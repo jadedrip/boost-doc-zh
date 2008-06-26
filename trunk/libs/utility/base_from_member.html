@@ -1,0 +1,406 @@
+<!DOCTYPE HTML PUBLIC "-//W3C//DTD HTML 3.2//EN">
+<html>
+<head>
+
+  
+  <meta content="text/html; charset=UTF-8" http-equiv="content-type">
+
+
+  
+  <title>Boost: Base-from-Member Idiom Documentation</title>
+</head>
+
+
+<body alink="red" bgcolor="white" link="blue" text="black" vlink="purple">
+
+ 
+<h1><img src="../../boost.png" alt="C++ Boost" align="middle" height="86" width="277">Base-from-Member 惯用法</h1>
+
+
+
+<p>类模板 <code>boost::base_from_member</code> 为那些需要用一个成员对基类进行初始化的类提供了解决的方法。这个类模板位于 <cite><a href="../../boost/utility/base_from_member.hpp">boost/utility/base_from_member.hpp</a></cite>，该文件被 <i><a href="../../boost/utility.hpp">boost/utility.hpp</a></i> 包含。</p>
+
+
+
+<p>测试及例子代码位于 <cite><a href="base_from_member_test.cpp">base_from_member_test.cpp</a></cite>.</p>
+
+
+
+<h2><a name="contents">目录</a></h2>
+
+
+
+<ul>
+
+
+	<li><a href="#contents">目录</a></li>
+
+
+	<li><a href="#rationale">原理</a></li>
+
+
+	<li><a href="#synopsis">摘要</a></li>
+
+
+	<li><a href="#usage">用法</a></li>
+
+
+	<li><a href="#example">例子</a></li>
+
+
+	<li><a href="#credits">Credits</a>
+		
+    
+    <ul>
+
+
+			<li><a href="#contributors">Contributors</a></li>
+
+
+		
+    
+    </ul>
+
+  </li>
+
+
+</ul>
+
+
+
+<h2><a name="rationale">原理</a></h2>
+
+
+
+<p>开发一个类的时候，有时候基类需要由当前类的一个成员来初始化。就象这个例子：</p>
+
+
+
+<blockquote>
+  
+  <pre>#include &lt;streambuf&gt;  <i>// for std::streambuf</i>
+#include &lt;ostream&gt;    <i>// for std::ostream</i>
+
+class fdoutbuf
+    : public std::streambuf
+{
+public:
+    explicit fdoutbuf( int fd );
+    //...
+};
+
+class fdostream
+    : public std::ostream
+{
+protected:
+    fdoutbuf buf;
+public:
+    explicit fdostream( int fd )
+        : buf( fd ), std::ostream( &amp;buf )
+        {}
+    //...
+};
+  </pre>
+
+</blockquote>
+
+
+
+<p>这是无定义的，因为C++的初始化顺序要求基类要在它所使用的成员之前进行初始化。<a href="http://www.moocat.org">R. Samuel Klatchko</a> 给出一个利用初始化顺序的解决方法。基类是以声明的顺序来进行初始化的，所以只要把相关的成员移到另一个基类中，并在原来的基类之前初始化，就可以保证正确的初始化了。</p>
+
+
+
+<p>按此方法定制的一个基类如下：</p>
+
+
+
+<blockquote>
+  
+  <pre>#include &lt;streambuf&gt;  <i>// for std::streambuf</i>
+#include &lt;ostream&gt;    <i>// for std::ostream</i>
+
+class fdoutbuf
+    : public std::streambuf
+{
+public:
+    explicit fdoutbuf( int fd );
+    //...
+};
+
+struct fdostream_pbase
+{
+    fdoutbuf sbuffer;
+
+    explicit fdostream_pbase( int fd )
+        : sbuffer( fd )
+        {}
+};
+
+class fdostream
+    : private fdostream_pbase
+    , public std::ostream
+{
+    typedef fdostream_pbase  pbase_type;
+    typedef std::ostream     base_type;
+
+public:
+    explicit fdostream( int fd )
+        : pbase_type( fd ), base_type( &amp;sbuffer )
+        {}
+    //...
+};
+  </pre>
+
+</blockquote>
+
+
+
+<p>其它项目也可以使用类似的定制基类。这个技巧非常基本，应该用一个模板来提供。主要的模板参数是被包含的成员的类型。该模板类有几个(显式的)构造
+函数成员模板，用于将构造函数的参数传递给成员。该模板类使用隐式的复制构造和赋值操作，如果被包含的成员是不可复制的，则取消它们。</p>
+
+
+
+<p>如果应用该模板的类需要很复杂的构造和复制操作，或者编译器不够先进而不太使用它，那么手工编写基类会更好些。</p>
+
+
+
+<p>由于基类是没有名字的，所以一个类不能有多个(直接的)相同类型的基类。这个模板类有一个额外的整型模板参数，用于提供一个有区别的单独的类。这个参数有一个缺省值，如果你只有一个成员类型，就可以只写一个参数。</p>
+
+
+
+<h2><a name="synopsis">摘要</a></h2>
+
+
+
+<blockquote>
+  
+  <pre>#ifndef BOOST_BASE_FROM_MEMBER_MAX_ARITY<br>#define BOOST_BASE_FROM_MEMBER_MAX_ARITY  10<br>#endif<br><br>template &lt; typename MemberType, int UniqueID = 0 &gt;<br>class boost::base_from_member<br>{<br>protected:<br>    MemberType  member;<br><br>    base_from_member();<br><br>    template&lt; typename T1 &gt;<br>    explicit  base_from_member( T1 x1 );<br><br>    template&lt; typename T1, typename T2 &gt;<br>    base_from_member( T1 x1, T2 x2 );<br><br>    //...<br><br>    template&lt; typename T1, typename T2, typename T3, typename T4,<br>     typename T5, typename T6, typename T7, typename T8, typename T9,<br>     typename T10 &gt;<br>    base_from_member( T1 x1, T2 x2, T3 x3, T4 x4, T5 x5, T6 x6, T7 x7,<br>     T8 x8, T9 x9, T10 x10 );<br>};<br></pre>
+
+</blockquote>
+
+
+
+<p>这个类模板的第一个模板参数
+<var>MemberType</var> 表示了作为基类的成员的类型。另一个模板参数 <var>UniqueID</var> 是一个整数，用于区分使用多个相同类型作为基类。后一个模板参数如果被忽略，其缺省值为0。这个类模板有一个保护数据成员，名为 <var>member</var>，可以被派生类用于后面的基类(或派生类自身)。</p>
+
+
+
+<p>它有一个缺省构造函数和几个构造函数成员模板。这些构造函数模板可以接受多个参数(当前最大为10个)并传递给数据成员的构造函数。由于C++不允许显式声明模板构造函数的模板参数，所以要确保这些参数已经尽可能接近数据成员的构造函数所使用的真实类型。</p>
+
+
+
+<p><var>BOOST_BASE_FROM_MEMBER_MAX_ARITY</var> 宏常量指定了构造函数模板的最大参数长度。需要更多(或更少)参数配置时，这个常量可以被覆盖。这个常量会被可扩展的代码读出，必须维护一个相同的最大值。(例如，一个类将该类模板用作基类，其成员具有一组灵活的构造函数)。</p>
+
+
+
+<h2><a name="usage">用法</a></h2>
+
+
+
+<p>以开始的例子为例，<code>fdoutbuf</code> 子对象要被封装在一个基类中，并在
+<code>std::ostream</code> 之前被继承。</p>
+
+
+
+<blockquote>
+  
+  <pre>#include &lt;boost/utility/base_from_member.hpp&gt;<br><br>#include &lt;streambuf&gt;  <i>// for std::streambuf</i>
+#include &lt;ostream&gt;    <i>// for std::ostream</i>
+
+class fdoutbuf
+    : public std::streambuf
+{
+public:
+    explicit fdoutbuf( int fd );
+    //...
+};
+
+class fdostream
+    : private boost::base_from_member&lt;fdoutbuf&gt;
+    , public std::ostream
+{
+    // Helper typedef's
+    typedef boost::base_from_member&lt;fdoutbuf&gt;  pbase_type;
+    typedef std::ostream                        base_type;
+
+public:
+    explicit fdostream( int fd )
+        : pbase_type( fd ), base_type( &amp;member )
+        {}
+    //...
+};
+  </pre>
+
+</blockquote>
+
+
+
+<p>base-from-member 惯用法是一个实现细节，因此它不应该对
+<code>fdostream</code> 的用户(或任何派生类)可见。由于初始化顺序的原因，<code>fdoutbuf</code> 子对象将在
+<code>std::ostream</code> 子对象之前初始化，这样前一个子对象就可以安全地在后一个子对象的构造中被使用。由于最终类型的
+<code>fdoutbuf</code> 子对象是唯一一个带有名字 "member" 的子对象，所以这个名字可以被最终类不加限定地使用。</p>
+
+
+
+<h2><a name="example">例子</a></h2>
+
+
+
+<p>base-from-member 类模板通常只包含一个 base-from-member 子对象，象关联一个
+stream-buffer 到一个 I/O 流。下面的例子示范了如何使用多个 base-from-member 子对象以及限定使用的问题。</p>
+
+
+
+<blockquote>
+  
+  <pre>#include &lt;boost/utility/base_from_member.hpp&gt;<br><br>#include &lt;cstddef&gt;  <i>// for NULL</i>
+
+struct an_int
+{
+    int  y;
+
+    an_int( float yf );
+};
+
+class switcher
+{
+public:
+    switcher();
+    switcher( double, int * );
+    //...
+};
+
+class flow_regulator
+{
+public:
+    flow_regulator( switcher &amp;, switcher &amp; );
+    //...
+};
+
+template &lt; unsigned Size &gt;
+class fan
+{
+public:
+    explicit fan( switcher );
+    //...
+};
+
+class system
+    : private boost::base_from_member&lt;an_int&gt;
+    , private boost::base_from_member&lt;switcher&gt;
+    , private boost::base_from_member&lt;switcher, 1&gt;
+    , private boost::base_from_member&lt;switcher, 2&gt;
+    , protected flow_regulator
+    , public fan&lt;6&gt;
+{
+    // Helper typedef's
+    typedef boost::base_from_member&lt;an_int&gt;       pbase0_type;
+    typedef boost::base_from_member&lt;switcher&gt;     pbase1_type;
+    typedef boost::base_from_member&lt;switcher, 1&gt;  pbase2_type;
+    typedef boost::base_from_member&lt;switcher, 2&gt;  pbase3_type;
+
+    typedef flow_regulator  base1_type;
+    typedef fan&lt;6&gt;          base2_type;
+
+public:
+    system( double x );
+    //...
+};
+
+system::system( double x )
+    : pbase0_type( 0.2 )
+    , pbase1_type()
+    , pbase2_type( -16, &amp;this-&gt;pbase0_type::member )
+    , pbase3_type( x, static_cast&lt;int *&gt;(NULL) )
+    , base1_type( pbase3_type::member, pbase1_type::member )
+    , base2_type( pbase2_type::member )
+{
+    //...
+}
+  </pre>
+
+</blockquote>
+
+
+
+<p>最终的类有多个子对象带有名字
+"member"，所以使用这个名字时必须用一个基类名字来限定(使用 <code>typedef</code>
+可以更容易地引用基类名)。但是，这又会在需要使用指针时带来一个新的问题。对一个以类名限定的子对象使用地址操作符会得到一个成员指针(这里有一个类型 <code>an_int boost::base_from_member&lt;an_int,
+0&gt; :: *</code>) 而不是指向成员的指针(类型为
+<code>an_int *</code>)。这个新问题的解决方法是，用 "<code>this-&gt;</code>" 来限定子对象，这一点对于指针才是必须的，对于引用或值则不需要。</p>
+
+
+
+<p>在初始化当中有一些参数的转换。<code>pbase0_type</code>&nbsp;构造函数的参数从
+<code>double</code> 转换为 <code>float</code>.  <code>pbase2_type</code> 构造函数的第一个参数由 <code>int</code> 转换为 <code>double</code>.  <code>pbase3_type</code> 构造函数的第二个参数是需要转换的一个特殊情况；在C++中所有形式的空指针都会被视为编译期的整型表达式，所以C++总是将这样的代码解释为一个整数，如果它可以找到一个接受整数或指针的重载。对于编译器来说，最后一个转换是必须的，这样才可以调用正确的构造函数，将指针类型用于 <code>switcher</code> 的构造函数。</p>
+
+
+
+<h2><a name="credits">Credits</a></h2>
+
+
+
+<h3><a name="contributors">Contributors</a></h3>
+
+
+
+<dl>
+
+
+	<dt><a href="../../people/ed_brey.htm">Ed Brey</a>
+	</dt>
+
+  <dd>Suggested some interface changes.
+
+	</dd>
+
+  <dt><a href="http://www.moocat.org">R. Samuel Klatchko</a> (<a href="mailto:rsk@moocat.org">rsk@moocat.org</a>, <a href="mailto:rsk@brightmail.com">rsk@brightmail.com</a>)
+	</dt>
+
+  <dd>Invented the idiom of how to use a class member for initializing
+		a base class.
+
+	</dd>
+
+  <dt><a href="../../people/dietmar_kuehl.htm">Dietmar Kuehl</a>
+	</dt>
+
+  <dd>Popularized the base-from-member idiom in his
+		<a href="http://www.informatik.uni-konstanz.de/%7Ekuehl/c++/iostream/">IOStream
+		example classes</a>.
+
+	</dd>
+
+  <dt>Jonathan Turkanis
+	</dt>
+
+  <dd>Supplied an implementation of generating the constructor templates that
+		can be controlled and automated with macros.  The implementation uses
+		the <a href="../preprocessor/index.html">Preprocessor library</a>.
+
+	</dd>
+
+  <dt><a href="../../people/daryle_walker.html">Daryle Walker</a>
+	</dt>
+
+  <dd>Started the library.  Contributed the test file <cite><a href="base_from_member_test.cpp">base_from_member_test.cpp</a></cite>.
+  </dd>
+
+</dl>
+
+
+
+<hr>
+
+<p>Revised: 28 August 2004</p>
+
+
+
+<p>Copyright 2001, 2003, 2004 Daryle Walker.  Use, modification, and distribution
+are subject to the Boost Software License, Version 1.0.  (See accompanying
+file <a href="../../LICENSE_1_0.txt">LICENSE_1_0.txt</a> or a copy at &lt;<a href="http://www.boost.org/LICENSE_1_0.txt">http://www.boost.org/LICENSE_1_0.txt</a>&gt;.)</p>
+
+
+
+</body>
+</html>

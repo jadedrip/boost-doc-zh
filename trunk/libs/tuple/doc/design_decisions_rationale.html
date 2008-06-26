@@ -1,0 +1,149 @@
+<!DOCTYPE HTML PUBLIC "-//W3C//DTD HTML 4.01 Transitional//EN">
+<html>
+<head>
+  <meta content="text/html; charset=UTF-8" http-equiv="content-type">
+  <title>Design decisions rationale for Boost Tuple Library</title>
+</head>
+
+
+
+
+<body bgcolor="#ffffff" text="#000000">
+
+
+<img src="../../../boost.png" alt="C++ Boost" height="86" width="277">
+
+<h1>Tuple 库 : 设计逻辑</h1>
+
+
+<h2>关于命名空间</h2>
+
+
+<p>
+曾经有一个关于tuple的命名空间的讨论，tuple应该在一个独立的命名空间还是应该直接在boost命名空间。 根据一般的原则，一个领域的库（如，<i>graph</i>, <i>python</i>）应该在一个独立的命名空间，而广泛使用的部件库应该在boost命名空间。
+Tuple处于一种中间的情况，一方面它能被广泛使用，另一方面它除了tuple模板外还引入了十分大量的名字。
+Tuple最初是在一个子命名空间。经过讨论，结果是tuple的定义直接在boost命名空间。经过又一番的讨论，tuple又放回一个子命名空间中。
+最终的方案（我希望如此）是所有的定义都在命名空间<code>::boost::tuples&nbsp;</code> ，和最常用的名称也直接在 <code>::boost</code> 命名空间。 
+这通过using声明来实现 (由 Dave Abrahams 建议)：
+<code></code></p>
+<pre>namespace boost {<br>  namespace tuples {<br>      ...      <br>    // 库的所有代码<br>      ...<br>  }<br>  using tuples::tuple; <br>  using tuples::make_tuple;<br>  using tuples::tie;<br>  using tuples::get;<br>}<br></pre>
+在这样的安排下，构造tuple的构造函数的调用，<code>make_tuple</code> 或者 <code>tie</code> 函数就可以直接使用而不需要命名空间的前缀。
+不仅如此，所有操作tuple的函数可通过Koenig-lookup方法找到。
+唯一的例外是<code>get&lt;N&gt;</code> 函数，它总是需要提供显式的模板参数，所以就没有提供 Koenig-lookup方法。 因此，get函数被提升到 <code>::boost</code> 命名空间。
+所以，对于一个应用程序开发者，tuple的使用接口实际上在命名空间 <code>::boost</code> &nbsp;。
+<p></p>
+
+<p>
+其他的名字，组成了一个库的开发者用的底层的接口（例如cons lists, metafunctions manipulating cons lists, ...），保留在子命名空间<code>::boost::tuples</code>。 注意，虽然下面名字是应用开发者使用的接口 <code>ignore</code>, <code>set_open</code>, <code>set_close</code> 和 <code>set_delimiter</code> ，但是仍然不直接在boost名命名空间。 
+原因是这些普通名字很容易发生名字冲突。
+还有，这些特性一般不被频繁使用。
+</p>
+
+
+<h4>给十分感兴趣命名空间设计的人</h4>
+
+
+<p>
+有一番关于子命名空间::boost::tuples的讨论。不使用最自然的名称"tuple"的理由是，避免和tuple模板有相同的名字。
+但是，在boost库中命名空间的名字很少被设计成复数的形式。
+首先，对命名空间和一个类用相同的名字，未曾有人反映有实质的麻烦。这样我们会考虑把&ldquo;tuples&rdquo;改为&ldquo;
+tuple&rdquo;。但是我们毕竟发现了一些麻烦。编译器 gcc 和 edg 都把这种命名空间和类名字相同的情况看作编译错误。
+<code></code></p>
+<pre>namespace boost {<br>  namespace tuple {<br>    ... tie(...);<br>    class tuple; <br>&nbsp;     ...<br>  }<br>  using tuple::tie; // 可以<br>  using tuple::tuple; // 错误<br>    ...<br>}<br></pre>
+注意，如果用相应的从全局命名空间开始的表示法似乎能够编译通过： 
+
+<code></code>
+<pre>using boost::tuple::tuple; // 可以<br></pre>
+
+
+
+<h2>部件链表(cons list)的结束符号 (nil, null_type, ...)</h2>
+
+
+<p>
+Tuple在内部表示为部件链表( <code>cons</code> list )：:
+
+<code></code></p>
+<pre>tuple&lt;int, int&gt;<br></pre>
+ 
+继承： <code></code>
+<pre>cons&lt;int, cons&lt;int, null_type&gt; &gt;<br></pre>
+
+
+<code>null_type</code> 是链表的结束符号。 原来是主张使用符号 <code>nil </code><span style="font-family: monospace;">，</span>但是这个符号已经在 MacOS 中使用，这样可能导致一些问题，所以用 <code>null_type</code> 代替之。
+其他被考虑过的名字有 <i>null_t</i> 和 <i>unit</i> (SML语言中的空tuple名)。
+<p>
+注意 <code>null_type</code> 是空tuple的内部表示： <code>tuple&lt;&gt;</code> 继承 <code>null_type</code> &nbsp;。
+</p>
+
+
+<h2>元素索引</h2>
+
+
+<p>
+使用0基址还是1基址的索引的选择问题，经过了透彻而深入的讨论。得出下面的观点：
+
+</p>
+<ul>
+
+  <li> 0-基址索引是 所谓的&ldquo; C++ 方法 &rdquo; ，用在数组等地方中。</li>
+
+  <li> 1-基址 如名字般直观 的索引也在很多地方存在， 例如， <code>bind1st</code>, <code>bind2nd</code>, <code>pair::first</code>, 等。</li>
+
+</ul>
+
+Tuple 的访问语法 <code>get&lt;N&gt;(a)</code> 或者 <code>a.get&lt;N&gt;()</code> (其中<code>a</code> 是一个 tuple ， <code>N</code> 是索引)，被认为是第一个观点的范畴，因此，tuple中第一个元素的索引是0 &nbsp; 。
+
+<p>
+有个建议希望tuple通过使用索引常量如 <code>_1st</code>, <code>_2nd</code>, <code>_3rd</code> &nbsp; ，来同时提供 1-基址的 如名字般直观 的索引&nbsp; 。可以通过合适地选择索引常量，使下面的语法是等价的：
+
+<code></code></p>
+<pre>a.get&lt;0&gt;() == a.get(_1st) == a[_1st] == a(_1st);<br></pre>
+Tuple库决定不提供多于一种索引方法，因为下面理由：
+<ul>
+
+  <li>0-基址 索引或许不能使所有的人满意，但是一旦固定下来，就不会在使用中被两种不同方法搞糊涂(有人希望数组提供这样的索引常量吗？) 。</li>
+
+  <li>增加另一中索引方法，并没有真正对库的使用者提供新的东西（如新的特性）。</li>
+
+  <li>C++ 变量和常量的命名规则并不提倡定义短而好用的常量(如 <code>_1st</code>, ...)。为了更好的目的，还是让 binding库和 lambda库使用。</li>
+
+  <li>访问语法 <code>a[_1st]</code> (或者 <code>a(_1st)</code>) 十分吸引人，几乎使我们不顾一切增加索引常量。但是，0-基址下标方法已经在C++中根深蒂固，以至于我们害怕陷入混乱。</li>
+
+  <li>
+这样的常量很容易增加。
+  </li>
+
+</ul>
+
+
+
+<h2>Tuple的比较运算</h2>
+
+
+比较操作符的实现是按照字典顺序方法。 
+其他的排序方法也被考虑到，例如方法 (<i>a &lt; b iff for each i a(i) &lt; b(i)</i>)。 我们相信，字典顺序虽然不是数学上最自然一种，但是是日常编程中频繁使用到的。
+
+<h2>串行化</h2>
+
+
+<p>在tuple串行化中的特殊字符存储在由ios_base::xalloc分配的空间中，它为<code>long</code>类型对象分配空间。
+<code>static_cast</code> 用于<code>long</code>类型和特殊字符类型之间的转换。 流中如有不能和long类型相互转换的字符，则不能通过编译。 这里可能需要修订一些地方。 两种可能的解决方案是：
+</p>
+<ul>
+
+  <li>只允许普通的char类型作为tule的分隔符，并用函数<code>widen</code> ，<code>narrow</code>&nbsp; 去和真正的流字符之间进行转换。这样总能通过编译，但是，一些设置函数调用得到的字符可能不是期望的那样（一些默认字符）。</li>
+
+  <li>分配足够的空间去存储流中真正的字符类型。
+这样意味着分隔符的内存需要独立地分配，还有指向此内存的指针应该存储在由<code>ios_base::xalloc</code> 分配的空间。
+有志愿者愿意实现这个功能吗？</li>
+
+</ul>
+
+
+<a href="tuple_users_guide.html">返回到用户指引</a>
+<hr>
+<p>&copy; Copyright Jaakko J&auml;rvi 2001. 
+</p>
+</body>
+</html>
