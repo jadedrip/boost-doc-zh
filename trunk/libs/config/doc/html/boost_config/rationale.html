@@ -1,0 +1,252 @@
+<!DOCTYPE HTML PUBLIC "-//W3C//DTD HTML 4.01 Transitional//EN">
+<html>
+<head>
+
+
+  
+  <meta http-equiv="Content-Type" content="text/html; charset=UTF-8">
+
+
+
+  
+  
+  <title>Rationale</title>
+  <link rel="stylesheet" href="../../../../../doc/html/boostbook.css" type="text/css">
+
+
+  
+  <meta name="generator" content="DocBook XSL Stylesheets V1.73.2">
+
+
+  
+  <link rel="start" href="../index.html" title="Boost.Config">
+
+
+  
+  <link rel="up" href="../index.html" title="Boost.Config">
+
+
+  
+  <link rel="prev" href="guidelines_for_boost_authors.html" title="Guidelines for Boost Authors">
+
+
+  
+  <link rel="next" href="acknowledgements.html" title="Acknowledgements">
+</head>
+
+
+<body alink="#0000ff" bgcolor="white" link="#0000ff" text="black" vlink="#840084">
+
+
+<table cellpadding="2" width="100%">
+
+  <tbody>
+
+    <tr>
+
+
+      <td valign="top"><img alt="Boost C++ Libraries" src="../../../../../boost.png" height="86" width="277"></td>
+
+
+      <td align="center"><a href="../../../../../index.html">Home</a></td>
+
+
+      <td align="center"><a href="../../../../../libs/libraries.htm">Libraries</a></td>
+
+
+      <td align="center"><a href="http://www.boost.org/people/people.htm">People</a></td>
+
+
+      <td align="center"><a href="http://www.boost.org/more/faq.htm">FAQ</a></td>
+
+
+      <td align="center"><a href="../../../../../more/index.htm">More</a></td>
+
+
+    </tr>
+
+  
+  </tbody>
+</table>
+
+
+<hr>
+<div class="spirit-nav">
+<a accesskey="p" href="guidelines_for_boost_authors.html"><img src="../../../../../doc/html/images/prev.png" alt="Prev"></a><a accesskey="u" href="../index.html"><img src="../../../../../doc/html/images/up.png" alt="Up"></a><a accesskey="h" href="../index.html"><img src="../../../../../doc/html/images/home.png" alt="Home"></a><a accesskey="n" href="acknowledgements.html"><img src="../../../../../doc/html/images/next.png" alt="Next"></a>
+</div>
+
+
+<div class="section" lang="en">
+<div class="titlepage">
+<div>
+<div>
+<h2 class="title" style="clear: both;">
+<a name="boost_config.rationale"></a><a class="link" href="rationale.html" title="Rationale">原理</a>
+</h2>
+
+</div>
+
+</div>
+
+</div>
+
+
+<div class="toc">
+<dl>
+
+
+  <dt><span class="section"><a href="rationale.html#boost_config.rationale.the_problem">问题</a></span></dt>
+
+
+  <dt><span class="section"><a href="rationale.html#boost_config.rationale.the_solution">解决方案</a></span></dt>
+
+
+</dl>
+
+</div>
+
+
+<p>多数传统的配置文件的"textbook"实现(其中所有配置选项在单个"集成"头文件中)的主要问题是，它们违背了某些基本的软件工程原理，使得 boost 
+更为脆弱，更难以维护，也更难以安全使用。你可以从 <a href="http://www.objectmentor.com/resources/articles/Principles_and_Patterns.pdf">以下文章</a> 
+中找到有关该原理的说明。</p>
+<div class="section" lang="en">
+<div class="titlepage">
+<div>
+<div>
+<h3 class="title">
+<a name="boost_config.rationale.the_problem"></a><a class="link" href="rationale.html#boost_config.rationale.the_problem" title="The problem">问题</a>
+</h3>
+
+</div>
+
+</div>
+
+</div>
+
+
+<p>想象这种一种情形，你正在多个平台上并行开发。现在要增加一个新的平台，或者修改一个已有平台的平台定义。那么会发生什么呢？所有东西都要重新编译。这不是很荒谬吗？我们只是增加一个新的平台，对原有的平台并没有做任何事，难道所有平台上的所有代码就得全部重新编译？</p>
+<p>实际上，在相互之间没有做任何事情的平台之间存在着强加的自然依赖性。本质上，由配置头文件提供的传统解决方法并不符合 Open-Closed 原理:</p>
+<div class="blockquote">
+<blockquote class="blockquote">
+  
+  <p>
+          </p>
+
+
+  
+  <p>
+            <span class="bold"><strong>"A module should be open for extension but
+            closed for modification. 一个模块应该对扩展保持开放而对修改保持关闭。"</strong></span>
+          </p>
+
+
+  
+  <p>
+        </p>
+
+
+</blockquote>
+
+</div>
+
+
+<p>扩展一个传统的配置头文件相当于修改了已有的代码。</p>
+
+<p>此外，考虑一下平台检测代码的复杂性和脆弱性。如果这个简单的变化会破坏在一些次要平台的检测，会怎么样呢？如果某人无意或有意(因为其它问题的变
+通方法)定义了一些平台相关的宏而这些宏要被检测代码所使用，又怎么办呢？传统的配置头文件是整个库中最不稳定的一个头文件，而 Boost
+的多数稳定的元素都要依赖于它。这违背了稳定依赖原理：</p>
+<div class="blockquote">
+<blockquote class="blockquote">
+  
+  <p>
+          </p>
+
+
+  
+  <p>
+            <span class="bold"><strong>"Depend in the direction of stability. 依赖于稳定的方向。"</strong></span>
+          </p>
+
+
+  
+  <p>
+        </p>
+
+
+</blockquote>
+
+</div>
+
+
+<p>即使是在一个次要平台上对传统配置头文件进行一些较小的修改之后，几乎所有平台的所有东西都要进行测试，如果我们遵循可靠的软件工程原理。</p>
+
+<p>另一个重要的问题是，并不总是可以将变化提交到&nbsp;<code class="computeroutput"><span class="special">&lt;</span><span class="identifier">boost</span><span class="special">/</span><span class="identifier">config</span><span class="special">.</span><span class="identifier">hpp</span><span class="special">&gt;</span></code>. 有些 boost 
+用户当前所用的平台使用了一些严格的非开放协议的工具和库。在这种情况下，不可能将修改提交到一个传统的集成配置头文件中，必须提供替代办法让用户可以插入他们自己的配置代码。</p>
+</div>
+
+
+<div class="section" lang="en">
+<div class="titlepage">
+<div>
+<div>
+<h3 class="title">
+<a name="boost_config.rationale.the_solution"></a><a class="link" href="rationale.html#boost_config.rationale.the_solution" title="The solution">解决方案</a>
+</h3>
+
+</div>
+
+</div>
+
+</div>
+
+
+<p>boost
+的配置头文件所采用的方法是，将配置分为三个正交的部分：编译器，标准库和平台。每个编译器/标准库/平台有它们自己的小配置文件，那么修改一个编译器的
+配置(举例)不会影响其它的编译器。另外，有办法可以忽略编译器/标准库/平台的检测代码(这样增加对新平台的支持不会破坏依赖性)，或者完全冻结配置；
+提供对依赖性变化的几乎完全的保护。</p>
+</div>
+
+
+</div>
+
+
+<table xmlns:rev="http://www.cs.rpi.edu/~gregod/boost/tools/doc/revision" width="100%">
+
+  <tbody>
+
+    <tr>
+
+
+      <td align="left"></td>
+
+
+      <td align="right">
+      
+      <div class="copyright-footer">Copyright &copy; 2001 -2007 Beman Dawes, Vesa Karvonen, John Maddock
+      
+      <p>
+        Distributed under the Boost Software License, Version 1.0. (See accompanying
+        file LICENSE_1_0.txt or copy at <a href="http://www.boost.org/LICENSE_1_0.txt" target="_top">http://www.boost.org/LICENSE_1_0.txt</a>)
+      </p>
+
+
+      </div>
+
+      </td>
+
+
+    </tr>
+
+  
+  </tbody>
+</table>
+
+
+<hr>
+<div class="spirit-nav">
+<a accesskey="p" href="guidelines_for_boost_authors.html"><img src="../../../../../doc/html/images/prev.png" alt="Prev"></a><a accesskey="u" href="../index.html"><img src="../../../../../doc/html/images/up.png" alt="Up"></a><a accesskey="h" href="../index.html"><img src="../../../../../doc/html/images/home.png" alt="Home"></a><a accesskey="n" href="acknowledgements.html"><img src="../../../../../doc/html/images/next.png" alt="Next"></a>
+</div>
+
+
+</body>
+</html>
