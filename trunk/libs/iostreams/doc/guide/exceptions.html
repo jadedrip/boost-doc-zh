@@ -1,0 +1,198 @@
+<!DOCTYPE HTML PUBLIC "-//W3C//DTD HTML 4.01 Transitional//EN">
+<html>
+<head>
+  <meta content="text/html; charset=UTF-8" http-equiv="content-type">
+
+    
+    
+  <title>Exceptions</title>
+  <link rel="stylesheet" href="../../../../boost.css">
+
+    
+  <link rel="stylesheet" href="../theme/iostreams.css">
+
+    
+  <style> 
+        OL LI { list-style-image:none; list-style-type: decimal } 
+        OL LI LI { list-style-image:none; list-style-type: lower-alpha } 
+     </style>
+</head>
+
+
+<body>
+
+
+<!-- Begin Banner -->
+
+    
+<h1 class="title">用户指南</h1>
+
+    
+<hr class="banner">
+
+<!-- End Banner -->
+
+<!-- Begin Nav -->
+
+<div class="nav">
+     <a href="views.html"><img src="../../../../doc/html/images/prev.png" border="0" height="19" width="19"></a>
+    <a href="guide.html"><img src="../../../../doc/html/images/up.png" border="0" height="19" width="19"></a>
+    <a href="buffering.html"><img src="../../../../doc/html/images/next.png" border="0" height="19" width="19"></a>
+</div>
+
+
+<!-- End Nav -->
+
+<a name="overview"></a>
+<h2>3.10 异常</h2>
+
+
+<dl class="page-index">
+
+  <dt><a href="#standard_iostreams">标准 Iostreams 库</a></dt>
+
+  <dt><a href="#boost_iostreams">Boost Iostreams 库</a></dt>
+
+  <dt><a href="#safety">异常安全性</a></dt>
+
+  <dt><a href="#acknowledgments">感谢</a></dt>
+
+</dl>
+
+
+<hr style="margin-top: 1em;">
+
+<a name="standard_iostreams"></a>
+<h2>标准 Iostreams 库</h2>
+
+
+<p><code>std::basic_streambuf</code> 中的负责执行 i/o 的 <code>public</code> 成员函数 &mdash; <code>sgetn()</code>, <code>sputn()</code>, <code>pubsync(), <i>等等</i> </code> &mdash; 都是通过 <code>std::basic_streambuf</code> 的 <code>protected virtual</code> 接口<code></code> &mdash; <code>underflow()</code>, <code>overflow()</code>, <code>sync()</code>,&nbsp;<code><i>等等</i></code> 来实现的。这些 <code>protected virtual</code> 函数中的多数通过抛出异常或返回错误代码(通常是 <code>traits_type::eof()</code>)来表示失败。所有异常都会由 <code>public</code> 成员函数向外传递，因此使用原始流缓冲的用户必须准备好处理异常。但是多数标准库的实现中所提供的流缓冲都不会抛出异常。
+</p>
+
+
+<p>作为对比，标准流缺省不会抛出异常：用户必须设置 <i>exception mask</i> 来要求以异常抛出的方式来报告错误。如果一个流的 exception mask 中的 <code>ios_base::badbit</code> 被置位，则所有由底层的流缓冲所抛出的异常都会被捕捉并重新抛出。
+</p>
+
+
+<p>因此，对于流来说，用户可以选择是否激活异常；而对于流缓冲来说，则是由实现者来选择，而不用户。
+</p>
+
+
+<a name="boost_iostreams"></a>
+<h2>Boost Iostreams 库</h2>
+
+
+<h5>策略</h5>
+
+
+<p>Boost Iostreams 库中的基本流缓冲模板 <a href="generic_streams.html#stream_buffer"><code>stream_buffer</code></a> 实现了 <code>std::basic_streambuf</code> 的 <code>protected virtual</code> 成员函数，将操作委托给 i/o 函数 <a href="../functions/read.html"><code>read</code></a>, <a href="../functions/write.html"><code>write</code></a>, <a href="../functions/put.html"><code>put</code></a>, <a href="../functions/get.html"><code>get</code></a>, <i>等等</i>，后者又进一步委托给过滤器和设备的成员函数。<i>这些成员函数通过抛出异常来报告错误</i>。异常会由 <code>stream_buffer</code> 的 <code>protected virtual</code> 成员和 <code>std::basic_streambuf</code> 的 public 成员向外传递。 
+</p>
+
+
+<p>建议用户自定义过滤器和设备使用的所有异常都派生自 <code>std::ios_base::failure</code>.<sup><a class="footnote_ref" name="note_1_ref" href="#note_1">[1]</a></sup>
+</p>
+
+
+<h5>原理</h5>
+
+
+<p>另一种选择是，要求过滤器和设备中所有返回类型为 <code>std::streamsize</code>&nbsp;的成员函数都以返回 <code>-1</code> 来表示错误，并修改返回 <code>void</code> 的函数的说明，使之可以返回一个 <code>bool</code> 来表示成功。使用异常来报告错误，允许实现者可以有办法传达关于错误原因的额外信息，同时也减轻了它们记住哪个返回值表示哪种错误的负担。
+</p>
+
+
+<p>第三种可能性是跟随 <code>std::basic_streambuf</code> 的例子，允许过滤器和设备的成员函数可以通过抛出异常或返回特定错误代码来报告错误。这种方法被否定的原因是，这样会使得 <a href="concepts.html#filter_concepts">过滤器</a> 和 <a href="concepts.html#device_concepts">设备</a> 的概念规范复杂化，并使得 <code>stream_buffer</code> 的内部更难于理解和维护。<sup><a class="footnote_ref" name="note_2_ref" href="#note_2">[2]</a></sup>
+</p>
+
+
+<a name="safety"></a>
+<h2>异常安全性</h2>
+Iostreams 库的目标是，在 i/o 操作中如果有异常抛出，提供以下保证：
+
+<ol>
+
+    <li>如果需要，则通过调用析构函数或 <a href="../functions/close.html"><code>close</code></a> 来释放相关资源。
+    </li>
+  <li>C++标准库规定的对于流和流缓冲的不变式得以保证。允许尝试其它的 i/o 但可能会导致另外的异常。
+    </li>
+
+    <li>Boost Iostreams 库规定的对于流和流缓冲的不变式得以保证。特定地，
+        
+    <ol>
+
+            <li><a href="generic_streams.html#stream_buffer"><code>stream_buffer</code></a> 或 <a href="generic_streams.html#stream"><code>stream</code></a> 可以被关闭和重新打开，并对底层 <a href="concepts.html#filter_concepts">过滤器</a> 或 <a href="concepts.html#device_concepts">设备</a> 类型的新实例执行其它 i/o.
+            </li>
+
+            <li><a href="../classes/filtering_streambuf.html"><code>filtering_streambuf</code></a> 或 <a href="../classes/filtering_stream.html"><code>filtering_stream</code></a> 的过滤器和设备链处于一致性状态。如果当前设备从链中去除或增加一个新设备，用户可以执行 i/o，就象是对一个新构造的流或流缓冲一样。
+            </li>
+
+        
+    </ol>
+ 
+    </li>
+
+</ol>
+
+
+<p>条件 2. 和 3. 依赖于 <a href="concepts.html#filter_concepts">过滤器</a> 和 <a href="concepts.html#device_concepts">设备</a> 概念的规范。注意，<span style="font-style: italic;">不</span><i></i>保证流或流缓冲的字符序列处于一致性状态，即数据不被破坏，通常在异常发生后也没有办法确定字符序列的状态。
+</p>
+
+
+<p>这些条件即是异常安全的 <i>基本保证</i> (<i>见</i> <a class="bib_ref" href="../bibliography.html#abrahams1">[Abrahams1]</a>.)
+</p>
+
+
+<a name="acknowledgments"></a>
+<h2>感谢</h2>
+
+
+<p>感谢 Angelika Langer 和 John Torjo 提供对异常的讨论。</p>
+
+
+<!-- Begin Footnotes -->
+
+<hr>
+
+<p>
+    <a class="footnote_ref" name="note_1" href="#note_1_ref"><sup>[1]</sup></a>C++ 标准将 <code>std::ios_base::failure</code> 描述为 "被 Iostreams 库的函数抛出的，用于报告在流缓冲操作时检测到的错误的所有对象类型的基类" (<a class="bib_ref" href="../bibliography.html#iso">[ISO]</a>, 第 27.4.2.1.1 节)。这里有一些不同的意见，即这是否意味着流缓冲的成员函数抛出的<span style="font-style: italic;">所有</span>异常必须都是类型 <code>failure</code> 的。
+</p>
+
+
+<p>对于C++ iostreams 的一种主流解释是，标准中的这段话意味着异常 "可以是任意类型" 但是 "如果该异常是因为<span style="font-style: italic;">某个IOStreams操作</span>检测到错误状态而抛出的，它就必须是类型 <code>failure</code> 的" (<a class="bib_ref" href="../bibliography.html#langer">[Langer]</a>, p. 36, 额外强调)。例如，作者可以用 <code>std::bad_alloc</code> 来表示缓冲区分配失败，而不必重新抛出一个 <code>failure</code>.
+</p>
+
+
+<p>但另一种主流是，<span style="font-style: italic;">所有</span>异常必须派生自 <code>failure</code>. (<a class="bib_ref" href="../bibliography.html#josuttis1">[Josuttis1]</a>, p. 602.) 
+</p>
+
+<p>Iostreams 库采取了中间立场：所有内部抛出的异常都是类型 <code>failure</code> 或其派生类的，而由用户自定义类型抛出的异常则直接转发。 
+</p>
+
+
+<p>
+    <a class="footnote_ref" name="note_2" href="#note_2_ref"><sup>[2]</sup></a>正如 Herb Sutter 所写的，"允许同一个操作可以有两种不同方法来报告错误是不好的设计....它使得接口和语义复杂化。并且让调用者更难使用，因为调用者必须能够处理不同风格的错误报告" (<a class="bib_ref" href="../bibliography.html#sutter">[Sutter]</a>, p. 130.)
+</p>
+
+
+<!-- End Footnotes -->
+
+<!-- Begin Footer -->
+
+<hr>
+<p class="copyright">Revised
+<!--webbot bot="Timestamp" S-Type="EDITED" S-Format="%d %B, %Y" startspan -->
+20 May, 2004
+<!--webbot bot="Timestamp" endspan i-checksum="38504" -->
+</p>
+
+
+<p class="copyright">&copy; Copyright <a href="http://www.kangaroologic.com" target="_top">Jonathan Turkanis</a>, 2004</p>
+
+<p class="copyright"> 
+    Distributed under the Boost Software License, Version 1.0. (See accompanying file LICENSE_1_0.txt or copy at <a href="http://www.boost.org/LICENSE_1_0.txt">http://www.boost.org/LICENSE_1_0.txt</a>)
+</p>
+
+
+<!-- End Footer -->
+
+</body>
+</html>
