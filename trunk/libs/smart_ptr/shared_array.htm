@@ -1,0 +1,121 @@
+﻿<!DOCTYPE HTML PUBLIC "-//W3C//DTD HTML 4.01 Transitional//EN">
+<html>
+	<head>
+		<title>shared_array</title>
+		<meta http-equiv="Content-Type" content="text/html; charset=UTF-8">
+	</head>
+	<body bgcolor="#ffffff" text="#000000">
+		<h1><A href="../../index.htm"><img src="../../boost.png" alt="boost.png (6897 bytes)" align="middle" width="277" height="86"
+					border="0"></A>shared_array 类模板</h1>
+		<p><b>shared_array</b> 类模板存储一个指向动态分配数组（动态分配数组一般是用 C++ <b>new[]</b> 表达式分配的）的指针。在最后一个 <b>shared_array</b> 所指向的对象被摧毁或重置时，要保证它所指向的对象被删除。</p>
+		<p>每一个 <b>shared_array</b> 都符合 C++ 标准库的 <b>CopyConstructible</b> 和 <b>Assignable</b> 的必要条件，并因此能够用于标准库容器。因为提供了比较操作，因此 <b>shared_array</b> 可以和标准库中的关联式容器一起工作。</p>
+		<p>通常，一个 <b>shared_array</b> 不能正确地持有一个指向由 <STRONG>new</STRONG> 的非数组形式分配的对象的指针。关于那种用法请参见 <a href="shared_ptr.htm"><b>shared_ptr</b></a>。</p>
+		<p>因为在实现中使用了引用计数，<b>shared_array</b> 的实例周期不会被回收。例如，如果 <b>main()</b> 持有一个指向 <b>A</b> 的 <b>shared_array</b>，<b>A</b> 又直接或间接持有一个指回 <b>A</b> 的 <b>shared_array</b> back to <b>A</b>，<b>A</b> 的使用计数是 2。最初的 <b>shared_array</b>  析构后将导致一个使用计数为 1 的 <b>A</b> 被悬挂。</p>
+		<p>一个指向 <b>std::vector</b> 的 <b>shared_ptr</b> 是一种可以代替 <b>shared_array</b> 的可选方案，只需要稍微一点的额外代价，可以得到更多的灵活性。</p>
+		<p>这个类模板被 <b>T</b> 参数化，<b>T</b> 是被指向的对象的类型。<b>T</b> 必须满足智能指针的<a href="smart_ptr.htm#common_requirements">共通需求</a>。</p>
+		<h2>Synopsis 概要</h2>
+		<pre>namespace boost {
+
+  template&lt;class T&gt; class shared_array {
+
+    public:
+      typedef T <a href="#element_type">element_type</a>;
+
+      explicit <a href="#constructors">shared_array</a>(T * p = 0);
+      template&lt;class D&gt; <a href="#constructors">shared_array</a>(T * p, D d);
+      <a href="#destructor">~shared_array</a>(); // never throws
+
+      <a href="#constructors">shared_array</a>(shared_array const &amp; r); // never throws
+
+      shared_array &amp; <a href="#assignment">operator=</a>(shared_array const &amp; r); // never throws
+
+      void <a href="#reset">reset</a>(T * p = 0);
+      template&lt;class D&gt; void <a href="#reset">reset</a>(T * p, D d);
+
+      T &amp; <a href="#indexing">operator[]</a>(std::ptrdiff_t i) const() const; // never throws
+      T * <a href="#get">get</a>() const; // never throws
+
+      bool <a href="#unique">unique</a>() const; // never throws
+      long <a href="#use_count">use_count</a>() const; // never throws
+
+      operator <A href="#conversions" ><i>unspecified-bool-type</i></A>() const; // never throws
+
+      void <a href="#swap">swap</a>(shared_array&lt;T&gt; &amp; b); // never throws
+  };
+
+  template&lt;class T&gt;
+    bool <a href="#comparison">operator==</a>(shared_array&lt;T&gt; const &amp; a, shared_array&lt;T&gt; const &amp; b); // never throws
+  template&lt;class T&gt;
+    bool <a href="#comparison">operator!=</a>(shared_array&lt;T&gt; const &amp; a, shared_array&lt;T&gt; const &amp; b); // never throws
+  template&lt;class T&gt;
+    bool <a href="#comparison">operator&lt;</a>(shared_array&lt;T&gt; const &amp; a, shared_array&lt;T&gt; const &amp; b); // never throws
+
+  template&lt;class T&gt; void <a href="#free-swap">swap</a>(shared_array&lt;T&gt; &amp; a, shared_array&lt;T&gt; &amp; b); // never throws
+
+}</pre>
+		<h2>Members 成员</h2>
+		<h3><a name="element_type">element_type 元素类型</a></h3>
+		<pre>typedef T element_type;</pre>
+		<p>提供所存储的指针的类型。</p>
+		<h3><a name="constructors">constructors 构造函数</a></h3>
+		<pre>explicit shared_array(T * p = 0);</pre>
+		<p>构造一个 <b>shared_array</b>，存储一个 <b>p</b> 的拷贝，<b>p</b> 必须是一个指向经由 C++ 的 <b>new[]</b> 表达式动态分配的数组的指针或者是 0。此后，<a href="#use_count">使用计数</a>为 1（即使 p == 0，参见 <a href="#destructor">~shared_array</a>）。这个构造函数可能抛出的异常只有 <b>std::bad_alloc</b>。如果抛出一个异常，则调用 <b>delete[] p</b>。</p>
+		<pre>template&lt;class D&gt; shared_array(T * p, D d);</pre>
+		<p>构造一个 <b>shared_array</b>，存储一个 <b>p</b> 和 <b>d</b> 的拷贝。此后，<a href="#use_count">使用计数</a>为 1。<b>D</b> 的拷贝构造函数和析构函数不能抛出异常。在 <b>p</b> 指向的数组被删除时，对象 <b>d</b> 被用于语句 <b>d(p)</b> 中。以 <b>p</b> 为参数调用对象 <b>d</b> 的过程不能抛出异常。这个构造函数可能抛出的异常只有 <b>std::bad_alloc</b>。如果抛出一个异常，则调用 <b>d(p)</b>。</p>
+		<pre>shared_array(shared_array const &amp; r); // never throws</pre>
+		<p>构造一个 <b>shared_array</b>，就像存储一个 <b>r</b> 中所存指针的一个拷贝。此后，所有拷贝的<a href="#use_count">使用计数</a>比初始使用计数多 1。</p>
+		<h3><a name="destructor">destructor 析构函数</a></h3>
+		<pre>~shared_array(); // never throws</pre>
+		<p>减少<a href="#use_count">使用计数</a>。然后，如果使用计数为 0，删除所存储指针所指向的数组。注意，<b>delete[]</b> 用在一个值为 0 的指针上是无害的。此处 <b>T</b> 不必是一个完整类型。为了保证这里不会抛出异常，要求删除对象的析构函数不能抛出异常。参见智能指针的<a href="smart_ptr.htm#common_requirements">共通需求</a>。</p>
+		<h3><a name="assignment">assignment 赋值</a></h3>
+		<pre>shared_array &amp; operator=(shared_array const &amp; r); // never throws</pre>
+		<p>像<a href="#constructors">上面</a>描述的一样构造一个新的 <b>shared_array</b>，然后用新的替换原来的 <b>shared_array</b>，并销毁被替换的对象。</p>
+		<h3><a name="reset">reset 重置</a></h3>
+		<pre>void reset(T * p = 0);</pre>
+		<p>像<a href="#constructors">上面</a>描述的一样构造一个新的 <b>shared_array</b>，然后用新的替换原来的 <b>shared_array</b>，并销毁被替换的对象。这里可能抛出的异常只有 <b>std::bad_alloc</b>。如果抛出一个异常，则调用 <b>delete[] p</b>。</p>
+		<pre>template&lt;class D&gt; void reset(T * p, D d);</pre>
+		<p>像<a href="#constructors">上面</a>描述的一样构造一个新的 <b>shared_array</b>，然后用新的替换原来的 <b>shared_array</b>，并销毁被替换的对象。<b>D</b> 的拷贝构造函数不能抛出异常。可能抛出的异常只有 <b>std::bad_alloc</b>。如果抛出一个异常，则调用 <b>d(p)</b>。</p>
+		<h3><a name="indexing">indexing 索引</a></h3>
+		<pre>T &amp; operator[](std::ptrdiff_t i) const; // never throws</pre>
+		<p>返回一个引向所存储的指针所指向的数组的元素 <b>i</b> 的引用。如果所存储指针为 0，或者 <b>i</b> 比 0 小，或者大于或等于数组中元素的数量，则行为是未定义的，而且几乎一定让你当场晕倒。</p>
+		<h3><a name="get">get 取得</a></h3>
+		<pre>T * get() const; // never throws</pre>
+		<p>返回所存储的指针。<b>T</b> 不必是一个完整类型。参见智能指针的<a href="smart_ptr.htm#common_requirements">共通需求</a>。</p>
+		<h3><a name="unique">unique 唯一性</a></h3>
+		<pre>bool unique() const; // never throws</pre>
+		<p>如果没有其它 <b>shared_array</b> 共享所存储指针的所有权，返回 true，否则返回false。<b>T</b> 不必是一个完整类型。参见智能指针的<a href="smart_ptr.htm#common_requirements">共通需求</a>。</p>
+		<h3><a name="use_count">use_count 使用计数</a></h3>
+		<pre>long use_count() const; // never throws</pre>
+		<p>返回共享所存储指针的所有权的 <b>shared_array</b> 对象的数量。<b>T</b> 不必是一个完整类型。参见智能指针的<a href="smart_ptr.htm#common_requirements">共通需求</a>。</p>
+		<p>因为 <b>use_count</b> 对于没有使用显式引用计数的 <b>shared_array</b> 的实现达不到必要的效率，它可能在将来的版本中被排除。因此它应该只用于调试的目的，而非产品代码。</p>
+		<h3><a name="conversions">conversions 转换</a></h3>
+		<pre>operator <i>unspecified-bool-type</i> () const; // never throws</pre>
+		<p>返回一个未确定的值，在需要布尔值的上下文中，它等价于 <code>get() != 0</code>。</p>
+		<h3><a name="swap">swap 交换</a></h3>
+		<pre>void swap(shared_ptr &amp; b); // never throws</pre>
+		<p>交换两个智能指针中的内容。这里并不需要 <b>T</b> 是一个完整类型。参见智能指针的<a href="smart_ptr.htm#common_requirements">共通需求</a>。</p>
+		<h2><a name="functions">Free Functions自由函数</a></h2>
+		<h3><a name="comparison">comparison 比较</a></h3>
+		<pre>template&lt;class T&gt;
+  bool operator==(shared_array&lt;T&gt; const &amp; a, shared_array&lt;T&gt; const &amp; b); // never throws
+template&lt;class T&gt;
+  bool operator!=(shared_array&lt;T&gt; const &amp; a, shared_array&lt;T&gt; const &amp; b); // never throws
+template&lt;class T&gt;
+  bool operator&lt;(shared_array&lt;T&gt; const &amp; a, shared_array&lt;T&gt; const &amp; b); // never throws</pre>
+		<p>比较两个智能指针所存储的指针。这里并不需要 <b>T</b> 是一个完整类型。参见智能指针的<a href="smart_ptr.htm#common_requirements">共通需求</a>。</p>
+		<p><b>operator&lt;</b> 重载提供了一个定义好的顺序，以便于 <b>shared_array</b> 对象可以用于关联式容器，比如 <b>std::map</b>。实现中使用 <b>std::less&lt;T *&gt;</b> 执行比较。这就确保比较是随时可行的，因为标准规定在指针上的比较操作是未确定的（5.9 [expr.rel] 第 2 段)，而指针上的 <b>std::less&lt;&gt;</b> 是有明确定义的（20.3.3 [lib.comparisons] 第 8 段）。</p>
+		<h3><a name="free-swap">swap 交换</a></h3>
+		<pre>template&lt;class T&gt;
+  void swap(shared_array&lt;T&gt; &amp; a, shared_array&lt;T&gt; &amp; b) // never throws</pre>
+		<p>等价于 <b>a.swap(b)</b>。与 <b>std::swap</b> 的接口匹配。为泛型编程提供帮助。</p>
+		<hr>
+		<p>Revised 
+			<!--webbot bot="Timestamp" S-Type="EDITED" S-Format="%d %B %Y" startspan --> 
+			09 January 2003<!--webbot bot="Timestamp" endspan i-checksum="32310" --></p>
+		<p>Copyright 1999 Greg Colvin and Beman Dawes. Copyright 2002 Darin Adler. 
+			Copyright 2002-2005 Peter Dimov. Permission to copy, use, modify, sell and 
+			distribute this document is granted provided this copyright notice appears in 
+			all copies. This document is provided "as is" without express or implied 
+			warranty, and with no claim as to its suitability for any purpose.</p>
+	</body>
+</html>
