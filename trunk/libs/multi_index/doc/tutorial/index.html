@@ -1,0 +1,210 @@
+<!DOCTYPE HTML PUBLIC "-//W3C//DTD HTML 4.0.1 Transitional//EN">
+<html>
+<head>
+
+
+  
+  <meta http-equiv="Content-Type" content="text/html; charset=UTF-8">
+
+
+
+  
+  
+  <title>Boost.MultiIndex Documentation - Tutorial</title>
+  <link rel="stylesheet" href="../style.css" type="text/css">
+
+
+  
+  <link rel="start" href="../index.html">
+
+
+  
+  <link rel="prev" href="../index.html">
+
+
+  
+  <link rel="up" href="../index.html">
+
+
+  
+  <link rel="next" href="basics.html">
+</head>
+
+
+<body>
+
+
+<h1><img src="../../../../boost.png" alt="boost.png (6897 bytes)" align="middle" height="86" width="277">Boost.MultiIndex 指南</h1>
+
+
+
+<div class="prev_link"><a href="../index.html"><img src="../prev.gif" alt="index" border="0"><br>
+
+
+Index目录
+</a></div>
+
+
+<div class="up_link"><a href="../index.html"><img src="../up.gif" alt="index" border="0"><br>
+
+
+Index目录
+</a></div>
+
+
+<div class="next_link"><a href="basics.html"><img src="../next.gif" alt="basics" border="0"><br>
+
+
+Basics基础
+</a></div>
+
+<br style="" clear="all">
+
+
+
+<hr>
+
+<h2>Contents目录</h2>
+
+
+
+<ul>
+
+
+  <li><a href="#rationale">Rationale原理</a></li>
+
+
+  <li><a href="#namespace">Namespace名字空间</a></li>
+
+
+  <li><a href="basics.html">Basics基础</a></li>
+
+
+  <li><a href="indices.html">Index types索引的类型</a></li>
+
+
+  <li><a href="key_extraction.html">Key extraction键提取</a></li>
+
+
+  <li><a href="creation.html">Container creation容器的创建</a></li>
+
+
+  <li><a href="debug.html">Debugging support测试的支持</a></li>
+
+
+  <li><a href="techniques.html">Techniques技巧</a></li>
+
+
+</ul>
+
+
+
+<h2><a name="rationale">Rationale原理</a></h2>
+
+
+
+<p>STL容器被设计为遵循这样一个概念，即每个容器控制它所拥有的一组元素，只允许按一种方式来访问，容器的类型决定了访问的方式，如：一个 
+<code>std::set</code> 按某种特定的排序标准维护它的元素，<code>std::list</code> 
+则允许按线性的顺序随意放置元素，等等。
+</p>
+
+
+
+<p>有时候，我们需要按不同的访问接口来访问同一组元素，例如：某些数据可能需要按一个以上的比较谓词来排序，或者一个双向列表需要对数复杂度的查找接口。在这些情况下，程序员通常只能手工地把元素重排到另一个容器中，这种方法通常需要一段代码来负责保证不同容器间的同步。 
+Boost.MultiIndex 就提供了由一组元素及其一个或多个索引组成的 
+<code>multi_index_container</code>s。这个工具比手工编写程序要漂亮得多，而且通常性能也更好。一个重要的设计策略是，在<code>multi_index_container</code>实例化时给定索引方式，索引的指定发生在编译期：这提供了静态类型检查和代码优化的充足空间。 
+</p>
+
+
+
+<p>Boost.MultiIndex 
+是从关系数据库理论中的索引概念获得灵感的，但是它并不是为了提供一个关系数据库框架。<code>multi_index_container</code> 
+被无缝地集成到了STL容器/算法的设计之中，并提供了额外的功能，主要是关于查找操作和元素更新，这对于单索引容器来说是很有用的扩展。
+</p>
+
+
+
+<p align="center">
+<img src="multi_index_cont_example.png" alt="diagram of a multi_index_container with three indices" height="304" width="600"><br>
+
+
+<b>图 1: 带有三个索引的 <code>multi_index_container</code>&nbsp;</b><b></b>
+</p>
+
+
+
+<p>上图描绘了一个带有三个索引的 <code>multi_index_container</code> 
+：头两个索引提供了类似于set的接口，分别按形状和id来排序元素，第三个索引则提供了<code>std::list</code>的双向列表功能。这些索引相当于内部元素的&ldquo;视图&rdquo;，但它们不仅提供了对集合的读访问：插入/删除操作也已实现，就象在<code>std::set</code>或<code>std::list</code>中的对应操作一样。通过一个给定的索引插入元素，仅当所有索引的唯一性约束均被满足时方能成功。
+</p>
+
+
+
+<h2>
+<a name="namespace">Namespace名字空间</a>
+</h2>
+
+
+
+<p>Boost.MultiIndex 的所有类型都位于<code>::boost::multi_index</code>名字空间。另外，主要的类模板 
+<code>multi_index_container</code> 以及全局函数 <code>get</code> 和 
+<code>project</code> 通过<code>using</code>声明被提升到 <code>::boost</code> 
+名字空间。简单地说，本文档中的示例代码均假定以下声明有效：
+</p>
+
+
+ 
+<blockquote>
+  
+  <pre><span class="keyword">using</span> <span class="keyword">namespace</span> <span class="special">::</span><span class="identifier">boost</span><span class="special">;</span>
+<span class="keyword">using</span> <span class="keyword">namespace</span> <span class="special">::</span><span class="identifier">boost</span><span class="special">::</span><span class="identifier">multi_index</span><span class="special">;</span>
+  </pre>
+
+</blockquote>
+
+
+
+<hr>
+
+<div class="prev_link"><a href="../index.html"><img src="../prev.gif" alt="index" border="0"><br>
+
+
+Index目录
+</a></div>
+
+
+<div class="up_link"><a href="../index.html"><img src="../up.gif" alt="index" border="0"><br>
+
+
+Index目录
+</a></div>
+
+
+<div class="next_link"><a href="basics.html"><img src="../next.gif" alt="basics" border="0"><br>
+
+
+Basics基础
+</a></div>
+
+<br style="" clear="all">
+
+
+
+<br>
+
+
+
+<p>Revised February 21st 2006</p>
+
+
+
+<p>&copy; Copyright 2003-2006 Joaqu&iacute;n M L&oacute;pez Mu&ntilde;oz.
+Distributed under the Boost Software 
+License, Version 1.0. (See accompanying file <a href="../../../../LICENSE_1_0.txt">
+LICENSE_1_0.txt</a> or copy at <a href="http://www.boost.org/LICENSE_1_0.txt">
+http://www.boost.org/LICENSE_1_0.txt</a>)
+</p>
+
+
+
+</body>
+</html>

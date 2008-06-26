@@ -1,0 +1,131 @@
+<!DOCTYPE html PUBLIC "-//W3C//DTD XHTML 1.0 Transitional//EN" "http://www.w3.org/TR/xhtml1/DTD/xhtml1-transitional.dtd">
+<html xmlns="http://www.w3.org/1999/xhtml" xml:lang="en" lang="en">
+<head>
+<!-- Copyright Aleksey Gurtovoy 2006. Distributed under the Boost --><!-- Software License, Version 1.0. (See accompanying --><!-- file LICENSE_1_0.txt or copy at http://www.boost.org/LICENSE_1_0.txt) -->
+  <meta http-equiv="Content-Type" content="text/html; charset=utf-8" />
+
+  <meta name="generator" content="Docutils 0.3.6: http://docutils.sourceforge.net/" />
+
+
+  <title>THE BOOST MPL LIBRARY: Details</title>
+  <link rel="stylesheet" href="../style.css" type="text/css" />
+</head>
+
+
+
+
+
+
+<body class="docframe">
+
+<table class="header">
+  <tbody>
+    <tr class="header">
+      <td class="header-group navigation-bar"><span class="navigation-group"><a href="./the-importance-of-being.html" class="navigation-link">Prev</a>&nbsp;<a href="./exercises.html" class="navigation-link">Next</a></span><span class="navigation-group-separator">&nbsp;|&nbsp;</span><span class="navigation-group"><a href="./lambda-details.html" class="navigation-link">Back</a>&nbsp;<a href="./exercises.html" class="navigation-link">Along</a></span><span class="navigation-group-separator">&nbsp;|&nbsp;</span><span class="navigation-group"><a href="./tutorial-metafunctions.html" class="navigation-link">Up</a>&nbsp;<a href="../index.html" class="navigation-link">Home</a></span><span class="navigation-group-separator">&nbsp;|&nbsp;</span><span class="navigation-group"><a href="./tutorial_toc.html" class="navigation-link">Full TOC</a></span></td>
+
+      <td class="header-group page-location"><a href="../index.html" class="navigation-link">标题页</a> / <a href="tutorial-metafunctions.html" class="navigation-link">教程：元函数和高阶元编程</a>&nbsp;/ <a href="./details.html" class="navigation-link">细节</a></td>
+
+    </tr>
+  </tbody>
+</table>
+<div class="header-separator"></div>
+
+<div class="section" id="details">
+<h1><a class="toc-backref" href="./tutorial-metafunctions.html#id59" name="details">细节</a></h1>
+
+<p>现在你应该对于一般的模板元编程和 Boost&nbsp;元编程库的基本概念和语言都有了相当的了解。本节将回顾一下一些重点。</p>
+
+<dl>
+
+  <dt>元函数前转</dt>
+
+  <dd>这种技术使用公有继承的方法，以基类的嵌套 <tt class="literal"><span class="pre">type</span></tt> 提供给派生的元函数。</dd>
+
+  <dt>元函数类</dt>
+
+  <dd>这是表示一个编译期函数的最基本的方法，它可以被作为多态元数据来处理；即作为一个类型来处理。元函数类带有一个名为 <tt class="literal"><span class="pre">apply</span></tt> 的嵌套元函数。</dd>
+
+  <dt>MPL</dt>
+
+  <dd>
+    <p class="first">本书中的多数例子都会用到 Boost
+元编程库。和 Boost type traits 的头文件一样，MPL
+的头文件遵循一个简单的惯例：</p>
+
+    <pre class="literal-block">#include &lt;boost/mpl/<em>component-name</em>.hpp&gt;<br /></pre>
+
+    <p class="last">不过，如果某个组件的名字以下划线结尾，则对应的 MPL 头文件名不包含末尾的下划线。例如，<tt class="literal"><span class="pre">mpl::bool_</span></tt> 位于
+    <tt class="literal"><span class="pre">&lt;boost/mpl/bool.hpp&gt;</span></tt>.  如果库中有违背这一惯例的地方，我们会向你指出。</p>
+
+  </dd>
+
+</dl>
+
+<!-- @ignore() -->
+<dl>
+
+  <dt>高阶函数</dt>
+
+  <dd>一个操作或返回函数的函数。高阶元编程的关键因素就是让元函数依据其它元数据进行多态化。</dd>
+
+  <dt>Lambda 表达式</dt>
+
+  <dd>简单的说，lambda 表达式就是可调用的元数据。没有可调用的元数据，高阶元函数就不可能实现。Lambda 表达式有两个基本形式：<span style="font-style: italic;">元函数类</span>和<span style="font-style: italic;">占位符表达式</span>。</dd>
+
+  <dt>占位符表达式</dt>
+
+  <dd>
+    <p class="first">一种 lambda 表达式，通过使用占位符，实现就地的 <em>partial metafunction
+application</em> 和 <em>元函数复合</em>。正如你将在本书中看到的，这些特性赋予我们神奇的能力，从最基本的元函数构建出几乎任意复杂的类型计算方法：</p>
+
+    <pre class="literal-block">// 在 some_sequence 中查找类型 x 的位置，以满足：<br />//         x 可转换为 'int'<br />//      &amp;&amp; x 不是 'char'<br />//      &amp;&amp; x 不是浮点类型<br />typedef mpl::find_if&lt;<br />      some_sequence<br />    , mpl::and_&lt;<br />          boost::is_convertible&lt;_1,int&gt;<br />        , mpl::not_&lt;boost::is_same&lt;_1,char&gt; &gt;<br />        , mpl::not_&lt;boost::is_float&lt;_1&gt; &gt;<br />      &gt;<br />    &gt;::type iter;<br /></pre>
+
+    <p class="last">占位符表达式很好地保证了算法的重用性，使我们无需编写新的元函数类。在STL的运行期环境中，通常缺乏对应的功能，因为手工编写一个循环要比使用标准算法更为容易，无论是在正确性还是在效率方面。</p>
+
+  </dd>
+
+</dl>
+
+<!-- @ example.prepend('''
+#include <boost/mpl/and.hpp>
+#include <boost/mpl/not.hpp>
+#include <boost/mpl/find_if.hpp>
+#include <boost/type_traits/is_convertible.hpp>
+#include <boost/type_traits/is_float.hpp>
+typedef mpl::vector<char, double, short, long> some_sequence;
+''')
+compile() -->
+<dl>
+
+  <dt><tt class="literal"><span class="pre">lambda</span></tt> 元函数</dt>
+
+  <dd>一个将 lambda 表达式转换为相应的元函数类的元函数。有关
+    <tt class="literal"><span class="pre">lambda</span></tt> 和 lambda 求值的详细信息，请看 <a class="reference" href="./reference-manual.html">MPL 参考手册</a>。</dd>
+
+  <dt><tt class="literal"><span class="pre">apply</span></tt> 元函数</dt>
+
+  <dd>一个元函数，它的第一个参数必须是 lambda 表达式，它以后面的参数调用该
+lambda 表达式工。通常，调用一个 lambda 表达式工，你应该将它和你想传给它的参数一起传递给
+    <tt class="literal"><span class="pre">mpl::apply</span></tt>，以代替使用 <tt class="literal"><span class="pre">lambda</span></tt> 和"手工"调用其结果。</dd>
+
+  <dt>惰性求值</dt>
+
+  <dd>将求值操作延迟至需要结果时的策略，以避免不需要的计算以及相关的没有必要的错误。元函数只有在我们访问其嵌套的 <tt class="literal"><span class="pre">::type</span></tt> 时才会执行，所以我们可以提供所有参数而不会执行任何计算，求值被延迟到最后一刻。</dd>
+
+</dl>
+
+</div>
+
+
+<div class="footer-separator"></div>
+
+<table class="footer">
+  <tbody>
+    <tr class="footer">
+      <td class="header-group navigation-bar"><span class="navigation-group"><a href="./the-importance-of-being.html" class="navigation-link">Prev</a>&nbsp;<a href="./exercises.html" class="navigation-link">Next</a></span><span class="navigation-group-separator">&nbsp;|&nbsp;</span><span class="navigation-group"><a href="./lambda-details.html" class="navigation-link">Back</a>&nbsp;<a href="./exercises.html" class="navigation-link">Along</a></span><span class="navigation-group-separator">&nbsp;|&nbsp;</span><span class="navigation-group"><a href="./tutorial-metafunctions.html" class="navigation-link">Up</a>&nbsp;<a href="../index.html" class="navigation-link">Home</a></span><span class="navigation-group-separator">&nbsp;|&nbsp;</span><span class="navigation-group"><a href="./tutorial_toc.html" class="navigation-link">Full TOC</a></span></td>
+
+    </tr>
+  </tbody>
+</table>
+</body>
+</html>
