@@ -2,95 +2,64 @@
 
 <html>
 <head>
-  <meta http-equiv="Content-Type" content="text/html; charset=us-ascii">
+  <meta http-equiv="Content-Type" content="text/html; charset=utf-8">
 
-  <title>Boost Random Number Library Generators</title>
+  <title>Boost 随机数库：生成器</title>
 </head>
 
 <body bgcolor="#FFFFFF" text="#000000">
-  <h1>Random Number Library Generators</h1>
+  <h1>随机数库：生成器</h2>
 
   <ul>
-    <li><a href="#intro">Introduction</a></li>
+    <li><a href="#intro">简介</a></li>
 
-    <li><a href="#synopsis">Synopsis</a></li>
+    <li><a href="#synopsis">概览</a></li>
 
-    <li><a href="#const_mod">Class template
-    <code>random::const_mod</code></a></li>
+    <li><a href="#const_mod"><code>random::const_mod</code> 类模板</a></li>
 
-    <li><a href="#linear_congruential">Class template
-    <code>random::linear_congruential</code></a></li>
+    <li><a href="#linear_congruential"><code>random::linear_congruential</code> 类模板</a></li>
 
-    <li><a href="#rand48">Class <code>rand48</code></a></li>
+    <li><a href="#rand48"><code>rand48</code> 类</a></li>
 
-    <li><a href="#additive_combine">Class template
-    <code>random::additive_combined</code></a></li>
+    <li><a href="#additive_combine"><code>random::additive_combined</code> 类模板</a></li>
 
-    <li><a href="#shuffle_output">Class template
-    <code>random::shuffle_output</code></a></li>
+    <li><a href="#shuffle_output"><code>random::shuffle_output</code> 类模板</a></li>
 
-    <li><a href="#inversive_congruential">Class template
-    <code>random::inversive_congruential</code></a></li>
+    <li><a href="#inversive_congruential"><code>random::inversive_congruential</code> 类模板</a></li>
 
-    <li><a href="#mersenne_twister">Class template
-    <code>random::mersenne_twister</code></a></li>
+    <li><a href="#mersenne_twister"><code>random::mersenne_twister</code> 类模板</a></li>
 
-    <li><a href="#lagged_fibonacci">Class template
-    <code>random::lagged_fibonacci</code></a></li>
+    <li><a href="#lagged_fibonacci"><code>random::lagged_fibonacci</code> 类模板</a></li>
 
-    <li><a href="#performance">Performance</a></li>
+    <li><a href="#performance">性能</a></li>
   </ul>
 
-  <h2><a name="intro" id="intro">Introduction</a></h2>
+  <h2><a name="intro" id="intro">简介</a></h2>
 
-  <p>This library provides several pseudo-random number generators. The
-  quality of a pseudo-random number generator crucially depends on both the
-  algorithm and its parameters. This library implements the algorithms as
+  <p>本库提供了数个伪随机数生成器。伪随机数生成器的性质与其算法和参数都有密切的关系。
+  This library implements the algorithms as
   class templates with template value parameters, hidden in namespace
   <code>boost::random</code>. Any particular choice of parameters is
   represented as the appropriately specializing <code>typedef</code> in
   namespace <code>boost</code>.</p>
 
-  <p>Pseudo-random number generators should not be constructed (initialized)
-  frequently during program execution, for two reasons. First, initialization
-  requires full initialization of the internal state of the generator. Thus,
-  generators with a lot of internal state (see below) are costly to
-  initialize. Second, initialization always requires some value used as a
-  "seed" for the generated sequence. It is usually difficult to obtain
-  several good seed values. For example, one method to obtain a seed is to
-  determine the current time at the highest resolution available, e.g.
-  microseconds or nanoseconds. When the pseudo-random number generator is
-  initialized again with the then-current time as the seed, it is likely that
-  this is at a near-constant (non-random) distance from the time given as the
-  seed for first initialization. The distance could even be zero if the
-  resolution of the clock is low, thus the generator re-iterates the same
-  sequence of random numbers. For some applications, this is
-  inappropriate.</p>
+  <p>程序执行过程中不应当频繁构造伪随机数生成器。原因有二：其一，生成器的构造要求对其内部状态进行完全的初始化；因此包含大量内部状态的生成器 (详下) 的构造往往是昂贵的。其二，生成器的构造需要提供序列的“种子”。取得多个良好的“种子”值往往是困难的。取得种子的方法之一是使用精确度尽可能高 (毫秒甚至纳秒) 的系统时间。如果再构建一个生成器之后再构建另一个，那么它们所使用的种子值之差会很接近一个常数。若系统时间的精确度不够高，这个差值甚至为零，从而得到两个行为相同的生成器。对于很多应用，这样的行为都是不合适的。</p>
 
-  <p>Note that all pseudo-random number generators described below are
-  CopyConstructible and Assignable. Copying or assigning a generator will
-  copy all its internal state, so the original and the copy will generate the
-  identical sequence of random numbers. Often, such behavior is not wanted.
-  In particular, beware of the algorithms from the standard library such as
-  std::generate. They take a functor argument by value, thereby invoking the
-  copy constructor when called.</p>
+  <p>注意以下描述的所有伪随机数生成器都是 CopyConstructible and Assignable。生成器的复制或赋值将会复制其内部状态，因此原有生成器和副本将会生成完全相同的随机数序列。这种行为往往不是需要的。特别注意标准库中的算法，如 std::generate。它们取函子的值作为参数，因此会调用复制构造函数。</p>
 
-  <p>The following table gives an overview of some characteristics of the
-  generators. The cycle length is a rough estimate of the quality of the
-  generator; the approximate relative speed is a performance measure, higher
-  numbers mean faster random number generation.</p>
+  <p>下表给出了生成器某些性质的概览。循环长度是给出了生成器性质的粗略描述；相对速度是性能的量度，值越大表示随机数生成越快。</p>
 
   <table border="1" summary="">
     <tr>
-      <th>generator</th>
+      <th>生成器</th>
 
-      <th>length of cycle</th>
+      <th>循环长度</th>
 
-      <th>approx. memory requirements</th>
+      <th>内存需求 (近似)</th>
 
-      <th>approx. relative speed</th>
+      <th>相对速度 (近似)</th>
 
-      <th>comment</th>
+      <th>备注</th>
     </tr>
 
     <tr>
@@ -126,13 +95,13 @@
 
       <td>20</td>
 
-      <td>global state</td>
+      <td>状态由全局变量保存</td>
     </tr>
 
     <tr>
       <td><a href="#ecuyer1988"><code>ecuyer1988</code></a></td>
 
-      <td>approx. 2<sup>61</sup></td>
+      <td>约 2<sup>61</sup></td>
 
       <td><code>2*sizeof(int32_t)</code></td>
 
@@ -193,7 +162,7 @@
       <td><code><a href=
       "#lagged_fibonacci_spec">lagged_fibonacci607</a></code></td>
 
-      <td>approx. 2<sup>32000</sup></td>
+      <td>约 2<sup>32000</sup></td>
 
       <td><code>607*sizeof(double)</code></td>
 
@@ -206,7 +175,7 @@
       <td><code><a href=
       "#lagged_fibonacci_spec">lagged_fibonacci1279</a></code></td>
 
-      <td>approx. 2<sup>67000</sup></td>
+      <td>约 2<sup>67000</sup></td>
 
       <td><code>1279*sizeof(double)</code></td>
 
@@ -219,7 +188,7 @@
       <td><code><a href=
       "#lagged_fibonacci_spec">lagged_fibonacci2281</a></code></td>
 
-      <td>approx. 2<sup>120000</sup></td>
+      <td>约 2<sup>120000</sup></td>
 
       <td><code>2281*sizeof(double)</code></td>
 
@@ -232,7 +201,7 @@
       <td><code><a href=
       "#lagged_fibonacci_spec">lagged_fibonacci3217</a></code></td>
 
-      <td>approx. 2<sup>170000</sup></td>
+      <td>约 2<sup>170000</sup></td>
 
       <td><code>3217*sizeof(double)</code></td>
 
@@ -245,7 +214,7 @@
       <td><code><a href=
       "#lagged_fibonacci_spec">lagged_fibonacci4423</a></code></td>
 
-      <td>approx. 2<sup>230000</sup></td>
+      <td>约 2<sup>230000</sup></td>
 
       <td><code>4423*sizeof(double)</code></td>
 
@@ -258,7 +227,7 @@
       <td><code><a href=
       "#lagged_fibonacci_spec">lagged_fibonacci9689</a></code></td>
 
-      <td>approx. 2<sup>510000</sup></td>
+      <td>约 2<sup>510000</sup></td>
 
       <td><code>9689*sizeof(double)</code></td>
 
@@ -271,7 +240,7 @@
       <td><code><a href=
       "#lagged_fibonacci_spec">lagged_fibonacci19937</a></code></td>
 
-      <td>approx. 2<sup>1050000</sup></td>
+      <td>约 2<sup>1050000</sup></td>
 
       <td><code>19937*sizeof(double)</code></td>
 
@@ -284,7 +253,7 @@
       <td><code><a href=
       "#lagged_fibonacci_spec">lagged_fibonacci23209</a></code></td>
 
-      <td>approx. 2<sup>1200000</sup></td>
+      <td>约 2<sup>1200000</sup></td>
 
       <td><code>23209*sizeof(double)</code></td>
 
@@ -297,7 +266,7 @@
       <td><code><a href=
       "#lagged_fibonacci_spec">lagged_fibonacci44497</a></code></td>
 
-      <td>approx. 2<sup>2300000</sup></td>
+      <td>约 2<sup>2300000</sup></td>
 
       <td><code>44497*sizeof(double)</code></td>
 
@@ -307,29 +276,15 @@
     </tr>
   </table>
 
-  <p>As observable from the table, there is generally a
-  quality/performance/memory trade-off to be decided upon when choosing a
-  random-number generator. The multitude of generators provided in this
-  library allows the application programmer to optimize the trade-off with
-  regard to his application domain. Additionally, employing several
-  fundamentally different random number generators for a given application of
-  Monte Carlo simulation will improve the confidence in the results.</p>
+  <p>可以从上表中观察到，选择随机数生成器时往往要在品质、性能、内存三者之间作出权衡。本库中提供的大量生成器足以让程序员选择最适合自己应用领域的一个。此外，在 Monte Carlo 模拟中使用多个有着根本性不同的随机数生成器将会提高结果的可信度。</p>
 
-  <p>If the names of the generators don't ring any bell and you have no idea
-  which generator to use, it is reasonable to employ <code>mt19937</code> for
-  a start: It is fast and has acceptable quality.</p>
+  <p>如果你不知如何选择，不妨先使用 <code>mt19937</code>；它快速、可靠。</p>
 
-  <p><em>Note:</em> These random number generators are not intended for use
-  in applications where non-deterministic random numbers are required. See
-  <a href="nondet_random.html">nondet_random.html</a> for a choice of
-  (hopefully) non-deterministic random number generators.</p>
+  <p><em>注意：</em>以上随机数生成器不能用于要求使用不确定随机数的应用领域；关于不确定随机数生成器，参看 <a href="nondet_random.html">nondet_random.html</a>。</p>
 
-  <p>In this description, I have refrained from documenting those members in
-  detail which are already defined in the <a href=
-  "random-concepts.html">concept documentation</a>.</p>
+  <p>对于在 <a href="random-concepts.html">概念文档</a> 中已经给出定义的成员，在下面的描述中不会详细说明。</p>
 
-  <h2><a name="synopsis" id="synopsis">Synopsis of the generators</a>
-  available from header <code>&lt;boost/random.hpp&gt;</code></h2>
+  <h2><code>&lt;boost/random.hpp&gt;</code> 中的生成器：<a name="synopsis" id="synopsis">概览</a></h2>
   <pre>
 namespace boost {
   namespace random {
@@ -366,10 +321,9 @@ namespace boost {
 } // namespace boost
 </pre>
 
-  <h2><a name="const_mod" id="const_mod">Class template
-  <code>random::const_mod</code></a></h2>
+  <h2><a name="const_mod" id="const_mod"><code>random::const_mod</code> 类模板</a></h2>
 
-  <h3>Synopsis</h3>
+  <h3>概览</h3>
   <pre>
 template&lt;class IntType, IntType m&gt;
 class random::const_mod
@@ -390,7 +344,7 @@ private:
 };
 </pre>
 
-  <h3>Description</h3>
+  <h3>描述</h3>
 
   <p>Class template <code>const_mod</code> provides functions performing
   modular arithmetic, carefully avoiding overflows. All member functions are
@@ -409,7 +363,7 @@ private:
     132-138
   </blockquote>
 
-  <h3>Member functions</h3>
+  <h3>成员函数</h3>
   <pre>
 template&lt;IntType c&gt; static IntType add(IntType x)
 </pre>
@@ -436,7 +390,7 @@ static IntType invert(IntType x)
   <h2><a name="linear_congruential" id="linear_congruential">Class template
   <code>random::linear_congruential</code></a></h2>
 
-  <h3>Synopsis</h3>
+  <h3>概览</h3>
   <pre>
 #include &lt;<a href=
 "../../boost/random/linear_congruential.hpp">boost/random/linear_congruential.hpp</a>&gt;
@@ -464,7 +418,7 @@ typedef random::linear_congruential&lt;long, 48271L, 0, 2147483647L,
      399268537L&gt; minstd_rand;
 </pre>
 
-  <h3>Description</h3>
+  <h3>描述</h3>
 
   <p>Instantiations of class template <code>linear_congruential</code> model
   a <a href="random-concepts.html#pseudo-rng">pseudo-random number
@@ -523,7 +477,7 @@ void seed(IntType x0)
 
   <h2><a name="rand48" id="rand48">Class <code>rand48</code></a></h2>
 
-  <h3>Synopsis</h3>
+  <h3>概览</h3>
   <pre>
 #include &lt;<a href=
 "../../boost/random/linear_congruential.hpp">boost/random/linear_congruential.hpp</a>&gt;
@@ -545,7 +499,7 @@ public:
 };
 </pre>
 
-  <h3>Description</h3>
+  <h3>描述</h3>
 
   <p>Class <code>rand48</code> models a <a href=
   "random-concepts.html#pseudo-rng">pseudo-random number generator</a>. It
@@ -589,7 +543,7 @@ void seed(uint64_t x0)
   <h2><a name="additive_combine" id="additive_combine">Class template
   <code>random::additive_combine</code></a></h2>
 
-  <h3>Synopsis</h3>
+  <h3>概览</h3>
   <pre>
 #include &lt;<a href=
 "../../boost/random/additive_combine.hpp">boost/random/additive_combine.hpp</a>&gt;
@@ -618,7 +572,7 @@ typedef random::additive_combine&lt;
 
 </pre>
 
-  <h3>Description</h3>
+  <h3>描述</h3>
 
   <p>Instatiations of class template <code>additive_combine</code> model a
   <a href="random-concepts.html#pseudo-rng">pseudo-random number
@@ -660,10 +614,9 @@ additive_combine(typename MLCG1::result_type seed1,
   <p>The specialization <code>ecuyer1988</code> was suggested in the above
   paper.</p>
 
-  <h2><a name="shuffle_output" id="shuffle_output">Class template
-  <code>random::shuffle_output</code></a></h2>
+  <h2><a name="shuffle_output" id="shuffle_output"><code>random::shuffle_output</code> 类模板</a></h2>
 
-  <h3>Synopsis</h3>
+  <h3>概览</h3>
   <pre>
 #include &lt;<a href=
 "../../boost/random/shuffle_output.hpp">boost/random/shuffle_output.hpp</a>&gt;
@@ -689,7 +642,7 @@ public:
 };
 </pre>
 
-  <h3>Description</h3>
+  <h3>描述</h3>
 
   <p>Instatiations of class template <code>shuffle_output</code> model a
   <a href="random-concepts.html#pseudo-rng">pseudo-random number
@@ -768,7 +721,7 @@ template&lt;class T&gt; void seed(T s)
   <h2><a name="inversive_congruential" id="inversive_congruential">Class
   template <code>random::inversive_congruential</code></a></h2>
 
-  <h3>Synopsis</h3>
+  <h3>概览</h3>
   <pre>
 #include &lt;<a href=
 "../../boost/random/inversive_congruential.hpp">boost/random/inversive_congruential.hpp</a>&gt;
@@ -792,7 +745,7 @@ public:
 typedef random::inversive_congruential&lt;int32_t, 9102, 2147483647-36884165, 2147483647&gt; hellekalek1995;
 </pre>
 
-  <h3>Description</h3>
+  <h3>描述</h3>
 
   <p>Instantiations of class template <code>inversive_congruential</code>
   model a <a href="random-concepts.html#pseudo-rng">pseudo-random number
@@ -841,10 +794,9 @@ void seed(IntType y0)
   <p>The specialization <code>hellekalek1995</code> was suggested in the
   above paper.</p>
 
-  <h2><a name="mersenne_twister" id="mersenne_twister">Class template
-  <code>random::mersenne_twister</code></a></h2>
+  <h2><a name="mersenne_twister" id="mersenne_twister"><code>random::mersenne_twister</code> 类模板</a></h2>
 
-  <h3>Synopsis</h3>
+  <h3>概览</h3>
   <pre>
 #include &lt;<a href=
 "../../boost/random/mersenne_twister.hpp">boost/random/mersenne_twister.hpp</a>&gt;
@@ -873,7 +825,7 @@ typedef mersenne_twister&lt;uint32_t,351,175,19,0xccab8ee7,11,7,0x31b6ab00,15,0x
 typedef mersenne_twister&lt;uint32_t,624,397,31,0x9908b0df,11,7,0x9d2c5680,15,0xefc60000,18, 3346425566U&gt; mt19937;
 </pre>
 
-  <h3>Description</h3>
+  <h3>描述</h3>
 
   <p>Instantiations of class template <code>mersenne_twister</code> model a
   <a href="random-concepts.html#pseudo-rng">pseudo-random number
@@ -967,7 +919,7 @@ template&lt;class Generator&gt; void seed(Generator &amp; gen)
   <h2><a name="lagged_fibonacci" id="lagged_fibonacci">Class template
   <code>random::lagged_fibonacci</code></a></h2>
 
-  <h3>Synopsis</h3>
+  <h3>概览</h3>
   <pre>
 #include &lt;<a href=
 "../../boost/random/lagged_fibonacci.hpp">boost/random/lagged_fibonacci.hpp</a>&gt;
@@ -1004,7 +956,7 @@ typedef random::lagged_fibonacci&lt;double, 23209, 13470&gt; lagged_fibonacci232
 typedef random::lagged_fibonacci&lt;double, 44497, 21034&gt; lagged_fibonacci44497;
 </pre>
 
-  <h3>Description</h3>
+  <h3>描述</h3>
 
   <p>Instantiations of class template <code>lagged_fibonacci</code> model a
   <a href="random-concepts.html#pseudo-rng">pseudo-random number
@@ -1201,5 +1153,12 @@ template&lt;class Generator&gt; void seed(Generator &amp; gen)
   accompanying file <a href="../../LICENSE_1_0.txt">LICENSE_1_0.txt</a> or
   copy at <a href=
   "http://www.boost.org/LICENSE_1_0.txt">http://www.boost.org/LICENSE_1_0.txt</a>)</i></p>
+  <p>中文版修订：2008/6/25</p>
+
+  <p><i>Copyright &copy; 2008 <a href=
+  "http://wiki.woodpecker.org.cn/moin/XiaoQi">xiaq</a></i></p>
+
+  <p><i>在 Boost Software License, Version 1.0 的条款下发布。(参看文件 <a href="../../LICENSE_1_0.txt">LICENSE_1_0.txt</a> 或在线副本 <a href="http://www.boost.org/LICENSE_1_0.txt"> http://www.boost.org/LICENSE_1_0.txt</a>)</i></p>
+
 </body>
 </html>
