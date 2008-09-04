@@ -1,0 +1,414 @@
+<!DOCTYPE HTML PUBLIC "-//W3C//DTD HTML 4.01 Transitional//EN">
+<html>
+<head>
+  <meta content="text/html; charset=UTF-8" http-equiv="content-type">
+
+    
+    
+  <title>Newline Filters</title>
+  <link rel="stylesheet" href="../../../../boost.css">
+
+    
+  <link rel="stylesheet" href="../theme/iostreams.css">
+</head>
+
+
+<body>
+
+
+<!-- Begin Banner -->
+
+    
+<h1 class="title">换行符过滤器</h1>
+
+    
+<hr class="banner">
+
+<!-- End Banner -->
+<dl class="page-index">
+
+  <dt><a href="#overview">简介</a></dt>
+
+  <dt><a href="#headers">头文件</a></dt>
+
+  <dt><a href="#synopsis">摘要</a></dt>
+
+  <dt><a href="#reference">参考</a>
+    </dt>
+  <dl class="page-index">
+
+      <dt>1. <a href="#constants">名字空间 <code>boost::iostreams::newline</code></a></dt>
+
+      <dt>2. <a href="#newline_filter">类 <code>newline_filter</code></a></dt>
+
+      <dt>3. <a href="#newline_checker">类 <code>newline_checker</code></a></dt>
+
+      <dt>4. <a href="#newline_error">类 <code>newline_error</code></a></dt>
+
+    
+  </dl>
+
+  
+</dl>
+
+
+<a name="overview"></a>
+<h2>简介</h2>
+
+
+<p>
+    Boost.Iostreams 提供两个组件来处理换行符约定：类模板 <a href="#newline_filter"><code>newline_filter</code></a> 用于在两种换行符约定间进行转换，而类模板 <a href="#newline_checker"><code>newline_checker</code></a> 则用于验证某个字符序列是否符合某个换行符约定。
+</p>
+
+
+<a name="headers"></a>
+<h2>头文件</h2>
+
+
+<dl>
+
+  <dt><a class="header" href="../../../../boost/iostreams/filter/newline.hpp"><code>&lt;boost/iostreams/filter/newline.hpp&gt;</code></a></dt>
+
+</dl>
+
+
+<a name="synopsis"></a>
+<h2>摘要</h2>
+
+
+<pre class="broken_ie"><span class="keyword">namespace</span> boost { <span class="keyword">namespace</span> iostreams {<br><br><span class="keyword">namespace</span> <a class="documented" href="#constants">newline</a> {<br>                    <br><span class="keyword">const</span> <span class="keyword">int</span> <a class="documented" href="#posix">posix</a>             = 1;    <span class="comment">// 以 CR 作为换行符</span>
+<span class="keyword">const</span> <span class="keyword">int</span> <a class="documented" href="#mac">mac</a>               = 2;    <span class="comment">// 以 LF 作为换行符</span>
+<span class="keyword">const</span> <span class="keyword">int</span> <a class="documented" href="#dos">dos</a>               = 4;    <span class="comment">// 以 CRLF 作为换行符</span>
+<span class="keyword">const</span> <span class="keyword">int</span> <a class="documented" href="#mixed">mixed</a>             = 8;    <span class="comment">// 混用不同的换行符</span>
+<span class="keyword">const</span> <span class="keyword">int</span> <a class="documented" href="#final_newline">final_newline</a>     = 16;<br><br>}   <span class="comment">// End namespace boost::iostreams::newline</span>
+
+<span class="keyword">class</span> <a class="documented" href="#newline_filter">newline_filter</a>;<br><span class="keyword">class</span> <a class="documented" href="#newline_checker">newline_checker</a>;<br><span class="keyword">class</span> <a class="documented" href="#newline_error">newline_error</a>;<br><br>} } <span class="comment">// End namespace boost::io</span></pre>
+
+
+<a name="reference"></a>
+<h2>参考</h2>
+
+
+<a name="constants"></a>
+<h3>1. 名字空间 <code>boost::iostreams::newline</code></h3>
+
+
+<p>名字空间 <code>boost::iostreams::newline</code> 中包含了一些整型常量，用于配置 <code>newline_filter</code>, <code>newline_checker</code> 和报告错误。这些常量解释如下：</p>
+
+
+<table style="margin-left: 2em; margin-bottom: 2em;" border="1" cellpadding="4">
+
+  <tbody>
+    <tr>
+      <th>常量</th>
+      <th>解释</th>
+    </tr>
+
+    <tr>
+
+        <td valign="top"><a name="posix"></a><code>posix</code></td>
+
+        <td>用于表示 POSIX 换行符约定
+        </td>
+
+    </tr>
+
+    <tr>
+
+        <td valign="top"><a name="dos"></a><code>dos</code></td>
+
+        <td>用于表示 DOS 换行符约定
+        </td>
+
+    </tr>
+
+    <tr>
+
+        <td valign="top"><a name="mac"></a><code>mac</code></td>
+
+        <td>用于表示经典的 Mac 换行符约定
+        </td>
+
+    </tr>
+
+    <tr>
+
+        <td valign="top"><a name="mixed"></a><code>mixed</code></td>
+
+        <td>用于表示文档中混用各种不同的换行符
+        </td>
+
+    </tr>
+
+    <tr>
+
+        <td valign="top"><a name="final_newline"></a><code>final_newline</code></td>
+
+        <td>用于表示文档以换行符结束
+        </td>
+
+    </tr>
+
+  </tbody>
+</table>
+
+
+<a name="newline_filter"></a>
+<h3>2. 类 <code>newline_filter</code></h3>
+
+
+<h4>描述</h4>
+
+
+<p>
+    一个 <a href="../concepts/dual_use_filter.html">DualUseFilter</a>，可在不同操作系统所使用的换行符约定间进行转换。其构造函数接受一个指定目标格式的整型参数。
+</p>
+
+
+<h4>摘要</h4>
+
+
+<pre class="broken_ie"><span class="keyword">class</span> <span class="defined">newline_filter</span> {<br><span class="keyword">public:</span>
+    <span class="keyword">typedef</span> char                      char_type;<br>    <span class="keyword">typedef</span> <span class="omitted">[implementation-defined]</span>  category;<br>    <span class="keyword">explicit</span> <a class="documented" href="#newline_filter_ctor">newline_filter</a>(<span class="keyword">int</span> target);<br>};</pre>
+
+
+<a name="newline_filter_ctor"></a>
+<h4><code>newline_filter::newline_filter</code></h4>
+
+
+<pre class="broken_ie">    <span class="keyword">explicit</span> newline_filter(<span class="keyword">int</span> target);</pre>
+
+
+<p>构造一个 newline_filter，用于转换至指定格式。参数 target 必须是 <a href="#posix"><code>newline::posix</code></a>, <a href="#dos"><code>newline::dos</code></a> 或 <a href="#mac"><code>newline::mac</code></a>.</p>
+
+
+<a name="newline_checker"></a>
+<h3>3. 类 <code>newline_checker</code></h3>
+
+
+<h4>描述</h4>
+
+
+<p>
+    一个 <a href="../concepts/dual_use_filter.html">DualUseFilter</a>，用于验证字符序列是否符合给定的换行符约定。 
+</p>
+
+
+<h4>摘要</h4>
+
+
+<pre class="broken_ie"><span class="keyword">class</span> <span class="defined">newline_checker</span> {<br><span class="keyword">public:</span>
+    <span class="keyword">typedef</span> char                      char_type;<br>    <span class="keyword">typedef</span> <span class="omitted">[implementation-defined]</span>  category;<br>    <span class="keyword">explicit</span> <a class="documented" href="#newline_filter_ctor">newline_checker</a>(<span class="keyword">int</span> target = <span class="omitted">default_value</span> );<br>    <span class="keyword">bool</span> <a class="documented" href="#newline_checker_is_posix">is_posix</a>() <span class="keyword">const</span>;<br>    <span class="keyword">bool</span> <a class="documented" href="#newline_checker_is_dos">is_dos</a>() <span class="keyword">const</span>;<br>    <span class="keyword">bool</span> <a class="documented" href="#newline_checker_is_mac">is_mac</a>() <span class="keyword">const</span>;<br>    <span class="keyword">bool</span> <a class="documented" href="#newline_checker_is_mixed_posix">is_mixed_posix</a>() <span class="keyword">const</span>;<br>    <span class="keyword">bool</span> <a class="documented" href="#newline_checker_is_mixed_dos">is_mixed_dos</a>() <span class="keyword">const</span>;<br>    <span class="keyword">bool</span> <a class="documented" href="#newline_checker_is_mixed_mac">is_mixed_mac</a>() <span class="keyword">const</span>;<br>    <span class="keyword">bool</span> <a class="documented" href="#newline_checker_is_mixed">is_mixed</a>() <span class="keyword">const</span>;<br>    <span class="keyword">bool</span> <a class="documented" href="#newline_checker_has_final_newline">has_final_newline</a>() <span class="keyword">const</span>;<br>};</pre>
+
+
+<a name="newline_checker::newline_checker_ctor"></a>
+<h4><code>newline_checker::newline_checker</code></h4>
+
+
+<pre class="broken_ie">    <span class="keyword">explicit</span> newline_checker(<span class="keyword">int</span> target = <span class="omitted">default_value</span> );</pre>
+
+
+<p>构造一个 newline_checker. 如果指定了 target, 则一旦检测出换行符不符合 target 就会抛出一个 newline_error. target 的值必须是 <a href="#posix"><code>newline::posix</code></a>, <a href="#dos"><code>newline::dos</code></a> 或 <a href="#mac"><code>newline::mac</code></a> 或它们其中一个与 <a href="#mac"><code>newline::final_newline</code></a>&nbsp;按位OR的结果值。</p>
+
+
+<p><b>注意：</b>如果一个 <code>newline_checker</code> 被用于执行输出，对于字符序列是否以换行符结束的检测只有在 newline_checker 被 <a href="../functions/close.html">closed</a> 时才能发现。而被 <a href="../functions/close.html"><code>close</code></a> 抛出的异常肯定会被are caught and ignored by the Iostreams 库捕获并忽略。因此，在执行输出时指定 <code>newline::final_newline</code> 作为 <code>target</code> 的一部分是没有效果的。要检查一个字符序列是否以换行符结束，应在 <code>newline_checker</code> 被关闭后调用 <a href="#newline_checker_has_final_newline"><code>has_final_newline</code></a>&nbsp;.
+
+<a name="newline_checker_is_posix"></a>
+</p>
+<h4><code>newline_checker::is_posix</code></h4>
+
+
+<pre class="broken_ie">    <span class="keyword">bool</span> is_posix() <span class="keyword">const</span>;</pre>
+
+
+<p>返回 true 如果当前已检测的字符中包含至少一个 POSIX 换行符且没有其它类型的换行符。</p>
+
+
+<a name="newline_checker_is_dos"></a>
+<h4><code>newline_checker::is_dos</code></h4>
+
+
+<pre class="broken_ie">    <span class="keyword">bool</span> is_dos() <span class="keyword">const</span>;</pre>
+
+
+<p>返回 true 如果当前已检测的字符中包含至少一个 DOS 换行符且没有其它类型的换行符。</p>
+
+
+<a name="newline_checker_is_mac"></a>
+<h4><code>newline_checker::is_mac</code></h4>
+
+
+<pre class="broken_ie">    <span class="keyword">bool</span> is_mac() <span class="keyword">const</span>;</pre>
+
+
+<p>返回 true 如果当前已检测的字符中包含至少一个经典 Mac 换行符且没有其它类型的换行符。</p>
+
+
+<a name="newline_checker_is_mixed_posix"></a>
+<h4><code>newline_checker::is_mixed_posix</code></h4>
+
+
+<pre class="broken_ie">    <span class="keyword">bool</span> is_mixed_posix() <span class="keyword">const</span>;</pre>
+
+
+<p>返回 true 如果当前已检测的字符中包含至少一个 POSIX 换行符。</p>
+
+
+<a name="newline_checker_is_mixed_dos"></a>
+<h4><code>newline_checker::is_mixed_dos</code></h4>
+
+
+<pre class="broken_ie">    <span class="keyword">bool</span> is_mixed_dos() <span class="keyword">const</span>;</pre>
+
+
+<p>返回 true 如果当前已检测的字符中包含至少一个 DOS 换行符。</p>
+
+
+<a name="newline_checker_is_mixed_mac"></a>
+<h4><code>newline_checker::is_mixed_mac</code></h4>
+
+
+<pre class="broken_ie">    <span class="keyword">bool</span> is_mixed_mac() <span class="keyword">const</span>;</pre>
+
+
+<p>返回 true 如果当前已检测的字符中包含至少一个经典 Mac 换行符。</p>
+
+
+<a name="newline_checker_is_mixed"></a>
+<h4><code>newline_checker::is_mixed</code></h4>
+
+
+<pre class="broken_ie">    <span class="keyword">bool</span> is_mixed() <span class="keyword">const</span>;</pre>
+
+
+<p>返回 true 如果当前已检测的字符中包含一种以上的换行符。</p>
+
+
+<a name="newline_checker_has_final_newline"></a>
+<h4><code>newline_checker::has_final_newline</code></h4>
+
+
+<pre class="broken_ie">    <span class="keyword">bool</span> has_final_newline() <span class="keyword">const</span>;</pre>
+
+
+<p>返回 <code>true</code> 如果 <code>newline_checker</code> 已关闭或已到达流末尾，且被检测的字符序列以换行符结束。</p>
+
+
+<a name="newline_error"></a>
+<h3>4. 类模板 <code>newline_error</code></h3>
+
+
+<h4>描述</h4>
+
+
+<p>用于 <a href="#newline_checker"><code>newline_checker</code></a> 报告错误。</p>
+
+
+<h4>摘要</h4>
+
+
+<pre class="broken_ie"><span class="keyword">class</span> <span class="defined">newline_error</span> : <span class="keyword">public</span> std::ios_base::failure {<br><span class="keyword">public:</span>
+    <span class="keyword">bool</span> <a class="documented" href="#newline_error_is_posix">is_posix</a>() <span class="keyword">const</span>;<br>    <span class="keyword">bool</span> <a class="documented" href="#newline_error_is_dos">is_dos</a>() <span class="keyword">const</span>;<br>    <span class="keyword">bool</span> <a class="documented" href="#newline_error_is_mac">is_mac</a>() <span class="keyword">const</span>;<br>    <span class="keyword">bool</span> <a class="documented" href="#newline_error_is_mixed_posix">is_mixed_posix</a>() <span class="keyword">const</span>;<br>    <span class="keyword">bool</span> <a class="documented" href="#newline_error_is_mixed_dos">is_mixed_dos</a>() <span class="keyword">const</span>;<br>    <span class="keyword">bool</span> <a class="documented" href="#newline_error_is_mixed_mac">is_mixed_mac</a>() <span class="keyword">const</span>;<br>    <span class="keyword">bool</span> <a class="documented" href="#newline_error_is_mixed">is_mixed</a>() <span class="keyword">const</span>;<br>    <span class="keyword">bool</span> <a class="documented" href="#newline_error_has_final_newline">has_final_newline</a>() <span class="keyword">const</span>;<br>};</pre>
+
+
+<a name="newline_error_is_posix"></a>
+<h4><code>newline_error::is_posix</code></h4>
+
+
+<pre class="broken_ie">    <span class="keyword">bool</span> is_posix() <span class="keyword">const</span>;</pre>
+
+
+<p>返回 true 如果抛出该异常的 <code>newline_checker</code> 所检测过的字符中包含至少一个 POSIX 换行符且没有其它类型的换行符。</p>
+
+
+<a name="newline_error_is_dos"></a>
+<h4><code>newline_error::is_dos</code></h4>
+
+
+<pre class="broken_ie">    <span class="keyword">bool</span> is_dos() <span class="keyword">const</span>;</pre>
+
+
+<p>返回 true 如果抛出该异常的 <code>newline_checker</code> 所检测过的字符中包含至少一个 DOS 换行符且没有其它类型的换行符。</p>
+
+
+<a name="newline_error_is_mac"></a>
+<h4><code>newline_error::is_mac</code></h4>
+
+
+<pre class="broken_ie">    <span class="keyword">bool</span> is_mac() <span class="keyword">const</span>;</pre>
+
+
+<p>返回 true 如果抛出该异常的 <code>newline_checker</code> 所检测过的字符中包含至少一个经典 Mac 换行符且没有其它类型的换行符。</p>
+
+
+<a name="newline_error_is_mixed_posix"></a>
+<h4><code>newline_error::is_mixed_posix</code></h4>
+
+
+<pre class="broken_ie">    <span class="keyword">bool</span> is_mixed_posix() <span class="keyword">const</span>;</pre>
+
+
+<p>返回 true 如果抛出该异常的 <code>newline_checker</code> 所检测过的字符中包含至少一个 POSIX 换行符。</p>
+
+
+<a name="newline_error_is_mixed_dos"></a>
+<h4><code>newline_error::is_mixed_dos</code></h4>
+
+
+<pre class="broken_ie">    <span class="keyword">bool</span> is_mixed_dos() <span class="keyword">const</span>;</pre>
+
+
+<p>返回 true 如果抛出该异常的 <code>newline_checker</code> 所检测过的字符中包含至少一个 DOS 换行符。</p>
+
+
+<a name="newline_error_is_mixed_mac"></a>
+<h4><code>newline_error::is_mixed_mac</code></h4>
+
+
+<pre class="broken_ie">    <span class="keyword">bool</span> is_mixed_mac() <span class="keyword">const</span>;</pre>
+
+
+<p>返回 true 如果抛出该异常的 <code>newline_checker</code> 所检测过的字符中包含至少一个经典 Mac 换行符。</p>
+
+
+<a name="newline_error_is_mixed"></a>
+<h4><code>newline_error::is_mixed</code></h4>
+
+
+<pre class="broken_ie">    <span class="keyword">bool</span> is_mixed() <span class="keyword">const</span>;</pre>
+
+
+<p>返回 true 如果抛出该异常的 <code>newline_checker</code> 所检测过的字符中包含一种以上换行符。</p>
+
+
+<a name="newline_error_has_final_newline"></a>
+<h4><code>newline_error::has_final_newline</code></h4>
+
+
+<pre class="broken_ie">    <span class="keyword">bool</span> has_final_newline() <span class="keyword">const</span>;</pre>
+
+
+<p>返回 <code>true</code> 如果抛出该异常的 <code>newline_checker</code> 已被关闭或或已到达流末尾，且被检测的字符序列以换行符结束。</p>
+
+
+<!-- Begin Footer -->
+
+<hr>
+<p class="copyright">Revised
+<!--webbot bot="Timestamp" S-Type="EDITED" S-Format="%d %B, %Y" startspan -->
+20 May, 2004
+<!--webbot bot="Timestamp" endspan i-checksum="38504" -->
+</p>
+
+
+<p class="copyright">&copy; Copyright <a href="http://www.kangaroologic.com" target="_top">Jonathan Turkanis</a>, 2004</p>
+
+<p class="copyright"> 
+    Distributed under the Boost Software License, Version 1.0. (See accompanying file LICENSE_1_0.txt or copy at <a href="http://www.boost.org/LICENSE_1_0.txt">http://www.boost.org/LICENSE_1_0.txt</a>)
+</p>
+
+
+<!-- End Footer -->
+
+</body>
+</html>

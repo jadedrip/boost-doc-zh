@@ -1,0 +1,111 @@
+﻿<html>
+<head>
+<meta http-equiv="Content-Type" content="text/html; charset=UTF-8">
+<title>Relation to other Boost libraries（和其它 Boost 库的关系）</title>
+<link rel="stylesheet" href="../boostbook.css" type="text/css">
+<meta name="generator" content="DocBook XSL Stylesheets V1.68.1">
+<link rel="start" href="../index.html" title="The Boost C++ Libraries BoostBook Documentation Subset">
+<link rel="up" href="../lambda.html" title="Chapter 8. Boost.Lambda">
+<link rel="prev" href="s07.html" title="Practical considerations">
+<link rel="next" href="s09.html" title="Contributors">
+</head>
+<body bgcolor="white" text="black" link="#0000FF" vlink="#840084" alink="#0000FF">
+<table cellpadding="2" width="100%">
+<td valign="top"><img alt="Boost C++ Libraries" width="277" height="86" src="../../../boost.png"></td>
+<td align="center"><a href="../../../index.htm">Home</a></td>
+<td align="center"><a href="../../../libs/libraries.htm">Libraries</a></td>
+<td align="center"><a href="../../../people/people.htm">People</a></td>
+<td align="center"><a href="../../../more/faq.htm">FAQ</a></td>
+<td align="center"><a href="../../../more/index.htm">More</a></td>
+</table>
+<hr>
+<div class="spirit-nav">
+<a accesskey="p" href="s07.html"><img src="../images/prev.png" alt="Prev"></a><a accesskey="u" href="../lambda.html"><img src="../images/up.png" alt="Up"></a><a accesskey="h" href="../index.html"><img src="../images/home.png" alt="Home"></a><a accesskey="n" href="s09.html"><img src="../images/next.png" alt="Next"></a>
+</div>
+<div class="section" lang="en">
+<div class="titlepage"><div><div><h2 class="title" style="clear: both">
+<a name="id1249733"></a>Relation to other Boost libraries（和其它 Boost 库的关系）</h2></div></div></div>
+<div class="toc"><dl>
+<dt><span class="section"><a href="s08.html#id1249739">Boost Function</a></span></dt>
+<dt><span class="section"><a href="s08.html#id1249832">Boost Bind</a></span></dt>
+</dl></div>
+<div class="section" lang="en">
+<div class="titlepage"><div><div><h3 class="title">
+<a name="id1249739"></a>Boost Function</h3></div></div></div>
+<p>有时候把 lambda 仿函数存储到变量中是很方便的。但是，即使是最简单的 lambda 仿函数的类型也是又长又难看的，而且，声明具有 lambda 仿函数类型的变量基本上是不可能的。<span class="emphasis"><em>The Boost Function library</em></span> [<a href="../lambda.html#cit:boost::function" title="[function]"><span class="abbrev">function</span></a>] 为任意的函数对象（比如 lambda 仿函数）声明了包装类，而且这些包装类的类型是非常容易输出的。例如：</p>
+<pre class="programlisting">
+boost::function&lt;int(int, int)&gt; f = _1 + _2;
+boost::function&lt;int&amp;(int&amp;)&gt; g = (_1 += 10);
+int i = 1, j = 2;
+f(i, j); // returns 3
+g(i);    // sets i to = 11;
+</pre>
+<p>被包装函数对象的返回值和参数类型必须作为包装类模板 <code class="literal">boost::function</code> 的模板参数显式写出来，即使是具有其它泛型参数担的 lambda 仿函数被包装时也是如此。用 <code class="literal">boost::function</code> 包装一个函数对象引起的性能成本相当于虚拟函数的匹配，虽然这里并没有真的使用虚拟函数。需要注意将 lambda 仿函数存储在 <code class="literal">boost::function</code>  中会引发的一个危险。某种类型的 lambda 仿函数可能将引用存储在已绑定参数中，而不是持有 lambda 表达式的参数的拷贝。当临时 lambda 仿函数对象用在 STL 算法调用中，这总是安全的，因为在 STL 算法调用完成之后，lambda 仿函数立即被销毁。但是，一个被包装在 <code class="literal">boost::function</code>  中的 lambda 仿函数可以继续存在，造成悬挂引用的可能性。例如：</p>
+<pre class="programlisting">
+int* sum = new int();
+*sum = 0;
+boost::function&lt;int&amp;(int)&gt; counter = *sum += _1;
+counter(5); // ok, *sum = 5;
+delete sum; 
+counter(3); // error, *sum does not exist anymore
+</pre>
+<p>
+
+</p>
+</div>
+<div class="section" lang="en">
+<div class="titlepage"><div><div><h3 class="title">
+<a name="id1249832"></a>Boost Bind</h3></div></div></div>
+<div class="toc"><dl><dt><span class="section"><a href="s08.html#id1249878">First argument of bind expression（bind 表达式的第一个参数）</a></span></dt></dl></div>
+<p><span class="emphasis"><em>The Boost Bind</em></span> [<a href="../lambda.html#cit:boost::bind" title="[bind]"><span class="abbrev">bind</span></a>] 库和 BLL 有部分重叠功能。基本上，Boost Bind 库（简称为 BB）实现了 BLL 的 bind 表达式部分。但是，还是有一些语义上的不同。</p>
+<p>BLL 和 BB 各自单独发展，而且有着各自不同的实现。这就意味着来自 BB 的 bind 表达式不能用于 BLL 的 bind 表达式，或者其它类型的 lambda 表达式中。对于在 BB 中使用 BLL bind 表达式也有同样的问题。但是，库还是会共存，因为 BB 库的名字在 <code class="literal">boost</code> 名字空间中，而 BLL 名字在 <code class="literal">boost::lambda</code> 名字空间中。</p>
+<p>BLL 需要一个与 C++ 标准比较一致的编译器，BB 库的可移植性更好一些，可以用于更多的编译器。</p>
+<p>下面两段描述 BB 的 bind 表达式和 BLL 的 bind 表达式有哪些语义上的区别。</p>
+<div class="section" lang="en">
+<div class="titlepage"><div><div><h4 class="title">
+<a name="id1249878"></a>First argument of bind expression（bind 表达式的第一个参数）</h4></div></div></div>
+<p>BB 中的 bind 表达式的第一个参数，目标函数，与其它参数的被处理手段不同，因为这个参数没有发生参数替换。在 BLL 中，第一个参数在这方面没什么特殊。例如：</p>
+<pre class="programlisting">
+template&lt;class F&gt;
+int foo(const F&amp; f) {
+  int x;
+  ..
+  bind(f, _1)(x);
+  ...
+}
+</pre>
+<pre class="programlisting">
+int bar(int, int);
+nested(bind(bar, 1, _1));
+</pre>
+<p><code class="literal">foo</code> 中的 bind 表达式变成：</p>
+<pre class="programlisting">
+bind(bind(bar, 1, _1), _1)(x)
+</pre>
+<p>BLL 将此解释为：</p>
+<pre class="programlisting">
+bar(1, x)(x)
+</pre>
+<p>而 BB 库解释为</p>
+<pre class="programlisting">
+bar(1, x)
+</pre>
+<p>为了在 BLL 中得到这个功能，<code class="literal">foo</code> 函数中的 bind 表达式可以写成：</p>
+<pre class="programlisting">
+bind(unlambda(f), _1)(x);
+</pre>
+<p>就像 <a href="le_in_details.html#lambda.unlambda" title="Unlambda"> &#8220;Unlambda&#8221; 部分</a>的解释。</p>
+</div>
+<p>BB 库最多支持 9 个占位符，而 BLL 只定义了三个占位符。不再提供更多的根本原因，在于任何 STL 算法接受的函数对象的最大数量是 2。BB 库中的占位符数量很容易增加。在 BLL 中也可以做到，但是更费事一些。BLL 将实际参数传递到 lambda 仿函数中时通常不会把它们包装到一个 tuple 对象中，除非它们本身就是 tuple。原因在于一些广泛使用的编译器不能将中间 tuple 对象优化掉。中间 tuples 的构建可能引起重大的性能损失，特别是对于最简单的（同时也是最普通的）lambda 仿函数。我们致力于一个混合方案，即允许更多的占位符，同时又不危害简单 lambda 仿函数的性能。</p>
+</div>
+</div>
+<table width="100%"><tr>
+<td align="left"></td>
+<td align="right"><small>Copyright  1999-2004 Jaakko Jrvi, Gary Powell</small></td>
+</tr></table>
+<hr>
+<div class="spirit-nav">
+<a accesskey="p" href="s07.html"><img src="../images/prev.png" alt="Prev"></a><a accesskey="u" href="../lambda.html"><img src="../images/up.png" alt="Up"></a><a accesskey="h" href="../index.html"><img src="../images/home.png" alt="Home"></a><a accesskey="n" href="s09.html"><img src="../images/next.png" alt="Next"></a>
+</div>
+</body>
+</html>

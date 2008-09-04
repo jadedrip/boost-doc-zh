@@ -1,0 +1,1934 @@
+<!DOCTYPE HTML PUBLIC "-//W3C//DTD HTML 4.0.1 Transitional//EN">
+<html>
+<head>
+
+
+
+
+
+  
+  
+  
+  
+  <meta http-equiv="Content-Type" content="text/html; charset=UTF-8">
+
+
+
+
+
+
+  
+  
+  
+  
+  
+  
+  
+  
+  <title>Boost.MultiIndex Documentation - Tutorial - Key extraction</title>
+  <link rel="stylesheet" href="../style.css" type="text/css">
+
+
+
+
+
+  
+  
+  
+  
+  <link rel="start" href="../index.html">
+
+
+
+
+
+  
+  
+  
+  
+  <link rel="prev" href="indices.html">
+
+
+
+
+
+  
+  
+  
+  
+  <link rel="up" href="index.html">
+
+
+
+
+
+  
+  
+  
+  
+  <link rel="next" href="creation.html">
+</head>
+
+
+<body>
+
+
+
+
+
+<h1><img src="../../../../boost.png" alt="boost.png (6897 bytes)" align="middle" height="86" width="277">Boost.MultiIndex 指南: 键提取</h1>
+
+
+
+
+
+
+<div class="prev_link"><a href="indices.html"><img src="../prev.gif" alt="index types" border="0"><br>
+
+
+
+
+
+Index types索引的类型
+</a></div>
+
+
+
+
+
+<div class="up_link"><a href="index.html"><img src="../up.gif" alt="Boost.MultiIndex tutorial" border="0"><br>
+
+
+
+
+
+Boost.MultiIndex 指南
+</a></div>
+
+
+
+
+
+<div class="next_link"><a href="creation.html"><img src="../next.gif" alt="container creation" border="0"><br>
+
+
+
+
+
+Container creation容器的创建
+</a></div>
+
+
+
+
+<br style="" clear="all">
+
+
+
+
+
+
+<hr>
+
+<h2>Contents目录</h2>
+
+
+
+
+
+
+<ul>
+
+
+
+
+
+  <li><a href="#intro">Introduction简介</a>
+    
+    
+    
+    
+    
+    <ul>
+
+
+
+
+
+      <li><a href="#read_write_key_extractors">Read/write key extractors读/写键提取器</a></li>
+
+
+
+
+
+    
+    
+    
+    
+    
+    </ul>
+
+
+
+
+
+  </li>
+
+
+
+
+
+  <li><a href="#predefined_key_extractors">Predefined key extractors预定义的键提取器</a>
+    
+    
+    
+    
+    
+    <ul>
+
+
+
+
+
+      <li><a href="#identity"><code>identity</code></a></li>
+
+
+
+
+
+      <li><a href="#member"><code>member</code></a></li>
+
+
+
+
+
+      <li><a href="#const_mem_fun"><code>const_mem_fun</code> 和 <code>mem_fun</code></a></li>
+
+
+      <li><a href="#global_fun"><code>global_fun</code></a> </li>
+
+
+
+
+
+    
+    
+    
+    
+    
+    </ul>
+
+
+
+
+
+  </li>
+
+
+
+
+
+  <li><a href="#user_defined_key_extractors">User-defined key extractors用户定义的键提取器</a></li>
+
+
+
+
+
+  <li><a href="#composite_keys">Composite keys组合键</a>
+    
+    
+    
+    
+    
+    <ul>
+
+
+
+
+
+      <li><a href="#composite_keys_hash">Composite keys and hashed indices组合键和散列索引</a></li>
+
+
+
+
+
+    
+    
+    
+    
+    
+    </ul>
+
+
+
+
+
+  </li>
+
+
+
+
+
+  <li><a href="#advanced_key_extractors">Boost.MultiIndex 键提取器的高级特性</a></li>
+
+
+
+
+
+</ul>
+
+
+
+
+
+
+<h2><a name="intro">Introduction简介</a></h2>
+
+
+
+
+
+
+<p>
+STL关联式容器中已经有键的概念，虽然还只是初始的形式。这些容器的键是以嵌套类型 key_type 来标识的；对于 <code>std::set</code>s 和 <code>std::multiset</code>s,
+<code>key_type</code> 就是 <code>value_type</code>, 即键就是元素本身。<code>std::map</code> 和 <code>std::multimap</code> 管理的元素的类型则是 <code>std::pair&lt;const Key,T&gt;</code>, 其中 first
+成员就是键。无论是哪种情形，从一个给定元素中获取键的过程都是固定的，而不能由用户定制。
+</p>
+
+
+
+
+
+
+<p>STL关联式容器所提供的这种固定的键提取机制在 Boost.MultiIndex 中就显得伸缩性不够好，在 Boost.MultiIndex 中多个索引共享同一个 <code>value_type</code> 定义，但可能具有完全不同的查找语义。由于这个原因，Boost.MultiIndex 提出了一个 
+<a href="../reference/key_extraction.html#key_extractors"><code>Key
+Extractor键提取器</code></a> 的概念，以使得在定义基于键的索引时更为清晰和可控。
+</p>
+
+
+
+
+
+
+<p>直观地说，键提取器就是一个函数对象，它接受一个元素的引用而返回相关联的键。正式的定义还需要一些对处理稳定性的合理约束，键提取器被假定为在传
+入同一个元素时必须返回相同的键：这一点与&ldquo;键是元素的一部分且不依赖于外部数据&rdquo;这一非正式定义是一致的。
+</p>
+
+
+
+
+
+
+<h3><a name="read_write_key_extractors">Read/write key extractors读/写键提取器</a></h3>
+
+
+
+
+
+
+<p>如果键提取器在传入一个非常量性元素时返回一个非常量性的键引用，那么这个键提取器就被称作为<span style="font-style: italic;">读/写的</span>，否则就称为<span style="font-style: italic;">只读的</span>。Boost.MultiIndex 要求在使用有序索引或散列索引的 <code>modify_key</code> 成员函数时，键提取器必须是读/写的。在其它所有情形下，则只需要只读的键提取器。<a href="#advanced_key_extractors">Boost.MultiIndex 键提取器的高级特性</a> 一节详细说明了哪些预定义的键提取器是读/写的。
+</p>
+
+
+
+
+
+
+<h2><a name="predefined_key_extractors">Predefined key extractors预定义的键提取器</a></h2>
+
+
+
+
+
+
+<h3><a name="identity"><code>identity</code></a></h3>
+
+
+
+
+
+
+<p><a href="../reference/key_extraction.html#identity"><code>identity</code></a>
+键提取器将整个底层对象作为关联的键返回：
+</p>
+
+
+
+
+
+
+<blockquote>
+  
+  
+  
+  
+  <pre><span class="preprocessor">#include</span> <span class="special">&lt;</span><span class="identifier">boost</span><span class="special">/</span><span class="identifier">multi_index_container</span><span class="special">.</span><span class="identifier">hpp</span><span class="special">&gt;</span>
+<span class="preprocessor">#include</span> <span class="special">&lt;</span><span class="identifier">boost</span><span class="special">/</span><span class="identifier">multi_index</span><span class="special">/</span><span class="identifier">ordered_index</span><span class="special">.</span><span class="identifier">hpp</span><span class="special">&gt;</span>
+<span class="preprocessor">#include</span> <span class="special">&lt;</span><span class="identifier">boost</span><span class="special">/</span><span class="identifier">multi_index</span><span class="special">/</span><span class="identifier">identity</span><span class="special">.</span><span class="identifier">hpp</span><span class="special">&gt;</span>
+
+<span class="identifier">multi_index_container</span><span class="special">&lt;</span>
+  <span class="keyword">int</span><span class="special">,</span>
+  <span class="identifier">indexed_by</span><span class="special">&lt;</span>
+    <span class="identifier">ordered_unique</span><span class="special">&lt;</span>
+      <span class="identifier">identity</span><span class="special">&lt;</span><span class="keyword">int</span><span class="special">&gt;</span> <span class="comment">// 键为整个元素</span>
+    <span class="special">&gt;</span>
+  <span class="special">&gt;</span>
+<span class="special">&gt;</span> <span class="identifier">cont</span><span class="special">;</span>
+  </pre>
+
+
+
+
+</blockquote>
+
+
+
+
+
+
+<h3><a name="member"><code>member</code></a></h3>
+
+
+
+
+
+
+<p>
+<a href="../reference/key_extraction.html#member"><code>member</code></a>
+键提取器返回底层对象的一个指定数据成员的引用。例如，我们熟悉的 employee 容器的以下版本：
+</p>
+
+
+
+
+
+
+<blockquote>
+  
+  
+  
+  
+  <pre><span class="preprocessor">#include</span> <span class="special">&lt;</span><span class="identifier">boost</span><span class="special">/</span><span class="identifier">multi_index_container</span><span class="special">.</span><span class="identifier">hpp</span><span class="special">&gt;</span>
+<span class="preprocessor">#include</span> <span class="special">&lt;</span><span class="identifier">boost</span><span class="special">/</span><span class="identifier">multi_index</span><span class="special">/</span><span class="identifier">ordered_index</span><span class="special">.</span><span class="identifier">hpp</span><span class="special">&gt;</span>
+<span class="preprocessor">#include</span> <span class="special">&lt;</span><span class="identifier">boost</span><span class="special">/</span><span class="identifier">multi_index</span><span class="special">/</span><span class="identifier">identity</span><span class="special">.</span><span class="identifier">hpp</span><span class="special">&gt;</span>
+<span class="preprocessor">#include</span> <span class="special">&lt;</span><span class="identifier">boost</span><span class="special">/</span><span class="identifier">multi_index</span><span class="special">/</span><span class="identifier">member</span><span class="special">.</span><span class="identifier">hpp</span><span class="special">&gt;</span>
+
+<span class="keyword">typedef</span> <span class="identifier">multi_index_container</span><span class="special">&lt;</span>
+  <span class="identifier">employee</span><span class="special">,</span>
+  <span class="identifier">indexed_by</span><span class="special">&lt;</span>
+    <span class="identifier">ordered_unique</span><span class="special">&lt;</span><span class="identifier">identity</span><span class="special">&lt;</span><span class="identifier">employee</span><span class="special">&gt;</span> <span class="special">&gt;,</span>
+    <span class="identifier">ordered_non_unique</span><span class="special">&lt;</span><span class="identifier">member</span><span class="special">&lt;</span><span class="identifier">employee</span><span class="special">,</span><span class="identifier">std</span><span class="special">::</span><span class="identifier">string</span><span class="special">,&amp;</span><span class="identifier">employee</span><span class="special">::</span><span class="identifier">name</span><span class="special">&gt;</span> <span class="special">&gt;,</span>
+    <span class="identifier">ordered_unique</span><span class="special">&lt;</span><span class="identifier">member</span><span class="special">&lt;</span><span class="identifier">employee</span><span class="special">,</span><span class="keyword">int</span><span class="special">,&amp;</span><span class="identifier">employee</span><span class="special">::</span><span class="identifier">ssnumber</span><span class="special">&gt;</span> <span class="special">&gt;</span>
+  <span class="special">&gt;</span>
+<span class="special">&gt;</span> <span class="identifier">employee_set</span><span class="special">;</span>
+  </pre>
+
+
+
+
+</blockquote>
+
+
+
+
+
+
+<p>第二个和第三个索引使用了 <code>member</code> 键提取器，分别作用于
+<code>employee::name</code> 和 <code>employee::ssnumber</code>。member的实例化规范中还需要一点点人手的工作：
+</p>
+
+
+
+
+
+
+<blockquote>
+  
+  
+  
+  
+  <pre><span class="identifier">member</span><span class="special">&lt;</span><span class="identifier"><i>(base type)</i></span><span class="special">,</span><span class="identifier"><i>(key type)</i></span><span class="special">,</span><span class="identifier"><i>(pointer to member)</i></span><span class="special">&gt;</span>
+  </pre>
+
+
+
+
+</blockquote>
+
+
+
+
+
+
+<p>看起来第一个和第二个参数是多余的，因为底层对象的类型以及关联的数据成员的类型信息都应包含在 pointer to member 参数中：但不幸的是，在目前的C++机制中这些信息是取不出来的，这也使得 member 的语法有点复杂。
+</p>
+
+
+
+
+
+
+<h3><a name="const_mem_fun"><code>const_mem_fun</code> 和 <code>mem_fun</code></a></h3>
+
+
+
+
+
+
+<p>有时候，索引的键并不一定是元素的某个具体数据成员，而是某个成员函数的返回值。这类似于有些关系数据库所支持的 <i>calculated indices计算索引</i> 的概念。Boost.MultiIndex 通过
+<a href="../reference/key_extraction.html#const_mem_fun"><code>const_mem_fun</code></a> 来支持这类键提取器。考虑以下容器，该容器的第三个索引以 name 字段的长度来排序：
+</p>
+
+
+
+
+
+
+<blockquote>
+  
+  
+  
+  
+  <pre><span class="preprocessor">#include</span> <span class="special">&lt;</span><span class="identifier">boost</span><span class="special">/</span><span class="identifier">multi_index_container</span><span class="special">.</span><span class="identifier">hpp</span><span class="special">&gt;</span>
+<span class="preprocessor">#include</span> <span class="special">&lt;</span><span class="identifier">boost</span><span class="special">/</span><span class="identifier">multi_index</span><span class="special">/</span><span class="identifier">ordered_index</span><span class="special">.</span><span class="identifier">hpp</span><span class="special">&gt;</span>
+<span class="preprocessor">#include</span> <span class="special">&lt;</span><span class="identifier">boost</span><span class="special">/</span><span class="identifier">multi_index</span><span class="special">/</span><span class="identifier">identity</span><span class="special">.</span><span class="identifier">hpp</span><span class="special">&gt;</span>
+<span class="preprocessor">#include</span> <span class="special">&lt;</span><span class="identifier">boost</span><span class="special">/</span><span class="identifier">multi_index</span><span class="special">/</span><span class="identifier">member</span><span class="special">.</span><span class="identifier">hpp</span><span class="special">&gt;</span>
+<span class="preprocessor">#include</span> <span class="special">&lt;</span><span class="identifier">boost</span><span class="special">/</span><span class="identifier">multi_index</span><span class="special">/</span><span class="identifier">mem_fun</span><span class="special">.</span><span class="identifier">hpp</span><span class="special">&gt;</span>
+
+<span class="keyword">struct</span> <span class="identifier">employee</span>
+<span class="special">{</span>
+  <span class="keyword">int</span>         <span class="identifier">id</span><span class="special">;</span>
+  <span class="identifier">std</span><span class="special">::</span><span class="identifier">string</span> <span class="identifier">name</span><span class="special">;</span>
+
+  <span class="identifier">employee</span><span class="special">(</span><span class="keyword">int</span> <span class="identifier">id</span><span class="special">,</span><span class="keyword">const</span> <span class="identifier">std</span><span class="special">::</span><span class="identifier">string</span><span class="special">&amp;</span> <span class="identifier">name</span><span class="special">):</span><span class="identifier">id</span><span class="special">(</span><span class="identifier">id</span><span class="special">),</span><span class="identifier">name</span><span class="special">(</span><span class="identifier">name</span><span class="special">){}</span>
+
+  <span class="keyword">bool</span> <span class="keyword">operator</span><span class="special">&lt;(</span><span class="keyword">const</span> <span class="identifier">employee</span><span class="special">&amp;</span> <span class="identifier">e</span><span class="special">)</span><span class="keyword">const</span><span class="special">{</span><span class="keyword">return</span> <span class="identifier">id</span><span class="special">&lt;</span><span class="identifier">e</span><span class="special">.</span><span class="identifier">id</span><span class="special">;}</span>
+
+  <span class="comment">// 返回 name 字段的长度</span>
+  <span class="identifier">std</span><span class="special">::</span><span class="identifier">size_t</span> <span class="identifier">name_length</span><span class="special">()</span><span class="keyword">const</span><span class="special">{</span><span class="keyword">return</span> <span class="identifier">name</span><span class="special">.</span><span class="identifier">size</span><span class="special">();}</span>
+<span class="special">};</span>
+
+<span class="keyword">typedef</span> <span class="identifier">multi_index_container</span><span class="special">&lt;</span>
+  <span class="identifier">employee</span><span class="special">,</span>
+  <span class="identifier">indexed_by</span><span class="special">&lt;</span>
+    <span class="comment">// 按 employee::operator&lt; 排序</span>
+    <span class="identifier">ordered_unique</span><span class="special">&lt;</span><span class="identifier">identity</span><span class="special">&lt;</span><span class="identifier">employee</span><span class="special">&gt;</span> <span class="special">&gt;,</span>
+    
+    <span class="comment">// 按 less&lt;string&gt; 对 name 排序</span>
+    <span class="identifier">ordered_non_unique</span><span class="special">&lt;</span><span class="identifier">member</span><span class="special">&lt;</span><span class="identifier">employee</span><span class="special">,</span><span class="identifier">std</span><span class="special">::</span><span class="identifier">string</span><span class="special">,&amp;</span><span class="identifier">employee</span><span class="special">::</span><span class="identifier">name</span><span class="special">&gt;</span> <span class="special">&gt;,</span>
+    
+    <span class="comment">// 按 less&lt;int&gt; 对 name_length() 排序</span>
+    <span class="identifier">ordered_non_unique</span><span class="special">&lt;</span>
+      <span class="identifier">const_mem_fun</span><span class="special">&lt;</span><span class="identifier">employee</span><span class="special">,</span><span class="identifier">std</span><span class="special">::</span><span class="identifier">size_t</span><span class="special">,&amp;</span><span class="identifier">employee</span><span class="special">::</span><span class="identifier">name_length</span><span class="special">&gt;</span>
+    <span class="special">&gt;</span>
+  <span class="special">&gt;</span>
+<span class="special">&gt;</span> <span class="identifier">employee_set</span><span class="special">;</span>
+  </pre>
+
+
+
+
+</blockquote>
+
+
+
+
+
+
+<p>
+<code>const_mem_fun</code> 的语法与
+<a href="#member"><code>member</code></a> 相似：
+</p>
+
+
+
+
+
+
+<blockquote>
+  
+  
+  
+  
+  <pre><span class="identifier">const_mem_fun</span><span class="special">&lt;</span><span class="identifier"><i>(base type)</i></span><span class="special">,</span><span class="identifier"><i>(key type)</i></span><span class="special">,</span><span class="identifier"><i>(pointer to member function)</i></span><span class="special">&gt;</span>
+  </pre>
+
+
+
+
+</blockquote>
+
+
+
+
+
+
+<p>其中的成员函数必须是 <code>const 的，且不带参数并返回一个由key type指定类型的值。多数情况下你都要使用</code> <code>const</code> 成员函数，因为 <code>multi_index_container</code> 中的元素都是被当作常量来处理的，就象 <code>std::set 里面的元素一样。但是，也提供了另一个版本</code>
+<a href="../reference/key_extraction.html#mem_fun"><code>mem_fun</code></a>
+用于非常量性的成员函数，在
+<a href="#advanced_key_extractors">advanced features
+of Boost.MultiIndex 键提取器的高级特性</a> 一节中将讨论到使用它的情形。
+</p>
+
+
+
+
+
+
+
+
+<p>例子一节中的 <a href="../examples.html#example2">Example 2</a> 有一个完整的程序，示范了如何使用 <code>const_mem_fun</code>.</p>
+
+
+<h3><a name="global_fun"><code>global_fun</code></a></h3>
+
+
+
+<p><code>const_mem_fun</code> 和 <code>mem_fun</code> 是基于提取键值的基类型的一个给定成员函数的，<a href="../reference/key_extraction.html#global_fun"><code>global_fun</code></a> 
+则使用一个全局函数(或静态成员函数)，该函数以基类型作为其参数并返回键值： </p>
+
+
+
+<blockquote>
+  
+  
+  <pre><span class="preprocessor">#include</span> <span class="special">&lt;</span><span class="identifier">boost</span><span class="special">/</span><span class="identifier">multi_index_container</span><span class="special">.</span><span class="identifier">hpp</span><span class="special">&gt;</span><br><span class="preprocessor">#include</span> <span class="special">&lt;</span><span class="identifier">boost</span><span class="special">/</span><span class="identifier">multi_index</span><span class="special">/</span><span class="identifier">ordered_index</span><span class="special">.</span><span class="identifier">hpp</span><span class="special">&gt;</span><br><span class="preprocessor">#include</span> <span class="special">&lt;</span><span class="identifier">boost</span><span class="special">/</span><span class="identifier">multi_index</span><span class="special">/</span><span class="identifier">global_fun</span><span class="special">.</span><span class="identifier">hpp</span><span class="special">&gt;</span><br><br><span class="keyword">struct</span> <span class="identifier">rectangle</span><br><span class="special">{</span><br>  <span class="keyword">int</span> <span class="identifier">x0</span><span class="special">,</span><span class="identifier">y0</span><span class="special">;</span><br>  <span class="keyword">int</span> <span class="identifier">x1</span><span class="special">,</span><span class="identifier">y1</span><span class="special">;</span><br><span class="special">};</span><br><br><span class="keyword">unsigned</span> <span class="keyword">long</span> <span class="identifier">area</span><span class="special">(</span><span class="keyword">const</span> <span class="identifier">rectangle</span><span class="special">&amp;</span> <span class="identifier">r</span><span class="special">)</span><br><span class="special">{</span><br>  <span class="keyword">return</span> <span class="special">(</span><span class="keyword">unsigned</span> <span class="keyword">long</span><span class="special">)(</span><span class="identifier">r</span><span class="special">.</span><span class="identifier">x1</span><span class="special">-</span><span class="identifier">r</span><span class="special">.</span><span class="identifier">x0</span><span class="special">)*(</span><span class="identifier">r</span><span class="special">.</span><span class="identifier">x1</span><span class="special">-</span><span class="identifier">r</span><span class="special">.</span><span class="identifier">x0</span><span class="special">)+</span><br>         <span class="special">(</span><span class="keyword">unsigned</span> <span class="keyword">long</span><span class="special">)(</span><span class="identifier">r</span><span class="special">.</span><span class="identifier">y1</span><span class="special">-</span><span class="identifier">r</span><span class="special">.</span><span class="identifier">y0</span><span class="special">)*(</span><span class="identifier">r</span><span class="special">.</span><span class="identifier">y1</span><span class="special">-</span><span class="identifier">r</span><span class="special">.</span><span class="identifier">y0</span><span class="special">);</span><br><span class="special">}</span><br><br><span class="keyword">typedef</span> <span class="identifier">multi_index_container</span><span class="special">&lt;</span><br>  <span class="identifier">rectangle</span><span class="special">,</span><br>  <span class="identifier">indexed_by</span><span class="special">&lt;</span><br>    <span class="comment">// 按面积递增排序</span><br>    <span class="identifier">ordered_non_unique</span><span class="special">&lt;</span><span class="identifier">global_fun</span><span class="special">&lt;</span><span class="keyword">const</span> <span class="identifier">rectangle</span><span class="special">&amp;,</span><span class="keyword">unsigned</span> <span class="keyword">long</span><span class="special">,&amp;</span><span class="identifier">area</span><span class="special">&gt;</span> <span class="special">&gt;</span><br>  <span class="special">&gt;</span><br><span class="special">&gt;</span> <span class="identifier">rectangle_container</span><span class="special">;</span>
+  </pre>
+
+
+</blockquote>
+
+
+
+<p><code>global_fun</code> 遵循以下语法： </p>
+
+
+
+<blockquote>
+  
+  
+  <pre><span class="identifier">global_fun</span><span class="special">&lt;</span><span class="identifier"><i>(argument type)</i></span><span class="special">,</span><span class="identifier"><i>(key type)</i></span><span class="special">,</span><span class="identifier"><i>(pointer to function)</i></span><span class="special">&gt;</span>
+  </pre>
+
+
+</blockquote>
+
+
+
+<p>其中参数 argument type 和 key type 必须与函数所用的签名<span style="font-style: italic;">精确</span>匹配；例如，在上例中，argument 
+type 为 <code>const rectangle&amp;</code>, 不能省略 
+"<code>const</code>" 和 "<code>&amp;</code>" 部分。所以，虽然多数时候基类型是通过常量引用来传递的，但 <code>global_fun</code> 也可用于传值或传非常量引用的函数：后一种情况通常不直接使用，因为 
+<code>multi_index_container</code>s 会将它们的元素视为常量，但在&nbsp;<a href="#advanced_key_extractors">Boost.MultiIndex 键提取器的高级特性</a> 一节中描述了一个有效的例子，使用了基于非常量引用参数的函数的键提取。 </p>
+
+
+
+<p>例子一节中的 
+<a href="../examples.html#example2">Example 2</a> 使用了 <code>gobal_fun</code>. </p>
+
+
+
+
+<h2><a name="user_defined_key_extractors">User-defined key extractors用户定义的键提取器</a></h2>
+
+
+
+
+
+
+<p>虽然 Boost.MultiIndex 提供的 <a href="#predefined_key_extractors">predefined key extractors预定义的键提取器</a>
+可适用于大多数情形，但用户也可以为更奇特的情形提供自已的键提取器，只要它们符合
+<a href="../reference/key_extraction.html#key_extractors"><code>Key
+Extractor键提取器</code></a> 的概念。
+</p>
+
+
+
+
+
+
+<blockquote>
+  
+  
+  
+  
+  <pre><span class="comment">// record 类</span>
+<span class="keyword">struct</span> <span class="identifier">record</span>
+<span class="special">{</span>
+  <span class="identifier">boost</span><span class="special">::</span><span class="identifier">gregorian</span><span class="special">::</span><span class="identifier">date</span> <span class="identifier">d</span><span class="special">;</span>
+  <span class="identifier">std</span><span class="special">::</span><span class="identifier">string</span>            <span class="identifier">str</span><span class="special">;</span>    <br><span class="special">};</span>
+
+<span class="comment">// 提取一个 record 的年份</span>
+<span class="keyword">struct</span> <span class="identifier">record_year</span>
+<span class="special">{</span>
+  <span class="comment">// 键提取器概念有一个 result_type typedef</span>
+  <span class="keyword">typedef</span> <span class="identifier">boost</span><span class="special">::</span><span class="identifier">gregorian</span><span class="special">::</span><span class="identifier">greg_year</span> <span class="identifier">result_type</span><span class="special">;</span> <br>  <br>  <span class="identifier">result_type</span> <span class="keyword">operator</span><span class="special">()(</span><span class="keyword">const</span> <span class="identifier">record</span><span class="special">&amp;</span> <span class="identifier">r</span><span class="special">)</span><span class="keyword">const</span> <span class="comment">// operator() 必须是 const 的</span>
+  <span class="special">{</span>
+    <span class="keyword">return</span> <span class="identifier">r</span><span class="special">.</span><span class="identifier">d</span><span class="special">.</span><span class="identifier">year</span><span class="special">();</span>
+  <span class="special">}</span>
+<span class="special">};</span>
+
+<span class="comment">// 使用前面定义的键提取器的一个例子</span>
+<span class="keyword">typedef</span> <span class="identifier">multi_index_container</span><span class="special">&lt;</span>
+  <span class="identifier">record</span><span class="special">,</span>
+  <span class="identifier">indexed_by</span><span class="special">&lt;</span>
+    <span class="identifier">ordered_non_unique</span><span class="special">&lt;</span><span class="identifier">record_year</span><span class="special">&gt;</span> <span class="comment">// 按 record 的年份排序</span>
+  <span class="special">&gt;</span>
+<span class="special">&gt;</span> <span class="identifier">record_log</span><span class="special">;</span>
+  </pre>
+
+
+
+
+</blockquote>
+
+
+
+
+
+
+<p>
+&nbsp;例子一节中的 <a href="../examples.html#example6">Example 6</a> 在一些复杂的情形中使用了用户定义的键提取器，其中的键是通过指针来访问的。
+</p>
+
+
+
+
+
+
+<h2><a name="composite_keys">Composite keys组合键</a></h2>
+
+
+
+
+
+
+<p>在关系数据库中，组合键依赖于一张表中的两个或以上字段。 Boost.MultiIndex 中的类似概念是
+<a href="../reference/key_extraction.html#composite_key">
+<code>composite_key</code></a>，如下例所示：
+</p>
+
+
+
+
+
+
+<blockquote>
+  
+  
+  
+  
+  <pre><span class="preprocessor">#include</span> <span class="special">&lt;</span><span class="identifier">boost</span><span class="special">/</span><span class="identifier">multi_index_container</span><span class="special">.</span><span class="identifier">hpp</span><span class="special">&gt;</span>
+<span class="preprocessor">#include</span> <span class="special">&lt;</span><span class="identifier">boost</span><span class="special">/</span><span class="identifier">multi_index</span><span class="special">/</span><span class="identifier">ordered_index</span><span class="special">.</span><span class="identifier">hpp</span><span class="special">&gt;</span>
+<span class="preprocessor">#include</span> <span class="special">&lt;</span><span class="identifier">boost</span><span class="special">/</span><span class="identifier">multi_index</span><span class="special">/</span><span class="identifier">member</span><span class="special">.</span><span class="identifier">hpp</span><span class="special">&gt;</span>
+<span class="preprocessor">#include</span> <span class="special">&lt;</span><span class="identifier">boost</span><span class="special">/</span><span class="identifier">multi_index</span><span class="special">/</span><span class="identifier">composite_key</span><span class="special">.</span><span class="identifier">hpp</span><span class="special">&gt;</span>
+
+<span class="keyword">struct</span> <span class="identifier">phonebook_entry</span>
+<span class="special">{</span>
+  <span class="identifier">std</span><span class="special">::</span><span class="identifier">string</span> <span class="identifier">family_name</span><span class="special">;</span>
+  <span class="identifier">std</span><span class="special">::</span><span class="identifier">string</span> <span class="identifier">given_name</span><span class="special">;</span>
+  <span class="identifier">std</span><span class="special">::</span><span class="identifier">string</span> <span class="identifier">phone_number</span><span class="special">;</span>
+
+  <span class="identifier">phonebook_entry</span><span class="special">(</span>
+    <span class="identifier">std</span><span class="special">::</span><span class="identifier">string</span> <span class="identifier">family_name</span><span class="special">,</span>
+    <span class="identifier">std</span><span class="special">::</span><span class="identifier">string</span> <span class="identifier">given_name</span><span class="special">,</span>
+    <span class="identifier">std</span><span class="special">::</span><span class="identifier">string</span> <span class="identifier">phone_number</span><span class="special">):</span>
+    <span class="identifier">family_name</span><span class="special">(</span><span class="identifier">family_name</span><span class="special">),</span><span class="identifier">given_name</span><span class="special">(</span><span class="identifier">given_name</span><span class="special">),</span><span class="identifier">phone_number</span><span class="special">(</span><span class="identifier">phone_number</span><span class="special">)</span>
+  <span class="special">{}</span>
+<span class="special">};</span>
+
+<span class="comment">// </span><span class="comment">定义一个带组合键</span><span class="comment">(family_name,given_name)</span><span class="comment">的multi_index_container</span><span class="comment"></span>
+<span class="keyword">typedef</span> <span class="identifier">multi_index_container</span><span class="special">&lt;</span>
+  <span class="identifier">phonebook_entry</span><span class="special">,</span>
+  <span class="identifier">indexed_by</span><span class="special">&lt;</span>
+    <span class="comment">//</span><span class="comment">非唯一，一些用户可能有一个以上号码</span><span class="comment"></span>
+    <span class="identifier">ordered_non_unique</span><span class="special">&lt;</span> <br>      <span class="identifier">composite_key</span><span class="special">&lt;</span>
+        <span class="identifier">phonebook_entry</span><span class="special">,</span>
+        <span class="identifier">member</span><span class="special">&lt;</span><span class="identifier">phonebook_entry</span><span class="special">,</span><span class="identifier">std</span><span class="special">::</span><span class="identifier">string</span><span class="special">,&amp;</span><span class="identifier">phonebook_entry</span><span class="special">::</span><span class="identifier">family_name</span><span class="special">&gt;,</span>
+        <span class="identifier">member</span><span class="special">&lt;</span><span class="identifier">phonebook_entry</span><span class="special">,</span><span class="identifier">std</span><span class="special">::</span><span class="identifier">string</span><span class="special">,&amp;</span><span class="identifier">phonebook_entry</span><span class="special">::</span><span class="identifier">given_name</span><span class="special">&gt;</span>
+      <span class="special">&gt;</span>
+    <span class="special">&gt;,</span>
+    <span class="identifier">ordered_unique</span><span class="special">&lt;</span> <span class="comment">// </span><span class="comment">唯一，一个号码仅属于一个用户</span><span class="comment"></span>
+      <span class="identifier">member</span><span class="special">&lt;</span><span class="identifier">phonebook_entry</span><span class="special">,</span><span class="identifier">std</span><span class="special">::</span><span class="identifier">string</span><span class="special">,&amp;</span><span class="identifier">phonebook_entry</span><span class="special">::</span><span class="identifier">phone_number</span><span class="special">&gt;</span>
+    <span class="special">&gt;</span>
+  <span class="special">&gt;</span>
+<span class="special">&gt;</span> <span class="identifier">phonebook</span><span class="special">;</span>
+  </pre>
+
+
+
+
+</blockquote>
+
+
+
+
+
+
+<p>
+<code>composite_key</code> 接受两个或以上针对同一值(即这里的<code>phonebook_entry</code>)的键提取器。对组合键的查找操作要传入由各查找值组成的 tuple:
+</p>
+
+
+
+
+
+
+<blockquote>
+  
+  
+  
+  
+  <pre><span class="identifier">phonebook</span> <span class="identifier">pb</span><span class="special">;</span>
+<span class="special">...</span>
+<span class="comment">// search for Dorothea White's number</span>
+<span class="identifier">phonebook</span><span class="special">::</span><span class="identifier">iterator</span> <span class="identifier">it</span><span class="special">=</span><span class="identifier">pb</span><span class="special">.</span><span class="identifier">find</span><span class="special">(</span><span class="identifier">boost</span><span class="special">::</span><span class="identifier">make_tuple</span><span class="special">(</span><span class="string">"White"</span><span class="special">,</span><span class="string">"Dorothea"</span><span class="special">));</span>
+<span class="identifier">std</span><span class="special">::</span><span class="identifier">string</span> <span class="identifier">number</span><span class="special">=</span><span class="identifier">it</span><span class="special">-&gt;</span><span class="identifier">phone_number</span><span class="special">;</span>
+  </pre>
+
+
+
+
+</blockquote>
+
+
+
+
+
+
+<p>组合键按字典序排序，即排序首先对第一个键执行，如果第一个键相等则对第二个键执行，等等。这个规则允许仅指定第一个键进行部分查找：</p>
+
+
+
+<blockquote>
+  
+  
+  
+  
+  <pre><span class="identifier">phonebook</span> <span class="identifier">pb</span><span class="special">;</span>
+<span class="special">...</span>
+<span class="comment">// </span><span class="comment">查找所有</span><span class="comment"> Whites</span>
+<span class="identifier">std</span><span class="special">::</span><span class="identifier">pair</span><span class="special">&lt;</span><span class="identifier">phonebook</span><span class="special">::</span><span class="identifier">iterator</span><span class="special">,</span><span class="identifier">phonebook</span><span class="special">::</span><span class="identifier">iterator</span><span class="special">&gt;</span> <span class="identifier">p</span><span class="special">=</span>
+  <span class="identifier">pb</span><span class="special">.</span><span class="identifier">equal_range</span><span class="special">(</span><span class="identifier">boost</span><span class="special">::</span><span class="identifier">make_tuple</span><span class="special">(</span><span class="string">"White"</span><span class="special">));</span>
+  </pre>
+
+
+
+
+</blockquote>
+
+
+
+
+
+
+<p>为了方便使用，如果仅指定第一个键，可以直接传递该参数而不需要把它放入 tuple:
+</p>
+
+
+
+
+
+
+<blockquote>
+  
+  
+  
+  
+  <pre><span class="identifier">phonebook</span> <span class="identifier">pb</span><span class="special">;</span>
+<span class="special">...</span>
+<span class="comment">// 查找所有 Whites</span>
+<span class="identifier">std</span><span class="special">::</span><span class="identifier">pair</span><span class="special">&lt;</span><span class="identifier">phonebook</span><span class="special">::</span><span class="identifier">iterator</span><span class="special">,</span><span class="identifier">phonebook</span><span class="special">::</span><span class="identifier">iterator</span><span class="special">&gt;</span> <span class="identifier">p</span><span class="special">=</span><span class="identifier">pb</span><span class="special">.</span><span class="identifier">equal_range</span><span class="special">(</span><span class="string">"White"</span><span class="special">);</span>
+  </pre>
+
+
+
+
+</blockquote>
+
+
+
+
+
+
+<p>另外，不指定第一个键的部分查找是不允许的。</p>
+
+
+
+<p>缺省地，对应的 <code>std::less</code> 谓词被应用组合键中的每个子键。其它比较谓词也可以用 <a href="../reference/key_extraction.html#composite_key_compare">
+<code>composite_key_compare</code></a>&nbsp;来指定：
+</p>
+
+
+
+
+
+
+<blockquote>
+  
+  
+  
+  
+  <pre><span class="comment">// </span><span class="comment">按名字的逆序排列的电话本</span><span class="comment"></span>
+
+<span class="keyword">typedef</span> <span class="identifier">multi_index_container</span><span class="special">&lt;</span>
+  <span class="identifier">phonebook_entry</span><span class="special">,</span>
+  <span class="identifier">indexed_by</span><span class="special">&lt;</span>
+    <span class="identifier">ordered_non_unique</span><span class="special">&lt;</span>
+      <span class="identifier">composite_key</span><span class="special">&lt;</span>
+        <span class="identifier">phonebook_entry</span><span class="special">,</span>
+        <span class="identifier">member</span><span class="special">&lt;</span><span class="identifier">phonebook_entry</span><span class="special">,</span><span class="identifier">std</span><span class="special">::</span><span class="identifier">string</span><span class="special">,&amp;</span><span class="identifier">phonebook_entry</span><span class="special">::</span><span class="identifier">family_name</span><span class="special">&gt;,</span>
+        <span class="identifier">member</span><span class="special">&lt;</span><span class="identifier">phonebook_entry</span><span class="special">,</span><span class="identifier">std</span><span class="special">::</span><span class="identifier">string</span><span class="special">,&amp;</span><span class="identifier">phonebook_entry</span><span class="special">::</span><span class="identifier">given_name</span><span class="special">&gt;</span>
+      <span class="special">&gt;,</span>
+      <span class="identifier">composite_key_compare</span><span class="special">&lt;</span>
+        <span class="identifier">std</span><span class="special">::</span><span class="identifier">less</span><span class="special">&lt;</span><span class="identifier">std</span><span class="special">::</span><span class="identifier">string</span><span class="special">&gt;,</span>   <span class="comment">// </span><span class="comment">姓氏按缺省排序</span><span class="comment"></span>
+        <span class="identifier">std</span><span class="special">::</span><span class="identifier">greater</span><span class="special">&lt;</span><span class="identifier">std</span><span class="special">::</span><span class="identifier">string</span><span class="special">&gt;</span> <span class="comment">// </span><span class="comment">名字按逆序排序</span><span class="comment"></span>
+      <span class="special">&gt;</span>
+    <span class="special">&gt;,</span>
+    <span class="identifier">ordered_unique</span><span class="special">&lt;</span>
+      <span class="identifier">member</span><span class="special">&lt;</span><span class="identifier">phonebook_entry</span><span class="special">,</span><span class="identifier">std</span><span class="special">::</span><span class="identifier">string</span><span class="special">,&amp;</span><span class="identifier">phonebook_entry</span><span class="special">::</span><span class="identifier">phone_number</span><span class="special">&gt;</span>
+    <span class="special">&gt;</span>
+  <span class="special">&gt;</span>
+<span class="special">&gt;</span> <span class="identifier">phonebook</span><span class="special">;</span>
+  </pre>
+
+
+
+
+</blockquote>
+
+
+
+
+
+
+<p>有关<code>composite_key</code>的应用请见&ldquo;例子&rdquo;一节中的 <a href="../examples.html#example7">example 7</a>。
+</p>
+
+
+
+
+
+
+<h3><a name="composite_keys_hash">Composite keys and hashed indices</a>组合键与散列索引</h3>
+
+
+
+
+
+
+<p>组合键也可以方便地用于散列索引：
+</p>
+
+
+
+
+
+
+<blockquote>
+  
+  
+  
+  
+  <pre><span class="keyword">struct</span> <span class="identifier">street_entry</span>
+<span class="special">{</span>
+  <span class="comment">// </span><span class="comment">座标</span><span class="comment"></span>
+  <span class="keyword">int</span> <span class="identifier">x</span><span class="special">;</span>
+  <span class="keyword">int</span> <span class="identifier">y</span><span class="special">;</span>
+
+  <span class="identifier">std</span><span class="special">::</span><span class="identifier">string</span> <span class="identifier">name</span><span class="special">;</span>
+
+  <span class="identifier">street_entry</span><span class="special">(</span><span class="keyword">int</span> <span class="identifier">x</span><span class="special">,</span><span class="keyword">int</span> <span class="identifier">y</span><span class="special">,</span><span class="keyword">const</span> <span class="identifier">std</span><span class="special">::</span><span class="identifier">string</span><span class="special">&amp;</span> <span class="identifier">name</span><span class="special">):</span><span class="identifier">x</span><span class="special">(</span><span class="identifier">x</span><span class="special">),</span><span class="identifier">y</span><span class="special">(</span><span class="identifier">y</span><span class="special">),</span><span class="identifier">name</span><span class="special">(</span><span class="identifier">name</span><span class="special">){}</span>
+<span class="special">};</span>
+
+<span class="keyword">typedef</span> <span class="identifier">multi_index_container</span><span class="special">&lt;</span>
+  <span class="identifier">street_entry</span><span class="special">,</span>
+  <span class="identifier">indexed_by</span><span class="special">&lt;</span>
+    <span class="identifier">hashed_non_unique</span><span class="special">&lt;</span> <span class="comment">// </span><span class="comment">以座标为索引</span><span class="comment"></span>
+      <span class="identifier">composite_key</span><span class="special">&lt;</span>
+        <span class="identifier">street_entry</span><span class="special">,</span>
+        <span class="identifier">member</span><span class="special">&lt;</span><span class="identifier">street_entry</span><span class="special">,</span><span class="keyword">int</span><span class="special">,&amp;</span><span class="identifier">street_entry</span><span class="special">::</span><span class="identifier">x</span><span class="special">&gt;,</span>
+        <span class="identifier">member</span><span class="special">&lt;</span><span class="identifier">street_entry</span><span class="special">,</span><span class="keyword">int</span><span class="special">,&amp;</span><span class="identifier">street_entry</span><span class="special">::</span><span class="identifier">y</span><span class="special">&gt;</span>
+      <span class="special">&gt;</span>
+    <span class="special">&gt;,</span>
+    <span class="identifier">hashed_non_unique</span><span class="special">&lt;</span> <span class="comment">// </span><span class="comment">以街名为索引</span><span class="comment"></span>
+      <span class="identifier">member</span><span class="special">&lt;</span><span class="identifier">street_entry</span><span class="special">,</span><span class="identifier">std</span><span class="special">::</span><span class="identifier">string</span><span class="special">,&amp;</span><span class="identifier">street_entry</span><span class="special">::</span><span class="identifier">name</span><span class="special">&gt;</span>
+    <span class="special">&gt;</span>
+  <span class="special">&gt;</span>
+<span class="special">&gt;</span> <span class="identifier">street_locator</span><span class="special">;</span>
+
+<span class="identifier">street_locator</span> <span class="identifier">sl</span><span class="special">;</span>
+<span class="special">...</span>
+<span class="keyword">void</span> <span class="identifier">streets_in_quadrant</span><span class="special">(</span><span class="keyword">int</span> <span class="identifier">x</span><span class="special">,</span><span class="keyword">int</span> <span class="identifier">y</span><span class="special">)</span>
+<span class="special">{</span>
+  <span class="identifier">std</span><span class="special">::</span><span class="identifier">pair</span><span class="special">&lt;</span><span class="identifier">street_locator</span><span class="special">::</span><span class="identifier">iterator</span><span class="special">,</span><span class="identifier">street_locator</span><span class="special">::</span><span class="identifier">iterator</span><span class="special">&gt;</span> <span class="identifier">p</span><span class="special">=</span>
+    <span class="identifier">sl</span><span class="special">.</span><span class="identifier">equal_range</span><span class="special">(</span><span class="identifier">boost</span><span class="special">::</span><span class="identifier">make_tuple</span><span class="special">(</span><span class="identifier">x</span><span class="special">,</span><span class="identifier">y</span><span class="special">));</span>
+
+  <span class="keyword">while</span><span class="special">(</span><span class="identifier">p</span><span class="special">.</span><span class="identifier">first</span><span class="special">!=</span><span class="identifier">p</span><span class="special">.</span><span class="identifier">second</span><span class="special">){</span>
+    <span class="identifier">std</span><span class="special">::</span><span class="identifier">cout</span><span class="special">&lt;&lt;</span><span class="identifier">p</span><span class="special">.</span><span class="identifier">first</span><span class="special">-&gt;</span><span class="identifier">name</span><span class="special">&lt;&lt;</span><span class="identifier">std</span><span class="special">::</span><span class="identifier">endl</span><span class="special">;</span>
+    <span class="special">++</span><span class="identifier">p</span><span class="special">.</span><span class="identifier">first</span><span class="special">;</span>
+  <span class="special">}</span>
+<span class="special">}</span>
+  </pre>
+
+
+
+
+</blockquote>
+
+
+
+
+
+
+<p>注意，散列是自动实现的：对于组合键，<code>boost::hash</code> 被特化为对组合键的每个元素调用 
+<code>boost::hash</code> 所得值的函数。如果我们要对于组合键中的元素指定不同的散列函数，我们可以用
+<a href="../reference/key_extraction.html#composite_key_hash"><code>composite_key_hash</code></a>
+工具来实现：
+</p>
+
+
+
+
+
+
+<blockquote>
+  
+  
+  
+  
+  <pre><span class="keyword">struct</span> <span class="identifier">tuned_int_hash</span>
+<span class="special">{</span>
+  <span class="keyword">int</span> <span class="keyword">operator</span><span class="special">()(</span><span class="keyword">int</span> <span class="identifier">x</span><span class="special">)</span><span class="keyword">const</span>
+  <span class="special">{</span>
+    <span class="comment">// </span><span class="comment">针对本应用特别编写的散列函数</span><span class="comment"></span>
+  <span class="special">}</span>
+<span class="special">};</span>
+
+<span class="keyword">typedef</span> <span class="identifier">multi_index_container</span><span class="special">&lt;</span>
+  <span class="identifier">street_entry</span><span class="special">,</span>
+  <span class="identifier">indexed_by</span><span class="special">&lt;</span>
+    <span class="identifier">hashed_non_unique</span><span class="special">&lt;</span> <span class="comment">// </span><span class="comment">以座标为索引</span><span class="comment"></span>
+      <span class="identifier">composite_key</span><span class="special">&lt;</span>
+        <span class="identifier">street_entry</span><span class="special">,</span>
+        <span class="identifier">member</span><span class="special">&lt;</span><span class="identifier">street_entry</span><span class="special">,</span><span class="keyword">int</span><span class="special">,&amp;</span><span class="identifier">street_entry</span><span class="special">::</span><span class="identifier">x</span><span class="special">&gt;,</span>
+        <span class="identifier">member</span><span class="special">&lt;</span><span class="identifier">street_entry</span><span class="special">,</span><span class="keyword">int</span><span class="special">,&amp;</span><span class="identifier">street_entry</span><span class="special">::</span><span class="identifier">y</span><span class="special">&gt;</span>
+      <span class="special">&gt;,</span>
+      <span class="identifier">composite_key_hash</span><span class="special">&lt;</span>
+        <span class="identifier">tuned_int_hash</span><span class="special">,</span>
+        <span class="identifier">tuned_int_hash</span>
+      <span class="special">&gt;</span>
+    <span class="special">&gt;,</span>
+    <span class="identifier">hashed_non_unique</span><span class="special">&lt;</span> <span class="comment">// </span><span class="comment">以街名为索引</span><span class="comment"></span>
+      <span class="identifier">member</span><span class="special">&lt;</span><span class="identifier">street_entry</span><span class="special">,</span><span class="identifier">std</span><span class="special">::</span><span class="identifier">string</span><span class="special">,&amp;</span><span class="identifier">street_entry</span><span class="special">::</span><span class="identifier">name</span><span class="special">&gt;</span>
+    <span class="special">&gt;</span>
+  <span class="special">&gt;</span>
+<span class="special">&gt;</span> <span class="identifier">street_locator</span><span class="special">;</span>
+  </pre>
+
+
+
+
+</blockquote>
+
+
+
+
+
+
+<p>组合键的等价性也可以用
+<a href="../reference/key_extraction.html#composite_key_equal_to"><code>composite_key_equal_to</code></a>&nbsp;来指定，虽然大多数情况下缺省的等价性谓词(即以元素类型实例化的 <code>std::equal_to</code>)会是正确的选择。
+</p>
+
+
+
+
+
+
+<p>与有序索引不同，我们不能仅指定组合键的第一个键来进行部分查找：
+</p>
+
+
+
+
+
+
+<blockquote>
+  
+  
+  
+  
+  <pre><span class="comment">// </span><span class="comment">试图定位座标x==0的街道</span><span class="comment"><br>// </span><span class="comment">编译期错误：散列索引不允许这种操作</span><span class="comment"></span>
+<span class="identifier">std</span><span class="special">::</span><span class="identifier">pair</span><span class="special">&lt;</span><span class="identifier">street_locator</span><span class="special">::</span><span class="identifier">iterator</span><span class="special">,</span><span class="identifier">street_locator</span><span class="special">::</span><span class="identifier">iterator</span><span class="special">&gt;</span> <span class="identifier">p</span><span class="special">=</span>
+  <span class="identifier">sl</span><span class="special">.</span><span class="identifier">equal_range</span><span class="special">(</span><span class="identifier">boost</span><span class="special">::</span><span class="identifier">make_tuple</span><span class="special">(</span><span class="number">0</span><span class="special">));</span>
+  </pre>
+
+
+
+
+</blockquote>
+
+
+
+
+
+
+<p>这个限制的原因非常浅显：组合键的散列值由它的所有元素所决定，不可能依靠部分信息来计算得到。
+</p>
+
+
+
+
+
+
+<h2><a name="advanced_key_extractors">Boost.MultiIndex 键提取器的高级特性</a></h2>
+
+
+
+
+
+
+<p><a href="../reference/key_extraction.html#key_extractors"><code>Key Extractor键提取器</code></a>
+的概念允许以不同的类型提取同一个对象的键值，只要定义多个重载的 <code>operator()</code>：
+</p>
+
+
+
+
+
+
+<blockquote>
+  
+  
+  
+  
+  <pre><span class="comment">// </span><span class="comment">从</span><span class="comment">employee 和 employee * 提取</span><span class="comment"> name 的例子</span><span class="comment"></span>
+<span class="keyword">struct</span> <span class="identifier">name_extractor</span>
+<span class="special">{</span>
+  <span class="keyword">typedef</span> <span class="identifier">std</span><span class="special">::</span><span class="identifier">string</span> <span class="identifier">result_type</span><span class="special">;</span>
+
+  <span class="keyword">const</span> <span class="identifier">result_type</span><span class="special">&amp;</span> <span class="keyword">operator</span><span class="special">()(</span><span class="keyword">const</span> <span class="identifier">employee</span><span class="special">&amp;</span> <span class="identifier">e</span><span class="special">)</span><span class="keyword">const</span><span class="special">{</span><span class="keyword">return</span> <span class="identifier">e</span><span class="special">.</span><span class="identifier">name</span><span class="special">;}</span>
+  <span class="identifier">result_type</span><span class="special">&amp;</span>       <span class="keyword">operator</span><span class="special">()(</span><span class="identifier">employee</span><span class="special">*</span> <span class="identifier">e</span><span class="special">)</span><span class="keyword">const</span><span class="special">{</span><span class="keyword">return</span> <span class="identifier">e</span><span class="special">-&gt;</span><span class="identifier">name</span><span class="special">;}</span>
+<span class="special">};</span>
+
+<span class="comment">// name_extractor 可以处理类型为 employee 的元素</span>
+<span class="keyword">typedef</span> <span class="identifier">multi_index_container</span><span class="special">&lt;</span>
+  <span class="identifier">employee</span><span class="special">,</span>
+  <span class="identifier">indexed_by</span><span class="special">&lt;</span>
+    <span class="identifier">ordered_unique</span><span class="special">&lt;</span><span class="identifier">name_extractor</span><span class="special">&gt;</span>
+  <span class="special">&gt;</span>
+<span class="special">&gt;</span> <span class="identifier">employee_set</span><span class="special">;</span>
+
+<span class="comment">// 也可以处理类型为 employee * 的元素</span>
+<span class="keyword">typedef</span> <span class="identifier">multi_index_container</span><span class="special">&lt;</span>
+  <span class="identifier">employee</span><span class="special">*,</span>
+  <span class="identifier">indexed_by</span><span class="special">&lt;</span>
+    <span class="identifier">ordered_unique</span><span class="special">&lt;</span><span class="identifier">name_extractor</span><span class="special">&gt;</span>
+  <span class="special">&gt;</span>
+<span class="special">&gt;</span> <span class="identifier">employee_ptr_set</span><span class="special">;</span>
+  </pre>
+
+
+
+
+</blockquote>
+
+
+
+
+
+
+<p>这一特性被Boost.MultiIndex中的预定义键提取器充分使用，以使得当容器中的元素是指向实际对象的指针或引用时，能够更方便地定义 
+<code>multi_index_container</code>。以下声明为存放employees指针的 
+<code>multi_index_container</code>，以员工名字排序。
+</p>
+
+
+
+
+
+
+<blockquote>
+  
+  
+  
+  
+  <pre><span class="keyword">typedef</span> <span class="identifier">multi_index_container</span><span class="special">&lt;</span>
+  <span class="identifier">employee</span> <span class="special">*,</span>
+  <span class="identifier">indexed_by</span><span class="special">&lt;</span>
+    <span class="identifier">ordered_non_unique</span><span class="special">&lt;</span><span class="identifier">member</span><span class="special">&lt;</span><span class="identifier">employee</span><span class="special">,</span><span class="identifier">std</span><span class="special">::</span><span class="identifier">string</span><span class="special">,&amp;</span><span class="identifier">employee</span><span class="special">::</span><span class="identifier">name</span><span class="special">&gt;</span> <span class="special">&gt;</span> <span class="special">&gt;</span>
+<span class="special">&gt;</span> <span class="identifier">employee_set</span><span class="special">;</span>
+  </pre>
+
+
+
+
+</blockquote>
+
+
+
+
+
+
+<p>注意，这个声明与存放实际<code>employee</code>对象的<code>multi_index_container</code>方式一样：<code>member</code> 
+只需要多一次解引用以访问 <code>employee::name</code>。类似的功能也可以用于由
+<a href="../../../../doc/html/ref.html">Boost.Ref</a> 提供的引用包装器：
+</p>
+
+
+
+
+
+
+<blockquote>
+  
+  
+  
+  
+  <pre><span class="keyword">typedef</span> <span class="identifier">multi_index_container</span><span class="special">&lt;</span>
+  <span class="identifier">boost</span><span class="special">::</span><span class="identifier">reference_wrapper</span><span class="special">&lt;</span><span class="keyword">const</span> <span class="identifier">employee</span><span class="special">&gt;,</span>
+  <span class="identifier">indexed_by</span><span class="special">&lt;</span>
+    <span class="identifier">ordered_non_unique</span><span class="special">&lt;</span><span class="identifier">member</span><span class="special">&lt;</span><span class="identifier">employee</span><span class="special">,</span><span class="identifier">std</span><span class="special">::</span><span class="identifier">string</span><span class="special">,&amp;</span><span class="identifier">employee</span><span class="special">::</span><span class="identifier">name</span><span class="special">&gt;</span> <span class="special">&gt;</span> <span class="special">&gt;</span>
+<span class="special">&gt;</span> <span class="identifier">employee_set</span><span class="special">;</span>
+  </pre>
+
+
+
+
+</blockquote>
+
+
+
+
+
+
+<p>事实上，对指针的支持被扩展至接受所谓的<i>链式指针chained pointers</i>。这种链式指针是指向实际对象、元素引用包装或<span style="font-style: italic;">另一个链式指针</span>的裸指针或智能指针或迭代器；即链式指针可以是类指针类型的任意组合，其最终解引用为提取键值的元素。指向<code>employee</code>的链式指针例子有：
+</p>
+
+
+
+
+<ul>
+
+
+
+
+
+  <li><code>employee *</code>,</li>
+
+
+
+
+
+  <li><code>const employee *</code>,</li>
+
+
+
+
+
+  <li><code>std::auto_ptr&lt;employee&gt;</code>,</li>
+
+
+
+
+
+  <li><code>std::list&lt;boost::reference_wrapper&lt;employee&gt; &gt;::iterator</code>,</li>
+
+
+
+
+
+  <li><code>employee **</code>,</li>
+
+
+
+
+
+  <li><code>boost::shared_ptr&lt;const employee *&gt;</code>.</li>
+
+
+
+
+
+</ul>
+
+
+
+通常，解引用长度大于1的链式指针很少用于普通程序，但是它们可能在以下情形出现：从已存在的<code>multi_index_container</code>构造如<code></code><code>multi_index_container</code>的&ldquo;视图&rdquo;时。
+
+
+<p>为了简单总结一下对引用包装和指针使用Boost.MultiIndex键提取器的不同用法，考虑以下类型：
+</p>
+
+
+
+
+
+
+<blockquote>
+  
+  
+  
+  
+  <pre><span class="keyword">struct</span> <span class="identifier">T</span>
+<span class="special">{</span>
+  <span class="keyword">int</span>       <span class="identifier">i</span><span class="special">;</span>
+  <span class="keyword">const</span> <span class="keyword">int</span> <span class="identifier">j</span><span class="special">;</span>
+  <span class="keyword">int</span>       <span class="identifier">f</span><span class="special">()</span><span class="keyword">const</span><span class="special">;</span>
+  <span class="keyword">int</span>       <span class="identifier">g</span><span class="special">();</span>
+<span class="special">};</span>
+  </pre>
+
+
+
+
+</blockquote>
+
+
+
+
+
+
+<p>下表列出了适用于不同的T指针和引用的键提取器，对其成员分别列出：
+</p>
+
+<p></p>
+
+
+<p align="center">
+</p>
+<table cellspacing="0">
+
+
+  <caption><b>Boost.MultiIndex 键提取器用例</b></caption>
+  <tbody>
+
+
+    <tr>
+
+
+      <th>元素类型</th>
+
+
+      <th>键</th>
+
+
+      <th>键提取器</th>
+
+
+      <th>是否可用于 const 元素?</th>
+
+
+      <th>读/写?</th>
+
+    </tr>
+
+
+    <tr>
+
+
+      <td rowspan="6" align="middle"><code>T</code></td>
+
+
+      <td><code>i</code></td>
+
+
+      <td><code>member&lt;T,int,&amp;T::i&gt;</code></td>
+
+
+      <td align="middle">yes</td>
+
+
+      <td align="middle">yes</td>
+
+    </tr>
+
+
+    <tr>
+
+
+      <td><code>j</code></td>
+
+
+      <td><code>member&lt;T,const int,&amp;T::j&gt;</code></td>
+
+
+      <td align="middle">yes</td>
+
+
+      <td align="middle">no</td>
+
+    </tr>
+
+
+    <tr>
+
+
+      <td><code>f()</code></td>
+
+
+      <td><code>const_mem_fun&lt;T,int,&amp;T::f&gt;</code></td>
+
+
+      <td align="middle">yes</td>
+
+
+      <td align="middle">no</td>
+
+    </tr>
+
+
+    <tr>
+
+
+      <td><code>g()</code></td>
+
+
+      <td><code>mem_fun&lt;T,int,&amp;T::g&gt;</code></td>
+
+
+      <td align="middle">no</td>
+
+
+      <td align="middle">no</td>
+
+    </tr>
+
+
+    <tr>
+
+
+      <td><code>gf()</code></td>
+
+
+      <td><code>global_fun&lt;const T&amp;,int,&amp;T::gf&gt;</code></td>
+
+
+      <td align="middle">yes</td>
+
+
+      <td align="middle">no</td>
+
+    </tr>
+
+
+    <tr>
+
+
+      <td><code>gg()</code></td>
+
+
+      <td><code>global_fun&lt;T&amp;,int,&amp;T::gg&gt;</code></td>
+
+
+      <td align="middle">no</td>
+
+
+      <td align="middle">no</td>
+
+    </tr>
+
+
+    <tr class="odd_tr">
+
+
+      <td rowspan="6" align="middle"><code>reference_wrapper&lt;T&gt;</code></td>
+
+
+      <td><code>i</code></td>
+
+
+      <td><code>member&lt;T,int,&amp;T::i&gt;</code></td>
+
+
+      <td align="middle">yes</td>
+
+
+      <td align="middle">yes</td>
+
+    </tr>
+
+
+    <tr class="odd_tr">
+
+
+      <td><code>j</code></td>
+
+
+      <td><code>member&lt;T,const int,&amp;T::j&gt;</code></td>
+
+
+      <td align="middle">yes</td>
+
+
+      <td align="middle">no</td>
+
+    </tr>
+
+
+    <tr class="odd_tr">
+
+
+      <td><code>f()</code></td>
+
+
+      <td><code>const_mem_fun&lt;T,int,&amp;T::f&gt;</code></td>
+
+
+      <td align="middle">yes</td>
+
+
+      <td align="middle">no</td>
+
+    </tr>
+
+
+    <tr class="odd_tr">
+
+
+      <td><code>g()</code></td>
+
+
+      <td><code>mem_fun&lt;T,int,&amp;T::g&gt;</code></td>
+
+
+      <td align="middle">yes</td>
+
+
+      <td align="middle">no</td>
+
+    </tr>
+
+
+    <tr class="odd_tr">
+
+
+      <td><code>gf()</code></td>
+
+
+      <td><code>global_fun&lt;const T&amp;,int,&amp;T::gf&gt;</code></td>
+
+
+      <td align="middle">yes</td>
+
+
+      <td align="middle">no</td>
+
+    </tr>
+
+
+    <tr class="odd_tr">
+
+
+      <td><code>gg()</code></td>
+
+
+      <td><code>global_fun&lt;T&amp;,int,&amp;T::gg&gt;</code></td>
+
+
+      <td align="middle">yes</td>
+
+
+      <td align="middle">no</td>
+
+    </tr>
+
+
+    <tr>
+
+
+      <td rowspan="6" align="middle"><code>reference_wrapper&lt;const T&gt;</code></td>
+
+
+      <td><code>i</code></td>
+
+
+      <td><code>member&lt;T,const int,&amp;T::i&gt;</code></td>
+
+
+      <td align="middle">yes</td>
+
+
+      <td align="middle">no</td>
+
+    </tr>
+
+
+    <tr>
+
+
+      <td><code>j</code></td>
+
+
+      <td><code>member&lt;T,const int,&amp;T::j&gt;</code></td>
+
+
+      <td align="middle">yes</td>
+
+
+      <td align="middle">no</td>
+
+    </tr>
+
+
+    <tr>
+
+
+      <td><code>f()</code></td>
+
+
+      <td><code>const_mem_fun&lt;T,int,&amp;T::f&gt;</code></td>
+
+
+      <td align="middle">yes</td>
+
+
+      <td align="middle">no</td>
+
+    </tr>
+
+
+    <tr>
+
+
+      <td><code>g()</code></td>
+
+
+      <td colspan="3">&nbsp;</td>
+
+    </tr>
+
+
+    <tr>
+
+
+      <td><code>gf()</code></td>
+
+
+      <td><code>global_fun&lt;const T&amp;,int,&amp;T::gf&gt;</code></td>
+
+
+      <td align="middle">yes</td>
+
+
+      <td align="middle">no</td>
+
+    </tr>
+
+
+    <tr>
+
+
+      <td><code>gg()</code></td>
+
+
+      <td colspan="3">&nbsp;</td>
+
+    </tr>
+
+
+    <tr class="odd_tr">
+
+
+      <td rowspan="6" align="middle"><code>指向T</code> 或 
+      <code>reference_wrapper&lt;T&gt; <br>
+的链式指针</code></td>
+
+
+      <td><code>i</code></td>
+
+
+      <td><code>member&lt;T,int,&amp;T::i&gt;</code></td>
+
+
+      <td align="middle">yes</td>
+
+
+      <td align="middle">yes</td>
+
+    </tr>
+
+
+    <tr class="odd_tr">
+
+
+      <td><code>j</code></td>
+
+
+      <td><code>member&lt;T,const int,&amp;T::j&gt;</code></td>
+
+
+      <td align="middle">yes</td>
+
+
+      <td align="middle">no</td>
+
+    </tr>
+
+
+    <tr class="odd_tr">
+
+
+      <td><code>f()</code></td>
+
+
+      <td><code>const_mem_fun&lt;T,int,&amp;T::f&gt;</code></td>
+
+
+      <td align="middle">yes</td>
+
+
+      <td align="middle">no</td>
+
+    </tr>
+
+
+    <tr class="odd_tr">
+
+
+      <td><code>g()</code></td>
+
+
+      <td><code>mem_fun&lt;T,int,&amp;T::g&gt;</code></td>
+
+
+      <td align="middle">yes</td>
+
+
+      <td align="middle">no</td>
+
+    </tr>
+
+
+    <tr class="odd_tr">
+
+
+      <td><code>gf()</code></td>
+
+
+      <td><code>global_fun&lt;const T&amp;,int,&amp;T::gf&gt;</code></td>
+
+
+      <td align="middle">yes</td>
+
+
+      <td align="middle">no</td>
+
+    </tr>
+
+
+    <tr class="odd_tr">
+
+
+      <td><code>gg()</code></td>
+
+
+      <td><code>global_fun&lt;T&amp;,int,&amp;T::gg&gt;</code></td>
+
+
+      <td align="middle">yes</td>
+
+
+      <td align="middle">no</td>
+
+    </tr>
+
+
+    <tr>
+
+
+      <td rowspan="6" align="middle">指向 <code>const T</code> 或 
+      <code>reference_wrapper&lt;const T&gt;<br>
+的链式指针</code></td>
+
+
+      <td><code>i</code></td>
+
+
+      <td><code>member&lt;T,const int,&amp;T::i&gt;</code></td>
+
+
+      <td align="middle">yes</td>
+
+
+      <td align="middle">no</td>
+
+    </tr>
+
+
+    <tr>
+
+
+      <td><code>j</code></td>
+
+
+      <td><code>member&lt;T,const int,&amp;T::j&gt;</code></td>
+
+
+      <td align="middle">yes</td>
+
+
+      <td align="middle">no</td>
+
+    </tr>
+
+
+    <tr>
+
+
+      <td><code>f()</code></td>
+
+
+      <td><code>const_mem_fun&lt;T,int,&amp;T::f&gt;</code></td>
+
+
+      <td align="middle">yes</td>
+
+
+      <td align="middle">no</td>
+
+    </tr>
+
+
+    <tr>
+
+
+      <td><code>g()</code></td>
+
+
+      <td colspan="3">&nbsp;</td>
+
+    </tr>
+
+
+    <tr>
+
+
+      <td><code>gf()</code></td>
+
+
+      <td><code>global_fun&lt;const T&amp;,int,&amp;T::gf&gt;</code></td>
+
+
+      <td align="middle">yes</td>
+
+
+      <td align="middle">no</td>
+
+    </tr>
+
+
+    <tr>
+
+
+      <td><code>gg()</code></td>
+
+
+      <td colspan="3">&nbsp;</td>
+
+    </tr>
+
+  
+  </tbody>
+</table>
+
+
+<br>
+
+
+<p>&ldquo;是否可用于<code>const</code>元素？&rdquo;一列写明了对应的键提取器是否可以在传入常量性元素时使用(这是指第一列中指定的元素，而不是所引用的<code>T</code>对象)。唯一不可用的情况是当传入元素为裸<code>T</code>对象时，不能使用<code>T::g</code> 和 <code>T:gg</code>，由于我们在处理的是一个非常量成员函数 (<code>T::g</code>) 和一个接受 <code>T</code> 的非常量引用的函数：这也意味着 
+<code>multi_index_container</code> 中的元素 <code>T</code> 不能用 <code>T::g</code> 或 <code>T::gg</code> 
+来排序，因为 <code>multi_index_container</code> 中元素被视为是常量的。
+</p>
+
+
+
+
+
+
+<p>"读/写?"一列表明哪些组合生成的是
+<a href="#read_write_key_extractors">read/write key extractors读/写的键提取器</a>。
+</p>
+
+
+
+
+
+
+<p>有时我们必须在键提取器的规范中保证<code>const</code>-正确性：某种意义上，<code>const</code> 
+限定符被用于成员部分，即使这个成员没有被定义为<code>const</code>。例如，如果元素类型为 <code>const T *</code>, 按 
+<code>T::i</code> 排序不能写成 <code>member&lt;const T,int,&amp;T::i&gt;</code>, 而是 
+<code>member&lt;T,const int,&amp;T::i&gt;</code>。</p>
+
+
+
+<p>有关这些键提取器的应用示例，请参看&ldquo;例子&rdquo;一节中的
+<a href="../examples.html#example2">example 2</a> 和
+<a href="../examples.html#example6">example 6</a>。
+</p>
+
+
+
+
+
+
+<hr>
+
+<div class="prev_link"><a href="indices.html"><img src="../prev.gif" alt="index types" border="0"><br>
+
+
+
+
+
+Index types索引的类型
+</a></div>
+
+
+
+
+
+<div class="up_link"><a href="index.html"><img src="../up.gif" alt="Boost.MultiIndex tutorial" border="0"><br>
+
+
+
+
+
+Boost.MultiIndex 指南
+</a></div>
+
+
+
+
+
+<div class="next_link"><a href="creation.html"><img src="../next.gif" alt="container creation" border="0"><br>
+
+
+
+
+
+Container creation容器的创建
+</a></div>
+
+
+
+
+<br style="" clear="all">
+
+
+
+
+
+
+<br>
+
+
+<p>Revised June 11th 2007</p>
+
+
+
+<p>&copy; Copyright 2003-2007 Joaqu&iacute;n M L&oacute;pez Mu&ntilde;oz. Distributed under the Boost 
+Software License, Version 1.0. (See accompanying file <a href="../../../../LICENSE_1_0.txt">LICENSE_1_0.txt</a> or copy at <a href="http://www.boost.org/LICENSE_1_0.txt">http://www.boost.org/LICENSE_1_0.txt</a>) 
+</p>
+
+
+</body>
+</html>

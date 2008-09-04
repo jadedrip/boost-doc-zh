@@ -1,0 +1,357 @@
+<!DOCTYPE HTML PUBLIC "-//W3C//DTD HTML 4.0.1 Transitional//EN">
+<html>
+<head>
+
+
+
+  
+  
+  <meta http-equiv="Content-Type" content="text/html; charset=UTF-8">
+
+
+
+
+  
+  
+  
+  
+  <title>Boost.MultiIndex Documentation - Future work</title>
+  <link rel="stylesheet" href="style.css" type="text/css">
+
+
+
+  
+  
+  <link rel="start" href="index.html">
+
+
+
+  
+  
+  <link rel="prev" href="tests.html">
+
+
+
+  
+  
+  <link rel="up" href="index.html">
+
+
+
+  
+  
+  <link rel="next" href="release_notes.html">
+</head>
+
+
+<body>
+
+
+
+<h1><img src="../../../boost.png" alt="boost.png (6897 bytes)" align="middle" height="86" width="277">Boost.MultiIndex Future work</h1>
+
+
+
+
+<div class="prev_link"><a href="tests.html"><img src="prev.gif" alt="tests" border="0"><br>
+
+
+测试
+</a></div>
+
+
+
+<div class="up_link"><a href="index.html"><img src="up.gif" alt="index" border="0"><br>
+
+
+目录
+</a></div>
+
+
+
+<div class="next_link"><a href="release_notes.html"><img src="next.gif" alt="release notes" border="0"><br>
+
+
+
+发布说明
+</a></div>
+
+
+<br style="" clear="all">
+
+
+
+
+<hr>
+
+<p>大量新的功能正准备加入到Boost.MultiIndex的未来版本中。其中一些是关于库的扩展性的，它们已成为当前的<code>multi_index_container</code>内部设计的指导原则。
+</p>
+
+
+
+
+<h2>Contents目录</h2>
+
+
+
+
+<ul>
+
+
+
+  <li><a href="#ranked_indices">排名索引</a></li>
+
+
+
+  <li><a href="#notifying">通知索引</a></li>
+
+
+
+  <li><a href="#constraints">约束</a></li>
+
+
+
+  <li><a href="#user_defined_indices">用户自定义索引</a></li>
+
+  <li><a href="#indexed_maps">带索引的 maps</a></li>
+
+
+
+  <li><a href="#move_semantics">Move 语义</a></li>
+
+
+
+</ul>
+
+
+
+
+<h2><a name="ranked_indices">排名索引</a></h2>
+
+
+
+
+<p>有序索引是采用红-黑树来实现的；可以通过增加一些信息把这种树变成为称为<a href="http://pine.cs.yale.edu/pinewiki/OrderStatisticsTree"><i>order-statistics 
+trees</i></a>的数据结构，它可以对第n个元素进行对数查找。order-statistics trees可用于设计<i>排名索引ranked 
+indices</i>，以支持 <code>operator[]</code> 并同时保留有序索引的功能。
+</p>
+
+
+
+
+<h2><a name="notifying">通知索引</a></h2>
+
+
+
+
+<p><i>通知索引Notifying indices</i> 可作为已有索引类型的装饰物，它为索引增加了将内部事件(insertion, erasing, 
+modifying of elements)通知给外部实体的功能，象 <a href="../../../doc/html/signals.html">Boost.Signals</a> 库所做的那样。这些功能可用于实现： </p>
+
+
+
+<ol>
+
+
+  <li>日志记录， 
+  </li>
+
+
+  <li>GUI应用的界面， 
+  </li>
+
+
+  <li>分离的数据结构间的同步。 </li>
+
+
+</ol>
+
+
+
+<p>以下是通知索引的一种可能实现的概略：</p>
+
+
+<blockquote>
+  
+  
+  <pre><span class="keyword">struct</span> <span class="identifier">insert_log</span>
+<span class="special">{</span>
+  <span class="keyword">void</span> <span class="keyword">operator</span><span class="special">()(</span><span class="keyword">int</span> <span class="identifier">x</span><span class="special">)</span>
+  <span class="special">{</span>
+    <span class="identifier">std</span><span class="special">::</span><span class="identifier">clog</span><span class="special">&lt;&lt;</span><span class="string">"insert: "</span><span class="special">&lt;&lt;</span><span class="identifier">x</span><span class="special">&lt;&lt;</span><span class="identifier">std</span><span class="special">::</span><span class="identifier">endl</span><span class="special">;</span>
+  <span class="special">}</span>
+<span class="special">};</span>
+
+<span class="keyword">int</span> <span class="identifier">main</span><span class="special">()</span>
+<span class="special">{</span>
+  <span class="keyword">typedef</span> <span class="identifier">multi_index_container</span><span class="special">&lt;</span>
+    <span class="keyword">int</span><span class="special">,</span>
+    <span class="identifier">indexed_by</span><span class="special">&lt;</span>
+      <span class="identifier">notifying</span><span class="special">&lt;</span><span class="identifier">ordered_unique</span><span class="special">&lt;</span><span class="identifier">identity</span><span class="special">&lt;</span><span class="keyword">int</span><span class="special">&gt;</span> <span class="special">&gt;</span> <span class="special">&gt;,</span> <span class="comment">// notifying index</span>
+      <span class="identifier">ordered_non_unique</span><span class="special">&lt;</span><span class="identifier">identity</span><span class="special">&lt;</span><span class="keyword">int</span><span class="special">&gt;</span> <span class="special">&gt;</span>
+    <span class="special">&gt;</span>
+  <span class="special">&gt;</span> <span class="identifier">indexed_t</span><span class="special">;</span>
+
+  <span class="identifier">indexed_t</span> <span class="identifier">t</span><span class="special">;</span>
+
+  <span class="comment">// on_insert </span><span class="comment">为对应于插入操作的信号</span>
+  <span class="identifier">t</span><span class="special">.</span><span class="identifier">on_insert</span><span class="special">.</span><span class="identifier">connect</span><span class="special">(</span><span class="identifier">insert_log</span><span class="special">());</span>
+
+  <span class="identifier">t</span><span class="special">.</span><span class="identifier">insert</span><span class="special">(</span><span class="number">0</span><span class="special">);</span>
+  <span class="identifier">t</span><span class="special">.</span><span class="identifier">insert</span><span class="special">(</span><span class="number">1</span><span class="special">);</span>
+
+  <span class="keyword">return</span> <span class="number">0</span><span class="special">;</span>
+<span class="special">}</span>
+
+<span class="comment">// </span><span class="comment">输出:</span><br><span class="comment">//   insert: 0<br>//   insert: 1</span>
+  </pre>
+
+
+</blockquote>
+
+
+
+
+<h2><a name="constraints">约束</a></h2>
+
+
+
+
+<p>上面描述的通知索引功能实现了一个基于<i>index 
+adaptors</i>的强大的设计模式，已有索引的装饰物增加了底层索引的功能或改变了索引的语义。该模式可用于实现<i>约束constraints</i>，即依照某些有效性谓词限制接受某些元素。约束的语法看起来可能象这样： 
+</p>
+
+
+
+
+<blockquote>
+  
+  
+  <pre><span class="keyword">struct</span> <span class="identifier">is_even</span>
+<span class="special">{</span>
+  <span class="keyword">bool</span> <span class="keyword">operator</span><span class="special">()(</span><span class="keyword">int</span> <span class="identifier">x</span><span class="special">)</span><span class="keyword">const</span><span class="special">{</span><span class="keyword">return</span> <span class="identifier">x</span><span class="special">%</span><span class="number">2</span><span class="special">==</span><span class="number">0</span><span class="special">;}</span>
+<span class="special">};</span>
+
+<span class="keyword">typedef</span> <span class="identifier">multi_index_container</span><span class="special">&lt;</span>
+  <span class="keyword">int</span><span class="special">,</span>
+  <span class="identifier">indexed_by</span><span class="special">&lt;</span>
+    <span class="identifier">constrained</span><span class="special">&lt;</span><span class="identifier">ordered_unique</span><span class="special">&lt;</span><span class="identifier">identity</span><span class="special">&lt;</span><span class="keyword">int</span><span class="special">&gt;</span> <span class="special">&gt;,</span><span class="identifier">is_even</span><span class="special">&gt;</span>
+  <span class="special">&gt;</span>
+<span class="special">&gt;</span> <span class="identifier">indexed_t</span><span class="special">;</span>
+  </pre>
+
+
+</blockquote>
+
+
+
+
+<h2><a name="user_defined_indices">用户自定义索引</a></h2>
+
+
+
+
+<p>Boost.MultiIndex 中的<code>multi_index_container</code>索引的操作机制很简单，足以使(胆大的)用户可以写出他们自己的索引实现。<br>
+
+</p>
+
+<h2><a name="indexed_maps">带索引的 maps</a></h2>
+
+
+
+
+<p>
+<code>multi_index_container </code>完全可以作为<i>带索引的 
+maps</i>的实现基础，带索引的map即可以用多个不同键进行查找的map。实现此容器的动机主要是审美的原因，因为与直接基于<code>multi_index_container</code>所构造的类似结构相比，它并没有增加功能。 
+</p>
+
+
+
+<p>编写一个带索引的map的主要困难在于设计出一个合理的、尽可能靠近<code>std::map</code>的接口。将<code>std::map</code>的语法扩展至多个键有点困难。例如，考虑以下情形：</p>
+
+
+<blockquote>
+  
+  
+  <pre><span class="identifier">indexed_map</span><span class="special">&lt;</span><span class="keyword">int</span><span class="special">,</span><span class="identifier">string</span><span class="special">,</span><span class="keyword">double</span><span class="special">&gt;</span> <span class="identifier">m</span><span class="special">;</span>
+<span class="comment">// </span><span class="comment">关键字为 int 和 string, double 为对应的值</span><span class="comment"></span>
+
+<span class="special">...</span>
+
+<span class="identifier">cout</span><span class="special">&lt;&lt;</span><span class="identifier">m</span><span class="special">[</span><span class="number">0</span><span class="special">]&lt;&lt;</span><span class="identifier">endl</span><span class="special">;</span>      <span class="comment">// OK</span>
+<span class="identifier">cout</span><span class="special">&lt;&lt;</span><span class="identifier">m</span><span class="special">[</span><span class="string">"zero"</span><span class="special">]&lt;&lt;</span><span class="identifier">endl</span><span class="special">;</span> <span class="comment">// OK</span>
+<span class="identifier">m</span><span class="special">[</span><span class="number">1</span><span class="special">]=</span><span class="number">1.0</span><span class="special">;</span>              <span class="comment">// !!</span>
+  </pre>
+
+
+</blockquote>
+
+
+
+
+<p>在此例中的最后一句中，用户无法提供对应于<code>m[1]</code>值的 <code>string</code> 
+键。在设计带索引的map的接口时，此类问题必须被认真研究。
+</p>
+
+
+
+
+<h2><a name="move_semantics">Move 语义</a></h2>
+
+
+
+
+<p>Andrei Alexandrescu 引入了一种技术，以模拟被称为Mojo的 move 构造函数(请参见他在C/C++ User 
+Journal发表的文章 <a href="http://www.cuj.com/documents/s=8246/cujcexp2102alexandr/">"Generic&lt;Programming&gt;: 
+Move Constructors"</a>)。Move 
+语义减轻了创建及拷贝临时对象所耗费的负载，特别是对于<code>multi_index_container</code>这样的重型类。David 
+Abrahams 和 Gary Powell 在他们的论文<a href="http://anubis.dkuug.dk/jtc1/sc22/wg21/docs/papers/2004/n1610.html"> 
+"Clarification of Initialization of Class Objects by 
+rvalues"</a>中提供了move语义的另一个实现。 </p>
+
+
+
+<p>在将<code>multi_index_container</code>容器用作其它库(如关系数据库框架)的内部模块时，为其<code></code>增加move语义有明显的优势，可以高效地开发返回<code>multi_index_container</code>的函数。没有move语义的支持，可能就只能采用很难看的语法了，或者根本无法实现。</p>
+
+
+<hr>
+
+<div class="prev_link"><a href="tests.html"><img src="prev.gif" alt="tests" border="0"><br>
+
+
+测试
+</a></div>
+
+
+
+<div class="up_link"><a href="index.html"><img src="up.gif" alt="index" border="0"><br>
+
+
+目录
+</a></div>
+
+
+
+<div class="next_link"><a href="release_notes.html"><img src="next.gif" alt="release notes" border="0"><br>
+</a><a href="release_notes.html">
+
+
+发布说明</a><a href="release_notes.html">
+</a></div>
+
+
+<br style="" clear="all">
+
+
+
+
+<br>
+
+<p>Revised July 5th 2007</p>
+
+
+<p>&copy; Copyright 2003-2007 Joaqu&iacute;n M L&oacute;pez Mu&ntilde;oz. Distributed under the Boost 
+Software License, Version 1.0. (See accompanying file <a href="../../../LICENSE_1_0.txt">LICENSE_1_0.txt</a> or copy at <a href="http://www.boost.org/LICENSE_1_0.txt">http://www.boost.org/LICENSE_1_0.txt</a>) 
+</p>
+
+</body>
+</html>

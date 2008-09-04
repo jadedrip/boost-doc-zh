@@ -1,0 +1,160 @@
+﻿<html>
+<head>
+<meta http-equiv="Content-Type" content="text/html; charset=UTF-8">
+<title>Using the library（库的使用）</title>
+<link rel="stylesheet" href="../boostbook.css" type="text/css">
+<meta name="generator" content="DocBook XSL Stylesheets V1.68.1">
+<link rel="start" href="../index.html" title="The Boost C++ Libraries BoostBook Documentation Subset">
+<link rel="up" href="../lambda.html" title="Chapter 8. Boost.Lambda">
+<link rel="prev" href="s03.html" title="Introduction">
+<link rel="next" href="le_in_details.html" title="Lambda expressions in details">
+</head>
+<body bgcolor="white" text="black" link="#0000FF" vlink="#840084" alink="#0000FF">
+<table cellpadding="2" width="100%">
+<td valign="top"><img alt="Boost C++ Libraries" width="277" height="86" src="../../../boost.png"></td>
+<td align="center"><a href="../../../index.htm">Home</a></td>
+<td align="center"><a href="../../../libs/libraries.htm">Libraries</a></td>
+<td align="center"><a href="../../../people/people.htm">People</a></td>
+<td align="center"><a href="../../../more/faq.htm">FAQ</a></td>
+<td align="center"><a href="../../../more/index.htm">More</a></td>
+</table>
+<hr>
+<div class="spirit-nav">
+<a accesskey="p" href="s03.html"><img src="../images/prev.png" alt="Prev"></a><a accesskey="u" href="../lambda.html"><img src="../images/up.png" alt="Up"></a><a accesskey="h" href="../index.html"><img src="../images/home.png" alt="Home"></a><a accesskey="n" href="le_in_details.html"><img src="../images/next.png" alt="Next"></a>
+</div>
+<div class="section" lang="en">
+<div class="titlepage"><div><div><h2 class="title" style="clear: both">
+<a name="lambda.using_library"></a>Using the library（库的使用）</h2></div></div></div>
+<div class="toc"><dl>
+<dt><span class="section"><a href="using_library.html#lambda.introductory_examples">Introductory Examples（介绍性示例）</a></span></dt>
+<dt><span class="section"><a href="using_library.html#lambda.parameter_and_return_types">Parameter and return types of lambda functors（lambda 仿函数的参数和返回类型）</a></span></dt>
+<dt><span class="section"><a href="using_library.html#lambda.actual_arguments_to_lambda_functors">About actual arguments to lambda functors（关于 lambda 仿函数的实际参数）</a></span></dt>
+<dt><span class="section"><a href="using_library.html#lambda.storing_bound_arguments">Storing bound arguments in lambda functions（在 lambda 函数中存储已绑定参数）</a></span></dt>
+</dl></div>
+<p>这一部分的目标是介绍库的基本功能。库中有大量的例外和特殊情况，但我们到以后的章节再讨论它们。</p>
+<div class="section" lang="en">
+<div class="titlepage"><div><div><h3 class="title">
+<a name="lambda.introductory_examples"></a>Introductory Examples（介绍性示例）</h3></div></div></div>
+<p>本节中我们给出在 STL 算法调用中使用 BLL lambda 表达式的基础示例。我们以一些简单的表达式开始并逐步发展。首先，我们初始化一个容器的元素，比方说，一个 <code class="literal">list</code>，设为值 <code class="literal">1</code>：</p>
+<pre class="programlisting">
+list&lt;int&gt; v(10);
+for_each(v.begin(), v.end(), _1 = 1);</pre>
+<p>表达式 <code class="literal">_1 = 1</code> 创建一个 lambda 仿函数，它将 <code class="literal">v</code> 中的每一元素赋值为 <code class="literal">1</code>。<sup>[<a name="id1243857" href="#ftn.id1243857">1</a>]</sup></p>
+<p>接下来，我们创建一个指针的容器，并让它们指向第一个容器 <code class="literal">v</code> 中的元素：</p>
+<pre class="programlisting">
+vector&lt;int*&gt; vp(10); 
+transform(v.begin(), v.end(), vp.begin(), &amp;_1);</pre>
+<p>表达式 <code class="literal">&amp;_1</code> 创建一个取得 <code class="literal">v</code> 中每一个元素的地址的函数对象。这些地址赋值给 <code class="literal">vp</code> 中的对应元素。</p>
+<p>下一个代码片段改变 <code class="literal">v</code> 中的值。对于每一个元素，函数 <code class="literal">foo</code> 被调用。元素的原始值作为一个参数被传送给 <code class="literal">foo</code>。<code class="literal">foo</code> 的结果被赋回给那个元素：</p>
+<pre class="programlisting">
+int foo(int);
+for_each(v.begin(), v.end(), _1 = bind(foo, _1));</pre>
+<p>
+      </p>
+<p>下一步是为 <code class="literal">vp</code> 中的元素排序：</p>
+<pre class="programlisting">sort(vp.begin(), vp.end(), *_1 &gt; *_2);</pre>
+<p>在这个 <code class="literal">sort</code> 的调用中，我们根据元素的内容以递减的顺序排列那些元素。</p>
+<p>最后，下面的 <code class="literal">for_each</code> 调用输出以换行符分隔的 <code class="literal">vp</code> 的排序后的内容：</p>
+<pre class="programlisting">
+for_each(vp.begin(), vp.end(), cout &lt;&lt; *_1 &lt;&lt; '\n');
+</pre>
+<p>注意，作为一个 lambda 表达式的子表达式的一个常规（非 lambda 的）表达式立即被求值。这可能让人觉得惊讶。例如，如果前面的示例被重写为：</p>
+<pre class="programlisting">
+for_each(vp.begin(), vp.end(), cout &lt;&lt; '\n' &lt;&lt; *_1);
+</pre>
+<p>子表达式 <code class="literal">cout &lt;&lt; '\n'</code> 被立即求值，而效果是输出一个单个换行符，后面跟着 <code class="literal">vp</code> 的元素。BLL 提供函数 <code class="literal">constant</code> 和 <code class="literal">var</code> 分别将常量和变量引入 lambda 表达式，并可用于防止子表达式的立即求值：</p>
+<pre class="programlisting">
+for_each(vp.begin(), vp.end(), cout &lt;&lt; constant('\n') &lt;&lt; *_1);
+</pre>
+<p>
+关于这些函数的更彻底的描述，参见 <a href="le_in_details.html#lambda.delaying_constants_and_variables" title="Delaying constants and variables">&#8220;Delaying constants and variables&#8221; 部分</a>。</p>
+</div>
+<div class="section" lang="en">
+<div class="titlepage"><div><div><h3 class="title">
+<a name="lambda.parameter_and_return_types"></a>Parameter and return types of lambda functors（lambda 仿函数的参数和返回类型）</h3></div></div></div>
+<p>通过 lambda 仿函数的调用，实际参数取代了占位符。占位符没有规定这些实际参数的类型。基本的规则是只要完成取代的 lambda 表达式是一个合法的 C++ 表达式，那么这个 lambda 函数就能够用任何类型的参数调用。例如，表达式 <code class="literal">_1 + _2</code> 创建一个二元 lambda 仿函数。它能够被任意类型的两个对象 <code class="literal">A</code> 和 <code class="literal">B</code> 调用，只要这两个对象定义了 <code class="literal">operator+(A,B)</code>（而且 BLL 知道这个操作符的返回类型，参见后面的描述）。</p>
+<p>C++ 缺乏一个查询某个表达式类型的机制。然而，这种精确的机制对于 C++ lambda 表达式的实现又是至关重要的。因此，BLL 包含一个稍微复杂的类型推演系统，用一套特征类来推演 lambda 表达式的结果类型。它处理那些操作数是内建类型的表达式以及大多数操作数是标准库类型的表达式。大多数用户定义类型也同样适用，特别是在被定义的返回类型中的用户定义操作符符合通常惯例。</p>
+<p>然而，还是有一些情况返回类型无法推演。例如，假设你有这样的定义：</p>
+<pre class="programlisting">C operator+(A, B);</pre>
+<p>这个 lambda 表达式调用失败，因为返回类型无法被推演出来：</p>
+<pre class="programlisting">A a; B b; (_1 + _2)(a, b);</pre>
+<p>
+      </p>
+<p>对此有两种可供选择的解决方案。第一种是扩展 BLL 类型推演系统覆盖你自己的类型（参见 <a href="extending.html" title="Extending return type deduction system">&#8220;Extending return type deduction system&#8221; 部分</a>）。第二种是使用一个特殊的 lambda 表达式 (<code class="literal">ret</code>) 来就地定义返回类型（参见 <a href="le_in_details.html#lambda.overriding_deduced_return_type" title="Overriding the deduced return type">&#8220;Overriding the deduced return type&#8221; 部分</a>）：</p>
+<pre class="programlisting">A a; B b; ret&lt;C&gt;(_1 + _2)(a, b);</pre>
+<p>
+      </p>
+<p>对于 bind 表达式，返回类型的定义就像是 bind 函数的一个模板参数一样：</p>
+<pre class="programlisting">bind&lt;int&gt;(foo, _1, _2);</pre>
+<p>
+
+
+      </p>
+</div>
+<div class="section" lang="en">
+<div class="titlepage"><div><div><h3 class="title">
+<a name="lambda.actual_arguments_to_lambda_functors"></a>About actual arguments to lambda functors（关于 lambda 仿函数的实际参数）</h3></div></div></div>
+<p>对实际参数的一个大体限制是它们不能是非常量的右值。例如：</p>
+<pre class="programlisting">
+int i = 1; int j = 2; 
+(_1 + _2)(i, j); // ok
+(_1 + _2)(1, 2); // error (!)
+</pre>
+<p>这一限制也许不像看上去那么糟糕。因为 lambda 仿函数最常用在 STL 算法中，参数来自于很少返回右值的间接引用迭代器和间接引用操作符。对于它们返回右值的情况，相关讨论参见 <a href="le_in_details.html#lambda.rvalues_as_actual_arguments" title="Rvalues as actual arguments to lambda functors">&#8220;Rvalues as actual arguments to lambda functors&#8221; 部分</a>。</p>
+</div>
+<div class="section" lang="en">
+<div class="titlepage"><div><div><h3 class="title">
+<a name="lambda.storing_bound_arguments"></a>Storing bound arguments in lambda functions（在 lambda 函数中存储已绑定参数）</h3></div></div></div>
+<p>缺省情况下，已绑定参数的 temporary const copies（临时常拷贝）存储在 lambda 仿函数中。这就意味着已绑定参数的值在 lambda 函数的创建时是固定的，而且在这个 lambda 函数对象的整个生命周期中也会保持不变。例如：</p>
+<pre class="programlisting">
+int i = 1;
+(_1 = 2, _1 + i)(i);
+</pre>
+<p>逗号操作符被重载用来将 lambda 表达式结合到一个序列中，结果是，一元 lambda 仿函数的参数首先被赋为 2，然后再为它加上 <code class="literal">i</code> 的值。最终表达式的值是 3，不是 4。换句话说，lambda 表达式由 <code class="literal">lambda x.(x = 2, x + 1)</code> 创建，而不是 <code class="literal">lambda x.(x = 2, x + i)</code>。</p>
+<p>就像我们说过的，这是有例外的缺省行为。严格的规则如下：</p>
+<div class="itemizedlist"><ul type="disc">
+<li>
+<p>程序员可以控制使用 <code class="literal">ref</code> 和 <code class="literal">cref</code> 包装的存储机制 [<a href="../lambda.html#cit:boost::ref" title="[ref]"><span class="abbrev">ref</span></a>]。用 <code class="literal">ref</code> 或 <code class="literal">cref</code> 包装一个参数，分别指示库将参数作为一个引用或常引用来存储。例如，如果我们重写前面的示例，并用 <code class="literal">ref</code> 包装变量 <code class="literal">i</code>，我们可以创建 lambda 表达式 <code class="literal">lambda x.(x = 2, x + i)</code> ，而且表达式最终的值是 4：</p>
+<pre class="programlisting">
+i = 1;
+(_1 = 2, _1 + ref(i))(i);
+</pre>
+<p>注意，<code class="literal">ref</code> 和 <code class="literal">cref</code> 不同于 <code class="literal">var</code> 和 <code class="literal">constant</code>。后者创建 lambda 仿函数，而前者不创建。例如：</p>
+<pre class="programlisting">
+int i; 
+var(i) = 1; // ok
+ref(i) = 1; // not ok, ref(i) is not a lambda functor
+</pre>
+<p>函数 <code class="literal">ref</code> 和 <code class="literal">cref</code> 的存在主要是由于历史原因，而且 <code class="literal">ref</code> 总是能被 <code class="literal">var</code> 取代，而 <code class="literal">cref</code> 总能被 <code class="literal">constant_ref</code> 取代。关于细节，参见 <a href="le_in_details.html#lambda.delaying_constants_and_variables" title="Delaying constants and variables">&#8220;Delaying constants and variables&#8221; 部分</a>。<code class="literal">ref</code> 和 <code class="literal">cref</code> 函数是 Boost 中的通用工具函数，因此直接定义在 <code class="literal">boost</code> 名字空间中。</p>
+</li>
+<li><p>数组类型不能被拷贝，因此，缺省情况下，它们作为常引用存储。</p></li>
+<li>
+<p>对于某些表达式，参数作为引用存储更有意义。例如，lambda 表达式 <code class="literal">i += _1</code> 的意图很明显是要调用 lambda 仿函数以影响变量 <code class="literal">i</code> 的值，而不是它的什么临时拷贝。再例如，流操作符把它的最左边的参数作为 non-const references（非常引用）。严格规则为：</p>
+<div class="itemizedlist"><ul type="circle">
+<li><p>混合赋值操作符 (<code class="literal">+=</code>, <code class="literal">*=</code>, etc.) 的左参数作为引向非常量的引用存储。</p></li>
+<li><p>如果 <code class="literal">&lt;&lt;</code> 或 <code class="literal">&gt;&gt;</code> 操作符的左参数分别从 <code class="literal">basic_ostream</code> 或 <code class="literal">basic_istream</code> 的实例派生，则参数作为引向非常量的引用存储。对于所有其它类型，参数作为一个拷贝存储。</p></li>
+<li><p>在指针算数表达式中，非常量数组作为非常量引用来存储。这是为了防止指针算术运算使非常量数组常量化。</p></li>
+</ul></div>
+<p>
+
+</p>
+</li>
+</ul></div>
+<p>
+</p>
+</div>
+<div class="footnotes">
+<br><hr width="100" align="left">
+<div class="footnote"><p><sup>[<a name="ftn.id1243857" href="#id1243857">1</a>] </sup>严格地说，C++ 标准将 <code class="literal">for_each</code> 定义为一个 <span class="emphasis"><em>non-modifying sequence operation</em></span>（不变序列操作），而传给 <code class="literal">for_each</code> 的函数对象不应该改变它的参数。其实对 <code class="literal">for_each</code> 的参数的要求不必那么严格，因为只要迭代器是 <span class="emphasis"><em>mutable</em></span>（可变化）的，<code class="literal">for_each</code> 也可以接受能够对它们的参数产生副作用的函数对象。不过，它只是直截了当地提供一个其它带有 <code class="literal">std::for_each</code> 的功能的函数模板，只不过它对它的参数没有那么细致的要求。</p></div>
+</div>
+</div>
+<table width="100%"><tr>
+<td align="left"></td>
+<td align="right"><small>Copyright  1999-2004 Jaakko Jrvi, Gary Powell</small></td>
+</tr></table>
+<hr>
+<div class="spirit-nav">
+<a accesskey="p" href="s03.html"><img src="../images/prev.png" alt="Prev"></a><a accesskey="u" href="../lambda.html"><img src="../images/up.png" alt="Up"></a><a accesskey="h" href="../index.html"><img src="../images/home.png" alt="Home"></a><a accesskey="n" href="le_in_details.html"><img src="../images/next.png" alt="Next"></a>
+</div>
+</body>
+</html>

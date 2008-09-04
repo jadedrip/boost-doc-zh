@@ -1,0 +1,116 @@
+<!DOCTYPE HTML PUBLIC "-//W3C//DTD HTML 4.01 Transitional//EN">
+<html>
+<head>
+  <meta content="text/html; charset=UTF-8" http-equiv="content-type">
+
+	
+	
+  <title>evaluated_slots.html</title>
+  <link rel="stylesheet" type="text/css" href="../styles.css">
+</head>
+
+<body>
+
+<h4>求值插槽</h4>
+
+<div>求值插槽机制是一个工具，用于对一个常量整型表达式进行完全的求值并避免预处理器通常会使用的延后求值。
+</div>
+
+<h4>指南</h4>
+
+<div>为了弄明白这一机制的作用，我将从一个简单的文件迭代例子开始。考虑以下情形....
+</div>
+
+<div class="code">
+<pre>for (int i = 0; i &lt; 10; ++i) {<br>   for (int j = 0; j &lt; i; ++j) {<br>      // ... 使用 i 和 j<br>   }<br>}<br></pre>
+</div>
+
+<div>以上是以下多维度文件迭代的一个简单的运行期模型....
+</div>
+
+<div class="code">
+<pre>// file.hpp<br>#if !BOOST_PP_IS_ITERATING<br>   #ifndef FILE_HPP_<br>   #define FILE_HPP_<br><br>   #include &lt;boost/preprocessor/iteration/iterate.hpp&gt;<br><br>   #define BOOST_PP_ITERATION_PARAMS_1 (3, (0, 9, "file.hpp"))<br>   #include BOOST_PP_ITERATE()<br><br>   #endif // FILE_HPP_<br>#elif BOOST_PP_ITERATION_DEPTH() == 1<br>   #define I BOOST_PP_ITERATION()<br><br>   #define BOOST_PP_ITERATION_PARAMS_2 (3, (0, I, "file.hpp"))<br>   #include BOOST_PP_ITERATE()<br><br>   #undef I<br>#elif BOOST_PP_ITERATION_DEPTH() == 2<br>   #define J BOOST_PP_ITERATION()<br><br>   // 使用 I 和 J<br><br>   #undef J<br>#endif<br></pre>
+</div>
+
+<div>以上代码有一个问题。作者期望 <i>I</i> 被引向前一个迭代帧。但是实际情况并非如此。当作用引用 <i>I</i> 时，它实际上会被引向 <b>BOOST_PP_ITERATION</b>(), 但不是定义所在点的 <b>BOOST_PP_ITERATION</b>(). 相反，它将被引向与 <i>J</i> 相同的值。
+</div>
+
+<div>问题的原因是，预处理器总是以延后求值的方法来对所有东西进行求值。为了解决这一问题，我们需要 <i>I</i> 在这个地方进行 <i>求值</i>:
+</div>
+
+<div class="code">
+<pre>// ...<br>#elif BOOST_PP_ITERATION_DEPTH() == 1<br>   #define I BOOST_PP_ITERATION()<br>// ...<br></pre>
+</div>
+
+<div>
+	幸好，本库提供了这样做的机制：求值插槽。以下代码就使用了这一机制来 "解决" 上述问题...
+</div>
+
+<div class="code">
+<pre>// ...<br>#elif BOOST_PP_ITERATION_DEPTH() == 1<br>   #define BOOST_PP_VALUE BOOST_PP_ITERATION()<br>   #include BOOST_PP_ASSIGN_SLOT(1)<br>   #define I BOOST_PP_SLOT(1)<br>// ...<br></pre>
+</div>
+
+<div>对一个求值插槽进行赋值分为两步。首先，用户必须定义一个 <i>命名外部参数</i> <b>BOOST_PP_VALUE</b>. 它的值必须是一个整型常量表达式。其次，用户必须 <i>包含</i> <b>BOOST_PP_ASSIGN_SLOT</b>(<i>x</i>), 其中 <i>x</i> 为被赋值的特定的插槽(<i>1</i> 到 <b>BOOST_PP_LIMIT_SLOT_COUNT</b>). 这样将会对 <b>BOOST_PP_VALUE</b> 进行求值并将结果赋给索引 <i>x</i> 的插槽。
+</div>
+
+<div>要取回某个插槽的值，用户必须使用 <b>BOOST_PP_SLOT</b>(<i>x</i>).
+</div>
+
+<div>在上例中，<i>I</i> <i>仍旧</i> 是延后求值的。不过，它现在的求值是 <b>BOOST_PP_SLOT</b>(<i>1</i>). 该值 <i>不会被修改</i>，除非重新调用一次 <b>BOOST_PP_ASSIGN_SLOT</b>(<i>1</i>).
+</div>
+
+<h4>高级技术</h4>
+
+<div>插槽机制也可以被用于进行计算:
+</div>
+
+<div class="code">
+<pre>#include &lt;iostream&gt;<br><br>#include &lt;boost/preprocessor/slot/slot.hpp&gt;<br>#include &lt;boost/preprocessor/stringize.hpp&gt;<br><br>#define X() 4<br><br>#define BOOST_PP_VALUE 1 + 2 + 3 + X()<br>#include BOOST_PP_ASSIGN_SLOT(1)<br><br>#undef X<br><br>int main(void) {<br>   std::cout<br>      &lt;&lt; BOOST_PP_STRINGIZE(BOOST_PP_SLOT(1))<br>      &lt;&lt; std::endl;<br>   return 0;<br>}<br></pre>
+</div>
+
+<div>本质上，任何可以在 #if (或 #elif) 预处理指令中进行求值的东西都是可用的，除了 <i>defined</i> 操作符以外。
+</div>
+
+<div>甚至可以将一个特定的插槽用于对其本身的重新赋值:
+</div>
+
+<div class="code">
+<pre>#define BOOST_PP_VALUE 20<br>#include BOOST_PP_ASSIGN_SLOT(1)<br><br>#define BOOST_PP_VALUE 2 * BOOST_PP_SLOT(1)<br>#include BOOST_PP_ASSIGN_SLOT(1)<br><br>BOOST_PP_SLOT(1) // 40<br></pre>
+</div>
+
+<h4>参见</h4>
+
+<ul>
+
+	<li><a href="../ref/assign_slot.html">BOOST_PP_ASSIGN_SLOT</a></li>
+
+	<li><a href="../ref/limit_slot_count.html">BOOST_PP_LIMIT_SLOT_COUNT</a></li>
+
+	<li><a href="../ref/slot.html">BOOST_PP_SLOT</a></li>
+
+	<li><a href="../ref/value.html">BOOST_PP_VALUE</a></li>
+
+</ul>
+
+<div class="sig">- Paul Mensonides</div>
+
+	
+<hr size="1">
+	
+<div style="margin-left: 0px;">
+		<i>&copy; Copyright <a href="http://www.housemarque.com" target="_top">Housemarque Oy</a> 2002</i>
+		<br>
+<i>&copy; Copyright Paul Mensonides 2002</i>
+	</div>
+
+	
+<div style="margin-left: 0px;">
+		
+<p><small>Distributed under the Boost Software License, Version 1.0. (See
+		accompanying file <a href="../../../../LICENSE_1_0.txt">LICENSE_1_0.txt</a> or
+		copy at <a href="http://www.boost.org/LICENSE_1_0.txt">www.boost.org/LICENSE_1_0.txt</a>)</small></p>
+
+	</div>
+
+</body>
+</html>

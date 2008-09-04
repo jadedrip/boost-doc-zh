@@ -1,0 +1,215 @@
+<!DOCTYPE HTML PUBLIC "-//W3C//DTD HTML 4.01 Transitional//EN">
+<html>
+<head>
+
+  
+  <meta content="text/html; charset=UTF-8" http-equiv="content-type">
+
+
+    
+    
+  
+  
+  <title>Tutorial</title>
+  <link rel="stylesheet" href="../../../../boost.css">
+
+
+    
+  
+  <link rel="stylesheet" href="../theme/iostreams.css">
+</head>
+
+
+<body>
+
+
+
+<!-- Begin Banner -->
+
+    
+<h1 class="title">指南</h1>
+
+
+    
+<hr class="banner">
+
+<!-- End Banner -->
+
+<!-- Begin Nav -->
+
+<div class="nav">
+    <a href="container_source.html"><img src="../../../../doc/html/images/prev.png" border="0" height="19" width="19"></a>
+    <a href="tutorial.html"><img src="../../../../doc/html/images/up.png" border="0" height="19" width="19"></a>
+    <a href="container_device.html"><img src="../../../../doc/html/images/next.png" border="0" height="19" width="19"></a>
+</div>
+
+
+
+<!-- End Nav -->
+
+<a name="container_sink"></a>
+<h2>2.1.3. 编写一个 <code>container_sink</code></h2>
+
+
+
+<p>假设你想编写一个设备，用于将字符添加到一个STL容器中。只支持写出的设备被称为 <a href="../concepts/sink.html">Sink接收器</a>。一个典型的窄字符接收器如下：
+
+</p>
+
+<pre class="broken_ie"><span class="preprocessor">#include</span> <span class="literal">&lt;iosfwd&gt;</span>                          <span class="comment">// streamsize</span>
+<span class="preprocessor">#include</span> <a class="HEADER" href="../../../../boost/iostreams/categories.hpp"><span class="literal">&lt;boost/iostreams/categories.hpp&gt;</span></a>  <span class="comment">// sink_tag<br></span>
+<span class="keyword">namespace</span> io = boost::iostreams;<br><br><span class="keyword">class</span> my_sink {<br><span class="keyword">public</span>:<br>    <span class="keyword">typedef</span> <span class="keyword">char</span>      char_type;<br>    <span class="keyword">typedef</span> sink_tag  category;<br><br>    std::streamsize write(const <span class="keyword">char</span>* s, std::streamsize n)<br>    {<br>        <span class="comment">// 从缓冲区 s 中取出最多 n 个字符写入到底层的数据接收器中，</span>
+        <span class="comment">// 返回写入的字符数</span><span class="comment"></span>
+    }
+
+    <span class="comment">/* 其它成员 */</span>
+};</pre>
+
+
+
+<p>这里的成员类型 <a href="../guide/traits.html#char_type"><code>char_type</code></a> 表示 my_source 要处理的字符类型，通常是 <code>char</code> 或者 <code>wchar_t</code>. 成员类型 <a href="../guide/traits.html#char_type">category</a> 表示该设备支持哪些基本 i/o 操作。分类标志 <a href="../guide/traits.html#category_tags"><code>sink_tag</code></a>&nbsp;表示只支持 <a href="../functions/write.html"><code>write</code></a> .</p>
+
+
+
+
+
+<p>成员函数 <code>write</code> 写入最多 <code>n</code> 个字符到缓冲区 <code>s</code> 中，并返回读入的字符数量。通常，<code>write</code> 可以返回少于请求的字符数，这种情况下的接收器被称为 <i>non-blocking非阻塞的</i>。但是非阻塞设备与标准的流和流缓冲不相符合，因此多数设备是 <a href="../concepts/blocking.html">Blocking阻塞的</a>。<i>请见</i> <a href="../guide/asynchronous.html">Asynchronous and Non-Blocking I/O异步与非阻塞I/O</a>.</p>
+
+
+
+
+
+<p>你可将上述例子改为：</p>
+
+<pre class="broken_ie"><span class="preprocessor">#include</span> <a class="HEADER" href="../../../../boost/iostreams/concepts.hpp"><span class="literal">&lt;boost/iostreams/concepts.hpp&gt;</span></a>  <span class="comment">// sink</span>
+
+<span class="keyword">class</span> my_sink : <span class="keyword">public</span> sink {<br><span class="keyword">public</span>:<br>    std::streamsize write(const <span class="keyword">char</span>* s, std::streamsize n);<br><br>    <span class="comment">/* 其它成员 */</span>
+};</pre>
+
+
+
+<p>这里的 <a href="../classes/device.html#synopsis"><code>sink</code></a><a href="../classes/device.html#synopsis"><code></code></a> 是一个便于使用的基类，提供了成员类型 <code>char_type</code> 和 <code>category</code>, 而成员函数 <code>close</code> 和 <code>imbue</code> 为空操作，所以无需提供。
+
+</p>
+
+
+
+<p>现在你已经准备好编写你的 <code>container_source</code> 了。</p>
+
+<pre class="broken_ie"><span class="preprocessor">#include</span> <span class="literal">&lt;algorithm&gt;</span>                       <span class="comment">// copy, min</span>
+<span class="preprocessor">#include</span> <span class="literal">&lt;iosfwd&gt;</span>                          <span class="comment">// streamsize</span>
+<span class="preprocessor">#include</span> <a class="header" href="../../../../boost/iostreams/categories.hpp"><span class="literal">&lt;boost/iostreams/categories.hpp&gt;</span></a>  <span class="comment">// sink_tag</span>
+
+<span class="keyword">namespace</span> boost { <span class="keyword">namespace</span> iostreams { <span class="keyword">namespace</span> example {<br><br><span class="keyword">template</span>&lt;<span class="keyword">typename</span> Container&gt;<br><span class="keyword">class</span> container_sink {<br><span class="keyword">public</span>:<br>    <span class="keyword">typedef</span> <span class="keyword">typename</span> Container::value_type  char_type;<br>    <span class="keyword">typedef</span> sink_tag                        category;<br>    container_sink(Container&amp; container) : container_(container) { }<br>    std::streamsize write(const char_type* s, std::streamsize n)<br>    {<br>        container_.insert(container_.end(), s, s + n);<br>        <span class="keyword">return</span> n;<br>    }<br>    Container&amp; container() { return container_; }<br><span class="keyword">private</span>:<br>    Container&amp; container_;<br>};<br><br>} } } <span class="comment">// End namespace boost::iostreams:example</span></pre>
+
+
+
+<p>这里请留意：</p>
+
+
+
+
+<ul>
+
+  <li>成员类型 <code>char_type</code> 被定义为等价于容器的 <code>value_type</code>;
+  </li>
+
+  <li>成员类型 <code>category</code> 告诉 Iostreams 库 <code>container_sink</code> 是一个 <a href="../concepts/sink.html">Sink接收器</a>；
+  </li>
+
+  <li><code>container_sink</code> 可以由一个 <code>Container</code> 实例来构造，该实例的引用被保存，且可以通过成员函数 <code>container()</code> 来访问；而且</li>
+
+  <li><code>write()</code> 的实现使用容器的 <code>insert</code> 函数将指定缓冲区中的字符添加到底层的容器中。
+  </li>
+
+</ul>
+
+
+
+<p>（译注：以下这段话应该是在 <a href="container_source.html">编写一个 <code>container_source</code></a> 一节中）It's tempting to make <code>pos_</code> an iterator instead of an integral value. That would be fine here, but when you turn to Devices for <i>writing</i>
+to containers, a stored iterator could easily be invalidated if you're
+not careful. Since you're only dealing with RandomAccessIterators,
+maintaining the current reading position as an integral value is
+sufficient.&nbsp;</p>
+
+
+
+<p>你可以象下面那样向一个 container_sink 写入：</p>
+
+
+
+<pre class="broken_ie"><span class="preprocessor">#include</span> <span class="literal">&lt;cassert&gt;</span>
+<span class="preprocessor">#include</span> <span class="literal">&lt;string&gt;</span>
+<span class="preprocessor">#include</span> <a class="HEADER" href="../../../../boost/iostreams/stream.hpp"><span class="literal">&lt;boost/iostreams/stream.hpp&gt;</span></a>
+<span class="preprocessor">#include</span> <a class="HEADER" href="../../example/container_device.hpp"><span class="literal">&lt;libs/iostreams/example/container_device.hpp&gt;</span></a> <span class="comment">// container_source</span>
+
+<span class="keyword">namespace</span> io = boost::iostreams;<br><span class="keyword">namespace</span> ex = boost::iostreams::example;<br><br><span class="keyword">int</span> main()<br>{<br>    <span class="keyword">using</span> <span class="keyword">namespace</span> std;<br>    <span class="keyword">typedef</span> ex::container_sink&lt;string&gt; string_sink;<br><br>    string                          result;<br>    io::stream&lt;string_sink&gt;  out(result);<br>    out &lt;&lt; <span class="literal">"Hello World!"</span>;<br>    out.flush();<br>    assert(result == <span class="literal">"Hello World!"</span>);<br>}</pre>
+
+
+
+<p>注意，Iostreams 库缺省就提供了缓冲。因此，流 <code>out</code> 必须要刷新方可保证字符被写入到底层的 <code>string</code> 中。
+
+</p>
+
+<p>最后要提到的是，Iostreams 库提供了一个从STL容器读取的简单方法。首先，输出迭代器可以直接附加到 <a href="../guide/filtering_streams.html">filtering streams and stream buffers带过滤的流和流缓冲</a> 上。所以你可以这样写：</p>
+
+
+
+<pre class="broken_ie"><span class="preprocessor">#include</span> <span class="literal">&lt;cassert&gt;</span>
+<span class="preprocessor">#include</span> <span class="literal">&lt;iterator&gt;</span>  <span class="comment">// back_inserter</span>
+<span class="preprocessor">#include</span> <span class="literal">&lt;string&gt;</span>
+<span class="preprocessor">#include</span> <a class="HEADER" href="../../../../boost/iostreams/filtering_stream.hpp"><span class="literal">&lt;boost/iostreams/filtering_stream.hpp&gt;</span></a>
+
+<span class="keyword">namespace</span> io = boost::iostreams;<br><br><span class="keyword">int</span> main()<br>{<br>    <span class="keyword">using</span> <span class="keyword">namespace</span> std;<br><br>    string                 result;<br>    io::filtering_ostream  out(back_inserter(result));<br>    out &lt;&lt; <span class="literal">"Hello World!"</span>;<br>    out.flush();<br>    assert(result == <span class="literal">"Hello World!"</span>);<br>}</pre>
+
+
+
+<p>其次，Iostreams 库提供了另一个版本的 <code>back_inserter</code>，它比 <code>std::back_inserter</code> 更为高效，因为所返回的接收器使用 <code>insert</code> 而不是 <code>push_back</code>. 所以你可以这样写：</p>
+
+
+
+<pre class="broken_ie"><span class="preprocessor">#include</span> <span class="literal">&lt;cassert&gt;</span>
+<span class="preprocessor">#include</span> <span class="literal">&lt;string&gt;</span>
+<span class="preprocessor">#include</span> <a class="HEADER" href="../../../../boost/iostreams/device/back_inserter.hpp"><span class="literal">&lt;boost/iostreams/device/back_inserter.hpp&gt;</span></a>
+<span class="preprocessor">#include</span> <a class="HEADER" href="../../../../boost/iostreams/filtering_stream.hpp"><span class="literal">&lt;boost/iostreams/filtering_stream.hpp&gt;</span></a>
+
+<span class="keyword">namespace</span> io = boost::iostreams;<br><br><span class="keyword">int</span> main()<br>{<br>    <span class="keyword">using</span> <span class="keyword">namespace</span> std;<br><br>    string                 result;<br>    io::filtering_ostream  out(io::back_inserter(result));<br>    out &lt;&lt; <span class="literal">"Hello World!"</span>;<br>    out.flush();<br>    assert(result == <span class="literal">"Hello World!"</span>);<br>}</pre>
+
+
+
+<!-- Begin Nav -->
+
+<div class="nav">
+    <a href="container_source.html"><img src="../../../../doc/html/images/prev.png" border="0" height="19" width="19"></a>
+    <a href="tutorial.html"><img src="../../../../doc/html/images/up.png" border="0" height="19" width="19"></a>
+    <a href="container_device.html"><img src="../../../../doc/html/images/next.png" border="0" height="19" width="19"></a>
+</div>
+
+
+
+<!-- End Nav -->
+
+<!-- Begin Footer -->
+
+<hr>
+
+<p class="copyright">Revised
+<!--webbot bot="Timestamp" S-Type="EDITED" S-Format="%d %B, %Y" startspan -->
+20 May, 2004
+<!--webbot bot="Timestamp" endspan i-checksum="38504" -->
+</p>
+
+
+
+<p class="copyright">&copy; Copyright <a href="http://www.kangaroologic.com" target="_top">Jonathan Turkanis</a>, 2004</p>
+
+
+<p class="copyright"> 
+    Use, modification, and distribution are subject to the Boost Software License, Version 2.0. (See accompanying file <a href="../../../../LICENSE_1_0.txt">LICENSE_1_0.txt</a> or copy at <a href="http://www.boost.org/LICENSE_1_0.txt">http://www.boost.org/LICENSE_1_0.txt</a>)
+</p>
+
+
+<!-- End Footer -->
+
+</body>
+</html>
