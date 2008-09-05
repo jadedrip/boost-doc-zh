@@ -1,0 +1,135 @@
+<!DOCTYPE html PUBLIC "-//W3C//DTD HTML 4.01 Transitional//EN">
+<html><head>
+  <meta http-equiv="Content-Language" content="en-us">
+  <meta http-equiv="Content-Type" content="text/html; charset=UTF-8">
+
+  <title>Boost Function Object Adapter Library</title></head>
+
+
+<body bgcolor="#ffffff" text="#000000">
+  <table summary="" bgcolor="#007f7f" border="1" cellpadding="2">
+    <tbody><tr>
+      <td bgcolor="#ffffff"><img src="../../boost.png" alt="boost.png (6897 bytes)" height="86" width="277"></td>
+
+      <td><a href="../../index.htm"><font color="#ffffff" face="Arial"><big>Home</big></font></a></td>
+
+      <td><a href="../libraries.htm"><font color="#ffffff" face="Arial"><big>Libraries</big></font></a></td>
+
+      <td><a href="http://www.boost.org/people/people.htm"><font color="#ffffff" face="Arial"><big>People</big></font></a></td>
+
+      <td><a href="http://www.boost.org/more/faq.htm"><font color="#ffffff" face="Arial"><big>FAQ</big></font></a></td>
+
+      <td><a href="../../more/index.htm"><font color="#ffffff" face="Arial"><big>More</big></font></a></td>
+    </tr>
+  </tbody></table>
+
+  <h1>Function Pointer Adapters 函数指针适配器</h1>
+
+  <p>The header <a href="../../boost/functional.hpp">functional.hpp</a>
+  provides enhanced versions of both the function pointer adapters from the
+  C++ Standard Library (§20.3.7):</p>
+
+  <p>头文件 <a href="../../boost/functional.hpp">functional.hpp</a>
+  提供了对C++标准库的两个函数指针适配器(§20.3.7)的增强版本：</p>
+
+  <ul>
+    <li><tt>pointer_to_unary_function</tt></li>
+
+    <li><tt>pointer_to_binary_function</tt></li>
+  </ul>
+
+  <p>As well as the corresponding helper function template:</p><p>以及相应的辅助函数模板：</p>
+
+  <ul>
+    <li><tt>ptr_fun</tt></li>
+  </ul>
+
+  <p>However, you should not need to use the adapters in conjunction with the
+  adapters in this library due to our use of <a href="function_traits.html">function object traits</a>. You will however need to
+  use them if your implementation fails to work properly with our traits
+  classes (due to lack if partial specialisation), or if you wish to use a
+  function object adapter from a third party.</p><p>不过，你不需要将这些适配器与本库中的其它适配器一起使用，因为我们使用了 <a href="function_traits.html">函数对象 traits</a>. 如果你的实现不能让我们的 traits
+  类正常工作(如缺乏偏特化的支持), 或者如果你想使用第三方的函数对象适配器，这时你才需要用它们。</p>
+
+  <h3>Usage 用法</h3>
+
+  <p>If you need to use these adapters, usage is identical to the standard
+  function pointer adapters. For example,</p><p>如果你要使用这些适配器，它们的用法与标准的函数指针适配器是一样的。例如：</p>
+
+  <blockquote>
+    <pre>bool bad(std::string foo) { ... }<br>...<br>std::vector&lt;std::string&gt; c;<br>...<br>std::vector&lt;std::string&gt;::iterator it<br>     = std::find_if(c.begin(), c.end(), std::not1(boost::ptr_fun(bad)));<br></pre>
+  </blockquote>
+
+  <p>Note however that this library contains enhanced <a href="negators.html">negators</a> that support function object traits, so the
+  line above could equally be written</p><p>注意，本库包含的增强 <a href="negators.html">否定器</a> 支持函数对象 traits, 所以上面一行相当于：</p>
+
+  <blockquote>
+    <pre>std::vector&lt;std::string&gt;::iterator it<br>     = std::find_if(c.begin(), c.end(), boost::not1(bad));<br></pre>
+  </blockquote>
+
+  <h3>Argument Types 参数类型</h3>
+
+  <p>The standard defines <tt>pointer_to_unary_function</tt> like this
+  (§20.3.8&nbsp;¶2):</p><p>标准的 <tt>pointer_to_unary_function</tt> 定义如下(§20.3.8&nbsp;¶2):</p>
+
+  <blockquote>
+    <pre>template &lt;class Arg, class Result&gt;<br>class pointer_to_unary_function : public unary_function&lt;Arg, Result&gt; {<br>public:<br>  explicit pointer_to_unary_function(Result (* f)(<strong>Arg</strong>));<br>  Result operator()(<strong>Arg</strong> x) const;<br>};<br></pre>
+  </blockquote>
+
+  <p>Note that the argument to <tt>operator()</tt> is exactly the same type
+  as the argument to the wrapped function. If this is a value type, the
+  argument will be passed by value and copied twice.
+  <tt>pointer_to_binary_function</tt> has a similar problem.</p>
+
+  <p>注意，<tt>operator()</tt> 的参数与被包装函数的参数是完全相同的类型。如果它是一个值类型，则参数将被以值方式传递，并且复制两次。<tt>pointer_to_binary_function</tt> 也有同样的问题。</p>
+
+  <p>However, if we were to try and eliminate this inefficiency by instead
+  declaring the argument as <tt>const&nbsp;Arg&amp;</tt>, then if Arg were a
+  reference type, we would have a reference to a reference, which is
+  currently illegal (but see <a href="http://anubis.dkuug.dk/jtc1/sc22/wg21/docs/cwg_active.html#106">C++ core
+  language issue number 106)</a></p>
+
+  <p>但是，如果我们试图消除这一低率的操作，将参数的声明改为 <tt>const&nbsp;Arg&amp;</tt>, 那么如果 Arg 是一个引用类型，则我们就遇到了引用的引用，这在当前是非法的(不过请参见 <a href="http://anubis.dkuug.dk/jtc1/sc22/wg21/docs/cwg_active.html#106">C++核心语言问题 106)</a></p>
+
+  <p>So the way in which we want to declare the argument for
+  <tt>operator()</tt> depends on whether or not the wrapped function's
+  argument is a reference. If it is a reference, we want to declare it simply
+  as <tt>Arg</tt>; if it is a value we want to declare it as
+  <tt>const&nbsp;Arg&amp;</tt>.</p>
+
+  <p>所以，我们如何声明
+  <tt>operator()</tt> 的参数，取决于被包装函数的参数是否为引用。如果它是一个引用，则我们只要将它声明为 <tt>Arg</tt>; 如果它是一个值，则我们应该声明它为 <tt>const&nbsp;Arg&amp;</tt>.</p>
+
+  <p>The Boost <a href="../utility/call_traits.htm">call_traits</a> class
+  template contains a <tt>param_type</tt> typedef, which uses partial
+  specialisation to make precisely this decision. By declaring the
+  <tt>operator()</tt> as</p><p>Boost <a href="../utility/call_traits.htm">call_traits</a> 类模板包含了一个 <tt>param_type</tt> typedef, 它使用了偏特化来作出恰当的决定。通过将 <tt>operator()</tt> 声明为</p>
+
+  <blockquote>
+    <pre>Result operator()(typename call_traits&lt;Arg&gt;::param_type x) const<br></pre>
+  </blockquote>
+
+  <p>we achieve the desired result - we improve efficiency without generating
+  references to references.</p><p>我们就得到了所希望的结果 - 既提高了效率，又不会产生引用的引用。</p>
+
+  <h3>Limitations 局限</h3>
+
+  <p>The call traits template used to realise this improvement relies on
+  partial specialisation, so this improvement is only available on compilers
+  that support that feature. With other compilers, the argument passed to the
+  function will always be passed by reference, thus generating the
+  possibility of references to references.</p><p>call traits 模板依赖于偏特化，所以这一改进只能在支持这一特性的编译器上使用。对于其它编译器，传递给函数的参数总是以引用的方式进行传递，因此有可能产生引用的引用。</p>
+  <hr>
+
+  <p><a href="http://validator.w3.org/check?uri=referer"><img src="http://www.w3.org/Icons/valid-html401" alt="Valid HTML 4.01 Transitional" border="0" height="31" width="88"></a></p>
+
+  <p>Revised 
+  <!--webbot bot="Timestamp" s-type="EDITED" s-format="%d %B, %Y" startspan -->02
+  December, 2006<!--webbot bot="Timestamp" endspan i-checksum="38510" --></p>
+
+  <p><i>Copyright © 2000 Cadenza New Zealand Ltd.</i></p>
+
+  <p><i>Distributed under the Boost Software License, Version 1.0. (See
+  accompanying file <a href="../../LICENSE_1_0.txt">LICENSE_1_0.txt</a> or
+  copy at <a href="http://www.boost.org/LICENSE_1_0.txt">http://www.boost.org/LICENSE_1_0.txt</a>)</i></p>
+</body></html>
