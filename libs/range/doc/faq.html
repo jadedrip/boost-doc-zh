@@ -1,0 +1,217 @@
+<!DOCTYPE HTML PUBLIC "-//W3C//DTD HTML 3.2//EN">
+<html>
+<head>
+
+
+    
+  
+  <meta http-equiv="Content-Type" content="text/html; charset=UTF-8">
+
+
+    
+    
+  
+  
+  <title>Boost.Range FAQ</title>
+  <link rel="stylesheet" href="style.css" type="text/css">
+</head>
+
+
+<body>
+
+
+
+    
+<table border="0">
+
+
+        <tbody>
+
+    <tr>
+
+
+            <td><img src="../../../boost.png" border="0"></td>
+
+
+            <td>
+      
+      <h1 align="center">Boost.Range</h1>
+
+      </td>
+
+
+        </tr>
+
+
+    
+  
+  </tbody>
+</table>
+
+
+
+    
+<p>
+    </p>
+
+<h2>FAQ</h2>
+
+ <a name="FAQ"></a>
+    
+<ol>
+
+
+        <li>
+            <i>为什么对于</i><i> <code>std::pair&lt;iterator, iterator&gt;</code></i><i>，<code>range_iterator&lt;C&gt;::type</code> 和 <code>range_const_iterator&lt;C&gt;::type</code> 没有区别。</i>
+        </li>
+
+
+        
+  
+  <p>通常没有可能也不值得找到一个 <code>const_iterator</code>. 如果要得到一个，用户可以选择构造一个 <code>std::pair&lt;const_iterator,const_iterator&gt;</code>
+        对象。
+        </p>
+
+
+        
+  
+  <p>注意，<a href="utility_class.html#iter_range">iterator_range</a>
+        要比 <code>pair</code> 稍微方便一点，而 <a href="utility_class.html#sub_range"><code>sub_range</code></a> 则可以传播常量性。 </p>
+
+
+
+        <li>
+            <i>为什么不提供更多的类型或函数？</i>
+            
+    
+    <p>本库保持比较小是因为它当前的接口可以有更多的用途。如果真的需要更多的功能，它也可以实现。
+            </p>
+
+
+        </li>
+
+
+        <li>
+            <i>我如何实现使用区间的泛型算法？</i>
+            
+    
+    <p>你应该从接受两个(或多个)迭代器作为输入的泛型算法开始。然后使用 Boost.Range 在算法所基于的迭代器之上来构建一个手工版本。请注意，一旦实现了算法的区间版本，就不要再将迭代器版本公开在公有接口上。
+            </p>
+
+
+        </li>
+
+
+        <li>
+            <i>为什么没有递增区间的概念？</i>
+            
+    
+    <p>虽然我们有讨论递增迭代器，但是不太合适讨论这类区间；例如，我们无法确定区间的大小以及区间是否为空，因为我们不能比较这种迭代器。
+            </p>
+
+
+            
+    
+    <p>还应注意，递增迭代器派生自输出迭代器，所以也不存在输出区间。
+             </p>
+
+
+        </li>
+
+
+        <!--
+        <li>
+            <i>Should I use qualified syntax, for example
+<blockquote><pre>
+<span class=identifier>boost</span><span class=special>::</span><span class=identifier>begin</span><span class=special>( </span><span class=identifier>r </span><span class=special>); </span>
+</pre></blockquote>
+            instead of
+            <blockquote>
+<pre><span class=keyword>using </span><span class=keyword>namespace </span><span class=identifier>boost</span><span class=special>;</span>
+<span class=identifier>begin</span><span class=special>( </span><span class=identifier>r </span><span class=special>)</span></pre></blockquote>
+            when calling functions in this library? If so, can I still rely on argument
+            dependent lookup (ADL) to kick in?</i>
+            <p>
+            The answer to the first question is that "it's up to you". The
+            answer to the second question is Yes. Normally qualified syntax
+            disables ADL, but the functions are implemented in a special
+            manner that preserves ADL properties. The trick was explained by
+            Daniel Frey on comp.lang.std.c++ in the thread "Whence Swap" and
+            it is best explained by some code: <blockquote>
+    <pre>
+<span class=keyword>namespace </span><span class=identifier>boost</span>
+<span class=special>{
+    </span><span class=keyword>namespace </span><span class=identifier>range_detail
+    </span><span class=special>{
+        </span><span class=keyword>template</span><span class=special>&lt; </span><span class=keyword>class </span><span class=identifier>T </span><span class=special>&gt;
+        </span><span class=keyword>typename </span><span class=identifier>range_iterator</span><span class=special>&lt;</span><span class=identifier>T</span><span class=special>&gt;:</span><span class=identifier>type </span><span class=identifier>begin</span><span class=special>( </span><span class=identifier>T</span><span class=special>&amp; </span><span class=identifier>r </span><span class=special>)
+        </span><span class=special>{ </span><span class=comment>/* normal implementation */ </span><span class=special>}
+    </span><span class=special>}
+
+    </span><span class=keyword>template</span><span class=special>&lt; </span><span class=keyword>class </span><span class=identifier>T </span><span class=special>&gt;
+    </span><span class=keyword>typename </span><span class=identifier>range_iterator</span><span class=special>&lt;</span><span class=identifier>T</span><span class=special>&gt;::</span><span class=identifier>type </span><span class=identifier>begin</span><span class=special>( </span><span class=identifier>T</span><span class=special>&amp; </span><span class=identifier>r </span><span class=special>)
+    </span><span class=special>{
+        </span><span class=comment>//
+        // Create ADL hook
+        //
+        </span><span class=keyword>using </span><span class=identifier>range_detail</span><span class=special>::</span><span class=identifier>begin</span><span class=special>;
+        </span><span class=keyword>return </span><span class=identifier>begin</span><span class=special>( </span><span class=identifier>r </span><span class=special>);
+    </span><span class=special>}</span>
+<span class=special>}    </span>
+</pre>
+</blockquote>
+Cool indeed!
+</p>
+     -->
+
+    
+</ol>
+
+
+
+
+    
+<hr>&copy; <a id="Copyright" name="Copyright">Copyright</a> Thorsten Ottosen 2008. 
+<p>Distributed under the Boost Software License, Version 1.0. (See accompanying 
+file LICENSE_1_0.txt or copy at <a href="http://www.boost.org/LICENSE_1_0.txt">www.boost.org/LICENSE_1_0.txt</a>) 
+</p>
+
+
+    <br>
+
+
+    <br>
+
+
+    <br>
+
+
+    <br>
+
+
+    <br>
+
+
+    <br>
+
+
+    <br>
+
+
+    <br>
+
+
+    <br>
+
+
+    <br>
+
+
+    <br>
+
+
+
+
+    
+</body>
+</html>
