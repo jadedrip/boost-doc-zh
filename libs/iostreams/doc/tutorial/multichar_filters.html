@@ -1,0 +1,244 @@
+<!DOCTYPE HTML PUBLIC "-//W3C//DTD HTML 4.01 Transitional//EN">
+<html>
+<head>
+
+  
+  <meta content="text/html; charset=UTF-8" http-equiv="content-type">
+
+
+    
+    
+  
+  
+  <title>Tutorial</title>
+  <link rel="stylesheet" href="../../../../boost.css">
+
+
+    
+  
+  <link rel="stylesheet" href="../theme/iostreams.css">
+</head>
+
+
+<body>
+
+
+
+<!-- Begin Banner -->
+
+    
+<h1 class="title">指南</h1>
+
+
+    
+<hr class="banner">
+
+<!-- End Banner -->
+
+<!-- Begin Nav -->
+
+<div class="nav">
+    <a href="unix2dos_filters.html"><img src="../../../../doc/html/images/prev.png" border="0" height="19" width="19"></a>
+    <a href="tutorial.html"><img src="../../../../doc/html/images/up.png" border="0" height="19" width="19"></a>
+    <a href="dual_use_filters.html"><img src="../../../../doc/html/images/next.png" border="0" height="19" width="19"></a>
+</div>
+
+
+
+<!-- End Nav -->
+
+
+<a name="multichar"></a>
+<h2>2.2.8. 多字符过滤器</h2>
+
+
+
+<p>目前为止你所见到的过滤器 &mdash; 除了从 <code>stdio_filter</code> 派生的以外
+&mdash; 都是每次处理一个字符的。如果可以每次处理多个字符，通常能够减少函数调用的次数，从而提供代码的效率。这正是 <a href="../concepts/multi_character.html">多字符过滤器</a> 可以提供的。
+</p>
+
+
+
+<a name="multichar_input_filters"></a>
+<h4>多字符输入过滤器</h4>
+
+
+
+<p>一个典型的窄字符 <a href="../concepts/multi_character.html">多字符</a> <a href="../concepts/input_filter.html">输入过滤器</a> 如下：</p>
+
+<p>
+
+</p>
+
+<pre class="broken_ie"><span class="preprocessor">#include</span> <span class="literal">&lt;iosfwd&gt;</span>                          <span class="comment">// streamsize</span>
+<span class="preprocessor">#include</span> <a class="HEADER" href="../../../../boost/iostreams/categories.hpp"><span class="literal">&lt;boost/iostreams/categories.hpp&gt;</span></a>  <span class="comment">// tags<br></span>
+<span class="keyword">class</span> my_input_filter {<br><span class="keyword">public</span>:<br>    <span class="keyword">typedef</span> <span class="keyword">char</span> char_type;<br>    <span class="keyword">struct</span> category <br>        : input_filter_tag,<br>          multichar_tag<br>        { };<br><br>    <span class="keyword">template</span>&lt;<span class="keyword">typename</span> Source&gt;<br>    std::streamsize read(Source&amp; src, <span class="keyword">char</span>* s, std::streamsize n)<br>    {<br>        <span class="comment">// 读入最多 n 个已过滤字符到缓冲区 s, 返回读入的字符数或者</span><span class="comment"> -1 表示 EOF.</span>
+        <span class="comment">// src 用于访问未过滤字符序列</span>
+    }
+
+    <span class="comment">/* 其它成员 */</span>
+};</pre>
+
+
+
+<p>注意，成员类型 category 是一个可以转换为 <code>input_filter_tag</code> 和 <code>multichar_tag</code> 的 <code>struct</code>. 这样可以通知 Iostream 库 <code>my_input_filter</code> 是一个 <a href="../concepts/multi_character.html">多字符过滤器</a> 和 <a href="../concepts/input_filter.html">输入过滤器</a>。你也可以用以下方法来取得相同效果：
+</p>
+
+
+
+<pre class="broken_ie">    <span class="keyword">struct</span> category <br>        : input,<br>          filter_tag,<br>          multichar_tag<br>        { };<br><br>        <span class="comment">/* 或 */</span>
+
+    <span class="keyword">typedef</span> multichar_input_filter_tag category;</pre>
+
+
+
+<p>(详细请见<i></i> <a href="../guide/modes.html#mode_tags">Mode Tags模式标志</a> 和&nbsp;<a href="../guide/traits.html#category_tags">Category Tags分类标志</a>)
+
+</p>
+
+<p>你也可以将上述例子写为：</p>
+
+
+
+<pre class="broken_ie"><span class="preprocessor">#include</span> <span class="literal">&lt;iosfwd&gt;</span>                       <span class="comment">// streamsize</span>
+<span class="preprocessor">#include</span> <a class="HEADER" href="../../../../boost/iostreams/concepts.hpp"><span class="literal">&lt;boost/iostreams/concepts.hpp&gt;</span></a> <span class="comment">// multichar_input_filter</span>
+
+<span class="keyword">class</span> my_input_filter : <span class="keyword">public</span> multichar_input_filter {<br><span class="keyword">public</span>:<br>    <span class="keyword">template</span>&lt;<span class="keyword">typename</span> Source&gt;<br>    std::streamsize read(<span class="keyword">char</span>* s, std::streamsize n);<br><br>    <span class="comment">/* 其它成员 */</span>
+};</pre>
+
+
+
+<p>这里的 <a href="../classes/filter.html#synopsis"><code>multichar_input_filter</code></a> 更易于使用，提供了成员类型 <code>char_type</code> 和 <code>category</code>, 而且成员函数 <code>close</code> 和 <code>imbue</code> 为空操作。
+
+<a name="shell_comments_multichar_input_filter"></a>
+</p>
+
+<h4><code>shell_comments_multichar_input_filter</code></h4>
+
+
+
+<p>你可以将 <a href="shell_comments_filters.html">shell 注释过滤器</a> 实现为 <a href="../concepts/multi_character.html">多字符</a> <a href="../concepts/input_filter.html">输入过滤器</a> 如下：</p>
+
+
+
+<pre class="broken_ie"><span class="preprocessor">#include</span> <a class="header" href="../../../../boost/iostreams/char_traits.hpp"><span class="literal">&lt;boost/iostreams/char_traits.hpp&gt;</span></a> <span class="comment">// EOF, WOULD_BLOCK</span>
+<span class="preprocessor">#include</span> <a class="header" href="../../../../boost/iostreams/concepts.hpp"><span class="literal">&lt;boost/iostreams/concepts.hpp&gt;</span></a>    <span class="comment">// multichar_input_filter</span>
+<span class="preprocessor">#include</span> <a class="header" href="../../../../boost/iostreams/operations.hpp"><span class="literal">&lt;boost/iostreams/operations.hpp&gt;</span></a>  <span class="comment">// get</span>
+
+<span class="keyword">namespace</span> boost { <span class="keyword">namespace</span> iostreams { <span class="keyword">namespace</span> example {<br><br><span class="keyword">class</span> shell_comments_multichar_input_filter : <span class="keyword">public</span> multichar_input_filter {<br><span class="keyword">public</span>:<br>    <span class="keyword">explicit</span> shell_comments_multichar_input_filter(<span class="keyword">char</span> comment_char = '#')<br>        : comment_char_(comment_char), skip_(<span class="keyword">false</span>)<br>        { }<br><br>    <span class="keyword">template</span>&lt;<span class="keyword">typename</span> Source&gt;<br>    std::streamsize read(Source&amp; src, <span class="keyword">char</span>* s, std::streamsize n)<br>    {<br>        <span class="keyword">for</span> (std::streamsize z = <span class="numeric_literal">0</span>; z &lt; n; ++z) {<br>            <span class="keyword">int</span> c;<br>            <span class="keyword">while</span> (true) {<br>                <span class="keyword">if</span> ((c = boost::iostreams::get(src)) == <span class="numeric_literal">EOF</span>)<br>                    <span class="keyword">return</span> z != <span class="numeric_literal">0</span> ? z : <span class="numeric_literal">-1</span>;<br>                <span class="keyword">else</span> <span class="keyword">if</span> (c == WOULD_BLOCK)<br>                    <span class="keyword">return</span> z;<br>                skip_ = c == comment_char_ ?<br>                    <span class="keyword">true</span> :<br>                    c == '\n' ?<br>                        <span class="keyword">false</span> :<br>                        skip_;<br>                <span class="keyword">if</span> (!skip_)<br>                    <span class="keyword">break</span>;<br>            }<br>            s[z] = c;<br>        }<br>        <span class="keyword">return</span> n;<br>    }<br><br>    <span class="keyword">template</span>&lt;<span class="keyword">typename</span> Source&gt;<br>    <span class="keyword">void</span> close(Source&amp;) { skip_ = false; }<br><span class="keyword">private</span>:<br>    <span class="keyword">char</span> comment_char_;<br>    <span class="keyword">bool</span> skip_;<br>};<br><br>} } } <span class="comment">// End namespace boost::iostreams:example</span></pre>
+
+
+
+<p><code>read</code> 的实现和将 <a href="shell_comments_filters.html#shell_comments_input_filter"><code>shell注释过滤器的input_filter::get</code></a> 的实现放入一个从 <code>0</code> 和 <code>n</code> 和 <code>for</code> 循环中所得到的结果非常相似。自我递归调用的输入过滤器，如 <a href="tab_expanding_filters.html#tab_expanding_input_filter"><code>tab展开的输入过滤器</code></a>，就较难转为多字符过滤器。
+</p>
+
+
+
+<a name="multichar_output_filters"></a>
+<h4>多字符输出过滤器</h4>
+
+
+
+<p>一个典型的窄字符 <a href="../concepts/multi_character.html">多字符</a> <a href="../concepts/output_filter.html">输出过滤器</a> 如下：</p>
+
+<p>
+
+</p>
+
+<pre class="broken_ie"><span class="preprocessor">#include</span> <span class="literal">&lt;iosfwd&gt;</span>                          <span class="comment">// streamsize</span>
+<span class="preprocessor">#include</span> <a class="HEADER" href="../../../../boost/iostreams/categories.hpp"><span class="literal">&lt;boost/iostreams/categories.hpp&gt;</span></a>  <span class="comment">// tags<br></span>
+<span class="keyword">class</span> my_output_filter {<br><span class="keyword">public</span>:<br>    <span class="keyword">typedef</span> <span class="keyword">char</span> char_type;<br>    <span class="keyword">struct</span> category <br>        : output_filter_tag,<br>          multichar_tag<br>        { };<br><br>    <span class="keyword">template</span>&lt;<span class="keyword">typename</span> Sink&gt;<br>    std::streamsize write(Sink&amp; dest, <span class="keyword">const</span> <span class="keyword">char</span>* s, std::streamsize n)<br>    {<br>        <span class="comment">// 从缓冲区 s 消耗最多 n 个已过滤字符, 将已过滤字符写出到</span><span class="comment"> dest.</span>
+        <span class="comment">// 返回消耗的字符数。</span>
+    }
+
+    <span class="comment">/* 成员函数 */</span>
+};</pre>
+
+
+
+<p>注意，成员类型 category 是一个可以转换为 <code>output_filter_tag</code> 和 <code>multichar_tag</code> 的 <code>struct</code><code></code>. 这样可以通知 Iostream 库 <code>my_</code><code>output</code><code>_filter</code> 是一个 <a href="../concepts/multi_character.html">多字符过滤器</a> 和 <a href="../concepts/output_filter.html">输出过滤器</a>。和 <a href="../concepts/multi_character.html">多字符</a> <a href="../concepts/input_filter.html">输入过滤器</a> 一样，你也可以用以下方法来取得相同效果：
+</p>
+
+
+
+<pre class="broken_ie">    <span class="keyword">struct</span> category <br>        : output,<br>          filter_tag,<br>          multichar_tag<br>        { };<br><br>        <span class="comment">/* 或 */</span>
+
+    <span class="keyword">typedef</span> multichar_output_filter_tag category;</pre>
+
+
+
+<p>(详细请见 <a href="../guide/modes.html#mode_tags">Mode Tags模式标志</a> 和&nbsp;<a href="../guide/traits.html#category_tags">Category Tags分类标志</a>)
+
+</p>
+
+<p>你也可以将上述例子写为：</p>
+<pre class="broken_ie"><span class="preprocessor">#include</span> <span class="literal">&lt;iosfwd&gt;</span>                       <span class="comment">// streamsize</span>
+<span class="preprocessor">#include</span> <a class="HEADER" href="../../../../boost/iostreams/concepts.hpp"><span class="literal">&lt;boost/iostreams/concepts.hpp&gt;</span></a> <span class="comment">// multichar_output_filter</span>
+
+<span class="keyword">class</span> my_output_filter : <span class="keyword">public</span> multichar_output_filter {<br><span class="keyword">public</span>:<br>    <span class="keyword">template</span>&lt;<span class="keyword">typename</span> Sink&gt;<br>    std::streamsize write(Sink&amp; dest, <span class="keyword">const</span> <span class="keyword">char</span>* s, std::streamsize n);<br><br>    <span class="comment">/* 其它成员 */</span>
+};</pre>
+
+
+
+<p>这里的&nbsp;<a href="../classes/filter.html#synopsis"><code>multichar_output_filter</code></a> 更易于使用，提供了成员类型 <code>char_type</code> 和 <code>category</code>, 而且成员函数 <code>close</code> 和 <code>imbue</code> 为空操作。
+
+<a name="shell_comments_multichar_ouput_filter"></a>
+</p>
+
+<h4><code>shell_comments_multichar_output_filter</code></h4>
+
+
+
+<p>你可以将 <a href="shell_comments_filters.html">shell 注释过滤器</a> 实现为 <a href="../concepts/multi_character.html">多字符</a> <a href="../concepts/output_filter.html">输出过滤器</a> 如下：</p>
+
+
+
+<pre class="broken_ie"><span class="preprocessor">#include</span> <a class="header" href="../../../../boost/iostreams/char_traits.hpp"><span class="literal">&lt;boost/iostreams/char_traits.hpp&gt;</span></a> <span class="comment">// EOF, WOULD_BLOCK</span>
+<span class="preprocessor">#include</span> <a class="header" href="../../../../boost/iostreams/concepts.hpp"><span class="literal">&lt;boost/iostreams/concepts.hpp&gt;</span></a>    <span class="comment">// multichar_output_filter</span>
+<span class="preprocessor">#include</span> <a class="header" href="../../../../boost/iostreams/operations.hpp"><span class="literal">&lt;boost/iostreams/operations.hpp&gt;</span></a>  <span class="comment">// get</span>
+
+<span class="keyword">namespace</span> boost { <span class="keyword">namespace</span> iostreams { <span class="keyword">namespace</span> example {<br><br><span class="keyword">class</span> shell_comments_multichar_output_filter : <span class="keyword">public</span> multichar_output_filter {<br><span class="keyword">public</span>:<br>    <span class="keyword">explicit</span> shell_comments_multichar_output_filter(<span class="keyword">char</span> comment_char = '#')<br>        : comment_char_(comment_char), skip_(<span class="keyword">false</span>)<br>        { }<br><br>    <span class="keyword">template</span>&lt;<span class="keyword">typename</span> Sink&gt;<br>    std::streamsize write(Sink&amp; dest, <span class="keyword">const</span> char* s, std::streamsize n)<br>    {<br>        std::streamsize z;<br>        <span class="keyword">for</span> (z = <span class="numeric_literal">0</span>; z &lt; n; ++z) {<br>            <span class="keyword">int</span> c = s[z];<br>            skip_ = c == comment_char_ ?<br>                <span class="keyword">true</span> :<br>                c == <span class="literal">'\n'</span> ?<br>                    <span class="keyword">false</span> :<br>                    skip_;<br>            <span class="keyword">if</span> (skip_)<br>                <span class="keyword">continue</span>;<br>            <span class="keyword">if</span> (!iostreams::put(dest, c))<br>                <span class="keyword">break</span>;<br>        }<br>        <span class="keyword">return</span> z;<br>    }<br><br>    <span class="keyword">template</span>&lt;<span class="keyword">typename</span> Source&gt;<br>    <span class="keyword">void</span> close(Source&amp;) { skip_ = <span class="keyword">false</span>; }<br><span class="keyword">private</span>:<br>    <span class="keyword">char</span> comment_char_;<br>    <span class="keyword">bool</span> skip_;<br>};<br><br>} } } <span class="comment">// End namespace boost::iostreams:example</span></pre>
+
+
+
+<p><code>read</code> 的实现和将&nbsp;<a href="shell_comments_filters.html#shell_comments_output_filter"><code>shell注释过滤器的output_filter::put</code></a> 的实现放入一个从 <code>0</code> 和 <code>n</code> 和 <code>for</code> 循环中所得到的结果非常相似。自我递归调用的输出过滤器，如&nbsp;<a href="unix2dos_filters.html#unix2dos_output_filter"><code>unix2dos的输出过滤器</code></a>，就较难转为多字符过滤器。
+</p>
+
+
+
+<!-- Begin Nav -->
+
+<div class="nav">
+    <a href="unix2dos_filters.html"><img src="../../../../doc/html/images/prev.png" border="0" height="19" width="19"></a>
+    <a href="tutorial.html"><img src="../../../../doc/html/images/up.png" border="0" height="19" width="19"></a>
+    <a href="dual_use_filters.html"><img src="../../../../doc/html/images/next.png" border="0" height="19" width="19"></a>
+</div>
+
+
+
+<!-- End Nav -->
+
+<!-- Begin Footer -->
+
+<hr>
+
+<p class="copyright">Revised
+<!--webbot bot="Timestamp" S-Type="EDITED" S-Format="%d %B, %Y" startspan -->
+20 May, 2004
+<!--webbot bot="Timestamp" endspan i-checksum="38504" -->
+</p>
+
+
+
+<p class="copyright">&copy; Copyright <a href="http://www.kangaroologic.com" target="_top">Jonathan Turkanis</a>, 2004</p>
+
+
+<p class="copyright"> 
+    Use, modification, and distribution are subject to the Boost Software License, Version 2.0. (See accompanying file <a href="../../../../LICENSE_1_0.txt">LICENSE_1_0.txt</a> or copy at <a href="http://www.boost.org/LICENSE_1_0.txt">http://www.boost.org/LICENSE_1_0.txt</a>)
+</p>
+
+
+<!-- End Footer -->
+
+</body>
+</html>
