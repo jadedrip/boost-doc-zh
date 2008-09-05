@@ -1,0 +1,157 @@
+<!DOCTYPE HTML PUBLIC "-//W3C//DTD HTML 4.01 Transitional//EN" "http://www.w3.org/TR/html4/loose.dtd">
+<html>
+<head>
+<!--
+(C) Copyright 2002-4 Robert Ramey - http://www.rrsd.com . 
+Use, modification and distribution is subject to the Boost Software
+License, Version 1.0. (See accompanying file LICENSE_1_0.txt or copy at
+http://www.boost.org/LICENSE_1_0.txt)
+-->
+
+  
+  <meta http-equiv="Content-Type" content="text/html; charset=UTF-8">
+
+
+  
+  <link rel="stylesheet" type="text/css" href="../../../boost.css">
+
+
+  
+  <link rel="stylesheet" type="text/css" href="style.css">
+
+
+  
+  <title>Template serialization - shared_ptr</title>
+</head>
+
+
+<body link="#0000ff" vlink="#800080">
+
+
+<table summary="header" border="0" cellpadding="7" cellspacing="0" width="100%">
+
+
+  <tbody>
+
+    <tr>
+
+ 
+    <td valign="top" width="300"> 
+      
+      
+      <h3><a href="../../../index.htm"><img alt="C++ Boost" src="../../../boost.png" border="0" height="86" width="277"></a></h3>
+
+
+    </td>
+
+
+    <td valign="top"> 
+      
+      
+      <h1 align="center">Serialization序列化</h1>
+
+
+      
+      
+      <h2 align="center"><code style="white-space: normal;"></code>再谈&nbsp;<code style="white-space: normal;">shared_ptr&lt;class T&gt;</code> </h2>
+
+
+    </td>
+
+
+  </tr>
+
+
+  
+  </tbody>
+</table>
+
+
+<hr>前面所讲的 <code style="white-space: normal;">shared_ptr</code>
+序列化示范了序列化一个较复杂的类结构的简单方法。不幸的是，这个方法需要忍受一些不想要的特性：
+<ul>
+
+
+  <li>它依赖于 Boost 的 <code style="white-space: normal;">shared_ptr</code> 实现。<code style="white-space: normal;">shared_ptr</code> 接口已经被包含在 <code style="white-space: normal;">std::tr1</code> 中并将可能包含于标准C++库中。一个只依赖于公有接口的实现可以保证该功能可用于未来的 <code style="white-space: normal;">shared_ptr</code> 的任意实现。
+  </li>
+
+  <li>它要求使用额外的宏来进行输出。
+  </li>
+
+</ul>
+
+
+
+<pre><code>
+template&lt;class Archive, class T&gt;
+inline void save(
+    Archive &amp; ar,
+    const boost::shared_ptr&amp;ltT&gt; &amp;t,
+    const unsigned int /* file_version */
+){
+    const T * t_ptr = t.get();
+    // 仅序列化底层的裸指针
+    ar &lt;&amp;lt: boost::serialization::make_nvp("px", t_ptr);
+}
+
+template&lt;class Archive, class T&gt;
+inline void load(
+    Archive &amp; ar,
+    boost::shared_ptr&lt;T&gt; &amp;t,
+    const unsigned int file_version
+){
+    T* r;
+    // 恢复底层的裸指针
+    ar &gt;&gt; boost::serialization::make_nvp("px", r);
+
+    // To Do - 配合使用同一个裸指针的其它共享指针。
+    ...
+}
+</code></pre>
+理论上这比原来的实现简单得多。完成这段代码要求：
+
+<ol>
+
+
+  <li>填写 "To Do" 部分。这要求为
+  <code style="white-space: normal;">shared_ptr</code> 实例建立一个额外的 map。
+  </li>
+
+  <li>从基类指针识别指向相同对象的指针的方法。
+  </li>
+
+  <li>以上述方法进行序列化的指针的向后兼容。这引出了序列化的版本化。
+  </li>
+
+  <li>正确处理 <code style="white-space: normal;">weak_ptr</code>.
+  </li>
+
+</ol>
+以上努力的结果请见 
+<a target="serialization_shared_ptr" href="../../../boost/serialization/shared_ptr.hpp">
+<code style="white-space: normal;">boost::serialization::shared_ptr.hpp</code>
+</a>
+<p>注意，如果你的代码需要读入版本 1.32 以前的 boost 所创建的存档，你必须这样写：
+
+</p>
+
+<pre><code>
+#include &lt;boost/serialization/shared_ptr_132.hpp&gt;
+#include &lt;boost/serialization/shared_ptr.hpp&gt;
+</code></pre>
+而不能只写：
+<pre><code>
+#include &lt;boost/serialization/shared_ptr.hpp&gt;
+</code></pre>
+
+
+
+<hr>
+<p><i>&copy; Copyright <a href="http://www.rrsd.com">Robert Ramey</a> 2002-2004. 
+Distributed under the Boost Software License, Version 1.0. (See
+accompanying file LICENSE_1_0.txt or copy at http://www.boost.org/LICENSE_1_0.txt)
+</i></p>
+
+
+</body>
+</html>
