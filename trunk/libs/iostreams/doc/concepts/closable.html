@@ -1,0 +1,232 @@
+<!DOCTYPE HTML PUBLIC "-//W3C//DTD HTML 4.01 Transitional//EN">
+<html>
+<head>
+  <meta content="text/html; charset=UTF-8" http-equiv="content-type">
+
+    
+    
+  <title>Closable</title>
+  <link rel="stylesheet" href="../../../../boost.css">
+
+    
+  <link rel="stylesheet" href="../theme/iostreams.css">
+</head>
+
+
+<body>
+
+
+<!-- Begin Banner -->
+
+    
+<h1 class="title">Closable可关闭的</h1>
+
+    
+<hr class="banner">
+
+<!-- End Banner -->
+
+<h2>描述</h2>
+
+
+<p>一个可关闭的过滤器或设备在包含它的流或流缓冲关闭时，会接到通知。
+</p>
+
+
+<h4>动机</h4>
+
+
+<p>C++ 标准库中并没有某个流或流缓冲是<span style="font-style: italic;">打开</span>或<span style="font-style: italic;">关闭</span>的说法。但是对于 Iostreams 库来说，打开和关闭的概念是很重要的。有些过滤器和设备在流结束时会有特殊的行为 &mdash; 如，一个
+    <a href="output_filter.html">OutputFilter</a> 可能需要每个数据序列以换行符结束。那么在多次 i/o 操作间维护着状态的过滤器或设备则必须在过滤器或设备重新使用之前重置。这些过滤器或设备都需要在流被关闭前获得通知，它们都是 Closable.
+</p>
+
+
+<h4>关闭通知</h4>
+
+    
+<p>Iostreams 库通过调用函数library sends closure notifications by invoking the function <a href="../functions/close.html"><code>close</code></a> 来发送关闭通知。对于一个可关闭的过滤器或设备来说，<code>close</code>&nbsp;委托给了成员函数 <code>close</code>; 而对于其它设备则为空操作。关于何时及如何调用 <code>close</code> 的 <a href="../functions/close.html#when">细节</a> 比较复杂。不过，定义一个可以接收关闭通知的过滤器和设备则很容易。
+</p>
+
+
+<h2>例子</h2>
+
+
+<p>如果一个设备控制单个字符序列，要使它成为可关闭的，只需指定一个可转换为 <code>closable_tag</code> 的 <a href="../guide/traits.html#category_tags">category tag</a> 并且增加一个成员函数 <code>close</code>, 就象这样：
+</p>
+
+<pre class="broken_ie">    <span class="keyword">void</span> close() { <span class="comment"> /* 处理关闭通知 */ </span> }</pre>
+
+<p>派生自 <a href="../guide/concepts.html#convenience">这些辅助模板和 <code>typedef</code>s</a> 的过滤器和设备都带有自动提供的可转换为 <code>closable_tag</code> 的类别标志。
+</p>
+
+<p>对于控制单个序列的过滤器，<code>close</code> 的符号特征是：</p>
+
+<pre class="broken_ie">    <span class="keyword">template</span>&lt;<span class="keyword">typename</span> Device&gt;<br>    <span class="keyword">void</span> close(Device&amp;) { <span class="omitted"> ... </span> }</pre>
+
+<p>对于控制独立的输入和输出序列的过滤器和设备，以上符号特征要在参数列表的末端增加一个 <code>std::ios_base::openmode</code> 参数。该函数会被调用两次：第一次调用带有参数 <code>std::ios_base::in</code> 表示关闭输入序列，后一次则带有参数 <code>std::ios_base::out</code> 表示关闭输出序列。
+</p>
+
+    
+
+<h2>强化自</h2>
+
+
+<a name="types"></a>
+<h2>关联类型</h2>
+
+
+<table border="1" cellpadding="5">
+
+    <tbody>
+    <tr>
+      <td>Character type</td>
+      <td>相关序列的字符类型</td>
+    </tr>
+
+    <tr>
+      <td>Category</td>
+      <td>类别标志，可转换为 <a href="../guide/traits.html#category_tags"><code>closable_tag</code></a></td>
+    </tr>
+
+  </tbody>
+</table>
+
+
+<h2>符号</h2>
+
+
+<table cellpadding="2">
+
+    <tbody>
+    <tr>
+      <td><code>C</code></td>
+      <td>-</td>
+      <td>一个类型，是 Closable 的 model</td>
+    </tr>
+
+    <tr>
+      <td><code>D</code></td>
+      <td>-</td>
+      <td>一个类型，是 <a href="blocking.html">Blocking</a> 的 model, 具有与 <code>C</code> 相同的字符类型，且其模式强化自 <code>C</code> 的模式<code></code></td>
+    </tr>
+
+    <tr>
+      <td><code>c</code></td>
+      <td>-</td>
+      <td>类型 <code>C</code> 的对象<code></code></td>
+    </tr>
+
+    <tr>
+      <td><code>d</code></td>
+      <td>-</td>
+      <td>类型 <code>D</code> 的对象<code></code></td>
+    </tr>
+
+    <tr>
+      <td><code>w</code></td>
+      <td>-</td>
+      <td>类型 <code>std::ios_base::openmode</code> 的对象，等于 equal to <code>std::ios_base::in</code> 或 <code>std::ios_base::out</code></td>
+    </tr>
+
+  </tbody>
+</table>
+
+
+<h2>有效表达式 / 语义</h2>
+
+
+<p>与 <a href="filter.html">Filter</a> 或 <a href="device.html">Device</a> 相同，有以下额外要求：</p>
+
+
+<table border="1" cellpadding="5">
+
+    <tbody>
+    <tr>
+      <th>表达式</th>
+      <th>表达式类型</th>
+      <th>前提条件</th>
+      <th>语义</th>
+      <th>后续条件</th>
+    </tr>
+
+    <tr>
+
+        <td>
+            
+      <pre class="plain_code"><code><a href="../functions/close.html#close_device">boost::iostreams::close</a>(c, w)</code></pre>
+
+        </td>
+
+        <td><code>void</code></td>
+
+        <td>Category 可转换为 <a href="../guide/traits.html#category_tags"><code>device_tag</code></a></td>
+
+        <td>如果 <code>w</code> 为 <code>std::ios_base::out</code>, 写出零个或多个字符到输出序列
+        </td>
+
+        <td><code>c</code> 准备好开始处理新的字符序列</td>
+
+    </tr>
+
+    <tr>
+
+        <td>
+            
+      <pre class="plain_code"><code><a href="../functions/close.html#close_filter">boost::iostreams::close</a>(c, d, w)</code></pre>
+
+        </td>
+
+        <td><code>void</code></td>
+
+        <td>Category 可转换为 <a href="../guide/traits.html#category_tags"><code>filter_tag</code></a></td>
+
+        <td>
+            
+      <p>如果 <code>w</code> 为 <code>std::ios_base::out</code>，使用 <a href="../functions/put.html"><code>boost::iostreams::put</code></a> 和 <a href="../functions/write.html"><code>boost::iostreams::write</code></a> 写出零个或多个字符到 <code>d</code>&nbsp;<a href="../functions/write.html"><code></code></a>
+            </p>
+
+        </td>
+
+        <td><code>c</code> 准备好开始处理新的字符序列</td>
+
+    </tr>
+
+  </tbody>
+</table>
+
+
+<h2>异常</h2>
+
+
+<p>在 <a class="code" href="../functions/close.html"><code>close</code></a><code></code>
+的执行过程中发生的错误将通过抛出异常来表示。如果这些异常是在流或流缓冲的析构函数中抛出的话，则捕获并忽略它们。
+</p>
+
+
+<h2>模型</h2>
+
+
+<p>Iostreams 库提供的多数过滤器和设备都是可关闭的，但是这属于实现细节。</p>
+
+
+<!-- Begin Footer -->
+
+<hr>
+<p class="copyright">Revised
+<!--webbot bot="Timestamp" S-Type="EDITED" S-Format="%d %B, %Y" startspan -->
+20 May, 2004
+<!--webbot bot="Timestamp" endspan i-checksum="38504" -->
+</p>
+
+
+<p class="copyright">&copy; Copyright <a href="http://www.kangaroologic.com" target="_top">Jonathan Turkanis</a>, 2004</p>
+
+<p class="copyright"> 
+    Distributed under the Boost Software License, Version 1.0. (See accompanying file LICENSE_1_0.txt or copy at <a href="http://www.boost.org/LICENSE_1_0.txt">http://www.boost.org/LICENSE_1_0.txt</a>)
+</p>
+
+
+<!-- End Footer -->
+
+</body>
+</html>

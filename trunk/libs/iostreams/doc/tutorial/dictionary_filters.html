@@ -1,0 +1,311 @@
+<!DOCTYPE HTML PUBLIC "-//W3C//DTD HTML 4.01 Transitional//EN">
+<html>
+<head>
+
+
+  
+  
+  <meta content="text/html; charset=UTF-8" http-equiv="content-type">
+
+
+
+    
+    
+  
+  
+  
+  
+  <title>Tutorial</title>
+  <link rel="stylesheet" href="../../../../boost.css">
+
+
+
+    
+  
+  
+  <link rel="stylesheet" href="../theme/iostreams.css">
+</head>
+
+
+<body>
+
+
+
+
+<!-- Begin Banner -->
+
+    
+<h1 class="title">指南</h1>
+
+
+
+    
+<hr class="banner">
+
+<!-- End Banner -->
+
+<!-- Begin Nav -->
+
+<div class="nav">
+    <a href="tab_expanding_filters.html"><img src="../../../../doc/html/images/prev.png" border="0" height="19" width="19"></a>
+    <a href="tutorial.html"><img src="../../../../doc/html/images/up.png" border="0" height="19" width="19"></a>
+    <a href="unix2dos_filters.html"><img src="../../../../doc/html/images/next.png" border="0" height="19" width="19"></a>
+</div>
+
+
+
+
+<!-- End Nav -->
+
+<a name="dictionary"></a>
+<h2>2.2.6. 字典过滤器</h2>
+
+
+
+
+<p><span class="term">字典过滤器</span> 是指按以下方式进行文本替换的过滤器。它维护一组字符串对，每对字符串的第一部分表示单词，第二部分则表示替换文本 &mdash; 我将这个集合称为 <span class="term">字典</span>，所包含的字符串对称为 <span class="term">定义</span>。当字典过滤器遇到一个与定义中第一部分相匹配的单词时，它就转发替换的文本来代替原来的单词。其它单词、空白以及标点符号都照原样转发。 </p>
+
+
+
+
+<p>基本算法如下：每次检查一个字符，将它添加到被称为<span class="term">当前单词</span>的字符串上。遇到一个非字母字符时，对照字典检查当前单词是否为某个定义中的第一部分。如果是，则转发替代文本并后随非字母字符。否则，转发当前单词及非字母字符。当到达流的末尾时，再次对照字典进行检查，并转发当前单词或替代文本。
+</p>
+
+
+
+
+<p>以下章节中，我将以上算法分别实现为 <a href="../classes/stdio_filter.html"><code>stdio_filter</code></a>,&nbsp;<a href="../concepts/input_filter.html">InputFilter输入过滤器</a> 和 <a href="../concepts/output_filter.html">OutputFilter输出过滤器</a>。源代码可以在头文件 <a href="../../example/dictionary_filter.hpp"><code>&lt;libs/iostreams/example/dictionary_filter.hpp&gt;</code></a> 中找到。
+</p>
+
+
+
+
+<a name="dictionary"></a>
+<h4><code>dictionary</code></h4>
+
+
+
+
+<p>你可以用以下类来表示一个字典：</p>
+
+
+
+
+<pre class="broken_ie"><span class="preprocessor">#include</span> <span class="literal">&lt;map&gt;</span>
+<span class="preprocessor">#include</span> <span class="literal">&lt;string&gt;</span>
+
+<span class="keyword">namespace</span> boost { <span class="keyword">namespace</span> iostreams { <span class="keyword">namespace</span> example {<br><br><span class="keyword">class</span> dictionary {<br><span class="keyword">public</span>:<br>    <span class="keyword">void</span> add(std::string key, <span class="keyword">const</span> std::string&amp; value);<br>    <span class="keyword">void</span> replace(std::string&amp; key);<br><br>    <span class="comment">/* ... */</span>
+};
+
+} } } <span class="comment">// End namespace boost::iostreams:example</span></pre>
+
+
+
+
+<p>成员函数 <code>add</code> 将 <code>key</code> 转换为小写然后将 <code>key</code>, <code>value</code> 对添加到字典中。成员函数 <code>replace</code> 查找某个定义，其第一部分与 <code>key</code> 转换为小写后的结果相同。如果能找到，则将相应的替代文本赋给 <code>key</code>, 并将首字母的大小写调整为与 <code>key</code> 的首字母相同。否则，不做任何操作。
+</p>
+
+
+
+
+<a name="dictionary_stdio_filter"></a>
+<h4><code>dictionary_stdio_filter</code></h4>
+
+
+
+
+<p>你可以将字典过滤器实现为 <a href="../classes/stdio_filter.html"><code>stdio_filter</code></a> 如下：</p>
+
+
+
+
+<pre class="broken_ie"><span class="preprocessor">#include</span> <span class="literal">&lt;cstdio&gt;</span>    <span class="comment">// EOF</span>
+<span class="preprocessor">#include</span> <span class="literal">&lt;iostream&gt;</span>  <span class="comment">// cin, cout</span>
+<span class="preprocessor">#include</span> <a class="header" href="../../../../boost/iostreams/filter/stdio.hpp"><span class="literal">&lt;boost/iostreams/filter/stdio.hpp&gt;</span></a>
+
+<span class="keyword">namespace</span> boost { <span class="keyword">namespace</span> iostreams { <span class="keyword">namespace</span> example {<br><br><span class="keyword">class</span> dictionary_stdio_filter : <span class="keyword"><span class="keyword"><span class="keyword">public</span></span></span> stdio_filter {<br><span class="keyword">public</span>:<br>    dictionary_stdio_filter(dictionary&amp; d) : dictionary_(d) { }<br><span class="keyword">private</span>:<br>    <span class="keyword">void</span> do_filter()<br>    {<br>        <span class="keyword">using</span> <span class="keyword">namespace</span> std;<br>        <span class="keyword">while</span> (<span class="keyword">true</span>) {<br>            <span class="keyword"><span class="keyword">int</span></span> c = std::cin.get();<br>            <span class="keyword">if</span> (c == <span class="numeric_literal">EOF</span> || !std::isalpha((<span class="keyword">unsigned</span> <span class="keyword">char</span>) c)) {<br>                dictionary_.replace(current_word_);<br>                cout.write( current_word_.data(),<br>                            <span class="keyword">static_cast</span>&lt;streamsize&gt;(current_word_.size()) );<br>                current_word_.erase();<br>                <span class="keyword">if</span> (c == <span class="numeric_literal">EOF</span>)<br>                    break;<br>                cout.put(c);<br>            } <span class="keyword">else</span> {<br>                current_word_ += c;<br>            }<br>        }<br>    }<br>    dictionary&amp;  dictionary_;<br>    std::string  current_word_;<br>};<br><br>} } } <span class="comment">// End namespace boost::iostreams:example</span></pre>
+
+
+
+
+<p><code>do_filter</code> 的实现循环不断地从 <code>std::cin</code> 读入字符，并将字符添加到成员变量 <code>current_word_</code> 上，直至遇到非字母字符或流的结束。这时就使用成员变量 <code>dictionary_</code> 中所保存的字典，来替换当前的单词。最后，将当前单词写出到 <code>std::cout</code>，后随相应的非字母字符。
+</p>
+
+
+
+
+<a name="dictionary_input_filter"></a>
+<h4><code>dictionary_input_filter</code></h4>
+
+
+
+
+<p>你可以将字典过滤器实现为 <a href="../concepts/input_filter.html">InputFilter输入过滤器</a> 如下：</p>
+
+
+
+
+<pre class="broken_ie"><span class="preprocessor">#include</span> <a class="header" href="../../../../boost/iostreams/char_traits.hpp"><span class="literal">&lt;boost/iostreams/char_traits.hpp&gt;</span></a> <span class="comment">// EOF, WOULD_BLOCK</span>
+<span class="preprocessor">#include</span> <a class="header" href="../../../../boost/iostreams/concepts.hpp"><span class="literal">&lt;boost/iostreams/concepts.hpp&gt;</span></a>    <span class="comment">// input_filter</span>
+<span class="preprocessor">#include</span> <a class="header" href="../../../../boost/iostreams/operations.hpp"><span class="literal">&lt;boost/iostreams/operations.hpp&gt;</span></a>  <span class="comment">// get</span>
+
+<span class="keyword">namespace</span> boost { <span class="keyword">namespace</span> iostreams { <span class="keyword">namespace</span> example {<br><br><span class="keyword">class</span> dictionary_input_filter : <span class="keyword"><span class="keyword"><span class="keyword">public</span></span></span> input_filter {<br><span class="keyword">public</span>:<br>    dictionary_input_filter(dictionary&amp; d)<br>        : dictionary_(d), off_(std::string::npos), eof_(<span class="keyword">false</span>)<br>        { }<br><br>    <span class="keyword">template</span>&lt;<span class="keyword">typename</span> Source&gt;<br>    <span class="keyword"><span class="keyword">int</span></span> get(Source&amp; src);<br><br>    <span class="keyword">template</span>&lt;<span class="keyword">typename</span> Source&gt;<br>    <span class="keyword">void</span> close(Source&amp;);<br><span class="keyword">private</span>:<br>    dictionary&amp;             dictionary_;<br>    std::string             current_word_;<br>    std::string::size_type  off_;<br>    <span class="keyword"><span class="keyword">bool</span></span>                    eof_;<br>};<br><br>} } } <span class="comment">// End namespace boost::iostreams:example</span></pre>
+
+
+
+
+<p>函数 <code>get</code> 实现如下：</p>
+
+
+
+
+<pre class="broken_ie">    <span class="keyword">template</span>&lt;<span class="keyword">typename</span> Source&gt;<br>    <span class="keyword"><span class="keyword">int</span></span> get(Source&amp; src)<br>    {<br>        <span class="comment">// 处理未完成的工作。</span>
+        <span class="keyword">if</span> (off_ != std::string::npos &amp;&amp; off_ &lt; current_word_.size())<br>            <span class="keyword">return</span> current_word_[off_++];<br>        <span class="keyword">if</span> (off_ == current_word_.size()) {<br>            current_word_.erase();<br>            off_ = std::string::npos;<br>        }<br>        <span class="keyword">if</span> (eof_)<br>            <span class="keyword">return</span> <span class="numeric_literal">EOF</span>;<br><br>        <span class="comment">// 计算当前单词。</span>
+        <span class="keyword">while</span> (<span class="keyword">true</span>) {<br>            <span class="keyword"><span class="keyword">int</span></span> c;<br>            <span class="keyword">if</span> ((c = iostreams::get(src)) == WOULD_BLOCK)<br>                <span class="keyword">return</span> WOULD_BLOCK;<br><br>            <span class="keyword">if</span> (c == <span class="numeric_literal">EOF</span> || !std::isalpha((<span class="keyword">unsigned</span> <span class="keyword">char</span>) c)) {<br>                dictionary_.replace(current_word_);<br>                off_ = 0;<br>                <span class="keyword">if</span> (c == <span class="numeric_literal">EOF</span>)<br>                    eof_ = <span class="keyword">true</span>;<br>                <span class="keyword">else</span>
+                    current_word_ += c;
+                break;
+            } <span class="keyword">else</span> {<br>                current_word_ += c;<br>            }<br>        }<br><br>        <span class="keyword">return</span> this-&gt;get(src); <span class="comment">// 注意：current_word_ 非空。</span>
+    }</pre>
+
+
+
+
+<p>首先检查是否有上次调用 <code>get</code> 时剩余的字符。如果有，则更新某些跟踪信息并返回头一个字符。
+</p>
+
+
+
+<p><code>while</code> 循环与 <a href="#dictionary_stdio_filter"><code>字典过滤器的_stdio_filter::do_filter</code></a> 很相似：从 <a href="../concepts/source.html">Source来源</a> <code>src</code> 读入字符，添加到 <code>current_word_</code> 直至遇到非字母字符、<code>EOF</code> 或 <code>WOULD_BLOCK</code>. 值 <code>WOULD_BLOCK</code> 会传递给调用者。其它情况下，参照字典来决定替换的文本。
+ </p>
+
+
+
+
+ 
+<p>最后递归调用 <code>get</code> 本身来返回当前单词的第一个字符。</p>
+
+
+
+
+<p>如常，函数 <code>close</code> 重置过滤器的状态：</p>
+
+
+
+
+<pre class="broken_ie">    <span class="keyword">template</span>&lt;<span class="keyword">typename</span> Source&gt;<br>    <span class="keyword">void</span> close(Source&amp;)<br>    {<br>        current_word_.erase();<br>        off_ = std::string::npos;<br>        eof_ = <span class="keyword">false</span>;<br>    }</pre>
+
+
+
+
+<a name="dictionary_output_filter"></a>
+<h4><code>dictionary_output_filter</code></h4>
+
+
+
+
+<p>你可以将字典过滤器实现为 <a href="../concepts/output_filter.html">OutputFilter输出过滤器</a> 如下：</p>
+
+
+
+
+<pre class="broken_ie"><span class="preprocessor">#include</span> <span class="literal">&lt;algorithm&gt;</span>                      <span class="comment">// swap</span>
+<span class="preprocessor">#include</span> <a class="header" href="../../../../boost/iostreams/concepts.hpp"><span class="literal">&lt;boost/iostreams/concepts.hpp&gt;</span></a>   <span class="comment">// output_filter</span>
+<span class="preprocessor">#include</span> <a class="header" href="../../../../boost/iostreams/operations.hpp"><span class="literal">&lt;boost/iostreams/operations.hpp&gt;</span></a> <span class="comment">// write</span>
+
+<span class="keyword">namespace</span> boost { <span class="keyword">namespace</span> iostreams { <span class="keyword">namespace</span> example {<br><br><span class="keyword">class</span> dictionary_output_filter : <span class="keyword"><span class="keyword"><span class="keyword">public</span></span></span> output_filter {<br><span class="keyword">public</span>:<br>    <span class="keyword">typedef</span> std::map&lt;std::string, std::string&gt; map_type;<br>    dictionary_output_filter(dictionary&amp; d)<br>        : dictionary_(d), off_(std::string::npos)<br>        { }<br><br>    <span class="keyword">template</span>&lt;<span class="keyword">typename</span> Sink&gt;<br>    <span class="keyword"><span class="keyword">bool</span></span> put(Sink&amp; dest, <span class="keyword"><span class="keyword">int</span></span> c);<br><br>    <span class="keyword">template</span>&lt;<span class="keyword">typename</span> Sink&gt;<br>    <span class="keyword">void</span> close(Sink&amp; dest);<br><span class="keyword">private</span>:<br>    <span class="keyword">template</span>&lt;<span class="keyword">typename</span> Sink&gt;<br>    <span class="keyword"><span class="keyword">bool</span></span> write_current_word(Sink&amp; dest);<br>    dictionary&amp;             dictionary_;<br>    std::string             current_word_;<br>    std::string::size_type  off_;<br>    <span class="keyword"><span class="keyword">bool</span></span>                    initialized_;<br>};<br><br>} } } <span class="comment">// End namespace boost::iostreams:example</span></pre>
+
+
+
+
+<p>先来看看助手函数 <code>write_current_word</code>:</p>
+
+
+
+
+<pre class="broken_ie">    <span class="keyword">template</span>&lt;<span class="keyword">typename</span> Sink&gt;<br>    <span class="keyword"><span class="keyword">bool</span></span> write_current_word(Sink&amp; dest)<br>    {<br>        <span class="keyword">using</span> <span class="keyword">namespace</span> std;<br>        streamsize amt = <span class="keyword">static_cast</span>&lt;streamsize&gt;(current_word_.size() - off_);<br>        streamsize result =<br>            iostreams::write(dest, current_word_.data() + off_, amt);<br>        <span class="keyword">if</span> (result == amt) {<br>            current_word_.erase();<br>            off_ = string::npos;<br>            <span class="keyword">return</span> <span class="keyword">true</span>;<br>        } <span class="keyword">else</span> {<br>            off_ += result;<br>            <span class="keyword">return</span> <span class="keyword">false</span>;<br>        }<br>    }</pre>
+
+
+
+
+<p>该函数尝试从偏移量 <code>off_</code> 开始写出 <code>current_word_</code> 到给定的 <a href="../concepts/sink.html">Sink接收器</a>。如果整个序列被成功写出，<code>current_word_</code> 就被清除且函数返回 <code>true</code>. 否则成员变量 <code>off_</code> 被更新为指向第一个未写出字符且函数失败。
+</p>
+
+
+
+
+<p>使用 <code>write_current_word</code> 你可以实现 <code>put</code> 如下：</p>
+
+
+
+
+<pre class="broken_ie">    <span class="keyword">template</span>&lt;<span class="keyword">typename</span> Sink&gt;<br>    <span class="keyword"><span class="keyword">bool</span></span> put(Sink&amp; dest, <span class="keyword"><span class="keyword">int</span></span> c)<br>    {<br>        <span class="keyword">if</span> (off_ != std::string::npos &amp;&amp; !write_current_word(dest))<br>            <span class="keyword">return</span> <span class="keyword">false</span>;<br>        <span class="keyword">if</span> (!std::isalpha((<span class="keyword">unsigned</span> <span class="keyword">char</span>) c)) {<br>            dictionary_.replace(current_word_);<br>            off_ = 0;<br>        }<br><br>        current_word_ += c;<br>        <span class="keyword">return</span> <span class="keyword">true</span>;<br>    }</pre>
+
+
+
+
+<p>和 <a href="#dictionary_input_filter"><code>字典过滤器的_input_filter::get</code></a> 一样，你首先检查是否有上一次 <code>put</code> 调用剩下的字符要写出。如果有，就尝试用 <code>write_current_word</code> 写出这些字符。如果成功，则接着检查给定的字符 <code>c</code>.
+如果是一个非字母字符，则查找字典来决定替换的文本。其它情况下，将字符 <code>c</code> 添加到 <code>current_word_</code> 并返回 <code>true</code>.
+</p>
+
+
+
+
+<p>函数 <code>close</code> 除了重置过滤器状态外，还要多做一点工作。除非未过滤序列中的最后一个字符刚好是非字母字符，否则 current_word_ &nbsp;的内容还未被写出：</p>
+
+
+
+
+<pre class="broken_ie">    <span class="keyword">template</span>&lt;<span class="keyword">typename</span> Sink&gt;<br>    void close(Sink&amp; dest)<br>    {<br>        <span class="comment">// 重置 current_word_ 和 off_, 保存旧值。</span>
+        std::string             current_word;
+        std::string::size_type  off = <span class="numeric_literal">0</span>;<br>        current_word.swap(current_word_);<br>        std::swap(off, off_);<br><br>        <span class="comment">// 将剩余字符写出到 dest.</span>
+        <span class="keyword">if</span> (off == std::string::npos) {<br>            dictionary_.replace(current_word);<br>            off = <span class="numeric_literal">0</span>;<br>        }<br>        <span class="keyword">if</span> (!current_word.empty())<br>            iostreams::write( <br>                dest,<br>                current_word.data() + off, <br>                <span class="keyword">static_cast</span>&lt;std::streamsize&gt;(current_word.size() - off) <br>            );<br>    }</pre>
+
+
+
+
+<p>注意，你可以假设模板参数是 <a href="../concepts/blocking.html">阻塞式</a> <a href="../concepts/sink.html">接收器</a>，你必须在调用 <a href="../functions/write.html"><code>write</code></a> 之前重置 <code>current_word_</code> 和 <code>off_</code> 的值，万一 <a href="../functions/write.html"><code>write</code></a> 抛出异常也有保障了。</p>
+
+
+
+
+<!-- Begin Nav -->
+
+<div class="nav">
+    <a href="tab_expanding_filters.html"><img src="../../../../doc/html/images/prev.png" border="0" height="19" width="19"></a>
+    <a href="tutorial.html"><img src="../../../../doc/html/images/up.png" border="0" height="19" width="19"></a>
+    <a href="unix2dos_filters.html"><img src="../../../../doc/html/images/next.png" border="0" height="19" width="19"></a>
+</div>
+
+
+
+
+<!-- End Nav -->
+
+<!-- Begin Footer -->
+
+
+<hr>
+
+<p class="copyright">Revised
+<!--webbot bot="Timestamp" S-Type="EDITED" S-Format="%d %B, %Y" startspan -->
+20 May, 2004
+<!--webbot bot="Timestamp" endspan i-checksum="38504" -->
+</p>
+
+
+
+
+<p class="copyright">&copy; Copyright <a href="http://www.kangaroologic.com" target="_top">Jonathan Turkanis</a>, 2004</p>
+
+
+
+<p class="copyright"> 
+    Use, modification, and distribution are subject to the Boost Software License, Version 2.0. (See accompanying file <a href="../../../../LICENSE_1_0.txt">LICENSE_1_0.txt</a> or copy at <a href="http://www.boost.org/LICENSE_1_0.txt">http://www.boost.org/LICENSE_1_0.txt</a>)
+</p>
+
+
+
+<!-- End Footer -->
+
+</body>
+</html>

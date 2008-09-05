@@ -1,0 +1,195 @@
+<!DOCTYPE html PUBLIC "-//W3C//DTD XHTML 1.0 Transitional//EN" "http://www.w3.org/TR/xhtml1/DTD/xhtml1-transitional.dtd">
+<html xmlns="http://www.w3.org/1999/xhtml" xml:lang="en" lang="en">
+<head>
+
+  <meta http-equiv="Content-Type" content="text/html; charset=utf-8" />
+
+  <meta name="generator" content="Docutils 0.5: http://docutils.sourceforge.net/" />
+
+
+  <title>pointee and indirect_reference</title>
+  <meta name="author" content="David Abrahams" />
+
+  <meta name="organization" content="Boost Consulting" />
+
+  <meta name="date" content="2006-09-11" />
+
+  <meta name="copyright" content="Copyright David Abrahams 2004." />
+
+  <link rel="stylesheet" href="../../../rst.css" type="text/css" />
+</head>
+
+
+
+<body>
+
+<div class="document" id="pointee-and-indirect-reference">
+<h1 class="title"><tt class="docutils literal"><span class="pre">pointee</span></tt> 和 <tt class="docutils literal"><span class="pre">indirect_reference</span></tt></h1>
+
+<table class="docinfo" frame="void" rules="none">
+
+  <col class="docinfo-name" />
+  <col class="docinfo-content" />
+  <tbody valign="top">
+
+    <tr>
+      <th class="docinfo-name">Author:</th>
+
+      <td>David Abrahams</td>
+    </tr>
+
+    <tr>
+      <th class="docinfo-name">Contact:</th>
+
+      <td><a class="first last reference external" href="mailto:dave@boost-consulting.com">dave@boost-consulting.com</a></td>
+    </tr>
+
+    <tr>
+      <th class="docinfo-name">Organization:</th>
+
+      <td><a class="first last reference external" href="http://www.boost-consulting.com">Boost Consulting</a></td>
+    </tr>
+
+    <tr>
+      <th class="docinfo-name">Date:</th>
+
+      <td>2006-09-11</td>
+    </tr>
+
+    <tr>
+      <th class="docinfo-name">Copyright:</th>
+
+      <td>Copyright David Abrahams 2004.</td>
+    </tr>
+
+  </tbody>
+</table>
+
+<!-- Distributed under the Boost -->
+<!-- Software License, Version 1.0. (See accompanying -->
+<!-- file LICENSE_1_0.txt or copy at http://www.boost.org/LICENSE_1_0.txt) -->
+<table class="docutils field-list" frame="void" rules="none">
+
+  <col class="field-name" />
+  <col class="field-body" />
+  <tbody valign="top">
+
+    <tr class="field">
+      <th class="field-name">概要：</th>
+      <td class="field-body">提供在泛型代码中推断指针、智能指针和迭代器的引用类型的能力。</td>
+
+    </tr>
+
+  </tbody>
+</table>
+
+<div class="section" id="overview">
+<h1>简介</h1>
+
+<p>你曾经想过写一个可以操作任意可提领对象的泛型函数吗？如果有，你可能会遇到这个问题，即如何确定该对象"所指"的对象的类型：</p>
+
+<pre class="literal-block">template &lt;class Dereferenceable&gt;<br />void f(Dereferenceable p)<br />{<br />    <em>what-goes-here?</em> value = *p;<br />    ...<br />}<br /></pre>
+
+<div class="section" id="pointee">
+<h2><tt class="docutils literal"><span class="pre">pointee</span></tt></h2>
+
+<p>虽然不可能拿出一个完全泛化的算法来直接确定 <em>what-goes-here</em>, 但是有可能要求 <tt class="docutils literal"><span class="pre">pointee&lt;Dereferenceable&gt;::type</span></tt> 是正确的。当然，<tt class="docutils literal"><span class="pre">pointee</span></tt> 也有同样的困难：它不能对所有
+<tt class="docutils literal"><span class="pre">Dereferenceable</span></tt>s 可靠地确定适当的 <tt class="docutils literal"><span class="pre">::type</span></tt>, 不过它可以猜得很准(它可以用于所有指针、标准的和 boost 的智能指针及迭代器)，而且如果它猜错的话，也可以按需要进行特化：</p>
+
+<pre class="literal-block">namespace boost<br />{<br />  template &lt;class T&gt;<br />  struct pointee&lt;third_party_lib::smart_pointer&lt;T&gt; &gt;<br />  {<br />      typedef T type;<br />  };<br />}<br /></pre>
+
+</div>
+
+<div class="section" id="indirect-reference">
+<h2><tt class="docutils literal"><span class="pre">indirect_reference</span></tt></h2>
+
+<p><tt class="docutils literal"><span class="pre">indirect_reference&lt;T&gt;::type</span></tt> 比
+<tt class="docutils literal"><span class="pre">pointee</span></tt> 更为专用，它用于前转对其参数类型的一个对象进行提领所得的结果。多数可提领类型都只是返回它们的 pointee 的一个引用，但有些会返回代理的引用或以值方式返回 pointee.  当需要这些信息时，调用 <tt class="docutils literal"><span class="pre">indirect_reference</span></tt>.</p>
+
+<p>这两个模板对于
+<a class="reference external" href="indirect_iterator.html"><tt class="docutils literal"><span class="pre">indirect_iterator</span></tt></a> 的正确使用都是必须的。</p>
+
+</div>
+
+</div>
+
+<div class="section" id="reference">
+<h1>参考</h1>
+
+<div class="section" id="id1">
+<h2><tt class="docutils literal"><span class="pre">pointee</span></tt></h2>
+
+<!-- Copyright David Abrahams 2004. Use, modification and distribution is -->
+<!-- subject to the Boost Software License, Version 1.0. (See accompanying -->
+<!-- file LICENSE_1_0.txt or copy at http://www.boost.org/LICENSE_1_0.txt) -->
+<pre class="literal-block">template &lt;class Dereferenceable&gt;<br />struct pointee<br />{<br />    typedef /* 见下文 */ type;<br />};<br /></pre>
+
+<table class="docutils field-list" frame="void" rules="none">
+
+  <col class="field-name" />
+  <col class="field-body" />
+  <tbody valign="top">
+
+    <tr class="field">
+      <th class="field-name">要求：</th>
+      <td class="field-body">对于类型&nbsp;<tt class="docutils literal"><span class="pre">Dereferenceable</span></tt> 的一个对象 <tt class="docutils literal"><span class="pre">x</span></tt>, <tt class="docutils literal"><span class="pre">*x</span></tt>
+是合法的。如果 <tt class="docutils literal"><span class="pre">++x</span></tt> 是非法的，那么它应该既不是歧义的，也不违犯访问控制，且
+      <tt class="docutils literal"><span class="pre">Dereferenceable::element_type</span></tt> 应该是一个可访问的类型。否则 <tt class="docutils literal"><span class="pre">iterator_traits&lt;Dereferenceable&gt;::value_type</span></tt> 就应该是合法的。[注：这些要求无需适用于 <tt class="docutils literal"><span class="pre">pointee</span></tt> 的显式特化或偏特化]</td>
+
+    </tr>
+
+  </tbody>
+</table>
+
+<p><tt class="docutils literal"><span class="pre">type</span></tt> 按以下算法确定，其中
+<tt class="docutils literal"><span class="pre">x</span></tt> 为类型 <tt class="docutils literal"><span class="pre">Dereferenceable</span></tt> 的一个对象：</p>
+
+<pre class="literal-block">if ( ++x 是非法的 )<br />{<br />    return ``Dereferenceable::element_type``<br />}<br />else if (``*x`` 是一个 std::iterator_traits&lt;Dereferenceable&gt;::value_type 的非常量引用)<br />{<br />    return iterator_traits&lt;Dereferenceable&gt;::value_type<br />}<br />else<br />{<br />    return iterator_traits&lt;Dereferenceable&gt;::value_type const<br />}<br /></pre>
+
+</div>
+
+<div class="section" id="id2">
+<h2><tt class="docutils literal"><span class="pre">indirect_reference</span></tt></h2>
+
+<!-- Copyright David Abrahams 2004. Use, modification and distribution is -->
+<!-- subject to the Boost Software License, Version 1.0. (See accompanying -->
+<!-- file LICENSE_1_0.txt or copy at http://www.boost.org/LICENSE_1_0.txt) -->
+<pre class="literal-block">template &lt;class Dereferenceable&gt;<br />struct indirect_reference<br />{<br />    typedef /* 见下文 */ type;<br />};<br /></pre>
+
+<table class="docutils field-list" frame="void" rules="none">
+
+  <col class="field-name" />
+  <col class="field-body" />
+  <tbody valign="top">
+
+    <tr class="field">
+      <th class="field-name">要求：</th>
+      <td class="field-body">对于类型<tt class="docutils literal"><span class="pre"></span></tt> <tt class="docutils literal"><span class="pre">Dereferenceable</span></tt> 的一个对象 <tt class="docutils literal"><span class="pre">x</span></tt>, <tt class="docutils literal"><span class="pre">*x</span></tt>
+是合法的。如果 <tt class="docutils literal"><span class="pre">++x</span></tt> 是非法的，那么它应该既不是歧义的，也不违犯访问控制，且
+      <tt class="docutils literal"><span class="pre">pointee&lt;Dereferenceable&gt;::type&amp;</span></tt> 应该是合法的。否则 <tt class="docutils literal"><span class="pre">iterator_traits&lt;Dereferenceable&gt;::reference</span></tt> 就应该是合法的。[注：这些要求无需适用于<tt class="docutils literal"><span class="pre">indirect_reference</span></tt> 的显式特化或偏特化]</td>
+
+    </tr>
+
+  </tbody>
+</table>
+
+<p><tt class="docutils literal"><span class="pre">type</span></tt> 按以下算法确定，其中
+<tt class="docutils literal"><span class="pre">x</span></tt> 为类型 <tt class="docutils literal"><span class="pre">Dereferenceable</span></tt> 的一个对象：</p>
+
+<pre class="literal-block">if ( ++x 是非法的 )<br />    return ``pointee&lt;Dereferenceable&gt;::type&amp;``<br />else<br />    std::iterator_traits&lt;Dereferenceable&gt;::reference<br /></pre>
+
+</div>
+
+</div>
+
+</div>
+
+<div class="footer">
+<hr class="footer" />
+<a class="reference external" href="pointee.rst">View document source</a>.
+Generated by <a class="reference external" href="http://docutils.sourceforge.net/">Docutils</a> from <a class="reference external" href="http://docutils.sourceforge.net/rst.html">reStructuredText</a> source.
+
+</div>
+
+</body>
+</html>
