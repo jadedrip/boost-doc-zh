@@ -1,0 +1,93 @@
+<!DOCTYPE html PUBLIC "-//W3C//DTD XHTML 1.0 Transitional//EN" "http://www.w3.org/TR/xhtml1/DTD/xhtml1-transitional.dtd">
+<html xmlns="http://www.w3.org/1999/xhtml">
+<head>
+<!-- Copyright (c) Jeremy Siek and Andrew Lumsdaine 2000 --><!-- Distributed under the Boost --><!-- Software License, Version 1.0. (See accompanying --><!-- file LICENSE_1_0.txt or copy at http://www.boost.org/LICENSE_1_0.txt) -->
+  
+  <meta name="generator" content="HTML Tidy for Linux/x86 (vers 1 September 2005), see www.w3.org" />
+
+
+  
+  
+  <title>Concept Covering and Archetypes</title>
+  <meta http-equiv="Content-Type" content="text/html; charset=utf-8" />
+
+  
+  <link rel="stylesheet" href="../../rst.css" type="text/css" />
+</head>
+
+
+
+
+
+
+
+
+<body alink="#ff0000" bgcolor="#ffffff" link="#0000ee" text="#000000" vlink="#551a8b">
+
+  <img src="../../boost.png" alt="C++ Boost" height="86" width="277" /><br clear="none" />
+
+
+  
+<h2><a name="concept-covering" id="concept-covering">Concept Covering and
+  Archetypes 概念的充分性和原型</a></h2>
+
+
+  
+<p>我们已经讨论了选择最小要求(概念)的重要性，但同样重要的是，必须验证所选的概念对算法而言是<span style="font-style: italic;">充分</span>的。即所有可能的用户错误都将被概念检查所捕获而不会漏过。概念的覆盖度可以通过使用 
+<i>archetype classes原型类</i> 
+来验证。原型类是与特定概念相对应的接口的精确实现。原型类的运行期行为并不重要，其中的函数可以为空。然后一个简单的测试程序可以将原型类作为组件的输入来编译。如果程序通过编译，则可以肯定概念已经充分覆盖组件。以下代码示范了 
+<a href="http://www.sgi.com/tech/stl/InputIterator.html">Input Iterator</a> 
+概念的原形类。必须要小心确保原型是与概念精确匹配的。例如，概念要求 <tt>operator*()</tt> 的返回值必须可转换为 value 
+type。它并没有进一步要求返回值是 <tt>T&amp;</tt> 或是 <tt>const T&amp;</tt>. 这意味着以 
+<tt>T&amp;</tt> 或 <tt>const T&amp;</tt> 
+作为原型类的返回类型都是错误的。正确的方法是创建一个可转换为T的返回类型，如我们在下面所写的 <tt>reference</tt>. 
+原型类测试的有效性完全信赖于它与概念吻合的精确度，必须小心地进行(人工)检查。&nbsp;</p>
+
+  
+<pre>template &lt;class T&gt;<br />class input_iterator_archetype<br />{<br />private:<br />  typedef input_iterator_archetype self;<br />public:<br />  typedef std::input_iterator_tag iterator_category;<br />  typedef T value_type;<br />  struct reference {<br />    operator const value_type&amp;() const { return static_object&lt;T&gt;::get(); }<br />  };<br />  typedef const T* pointer;<br />  typedef std::ptrdiff_t difference_type;<br />  self&amp; operator=(const self&amp;) { return *this;  }<br />  bool operator==(const self&amp;) const { return true; }<br />  bool operator!=(const self&amp;) const { return true; }<br />  reference operator*() const { return reference(); }<br />  self&amp; operator++() { return *this; }<br />  self operator++(int) { return *this; }<br />};<br /></pre>
+
+
+  
+<p>泛型算法通常会用多个普通类型来实例化，以进行测试。例如，你可以用普通的指针来作为迭代器应用到 <tt>std::stable_sort()</tt>
+上。虽然这适合于测试算法的运行期行为，但无助地确认概念的充分条件，因为C++的类型并不符合某个特定的概念，它们通常提供比某个概念的最小功能要求多
+得多的特性。即是说，虽然函数模板对于给定的类型可以通过编译，但概念所要求的还是达不到函数真正所要求的。这正是为什么要在用普通类型进行测试以外，还
+要使用原型类来编译的重要性。 </p>
+<p>以下是来自 <a href="./stl_concept_covering.cpp"><tt>stl_concept_covering.cpp</tt></a> 
+一些摘要，示范了如何用原型来检查文档中对 <a href="http://www.sgi.com/tech/stl/stable_sort.html"><tt>std::stable_sort()</tt></a> 
+的要求。在这个例子中，看起来在SGI STL文档中，好象漏掉了 <a href="../utility/CopyConstructible.html">CopyConstructible</a> 和 <a href="../utility/Assignable.html">Assignable</a> 
+的要求(试一下删掉这些原型)。Boost的原型类被设计为可以分层的。在这个例子中，迭代器的值类型由三个原型组成。在&nbsp;<a href="reference.htm#basic-archetype">archetype 类的参考</a> 中，名为Base的模板参数指出了可以使用分层原型的地方。<br />
+</p>
+<pre>{<br />  typedef less_than_comparable_archetype&lt; <br />      sgi_assignable_archetype&lt;&gt; &gt; ValueType;<br />  random_access_iterator_archetype&lt;ValueType&gt; ri;<br />  std::stable_sort(ri, ri);<br />}<br /></pre>
+
+
+  
+<p><a href="./prog_with_concepts.htm">Next: Programming with
+  Concepts 用概念编程</a><br />
+
+  <a href="./creating_concepts.htm">Prev: Creating Concept Checking
+  Classes 创建概念检查类</a><br />
+
+  </p>
+<hr />
+
+  
+<table>
+
+    <tbody>
+    <tr valign="top">
+
+      <td nowrap="nowrap">Copyright &copy; 2000</td>
+
+
+      <td><a href="http://www.boost.org/people/jeremy_siek.htm">Jeremy Siek</a>(<a href="mailto:jsiek@osl.iu.edu">jsiek@osl.iu.edu</a>) Andrew
+      Lumsdaine(<a href="mailto:lums@osl.iu.edu">lums@osl.iu.edu</a>),
+        2007 <a href="mailto:dave@boost-consulting.com">David Abrahams</a>.
+    </td>
+    </tr>
+
+  
+  </tbody>
+</table>
+
+</body>
+</html>
