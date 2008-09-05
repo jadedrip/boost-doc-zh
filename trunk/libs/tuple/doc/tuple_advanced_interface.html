@@ -1,0 +1,359 @@
+<!DOCTYPE HTML PUBLIC "-//W3C//DTD HTML 4.01 Transitional//EN">
+<html>
+<head>
+
+  
+  <meta content="text/html; charset=UTF-8" http-equiv="content-type">
+
+
+
+
+
+    
+  
+  
+  
+  
+  <title>Tuple library advanced features</title>
+</head>
+
+
+<body bgcolor="#ffffff" text="#000000">
+
+
+
+
+
+
+<img src="../../../boost.png" alt="C++ Boost" height="86" width="277">
+
+  
+    
+<h1>Tuple 库高级特性</h1>
+
+
+
+
+
+
+本文档描述的高级特性全部在命名空间 <code>::boost::tuples&nbsp;</code>中
+
+<h2>Tuple 型别的元函数</h2>
+
+
+
+
+
+<p>设 <code>T</code> 是一个tuple型别， <code>N</code> 是一个整数常量表达式。 
+
+<code></code></p>
+
+
+
+
+<pre>element&lt;N, T&gt;::type</pre>
+
+
+
+
+
+
+此式给出<code></code>tuple型别<code> T&nbsp;</code>的第 <code>N</code> 个元素的型别<code></code><span style="font-family: monospace;">。</span>如果<span style="font-family: monospace;"></span> <code>T</code> 是一个常量，给出的也是一个常量型别。 应该注意<code> T</code> 的常量性不会影响引用类型的元素。
+<p></p>
+
+
+
+
+
+
+<code></code>
+<pre>length&lt;T&gt;::value</pre>
+
+
+
+
+
+
+给出tuple型别 <code>T</code> 的长度。
+<p></p>
+
+
+
+
+
+
+<h2>部件链表</h2>
+
+
+
+
+
+
+<p>
+Tuple 在内部表示为部件(cons)的链表。例如，下面tuple 
+
+<code></code></p>
+
+
+
+
+<pre>tuple&lt;A, B, C, D&gt;</pre>
+
+
+
+
+
+
+ 从下面型别继承
+<code></code>
+<pre>cons&lt;A, cons&lt;B, cons&lt;C, cons&lt;D, null_type&gt; &gt; &gt; &gt;<br></pre>
+
+
+
+
+
+
+Tuple模板提供一个 typedef <code>inherited</code> 用于访问部件链表(cons list)。例：
+<code>tuple&lt;A&gt;::inherited</code> 就是型别 <code>cons&lt;A, null_type&gt;</code>.
+<p></p>
+
+
+
+
+
+
+<h4>空的 tuple</h4>
+
+
+
+
+
+<p>
+空的tuple <code>tuple&lt;&gt;</code> 的内在表示是 <code>null_type</code> &nbsp;。
+</p>
+
+
+
+
+
+
+<h4>首和尾</h4>
+
+
+
+
+
+<p>
+Tuple模板和cons模板都提供 typedefs <code>head_type</code> 和 <code>tail_type&nbsp;</code>。
+这个<code>head_type</code> typedef给出tuple（或cons list）首元素的型别。这个 
+<code>tail_type</code> typedef 给出除去首元素的剩余的cons list 。 首元素用成员变量head存储，尾链表用成员变量tail表示。 部件链表(cons list)提供成员函数 <code>get_head()</code>&nbsp;返回首元素的引用，和成员函数 <code>&nbsp;get_tail()</code> 返回尾cons list的引用。
+两个函数都有常量和非常量的版本。
+</p>
+
+
+
+
+
+<p>注意，只有一个元素的tuple，<code>tail_type</code> 等于 <code>null_type</code> ，还有函数 <code>get_tail()</code> 返回 <code>null_type</code>型别的对象。
+</p>
+
+
+
+
+
+<p>
+空的 tuple (<code>null_type</code>) 没有首和尾，因此也没有函数 <code>get_head</code> 和 <code>get_tail</code> &nbsp;。
+</p>
+
+
+
+
+
+
+<p>把tuples看作为一个部件链表（cons list），就可以方便地定义泛型函数去操作tuple 。例如，下面的函数对每个tuple元素赋零值（明显地，赋值操作符必须在每个元素类型中都有定义）：
+</p>
+
+
+
+
+<pre><code>inline void set_to_zero(const null_type&amp;) {};<br><br>template &lt;class H, class T&gt;<br>inline void set_to_zero(cons&lt;H, T&gt;&amp; x) { x.get_head() = 0; set_to_zero(x.get_tail()); }<br></code></pre>
+
+
+
+
+
+<p>
+
+</p>
+
+
+
+
+<h4>构造一个部件链表</h4>
+
+
+
+
+
+
+<p>
+一个 部件链表(cons list)可以默认构造的条件是其所有的元素都可默认地构造。
+</p>
+
+
+
+
+
+<p>
+一个部件链表(cons list)可以从首到尾地被构造。构造函数的原型是：
+</p>
+
+
+
+
+<pre><code>cons(typename access_traits&lt;head_type&gt;::parameter_type h,<br>     const tail_type&amp; t)<br></code></pre>
+
+
+
+
+这里的 traits 模板应用在首元素的型别上，得到合适的用于参数传递的型别（对于引用型别，传递就是元素的型别，对于非引用型别，传递的是元素型别的非volatile的常量引用型别）。
+
+<p></p>
+
+
+
+
+
+<p>
+对于只含一个元素的部件链表(cons list)，尾参数 (<code>null_type</code>) 可以省略。
+</p>
+
+
+
+
+
+
+
+<h2>tuple元素型别的特性类型(Traits classes)&nbsp;</h2>
+
+
+
+
+
+
+<h4><code>access_traits</code></h4>
+
+
+
+
+
+<p>模板 <code>access_traits</code> 定义了三个型别函数。 给定tuple中一个元素的型别 <code>T</code> 有：
+</p>
+
+
+
+
+<ol>
+
+
+
+
+
+  <li><code>access_traits&lt;T&gt;::non_const_type</code> 把 <code>T</code> 映射为非常量函数（如非成员和成员的get函数和get_head函数）的返回类型。</li>
+
+
+
+
+
+  <li><code>access_traits&lt;T&gt;::const_type</code> 把&nbsp;<code>T</code> 映射为常量函数的返回类型。</li>
+
+
+
+
+
+  <li><code>access_traits&lt;T&gt;::parameter_type</code> 把 <code>T</code> 映射为tuple构造函数的参数类型。</li>
+
+
+
+
+
+</ol>
+
+
+
+
+
+<h4><code>make_tuple_traits</code></h4>
+
+
+
+
+
+
+用函数 <code>make_tuple&nbsp;</code>构造tuple中的元素型别，是通过型别函数<code>make_tuple_traits&nbsp;</code>计算出来的。型别函数调用 <code>make_tuple_traits&lt;T&gt;::type</code> 实现了如下型别映射：
+<ul>
+
+
+
+
+
+  <li><i>任意的引用类型</i><span style="font-style: italic;"> </span>-&gt; <i>编译错误</i>
+  </li>
+
+
+
+
+
+  <li><i>任意数组类型</i> -&gt; <i>数组的常量引用</i>
+  </li>
+
+
+
+
+
+  <li><code>T</code><i>的引用包装</i><code></code> -&gt; <code>T的引用</code>
+  </li>
+
+
+
+
+
+  <li><code>T</code> -&gt; <code>T</code>
+  </li>
+
+
+
+
+
+</ul>
+
+
+引用包装的对象通过ref或者cref函数构造<code></code><code></code><code></code> (参考 <a href="tuple_users_guide.html#make_tuple">关于 <code>make_tuple</code> 函数</a>)
+<p></p>
+
+
+
+
+
+
+<p>引用包装最初是tuple库的一部分，如今已经是boost库的一个通用的部件。 
+模板 <code>reference_wrapper</code> 和 <code>ref</code> ，<code>cref</code> 函数在boost库目录的一个独立的文件(ref.hpp)中定义；和直接在boost命名空间<code></code>。
+</p>
+
+
+
+
+
+
+<a href="tuple_users_guide.html">返回到用户指引</a>
+<hr>
+
+<p>&copy; Copyright Jaakko J&auml;rvi 2001.</p>
+
+
+
+
+
+  
+</body>
+</html>
