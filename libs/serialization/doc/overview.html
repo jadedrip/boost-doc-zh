@@ -1,0 +1,207 @@
+<!DOCTYPE HTML PUBLIC "-//W3C//DTD HTML 4.01 Transitional//EN" "http://www.w3.org/TR/html4/loose.dtd">
+<html>
+<head>
+<!--
+(C) Copyright 2002-4 Robert Ramey - http://www.rrsd.com . 
+Use, modification and distribution is subject to the Boost Software
+License, Version 1.0. (See accompanying file LICENSE_1_0.txt or copy at
+http://www.boost.org/LICENSE_1_0.txt)
+-->
+
+  
+  <meta http-equiv="Content-Type" content="text/html; charset=UTF-8">
+
+
+  
+  <link rel="stylesheet" type="text/css" href="../../../boost.css">
+
+
+  
+  <link rel="stylesheet" type="text/css" href="style.css">
+
+
+  
+  <title>Serialization - Overview</title>
+</head>
+
+
+<body link="#0000ff" vlink="#800080">
+
+
+<table summary="header" border="0" cellpadding="7" cellspacing="0" width="100%">
+
+
+  <tbody>
+
+    <tr>
+
+ 
+    <td valign="top" width="300"> 
+      
+      
+      <h3><a href="../../../index.htm"><img alt="C++ Boost" src="../../../boost.png" border="0" height="86" width="277"></a></h3>
+
+
+    </td>
+
+
+    <td valign="top"> 
+      
+      
+      <h1 align="center">Serialization序列化</h1>
+
+
+      
+      
+      <h2 align="center">简介</h2>
+
+
+    </td>
+
+
+  </tr>
+
+
+  
+  </tbody>
+</table>
+
+
+<hr>
+<dl class="index">
+
+
+  <dt><a href="#Requirements">要求</a></dt>
+
+
+  <dt><a href="#otherimplementations">其它实现</a></dt>
+
+
+  <!--
+  <dt><a href="#footnotes">Footnotes</a></dt>
+  -->
+</dl>
+
+
+<p>这里，我们用术语 <strong>"serialization序列化"</strong> 来表示将任意一组C++数据结构解构为一串字节的、可逆的过程。这样的系统可用于在另一个程序上下文中重新构建一个等价的结构。根据不同的上下文，它可以用来实现对象持久化、远程参数传递或其它功能。在本系统中，我们使用术语
+<strong>"archive存档"</strong> 来指代这个字节流的特定表现。它可以是一个二进制数据文件、文本文件、XML或其它由本库的用户所创建的东西。
+</p>
+
+<h2><a name="Requirements"></a>我们对于这个系统的目标是：</h2>
+
+
+   
+<ol>
+
+
+      <li>代码的可移植性 - 只依赖于 ANSI C++ 所提供的功能。
+
+      </li>
+
+  <li>代码的经济性 - 使用C++的一些特性，如 RTTI,
+      模板, 和多重继承等等，以使得代码更短也更易于使用。
+
+      </li>
+
+  <li>各个类定义版本的无关性。即当一个类的定义更改时，旧文件仍可导入到新版本的类中。
+
+      </li>
+
+  <li>深的指针保存和恢复。即指针的保存与恢复分别保存和恢复所指的数据。
+
+      </li>
+
+  <li>对共享数据指针的正确恢复。
+
+      </li>
+
+  <li>STL容器及其它常用模板的序列化。
+
+      </li>
+
+  <li>数据的可移植性 - 在一个平台上创建的字节流可以在另一平台上读出。
+
+      </li>
+
+  <li>类的序列化与存档格式的正交性。即任何文件格式都可用于保存任意一组C++数据结构的序列化信息而无需调整。
+
+      </li>
+
+  <li>非介入性。可以对不作更改的类进行序列化。即不要求进行序列化的类派生自某个特定基类或者实现特定的成员函数。这一点对于要将序列化应用于某些我们不能或不愿修改的类库中的类来说是十分必要的。
+
+      </li>
+
+  <li> <strong>archive</strong> 的接口必须足够简单，以易于创建一种新的存档类型。
+
+      </li>
+
+  <li> <strong>archive</strong> 的接口又必须足够丰富，才可以创建出象XML这样风格的存档。
+   </li>
+
+</ol>
+
+
+
+<h2><a name="otherimplementations"></a>其它实现</h2>
+在开始之前我查找了一下已有的一些实现。找到以下几个： 
+
+    
+<ul>
+
+
+      <li><u>MFC</u> 这是我非常熟悉的一个。我已经用了它几年了，并且发现它非常好用。不过，它不满足上述要求中的
+1, 2, 3, 6, 7, 和 9. 不管它是否符合所有要求，它还是我找到的最好用的实现。它产生了类的版本化 - 在MFC中部分实现 -
+这对于我的应用程序是至关重要的。不可避免的，版本 1.x 的程序需要比原有版本保存更多的信息到文件中。MFC是这些实现中唯一一个支持这个功能的
+- 虽然只对于最底层的派生类。但是也总比没有要好。MFC 没有实现STL容器的序列化。不过它实现了MFC容器的序列化。 </li>
+
+  <li><u>CommonC++ 库</u> <a href="bibliography.html#1">[1]</a>
+我可以说的是，它紧紧跟随着MFC的实现但存在一些问题。它是可移植的并且创建可移植的存档但忽略版本信息。它可以正确支持指针和STL容器的完全恢复。
+它支持压缩功能但不是我喜欢的方法。这个软件包还带有不错的文档。它不能满足 2, 3, 7, 8, 和 9. </li>
+
+  <li><u>Eternity</u> <a href="bibliography.html#2">[2]</a> 
+      这是一个"准"软件包。它看起来有不错的代码但确实需要一些文档和例子。不花些时间研究它的源代码是无法知道如何使用它的。新近的版本可以支持XML格式的文件。它不能满足 3, 6, 7?, 8, 和 9. 
+
+      </li>
+
+  <li><u>Holub 的实现</u> <a href="bibliography.html#3">[3]</a> 就是这篇论文让我第一次去思考对一个序列化实现应该有什么要求。如果你可以忽略这篇论文中的傲慢的语气，它还是值得一读的。该实现不能满足 2, 3, 4, 5, 和 6.
+
+      </li>
+
+  <li><u>s11n</u> <a href="bibliography.html#13">[13]</a> 这个库与本库有相近的目标。实现的某些方面也很相似。到这篇文章之时，它看起来：
+      
+    
+    <ul>
+
+
+          <li>可移植性(1) 只对于新近版本的GCC有保证。
+          </li>
+
+      <li>类定义的版本化(3) 在该库的支持并不明显。
+          </li>
+
+      <li>看起来它不能对共享指针自动计数(5).
+          我是从文档中描述推断出来的，它的文档中说不支持象 graph 这样的数据结构的序列 化。
+      </li>
+
+    
+    </ul>
+
+
+      它与本库的实现有很多不同点 - 也有很多相同点。 
+    </li>
+
+</ul>
+
+
+<hr>
+<p>Revised 1 November, 2004 
+</p>
+
+<p><i>&copy; Copyright <a href="http://www.rrsd.com">Robert Ramey</a> 2002-2004. 
+Distributed under the Boost Software License, Version 1.0. (See
+accompanying file LICENSE_1_0.txt or copy at http://www.boost.org/LICENSE_1_0.txt)
+</i></p>
+
+
+</body>
+</html>
