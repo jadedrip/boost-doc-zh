@@ -1,7 +1,7 @@
 <html>
 <head>
 <meta http-equiv="Content-Type" content="text/html; charset=UTF-8">
-<title>Design Topics（设计讨论）</title>
+<title>Design Topics（设计话题）</title>
 <link rel="stylesheet" href="../boostbook.css" type="text/css">
 <meta name="generator" content="DocBook XSL Stylesheets V1.73.2">
 <link rel="start" href="../index.html" title="The Boost C++ Libraries BoostBook Documentation Subset">
@@ -24,7 +24,7 @@
 </div>
 <div class="section" lang="en">
 <div class="titlepage"><div><div><h2 class="title" style="clear: both">
-<a name="string_algo.design"></a>Design Topics（设计讨论）</h2></div></div></div>
+<a name="string_algo.design"></a>Design Topics（设计话题）</h2></div></div></div>
 <div class="toc"><dl>
 <dt><span class="section"><a href="design.html#string_algo.string">string 表示法</a></span></dt>
 <dt><span class="section"><a href="design.html#string_algo.sequence_traits">序列特征</a></span></dt>
@@ -37,9 +37,9 @@
 <div class="titlepage"><div><div><h3 class="title">
 <a name="string_algo.string"></a>string 表示法</h3></div></div></div>
 <p>顾名思义，本库主要是和 strings 一起工作的。然而，在本库的语境中，一个 string 并不局限于任何特定的实现（比如 <code class="computeroutput">std::basic_string</code>），而是一个概念。这就允许本库的算法为任何满足给定要求的 string 类型所复用。</p>
-<p><span class="bold"><strong>定义：</strong></span>一个 string 就是一个可以用连续有序方式访问的 characters 的 <a href="../../../libs/range/doc/range.html" target="_top">range</a>。character 是任何带有“廉价”拷贝和赋值的值类型（基于上文所述原因，译文中的 character 和 string 一律保留原文，而不译为字符和字符串——译者）。</p>
-<p>string-type 的第一个要求是必须可以用 <a href="../../../libs/range/index.html" target="_top">Boost.Range</a> 访问。这一便利条件允许以一种统一的给予迭代器的方式访问 string 中的元素。这对于我们的库来说已经足够了。</p>
-<p>第二个要求清楚地规定了 characters 存储在 string 中的方法。本库中的算法在工作时假设拷贝一个 character 是比较廉价的，并因此分配额外的存储空间以缓存结果。对于普通字符类型来说这是一个正常的假设。即使这个要求没有被满足，算法也可以工作，但要付出性能降低的代价。</p>
+<p><span class="bold"><strong>定义：</strong></span>一个 string 就是一个可以用连续有序方式访问的 characters 的 <a href="../../../libs/range/doc/range.html" target="_top">range</a>。character 是任何带有“廉价”拷贝和赋值c 操作的值类型（基于前文所述原因，译文中的 character 和 string 一律保留原文，而不译为字符和字符串，只有明确表示为通常意义上的字符或字符串时才译为中文——译者）。</p>
+<p>string-type 的第一个要求是必须可以用 <a href="../../../libs/range/index.html" target="_top">Boost.Range</a> 访问。这一便利条件允许以一种统一的基于迭代器的方式访问 string 中的元素。这对于我们的库来说已经足够了。</p>
+<p>第二个要求清楚地规定了 characters 存储在 string 中的方法。本库中的算法在工作时假设拷贝一个 character 是比较廉价的，并因此分配额外的存储空间以缓存结果。对于常见的 character 类型来说这是一个正常的假设。即使这个要求没有被满足，算法也可以工作，但要付出性能降低的代价。</p>
 <p>另外，有些算法对 string-type 有额外的要求。特别是，那些可以创建一个给定类型的新 string 的算法。在这种情况下，它要求这个类型满足序列 (Std §23.1.1) 要求。</p>
 <p>在参考和代码中，对 string 类型的要求通过模板参数的名字表现出来。<code class="computeroutput">RangeT</code> 意味着基本的 range 要求必须有效。<code class="computeroutput">SequenceT</code> 表明扩展的序列要求。</p>
 </div>
@@ -84,114 +84,40 @@
 </tbody>
 </table></div>
 </div>
-<br class="table-break"><p>
-            Current implementation contains specializations for std::list&lt;T&gt; and
-            std::basic_string&lt;T&gt; from the standard library and SGI's std::rope&lt;T&gt; and std::slist&lt;T&gt;.
-        </p>
+<br class="table-break"><p>当前实现中包含针对标准库中的 std::list&lt;T&gt; 和 std::basic_string&lt;T&gt; 以及 SGI 的 std::rope&lt;T&gt; 和 std::slist&lt;T&gt; 的特化。</p>
 </div>
 <div class="section" lang="en">
 <div class="titlepage"><div><div><h3 class="title">
-<a name="string_algo.find"></a>Find Algorithms</h3></div></div></div>
-<p>
-            Find algorithms have similar functionality to <code class="computeroutput">std::search()</code> algorithm. They provide a different 
-            interface which is more suitable for common string operations. 
-            Instead of returning just the start of matching subsequence they return a range which is necessary 
-            when the length of the matching subsequence is not known beforehand. 
-            This feature also allows a partitioning of  the input sequence into three 
-            parts: a prefix, a substring and a suffix. 
-        </p>
-<p>
-            Another difference is an addition of various searching methods besides find_first, including find_regex. 
-        </p>
-<p>
-            It the library, find algorithms are implemented in terms of 
-            <a class="link" href="concept.html#string_algo.finder_concept" title="Finder Concept">Finders</a>. Finders are used also by other facilities 
-            (replace,split).
-            For convenience, there are also function wrappers for these finders to simplify find operations.
-        </p>
-<p>
-            Currently the library contains only naive implementation of find algorithms with complexity 
-            O(n * m) where n is the size of the input sequence and m is the size of the search sequence. 
-            There are algorithms with complexity O(n), but for smaller sequence a constant overhead is 
-            rather big. For small m &lt;&lt; n (m by magnitude smaller than n) the current implementation 
-            provides acceptable efficiency. 
-            Even the C++ standard defines the required complexity for search algorithm as O(n * m). 
-            It is possible that a future version of library will also contain algorithms with linear 
-            complexity as an option
-        </p>
+<a name="string_algo.find"></a>查找算法</h3></div></div></div>
+<p>查找算法具有与 <code class="computeroutput">std::search()</code> 算法类似的功能。它们提供了一个不同的接口，更适合常用的 string 操作。它们不再仅仅返回匹配子序列的开始位置，而是返回一个 range，这在事先不知道匹配子序列的长度时是非常必要的。这个特性也允许将输入序列分割为三个部分：一个前缀，一个 substring 和一个后缀。</p>
+<p>另一个不同是在 find_first 之外又增加了很多搜索方法，包括 find_regex。</p>
+<p>在本库中，查找算法是实现为 <a class="link" href="concept.html#string_algo.finder_concept" title="Finder Concept">Finders</a> 的。Finders 也被其它部件 (replace, split) 使用。为便于使用，还有函数将这些 Finders 包装成简单的查找操作。</p>
+<p>当前本库只包含了复杂度为 O(n * m) 的查找算法的初级实现，这里的 n 是输入序列的大小，而 m 是搜索序列的大小。要不是因为对于较小的序列来说，常量成本都是相当大的，算法本来可以带有 O(n) 复杂度。对于小的 m &lt;&lt; n（m 在数量级上比 n 小），当前实现提供了可以接受的性能。即使在 C++ 标准中为查找算法定义的必要复杂度都是 O(n * m)。在库的未来版本中，可能会包含可选的线性复杂度的算法。</p>
 </div>
 <div class="section" lang="en">
 <div class="titlepage"><div><div><h3 class="title">
-<a name="string_algo.replace"></a>Replace Algorithms</h3></div></div></div>
-<p>
-            The implementation of replace algorithms follows the layered structure of the library. The 
-            lower layer implements generic substitution of a range in the input sequence. 
-            This layer takes a <a class="link" href="concept.html#string_algo.finder_concept" title="Finder Concept">Finder</a> object and a 
-            <a class="link" href="concept.html#string_algo.formatter_concept" title="Formatter concept">Formatter</a> object as an input. These two 
-            functors define what to replace and what to replace it with. The upper layer functions 
-            are just wrapping calls to the lower layer. Finders are shared with the find and split facility. 
-        </p>
-<p>
-            As usual, the implementation of the lower layer is designed to work with a generic sequence while
-            taking advantage of specific features if possible 
-            (by using <a class="link" href="design.html#string_algo.sequence_traits" title="Sequence Traits">Sequence traits</a>)
-        </p>
+<a name="string_algo.replace"></a>替换算法</h3></div></div></div>
+<p>替换算法的实现遵循了本库的分层结构。较低的层次实现了通用的对输入序列中的一个 range 的置换。这个层次用一个 <a class="link" href="concept.html#string_algo.finder_concept" title="Finder Concept">Finder</a> 对象和一个 <a class="link" href="concept.html#string_algo.formatter_concept" title="Formatter concept">Formatter</a> 对象作为输入。这两个仿函数规定什么被替换以及用什么来替换。Finders 被查找和分割部件共享。</p>
+<p>照常，较低层次的实现在尽可能利用特定特性（通过使用<a class="link" href="design.html#string_algo.sequence_traits" title="Sequence Traits">序列特性</a>）的情况下，针对通用序列进行设计。</p>
 </div>
 <div class="section" lang="en">
 <div class="titlepage"><div><div><h3 class="title">
-<a name="string_algo.split"></a>Find Iterators &amp; Split Algorithms</h3></div></div></div>
-<p>
-            Find iterators are a logical extension of the <a class="link" href="design.html#string_algo.find" title="Find Algorithms">find facility</a>.
-            Instead of searching for one match, the whole input can be iteratively searched for multiple matches.
-            The result of the search is then used to partition the input. It depends on the algorithms which parts 
-            are returned as the result. They can be the matching parts (<code class="computeroutput"><a class="link" href="../boost/algorithm/find_iterator.html" title="Class template find_iterator">find_iterator</a></code>) of the parts in
-            between (<code class="computeroutput"><a class="link" href="../boost/algorithm/split_iterator.html" title="Class template split_iterator">split_iterator</a></code>). 
-        </p>
-<p>
-            In addition the split algorithms like <code class="computeroutput"><a class="link" href="../boost/algorithm/find_all.html" title="Function template find_all">find_all()</a></code> and <code class="computeroutput"><a class="link" href="../boost/algorithm/split_id2965593.html" title="Function template split">split()</a></code>
-            can simplify the common operations. They use a find iterator to search the whole input and copy the 
-            matches they found into the supplied container.
-        </p>
+<a name="string_algo.split"></a>查找迭代器 &amp; 分割算法</h3></div></div></div>
+<p>查找迭代器是<a class="link" href="design.html#string_algo.find" title="Find Algorithms">查找部件</a>的合理扩展。它不是仅搜索一个匹配项，而是迭代地搜索整个输入，以找到多个匹配项。搜索的结果被用来将输入分割为若干部分。它们可以是匹配的部分 (<code class="computeroutput"><a class="link" href="../boost/algorithm/find_iterator.html" title="Class template find_iterator">find_iterator</a></code>) 也可以是各匹配项之间部分 (<code class="computeroutput"><a class="link" href="../boost/algorithm/split_iterator.html" title="Class template split_iterator">split_iterator</a></code>)。这取决于返回这些部分作为结果的那个算法。</p>
+<p>另外，像 <code class="computeroutput"><a class="link" href="../boost/algorithm/find_all.html" title="Function template find_all">find_all()</a></code> 和 <code class="computeroutput"><a class="link" href="../boost/algorithm/split_id2965593.html" title="Function template split">split()</a></code> 这样的分割算法可以简化常用的操作。它们使用一个查找迭代器去搜索整个输入并将找到的匹配项拷贝到已提供好的容器中。</p>
 </div>
 <div class="section" lang="en">
 <div class="titlepage"><div><div><h3 class="title">
-<a name="string_algo.exception"></a>Exception Safety</h3></div></div></div>
-<p>
-            The library requires that all operations on types used as template
-            or function arguments provide the <span class="emphasis"><em>basic exception-safety guarantee</em></span>. 
-            In turn, all functions and algorithms in this library, except where stated
-            otherwise, will provide the <span class="emphasis"><em>basic exception-safety guarantee</em></span>.
-            In other words:
-            The library maintains its invariants and does not leak resources in
-            the face of exceptions.  Some library operations give stronger
-            guarantees, which are documented on an individual basis.
-        </p>
-<p>
-            Some functions can provide the <span class="emphasis"><em>strong exception-safety guarantee</em></span>.
-            That means that following statements are true:    
-            </p>
+<a name="string_algo.exception"></a>异常安全</h3></div></div></div>
+<p>本库要求对用作模板或函数参数的所有项目提供 <span class="emphasis"><em>basic exception-safety guarantee（基本异常安全保证）</em></span>。反过来，本库中的所有函数和算法，除非另有说明，都将提供 <span class="emphasis"><em>basic exception-safety guarantee（基本异常安全保证）</em></span>。换句话说：本库在面对异常时，它将保持它的不变量且不泄漏资源。某些库操作给出更强的保证，这些都被记录到个别的文档中。</p>
+<p>某些函数可以提供 <span class="emphasis"><em>strong exception-safety guarantee（强异常安全保证）</em></span>。这意味着以下描述成立：</p>
 <div class="itemizedlist"><ul type="disc">
-<li>
-                    If an exception is thrown, there are no effects other than those
-                    of the function 
-                </li>
-<li>
-                    If an exception is thrown other than by the function, there are no effects
-                </li>
+<li>如果抛出一个异常，不会对函数以外产生影响</li>
+<li>如果一个异常不是由这个函数抛出的，则没有影响</li>
 </ul></div>
-<p>
-            This guarantee can be provided under the condition that the operations 
-            on the types used for arguments for these functions either
-            provide the strong exception guarantee or do not alter the global state .
-         </p>
-<p>
-            In the reference, under the term <span class="emphasis"><em>strong exception-safety guarantee</em></span>, we mean the
-            guarantee as defined above.            
-        </p>
-<p>
-            For more information about the exception safety topics, follow this 
-            <a href="http://www.boost.org/more/generic_exception_safety.html" target="_top">link</a>
-        </p>
+<p>这种保证在这种条件下才会提供：这个操作所针对的类型用作既提供强异常保证又不改变全局状态的函数的参数。</p>
+<p>在参考中，术语 <span class="emphasis"><em>strong exception-safety guarantee（强异常安全保证）</em></span>，就意味着上面的定义。</p>
+<p>关于异常安全话题的更多信息，请参考这个<a href="http://www.boost.org/more/generic_exception_safety.html" target="_top">连接</a></p>
 </div>
 </div>
 <table xmlns:rev="http://www.cs.rpi.edu/~gregod/boost/tools/doc/revision" width="100%"><tr>
