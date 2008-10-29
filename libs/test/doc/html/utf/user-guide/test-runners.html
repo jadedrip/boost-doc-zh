@@ -1,6 +1,6 @@
 <html>
 <head>
-<meta http-equiv="Content-Type" content="text/html; charset=ISO-8859-1">
+<meta http-equiv="Content-Type" content="text/html; charset=utf-8">
 <title>The supplied test runners or where is the entrance?</title>
 <link rel="stylesheet" href="../../../style/style.css" type="text/css">
 <meta name="generator" content="DocBook XSL Stylesheets V1.74.0">
@@ -31,6 +31,9 @@
    All usage variants of the <acronym class="acronym">UTF</acronym>, excluding the 
    <a class="link" href="usage-variants/extern-test-runner.html" title="External test runner variant of the UTF">external test runner</a>, supply the test runner in a form of 
    free function named unit_test_main with the following signature:
+   <br />
+   <acronym class="acronym">UTF</acronym> 的所有用法，除了<a class="link" href="usage-variants/extern-test-runner.html" title="External test runner variant of the UTF">外部测试运行器</a>，
+   都以名为 unit_test_main 的自由函数形式提供了测试运行器，签名如下：
   </p>
 <pre class="programlisting">int unit_test_main( init_unit_test_func init_func, int argc, char* argv[] );</pre>
 <p class="first-line-indented">
@@ -43,6 +46,13 @@
    function. If you for any reason prefer more flexibility you can opt to implement the function main() yourself, in 
    which case it's going to be your responsibility to invoke the test runner, but the initialization function name is 
    not enforces the <acronym class="acronym">UTF</acronym>. See below for flags that needs to be defined/undefined in each usage variant to enable this.
+   <br />
+   要调用测试运行器需要将指向<a class="link" href="../user-guide.html#test-module.def">测试模块</a>初始化函数的指针作为第一个参数提供给测试运行器函数。
+   大多数情况下，这个函数是由测试运行入口点 - 函数 main() 调用的。
+   在大多数 <acronym class="acronym">UTF</acronym> 用法中，默认的函数 main() 实现都是可以作为库或测试模块的一部分自动生成的。
+   因为 main 函数需要根据默认实现定义好的名称引用初始化函数，所以你在实现初始化函数时需要符合特定的签名和名称。
+   如果因为某些原因希望更多的可伸缩性，你可以自己实现 main() 函数，在这种情况下你需要自己调用测试运行器，但初始化函数名称就不是 <acronym class="acronym">UTF</acronym> 强制的了。
+   下面的部分说明了在不同用法中这样做需要定义 / 取消定义的标签。
   </p>
 <div class="warning"><table border="0" summary="Warning">
 <tr>
@@ -54,6 +64,10 @@
     variants. The cause is different signature of the test module initialization function referred by the 
     <a class="link" href="initialization.html#utf.user-guide.initialization.signature-typedef" title="Initialization function signature access">typedef init_unit_test_func</a>. This makes static
     and dynamic library usage variants incompatible and they can't be easily switched on a fly.
+    <br />
+    虽然测试运行器函数的签名在语法上类似，但实际上是用于不同用法的。
+    这是因为不同的测试模块初始化函数是由 <a class="link" href="initialization.html#utf.user-guide.initialization.signature-typedef" title="Initialization function signature access">typedef init_unit_test_func</a> 引用的。(???)
+    这使得静态库和动态库不兼容，并且不是很容易进行切换。
    </p></td></tr>
 </table></div>
 <div class="section" lang="en">
@@ -64,10 +78,15 @@
     By default this variant supplies the function main() as part of static library. If this is for any reason undesirable 
     you need to define the flag <a class="xref" href="../compilation.html#utf.flag.no-main">BOOST_TEST_NO_MAIN</a> during the library 
     compilation and the function main() implementation won't be generated.
+    <br />
+    这种用法默认提供 main() 函数作为静态库的一部分。
+    无论什么原因，如果这不是你想要的，你需要在编译库的过程中定义标签 <a class="xref" href="../compilation.html#utf.flag.no-main">BOOST_TEST_NO_MAIN</a>，这样 main() 函数的实现就不会被生成了。
    </p>
 <p class="first-line-indented">
     In addition to the <a class="link" href="usage-variants/static-lib-variant.html" title="The static library variant of the UTF">initialization function signature requirement</a>
     default function main() implementation assumes the name of initialization function is init_unit_test_suite
+    <br />
+    另外，默认 main() 函数实现的<a class="link" href="usage-variants/static-lib-variant.html" title="The static library variant of the UTF">初始化函数签名需求</a>假设初始化函数名称为 init_unit_test_suite
    </p>
 </div>
 <div class="section" lang="en">
@@ -85,6 +104,11 @@
     inclusion. For a <a class="xref" href="../user-guide.html#multi-file-test-module.def">multi-file test module</a> flags can't
     be defined in makefile and have to be defined in only one of the test files to avoid duplicate copies of the 
     function main().
+    <br />
+    不像静态库用法，main() 函数不能位于动态库内部。于是，这种方法将 main() 函数的默认实现作为头文件 <code class="filename">boost/test/unit_test.hpp</code> 的一部分，使其出现在你的测试文件体中。
+    只有在测试模块被编译时定义标签 <a class="xref" href="../compilation.html#utf.flag.main">BOOST_TEST_MAIN</a> 或 <a class="xref" href="../compilation.html#utf.flag.module">BOOST_TEST_MODULE</a>，main() 函数才会被生成。
+    对于<a class="link" href="../user-guide.html#single-file-test-module.def">单文件测试模块</a>，标签可以定义在测试模块的 makefile 文件中或包含头文件 <code class="filename">boost/test/unit_test.hpp</a> 之前。
+    而对于<a class="xref" href="../user-guide.html#multi-file-test-module.def">多文件测试模块</a>，标签不能定义在 makefile 中，而只能定义在某一个测试文件中，避免 main() 函数的多重拷贝出现。
    </p>
 <div class="important"><table border="0" summary="Important">
 <tr>
@@ -96,6 +120,9 @@
      <a class="link" href="initialization.html" title="Test module initialization or ready, set">test module initialization function</a>. This means that if you 
      need to implement either function main() or initialization function manually, you can't define the above flags
      and are required to manually implement both of them.
+     <br />
+     同样的标签同样会控制空的<a class="link" href="initialization.html" title="Test module initialization or ready, set">测试模块初始化函数</a>。
+     这意味着如果你想要自己实现 main() 函数或初始化函数，你就不能定义上面的标签，并且需要手动实现两者。
     </p></td></tr>
 </table></div>
 </div>
@@ -109,6 +136,9 @@
     body. If this is for any reason undesirable you need to define the flag 
     <a class="xref" href="../compilation.html#utf.flag.no-main">BOOST_TEST_NO_MAIN</a> during test module compilation and the function main()
     implementation won't be generated.
+    <br />
+    默认情况下，这种用法将 main() 函数作为头文件 <code class="filename">boost/test/included/unit_test.hpp</code> 的一部分成为你测试文件体的一部分。
+    如果这不是你想要的，你需要在编译测试模块时定义标签 <a class="xref" href="../compilation.html#utf.flag.no-main">BOOST_TEST_NO_MAIN</a>，这样就不会生成 main() 函数的实现了。
    </p>
 </div>
 <div class="section" lang="en">
@@ -117,9 +147,12 @@
 <p class="first-line-indented">
     Once testing is finished, all supplied test runners report the results and returns an exit status value. Here are
     the summary of all possible generated values:
+    <br />
+    一旦测试完成，所有提供的测试运行器都报告结果并返回退出状态值。
+    下面是所有可能产生值的总结：
    </p>
 <div class="table">
-<a name="utf.user-guide.runners-exit-status-summary"></a><p class="title"><b>Table�4.�Generated exit status values</b></p>
+<a name="utf.user-guide.runners-exit-status-summary"></a><p class="title"><b>Table 4. Generated exit status values</b></p>
 <div class="table-contents"><table class="table" summary="Generated exit status values">
 <colgroup>
 <col>
@@ -135,6 +168,8 @@
 <td>
         No errors occurred during the test or the success result code was explicitly requested with the no_result_code
         parameter.
+        <br />
+        测试中没有错误发生，或者 no_result_code 参数明确要求成功结果代码。
        </td>
 </tr>
 <tr>
@@ -142,12 +177,16 @@
 <td>
         Non-fatal errors detected and no uncaught exceptions were thrown during testing or the <acronym class="acronym">UTF</acronym> fails during
         initialization.
+        <br />
+        检查到非致命错误并且测试中没有抛出未捕获的异常，或者 <acronym class="acronym">UTF</acronym> 初始化失败。
        </td>
 </tr>
 <tr>
 <td>boost::exit_exception_failure</td>
 <td>
         Fatal errors were detected or uncaught exceptions thrown during testing.
+        <br />
+        检查到致命错误，或者测试中抛出未捕获的异常。
        </td>
 </tr>
 </tbody>
@@ -158,7 +197,7 @@
 </div>
 <table xmlns:rev="http://www.cs.rpi.edu/~gregod/boost/tools/doc/revision" width="100%"><tr>
 <td align="left"></td>
-<td align="right"><div class="copyright-footer">Copyright � 2001-2007 Gennadiy Rozental</div></td>
+<td align="right"><div class="copyright-footer">Copyright © 2001-2007 Gennadiy Rozental</div></td>
 </tr></table>
 <hr>
 <div class="spirit-nav">
