@@ -1,0 +1,414 @@
+<!DOCTYPE HTML PUBLIC "-//W3C//DTD HTML 4.01 Transitional//EN">
+<html>
+<head>
+
+
+  
+  
+  <meta content="text/html; charset=UTF-8" http-equiv="content-type">
+
+
+
+    
+    
+  
+  
+  
+  
+  <title>Rationale</title>
+  <link rel="stylesheet" href="../../../boost.css">
+
+
+
+    
+  
+  
+  <link rel="stylesheet" href="theme/iostreams.css">
+
+
+
+    
+  
+  
+  <style>
+        OL OL { list-style-type:lower-alpha }
+    </style>
+</head>
+
+
+<body>
+
+
+
+
+<!-- Begin Banner -->
+
+    
+<h1 class="title">原理</h1>
+
+
+
+    
+<hr class="banner">
+
+<!-- End Banner -->
+
+<h3>目录</h3>
+
+
+
+
+<dl class="page-index">
+
+
+
+  <dt><a href="#goals">设计目标</a>
+    </dt>
+
+
+  
+  
+  <dl class="page-index">
+
+
+
+      <dt><a href="#simplicity">简单性</a></dt>
+
+
+
+      <dt><a href="#flexibility">灵活性</a></dt>
+
+
+
+      <dt><a href="#efficiency">效率</a></dt>
+
+
+
+      <dt><a href="#interoperability">互操作性</a></dt>
+
+
+
+    
+  
+  
+  </dl>
+
+
+
+  
+  <dt><a href="#decisions">设计决定</a>
+    </dt>
+
+
+  
+  
+  <dl class="page-index">
+
+
+
+      <dt><a href="#generic">泛型设计</a></dt>
+
+
+
+      <dt><a href="#modes">模式</a></dt>
+
+
+
+      <dt><a href="#lifetime">生存期管理</a></dt>
+
+
+
+      <dt><a href="#chain">链接口</a></dt>
+
+
+
+      <dt><a href="#asynchronous">异步和非阻塞 I/O</a></dt>
+
+
+
+    
+  
+  
+  </dl>
+
+
+
+  
+</dl>
+
+
+
+
+<hr>
+
+<a name="goals"></a>
+<h2>设计目标</h2>
+
+
+
+
+<p>Boost.Iostreams 的设计有四个标准：</p>
+
+
+<p>
+
+</p>
+
+
+<ol>
+
+
+
+    <li><b>简单性: </b>库应该容易学习，使用和扩展。 
+    </li>
+
+
+  <li><b>灵活性:</b> 库应该足够灵活，以生成具备几乎任意想要的特性的流和流缓冲。 
+    </li>
+
+
+  <li><b>效率:</b> 使用该库生成的流和流缓冲应该在多数情况下具有与手工编写的组件相近的效率。
+    </li>
+
+
+  <li><b>互操作性:</b> 库应该很容易适用于C++标准库的框架。特别是，
+    
+    
+    
+    <ol>
+
+
+
+        <li>用于构造流和流缓冲的组件 &mdash; <a href="concepts/source.html">Source</a>, <a href="concepts/sink.html">Sinks</a>, <a href="concepts/input_filter.html">InputFilters</a> 和 <a href="concepts/output_filter.html">OutputFilters</a> &mdash; 不应要求比标准库的流和流缓冲更丰富的接口。
+        </li>
+
+
+      <li>用该库所构造的流和流缓冲不应要求比标准库的流和流缓冲更丰富的接口。 </li>
+
+
+    
+    
+    </ol>
+
+
+
+  </li>
+
+
+</ol>
+
+
+
+
+<p>本质上，4a 说明在 Source 和 Sinks 可用的地方都可以使用标准库的流和流缓冲，而 4b
+则说明在标准库的流和流缓冲可用的地方都可以使用流和流缓冲。这两点使得可以很容易将 Boost.Iostreams 集成到已有代码中。
+</p>
+
+
+
+
+<a name="simplicity"></a>
+<h3>简单性</h3>
+
+
+
+
+<p>许多用户报告说这个库很容易学习和使用。它也已被证明是较易于扩展的。灵活性和效率的要求增加了设计的复杂。一个例子就是，需要大量的 <a href="guide/modes.html">modes</a> 来表示各种流和流缓冲。另一个例子是优化 <a href="concepts/device.html">Devices</a> 以处理位于内存的字符序列，如 <a href="classes/mapped_file.html">内存映射文件</a>；这引入了 <a href="concepts/direct.html">Direct</a> 设备，它比其它的设备要更难于使用。
+</p>
+
+
+
+
+<a name="flexibility"></a>
+<h3>灵活性</h3>
+
+
+
+
+<p>虽然 Boost.Iostreams 确实很灵活，但还是有一些限制的。例如，它不能定制 <a href="guide/generic_streams.html#stream_buffer"><code>stream_buffer</code></a> 所使用的缓冲策略：用户要么选择缺省的缓冲策略，要么使用非缓冲 i/o. 让用户控制缓冲策略将会使得库的接口和实现非常复杂。
+</p>
+
+
+
+
+<a name="efficiency"></a>
+<h3>效率</h3>
+
+
+
+
+<p>初步的测量显示，使用 Boost.Iostreams 所构建的流和流缓冲与手工编写的组件效率相等。进一步的测量 &mdash; 以及对库实现的适当调整 &mdash; 要等到确立了全面的评测集之后。 </p>
+
+
+
+
+<a name="interoperability"></a>
+<h3>互操作性</h3>
+
+
+
+
+<p>标准库的流和流缓冲当前可用于所有可使用设备的地方；但是这一点将会改变，当加入了对 <a href="guide/asynchronous.html">异步和非阻塞 i/o</a>
+的更多支持后，由于流和流缓冲无法区分暂时错误和永久错误以满足读或写的请求。此外，使用
+Boost.Iostreams 所定义的流和流缓冲可用于所有要求使用标准库的流和流缓冲的地方，唯一的要求是必须在流或流缓冲被完全初始化之后。例如，<a href="classes/filtering_stream.html"><code>filtering_stream</code></a> 的用户必须将一系列过滤器和设备加入到底层的 <a href="classes/chain.html">filter chain</a>，之后 <code>filtering_stream</code>
+才可以用于已有代码。这个限制是不可避免的，正如所有流和流缓冲要求一些特定的初始化一样，包括 <code>std::fstream</code> and <code>std::stringstream</code>.
+</p>
+
+
+
+
+<a name="decisions"></a>
+<h2>设计决定</h2>
+
+
+
+
+<a name="generic"></a>
+<h3>泛型设计</h3>
+
+
+
+
+<p>采用泛型设计的好处众所周知。例如，
+</p>
+
+
+
+<ul>
+
+
+
+    <li>已有的组件 &mdash; 如流、流缓冲和迭代器 &mdash; 可以很容易集成入库中。
+    </li>
+
+
+  <li>本库易于扩展以处理新的过滤器和设备概念。
+    </li>
+
+
+  <li>库的内部，如 <a href="classes/chain.html">filter chains</a>&nbsp;或流缓冲列表的实现，可以重新设计而不影响用户的代码。 
+  </li>
+
+
+</ul>
+
+
+
+<p>泛型设计的另一个典型好处在当前并不太重要，即以内联代码替代虚拟函数调用所获得的性能提升：因为 <code>std::basic_streambuf</code>
+使用虚拟函数作为定制方法，因此本库不可能期望消除虚拟函数调用。但是这些调用的代价已经被缓冲大大地减轻了。
+</p>
+
+
+
+
+<a name="modes"></a>
+<h3>模式</h3>
+
+
+
+
+<p>本库所支持的 <a href="guide/modes.html">modes</a>
+数量大大增加了库的复杂性。不幸的是，为了满足灵活性，所有模式看来都是必需的。<a href="guide/modes.html#definitions">这里</a> 的例子显示出除了一个模式以外，其它所有模式都有重要的用处。这个例外就是 <a href="guide/modes.html#bidirectional_seekable">bidirectional seekable</a>; 不过一旦实现了其它模式，这种模式自然就实现了。
+</p>
+
+
+
+
+<p>
+    I/o 库处理这个问题时，有两种方法：
+</p>
+
+
+
+<ul>
+
+
+
+    <li>它们只支持 <a href="guide/modes.html#input">input</a> 和 <a href="guide/modes.html#output">output</a>, 或者
+    </li>
+
+
+  <li>它们支持其它模式但允许不同模式的组件自由混合。为了避免运行期错误，用户必须研究各个组件的文档以确定它们是否兼容。
+  </li>
+
+
+</ul>
+
+
+
+
+<p>第二种方法显然是不可接受的。第一种因其简单性而吸引，但却漏掉了至关重要的用例。Boost.Iostreams 试图达到两者的最佳平衡，它建议新用户忽略除 <a href="guide/modes.html#input">input</a> 和 <a href="guide/modes.html#output">output</a> 之外的所有模式。
+</p>
+
+
+
+
+<a name="lifetime"></a>
+<h3>生存期管理</h3>
+
+
+
+
+<p>
+    <a href="concepts/filter.html">Filters</a> 和 <a href="concepts/device.html">Devices</a> 必须要么是 <a href="../../../doc/html/CopyConstructible.html" target="_top">CopyConstructible</a>，要么使用 <a href="../../../doc/html/ref.html"><code>boost::ref</code></a> 来传递给流和流缓冲。这个要求使得过滤器和设备的设计复杂化，因为有些不可复制的组件必须使用引用计数。模板 <a href="classes/file.html#file"><code>basic_file</code></a>
+是一个很好的例子。Boost.Iostreams
+的一个预发布版本允许动态分配的过滤器和设备以指针方式传给流和流缓冲，用户可以选择将其所有权传递给
+Iostreams 库。这种设计被拒绝了，原因有二：它不是异常安全的，并且需要一个额外的函数参数来表示对象的所有权是否传给程序库。
+</p>
+
+
+
+
+<a name="chain"></a>
+<h3>链接口</h3>
+
+
+
+
+<p>Boost.Iostreams 的某些预发布版本为 <a href="classes/chain.html">filter chains</a> 提供了丰富的接口，允许链被断开并在任意位置重连，就象 <code>std::list</code> 一样。为了使库更易于学习，后来去掉了这个功能；如果用户发现需要它，很容易就可以恢复。
+</p>
+
+
+
+
+<a name="asynchronous"></a>
+<h3>异步和非阻塞 I/O</h3>
+
+
+
+
+<p>Boost.Iostreams 提供的 <a href="concepts/filter.html">Filter</a> 概念被设计为可容纳 <a href="guide/asynchronous.html">异步和非阻塞 i/o</a>.&nbsp;<a href="concepts/device.html">Device</a>
+概念则可以支持非阻塞 i/o, 但是要支持异步
+i/o 则需要引入新的设备概念。为了向前兼容，已经加入了有限的支持：当引入其它概念和组件时，用户不需要重新设计已有的组件。此外，如果异步和非阻塞 i/o 不再使用，内部的库支持可以被去除而不影响已有的接口。
+</p>
+
+
+
+
+<!-- Begin Footer -->
+
+<hr>
+
+<p class="copyright">Revised
+<!--webbot bot="Timestamp" S-Type="EDITED" S-Format="%d %B, %Y" startspan -->
+20 May, 2004
+<!--webbot bot="Timestamp" endspan i-checksum="38504" -->
+</p>
+
+
+
+
+<p class="copyright">&copy; Copyright <a href="http://www.kangaroologic.com" target="_top">Jonathan Turkanis</a>, 2004</p>
+
+
+
+<p class="copyright"> 
+    Distributed under the Boost Software License, Version 1.0. (See accompanying file LICENSE_1_0.txt or copy at <a href="http://www.boost.org/LICENSE_1_0.txt">http://www.boost.org/LICENSE_1_0.txt</a>)
+</p>
+
+
+
+<!-- End Footer -->
+
+</body>
+</html>

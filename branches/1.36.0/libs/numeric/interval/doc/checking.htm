@@ -1,0 +1,140 @@
+﻿<!DOCTYPE html PUBLIC "-//W3C//DTD HTML 4.01 Transitional//EN"
+"http://www.w3.org/TR/html4/loose.dtd">
+
+<html>
+<head>
+  <meta http-equiv="Content-Language" content="en-us">
+  <meta http-equiv="Content-Type" content="text/html; charset=UTF-8">
+  <link rel="stylesheet" type="text/css" href="../../../../boost.css">
+
+  <title>Checking policies</title>
+</head>
+
+<body>
+  <h1>检查策略</h1>
+
+  <p>一个检查策略控制一个区间类如何处理特殊情况,例如:空区间，无穷数， 非法值。</p>
+
+  <p>例如，让我们考虑<code>operator+(interval, T)</code>.第二个参数可以是一个非法值 (对于浮点数，它可以是 NaN). 在这种情况下，该怎么办呢，首先我们会说:第二个参数永远都不会是非法值 ，其次，我们会说:这样一种情况会发生但被禁止，第三，我们可以允许这种值，当遇到这种情况时,产生一个空区间.还有许多其它的可能性。</p>
+
+  <p>这就是为什么使用一种检查策略:有许多有趣的行为，武断地选择其中的一种将会是让人不愉快的。</p>
+
+  <h2>要求</h2>
+
+  <p>检查类应当满足下面的要求(以接口的形式):</p>
+  <pre>
+/* 检查类的要求 */
+struct checking
+{
+  static T pos_inf();
+  static T neg_inf();
+  static T nan();
+  static bool is_nan(const T&amp;);
+  static T empty_lower();
+  static T empty_upper();
+  static bool is_empty(const T&amp;, const T&amp;);
+};
+</pre>
+
+  <p>开始的两个函数, <code>pos_inf</code> 和<code>neg_inf</code>,
+  会在每将类型需要创建无穷边界区间时被调用 . 例如, <code>interval::whole</code> 计算 <code>interval(checking::neg_inf(), checking::pos_inf())</code>.计算 如果无穷边界值被允许 ，并且，<code>std::numeric_limits&lt;T&gt;::infinity()</code> 返回一个正确的值，那么将会使用这个值。</p>
+
+  <p>下一个是函数<code>nan</code>. 这个函数会在每一次函数需要返回一个T类型的值 ，但是不能计算这个值时使用，仅当函数的某一个参数非法的情况下才会发生，例如，如果你询问一个空区间的中值是多少，将会调用函数<code>nan</code>，但请记住：<code>lower</code> 和  <code>upper</code>  直接返回区间中存储的值，所以，如果区间为空，函数<code>lower</code>和<code>upper</code>不会通过调用<code>checking::nan</code> 来返回结果(并且会和<code>checking::empty_lower</code>返回值相同
+  ).</p>
+
+  <p>函数<code>empty_lower</code> 和 <code>empty_upper</code> 分别返回空区间的下边界和上边界. 与函数<code>checking::nan</code>相比，没有要求函数<code>empty_lower</code>和<code>empty_upper</code>返回相同的值.例如，如果类型T没有任何非法值， <code>empty_</code>函数可以返回区间[1,0].</p>
+
+  <p>函数<code>is_nan</code>用于测试T类型的一个值是否合法，函数<code>is_empty</code>用于测试由两个参数构造的区间是否为空，这些测试通常会在那些涉及<code>T</code>类型的函数开始时调用，如果某一个参数声明为非法的，那么个函数将会试图产生一个非法的值或是一个输入区间。</p>
+
+  <h2>概要</h2>
+  <pre>
+namespace boost {
+namespace numeric {
+namespace interval_lib {
+
+template&lt;class T&gt;
+struct checking_base;
+template&lt;class T, class Checking = checking_base&lt;T&gt;, class Exception = exception_create_empty&lt;T&gt; &gt;
+struct checking_no_empty;
+template&lt;class T, class Checking = checking_base&lt;T&gt; &gt;
+struct checking_no_nan;
+template&lt;class T, class Checking = checking_base&lt;T&gt;, class Exception = exception_invalid_number&lt;T&gt; &gt;
+struct checking_catch_nan;
+
+template&lt;class T&gt; struct exception_create_empty { T operator()(); };
+template&lt;class T&gt; struct exception_invalid_number { void operator()(); };
+
+} // namespace numeric
+} // namespace interval_lib
+} // namespace boost
+</pre>
+
+  <h2>预定义的类</h2>
+
+  <p>为了简化策略的定制，类库中已经定义了一些模板.</p>
+
+  <p>首先，有一个 <code>checking_base</code>类. 得益于<code>std::numeric_limits&lt;T&gt;</code>提供的信息，这个类可以为策略类生成一个基类，如果类型<code>T</code>暗含NaNs(由<code>numeric_limits::has_quiet_NaN</code>所描述的), 那么这个值由函数<code>nan</code>, <code>empty_lower</code>,
+  <code>empty_upper</code>使用，以及一个用于函数<code>is_nan</code>的基本测试(也就是: <code>x!=x</code>)。
+  如果<code>T</code>类型没有暗含NaNs,那么一个函数<code>is_nan</code>是一个<code>assert(false)</code>断言, 空区间是[1,0], 并且函数<code>is_nan</code>永远返回<code>false</code>。像函数<code>nan</code>一样, 函数<code>pos_inf</code>返回<code>numeric_limits::infinity()</code>。如果可能的话, 或者是一个<code>assert(false)</code>断言. 函数<code>neg_inf</code>返回相反的结果，最后，<code>is_empty(T l,T u)</code> 永远通过<code>!(l&lt;=u)</code>来定义.</p>
+
+  <p>接下来的是<code>checking_no_empty</code>类. 使用这个类意味着每一次将会产生一个空的区间(通过<code>empty_lower</code> 和 <code>empty_upper</code>), 这个由模板的异常参数<code>Exception</code>指定的函数对象会被调用，并且其返回值将被传播.所以，如果异常<code>Exception</code>被合适的定义(例如: 它可以抛出一个异常， 也就是参数的名字所指定的异常), 你可以确信永远都不会有空区间产生，因此，函数<code>is_empty</code> 永远都返回<code>false</code> (因没有必要测试空区间). 就象前面解释的那样，我们同样可以使用<code>assert(false)</code>断言来来替换<code>NaN</code>;
+  你可以确信永远都不会产生非法值，如果没有使用这个模板，那就暗含着所有的函数都可以产生空区间，并且它们可以正确处理这些空区间参数
+  .</p>
+
+  <p>最后， <code>checking_no_nan</code>类和<code>checking_catch_nan</code>类. 第一个类表明库中的函数永远都不会接收非法值作为参数. 所以，函数<code>is_nan</code>将返回<code>false</code>. 另一个函数意味着参数可能是非法值,
+  函数<code>is_nan</code>将会调用函数对象<code>Exception</code>
+  并且返回 <code>false</code>.实际上，这个模板意味着非法数字永远都不会进入到函数体中，如果这两个模板都没被使用，那暗含着所有的函数都可能接收非法值并且它们可以正确处理这些非法值。</p>
+
+<p><code>exception_create_empty</code>抛出<code>std::runtime_error</code>异常，异常消息为:<code>"boost::interval:
+  empty interval created"</code>，<code>exception_invalid_number</code>
+  抛出<code>std::invalid_argument</code>异常，异常消息为:<code>"boost::interval: invalid number"</code>.</p>
+
+  <h2>定制你自己的检查策略</h2>
+
+  <p>为了定义一个合适的策略，你需要正确地描述你想从区间类中得到什么，首先，你是否在意在计算的最后得到一个空的区间， 如果你不想得到空的区间，函数empty_lower和函数empty_upper在调用时应当调用失败(它们可以抛出异常，设置一个标记).然而，如果没有函数会产生空区间，也就没有必要进行这些测试，因此，函数<code>is_empty</code>永远都返回<code>false</code>.在这种情况下，一个好的编译器将会进行大量的优化.</p>
+
+  <p>你也可能会对计算的最后产生的空区间有兴趣，例如，如果你需要把转换一个数组的不确定值(或区间)转换到一个新的区间数组中, 你可能不想在遇到第一个问题时就停下来，那么函数<code>empty_lower</code>和函数<code>empty_upper</code>需要返回合适的值用来定义一个空的区间(你可以使用一个上边界小于下边界的值);并且
+  函数<code>is_empty</code>应当可以从合法的区间中区分出空区间.</p>
+
+  <p>另一个重要的问题是：是否可能有一些基数字(base numbers) 
+  (T类型的对象)  是合法的? 如果可能，它们是否被允许，如果不可能，就没有测试的必要了，函数<code>is_nan</code>永远返回 <code>false</code>.也是在这种情况下，好的编译器可以进行大量的优化，如果函数参数可能保存非法值，依据非法值是否被允许，有两种情况需要考虑，如果允许，函数<code>is_nan</code>就必须测试它们是否是合法的，如果禁止，当使用非法的参数调用函数<code>is_nan</code>时，应当调用失败(产生异常或失败断言)并且返回<code>false</code>. 函数<code>nan</code>返回值没什么神奇的地方，因为区间函数保证不会返回非法的区间边界值，除非用户向构造函数传递了非法值。 所以，如果你不信任这个库，你可以在函数体内放置一个断言:-)</p>
+
+  <p>最后，如果在最开始的时候没有决定，你需要决定如何处理函数<code>nan</code>以及函数<code>pos_inf</code>和函数<code>neg_inf</code>，这些函数应当返回合法值或是抛出一个异常(尤其是如果基类型没有对应的值 ).</p>
+
+  <h2>一些例子</h2>
+
+  <ul>
+    <li>如果你需要一个策略来允许类库正确地操作数据，即使它们包含非法数字或空区间，那么可以使用<code>checking_base&lt;T&gt;</code>类
+    .</li>
+
+    <li>如果你不想产生空区间，并且不确定所有的数字都是合法的，那么<code>checking_catch_nan&lt;T,
+    checking_no_empty&lt;T&gt; &gt;</code>类可以帮助你.</li>
+
+    <li>如果所有的数字都是合法的，并且没有空区间会产生(或者你不想它们产生),那么你可以使用<code>checking_no_nan&lt;T, checking_no_empty&lt;T&gt; &gt;</code>类.
+    请注意: 如果<code>T</code>类型没有办法来描述非法数字，那么这种策略的行为将和<code>checking_no_empty&lt;T&gt;</code>类的行为一样，这是默认的策略并且也被称作 <code>interval_lib::checking_strict</code>.</li>
+
+    <li>如果所有的数据都是合法的，但是算法会产生和操作空区间，那么应当被使用<code>checking_no_nan&lt;T&gt;</code>类
+    .</li>
+
+    <li>类似地, 如果非法数据应当被指明出来并且算法可以操作空区间
+    ,<code>checking_catch_nan&lt;T&gt;</code>类就是一个好的解决方案.</li>
+    <li>如果你不在意非法数据或空区间产生时出现未定义的结果，你最好的赌注是创建你自己的策略，通过重载<code>checking_base</code>并且修改函数<code>is_nan</code>和函数<code>is_empty</code>
+    以使它们永远都返回<code>false</code>. 它可能是可用的最快的检查策略，然而，它的缺点是不安全。</li>
+  </ul>
+<p><a href="http://validator.w3.org/check?uri=referer"><img border="0" src=
+  "http://www.w3.org/Icons/valid-html401" alt="Valid HTML 4.01 Transitional"
+  height="31" width="88"></a></p>
+
+  <p>Revised 
+  <!--webbot bot="Timestamp" s-type="EDITED" s-format="%Y-%m-%d" startspan -->2006-12-24<!--webbot bot="Timestamp" endspan i-checksum="12172" --></p>
+
+  <p><i>Copyright &copy; 2002 Guillaume Melquiond, Sylvain Pion, Herv&eacute;
+  Br&ouml;nnimann, Polytechnic University<br>
+  Copyright &copy; 2003-2004 Guillaume Melquiond</i></p>
+
+  <p><i>Distributed under the Boost Software License, Version 1.0. (See
+  accompanying file <a href="../../../../LICENSE_1_0.txt">LICENSE_1_0.txt</a>
+  or copy at <a href=
+  "http://www.boost.org/LICENSE_1_0.txt">http://www.boost.org/LICENSE_1_0.txt</a>)</i></p>
+</body>
+</html>

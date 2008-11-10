@@ -1,0 +1,676 @@
+<!DOCTYPE html PUBLIC "-//W3C//DTD HTML 4.01 Transitional//EN">
+<html>
+<head>
+
+  <meta http-equiv="Content-Language" content="en-us">
+
+  <meta http-equiv="Content-Type" content="text/html; charset=UTF-8">
+
+  <meta name="GENERATOR" content="Microsoft FrontPage 6.0">
+
+  <meta name="ProgId" content="FrontPage.Editor.Document">
+
+  <link rel="stylesheet" type="text/css" href="../../../boost.css">
+  <title>The Boost Statechart Library - Performance</title>
+
+
+</head>
+
+
+<body link="#0000ff" vlink="#800080">
+
+<table summary="header" border="0" cellpadding="7" cellspacing="0" width="100%">
+
+  <tbody>
+
+    <tr>
+
+      <td valign="top" width="300">
+      <h3><a href="../../../index.htm"><img alt="C++ Boost" src="../../../boost.png" border="0" height="86" width="277"></a></h3>
+
+      </td>
+
+      <td valign="top">
+      <h1 align="center">Boost Statechart 库</h1>
+
+      <h2 align="center">Performance 性能</h2>
+
+      </td>
+
+    </tr>
+
+  </tbody>
+</table>
+
+<hr>
+<dl class="index">
+
+  <dt><a href="#SpeedVersusScalabilityTradeoffs">Speed
+versus scalability tradeoffs 速度与扩展性的折衷</a></dt>
+
+  <dt><a href="#MemoryManagementCustomization">Memory
+management customization 内存管理定制化</a></dt>
+
+  <dt><a href="#RttiCustomization">RTTI
+customization RTTI定制化</a></dt>
+
+  <dt><a href="#ResourceUsage">Resource usage 资源使用</a></dt>
+
+</dl>
+
+<h2><a name="SpeedVersusScalabilityTradeoffs" id="SpeedVersusScalabilityTradeoffs">Speed versus
+scalability tradeoffs 速度与扩展性的折衷</a></h2>
+
+<p>Quite a bit of effort has gone into making the library fast
+for small simple machines <b>and</b> scaleable at the same
+time (this applies only to <code>state_machine&lt;&gt;</code>,
+there still is some room for optimizing <code>fifo_scheduler&lt;&gt;</code>,
+especially for multi-threaded builds). While I believe it should
+perform reasonably in most applications, the scalability does not come
+for free. Small, carefully handcrafted state machines will thus easily
+outperform equivalent Boost.Statechart machines. To get a picture of
+how big the gap is, I implemented a simple benchmark in the BitMachine
+example. The Handcrafted example is a handcrafted variant of the
+1-bit-BitMachine implementing the same benchmark.<br>
+
+我们已投入了相当多的努力，以使得本库对于小的简单状态机更快速，同时也具有可扩展性(这些努力只用于 <code>state_machine&lt;&gt;</code>，
+对于 <code>fifo_scheduler&lt;&gt;</code>
+的优化还有很多空间，尤其是多线程的构建)。而我认为要在大多数应用中合理执行的话，可扩展性并不是免费的。因此，小的、精心地手工构造的状态机很容易胜
+过用 Boost.Statechart 构造的同样的状态机。为了全面了解它们之间到底有多大差距，我在 BitMachine
+例子中实现了一个简单的基准测试。而 Handcrafted 例子则是一个实现相同基准测试的 1-bit-BitMachine 的手工变体。</p>
+
+<p>I tried to create a fair but somewhat unrealistic <b>worst-case</b>
+scenario:<br>
+
+我试图创建一个公平的，但有点不切实际的<span style="font-weight: bold;">最坏</span>情
+况：</p>
+
+<ul>
+
+  <li>For both machines exactly one object of the only event is
+allocated before starting the test. This same object is then sent to
+the machines over and over<br>
+
+对于这两个状态机，在开始测试前都只分配了一个唯一事件的对象。这一对象被反复传送到状态机</li>
+
+  <li>The Handcrafted machine employs GOF-visitor double
+dispatch. The states are preallocated so that event dispatch &amp;
+transition amounts to nothing more than two virtual calls and one
+pointer assignment <br>
+
+Handcrafted 状态机采用 GOF-visitor
+双重分派。状态都是预分配的，以使得事件的分派和转换不会多于两次虚拟调用和一次指针赋值</li>
+
+</ul>
+
+<p>The Benchmarks - running on a 3.2GHz Intel Pentium 4 -
+produced the following dispatch and transition times per event:<br>
+
+基准测试 - 运行在一个 3.2GHz Intel Pentium 4 平台上 - 得到的每个事件的分派和转换时间如下：</p>
+
+<ul>
+
+  <li>Handcrafted:
+    <ul>
+
+      <li>MSVC7.1: 10ns</li>
+
+      <li>GCC3.4.2: 20ns</li>
+
+      <li>Intel9.0: 20ns</li>
+
+    </ul>
+
+  </li>
+
+  <li>1-bit-BitMachine with customized memory management:<br>
+
+1-bit-BitMachine
+带定制的内存管理：
+    <ul>
+
+      <li>MSVC7.1: 150ns</li>
+
+      <li>GCC3.4.2: 320ns</li>
+
+      <li>Intel9.0: 170ns</li>
+
+    </ul>
+
+  </li>
+
+</ul>
+
+<p>Although this is a big difference I still think it will not be
+noticeable in most&nbsp;real-world applications. No matter whether
+an application uses handcrafted or Boost.Statechart machines it will...<br>
+
+虽然有很大差距，但是我仍然认为在真实的应用中是不会感觉到的。无论应用程序使用手工的或是 Boost.Statechart 的状态机，它都会...</p>
+
+<ul>
+
+  <li>almost never run into a situation where a state machine is
+swamped with as many events as in the benchmarks. A state machine will
+almost always spend a good deal of time waiting for events (which
+typically come from a human operator, from machinery or from electronic
+devices over often comparatively slow I/O channels). Parsers are just
+about the only application of FSMs where this is not the case. However,
+parser FSMs are usually not directly specified on the state machine
+level but on a higher one that is better suited for the task. Examples
+of such higher levels are: Boost.Regex, Boost.Spirit, XML Schemas, etc.
+Moreover, the nature of parsers allows for a number of optimizations
+that are not possible in a general-purpose FSM
+framework.<br>
+
+几乎从未遇到这样的情形：一个状态机象这个基准测试一样要处理这么多的事件。状态机几乎总是花费大量的时间在等待事件(事件通常来自
+于操作员，或具有相对缓慢的I/O通道的机械或电子设备)。解析器可能是唯一一个不是这种情况的FSM应用。不过，解析器FSM通常不会直接在状态机这个
+层次上实现，而是在更高的层次上实现更为适合。这些更高层次的例子有：Boost.Regex, Boost.Spirit, XML
+Schemas, 等等。此外，解析器本身就允许一些优化，而这对于通用的FSM框架是不可能的。<br>
+
+Bottom line: While it is possible to implement a parser with this
+library, it is almost never advisable to do so because other approaches
+lead to better performing and more expressive
+code<br>
+
+底线：虽然有可能用这个库来实现一个解析器，但是它几乎从未适合于这样做，因为其它的方法有更好的性能和更有表现力的代码</li>
+
+  <li>often run state machines in their own threads. This adds
+considerable locking and thread-switching overhead. Performance tests
+with the PingPong example, where two asynchronous state machines
+exchange events, gave the following times to process one event and
+perform the resulting in-state reaction (using the library with <code>boost::fast_pool_allocator&lt;&gt;</code>):
+    <br>
+
+通常状态机都是在它们自己的线程中运行。这样增加了相当大量的锁和线程切换开销。在 PingPong
+例子的性能测试中，两个异步状态机交换事件，得出以下处理一个事件并执行状态内反应(使用带 <code>boost::fast_pool_allocator&lt;&gt;</code>
+的库)的时间：
+    <ul>
+
+      <li>Single-threaded (no locking and waiting): 840ns / 840ns<br>
+
+单
+线程(没有锁和等待): 840ns / 840ns</li>
+
+      <li>Multi-threaded with one thread (the scheduler uses
+mutex locking but never has to wait for events): 6500ns / 4800ns<br>
+
+带一个线程的多线
+程(调度器使用互斥体锁但无需等待事件): 6500ns / 4800ns</li>
+
+      <li>Multi-threaded with two threads (both schedulers use
+mutex locking and exactly one always waits for an event): 14000ns /
+7000ns<br>
+
+带两个线程的多线程(调度器均使用互斥体锁且有一个总是在等待事件): 14000ns /
+7000ns</li>
+
+    </ul>
+
+    <p>As mentioned above, there definitely is some room to
+improve the timings for the asynchronous machines. Moreover, these are
+very crude benchmarks, designed to show the overhead of locking and
+thread context switching. The overhead in a real-world application will
+typically be smaller and other operating systems can certainly do
+better in this area. However, I strongly believe that on most platforms
+the threading overhead is usually larger than the time that
+Boost.Statechart spends for event dispatch and transition. Handcrafted
+machines will inevitably have the same overhead, making raw
+single-threaded dispatch and transition speed much less important<br>
+
+如上所述，这个
+异步状态机的运行时间肯定还有一定的改善空间。此外，这些都是非常粗糙的基准测试，目的是为了显示锁定和线程上下文切换的开销。在现实应用中的开销应该更
+小一些，而且其他操作系统当然也可以在这方面做得更好。然而，我坚决认为，在大多数平台上，线程开销通常大于 Boost.Statechart
+在事件分派和转换上的开销。手工制作的状态机必然同样会有这些开销，使得原始的单线程调度和转换的速度更为重要</p>
+
+  </li>
+
+  <li>almost always allocate events with <code>new</code>
+and destroy them after consumption. This will add a few cycles, even if
+event memory management is customized<br>
+
+几乎总是用
+来分配事件，并在消耗掉以后销毁它们。这会增加几个CPU周期，即使事件的内存管理是定制的</li>
+
+  <li>often use state machines that employ orthogonal states and
+other advanced features. This forces the handcrafted machines to use a
+more adequate and more time-consuming
+book-keeping<br>
+
+人们通常使用状态机的正交状态和其它高级特性。这些会强制手工构造的状态机使用更为恰当也更为耗时的簿记</li>
+
+</ul>
+
+<p>Therefore, in real-world applications event dispatch and
+transition not normally constitutes a bottleneck and the relative gap
+between handcrafted and Boost.Statechart machines also becomes much
+smaller than in the worst-case
+scenario.<br>
+
+因此，在真实应用中，事件调度和转换通常不会构成瓶颈，手工构造物与 Boost.Statechart
+之间的相对差距也会比最坏情形下的差距小得多</p>
+
+<h3>Detailed performance data 具体的性能数据</h3>
+
+<p>In an effort to identify the main performance bottleneck, the
+example program "Performance" has been written. It measures the time
+that is spent to process one event in different BitMachine variants. In
+contrast to the BitMachine example, which uses only transitions,
+Performance uses a varying number of in-state reactions together with
+transitions. The only difference between in-state-reactions and
+transitions is that the former neither enter nor exit any states. Apart
+from that, the same amount of code needs to be run to dispatch an event
+and execute the resulting action.<br>
+
+BitMachine为了找到主要的性能瓶颈，我们写了一个程序"Performance"。它测量在不同的 BitMachine
+中处理一个事件所花费的时间。和 例子中只使用了转换相比，Performance
+使用了转换以及许多不同的状态内反应。状态内反应与转换之间的唯一区别在于，前者无需进入和退出任何状态。此外，分派一个事件和执行相应的动作所需的代码
+量是相同的。</p>
+
+<p>The following diagrams show the average time the library
+spends to process one event, depending on the percentage of in-state
+reactions employed. 0% means that all triggered reactions are
+transitions. 100% means that all triggered reactions are in-state
+reactions. I draw the following conclusions from these measurements:<br>
+
+以下图表显示的是本库在处理一个事件中花费的平均时间，其依赖于状态机反应使用率。0%表示所有触发的反应都是转换。100%则表示所有触发的反应都是状
+态机反应。我从这些测量结果中得到以下结论：</p>
+
+<ul>
+
+  <li>The fairly linear course of the curves suggests that the
+measurements with a 100% in-state reaction ratio are accurate and not
+merely a product of optimizations in the compiler. Such optimizations
+might have been possible due to the fact that in the 100% case it is
+known at compile-time that the current state will never
+change<br>
+
+性能曲线非常接近于直线，这表示对100%状态内反应比例的测量结果是正确的，而不仅仅是编译器优化的结果。这种优化很可能是由于以下事实，
+即在100%比例的情况下，在编译期就可以知道当前状态永远不会改变</li>
+
+  <li>The data points with 100% in-state reaction ratio and speed
+optimized RTTI show that modern compilers seem to inline the
+complex-looking dispatch code so aggressively that dispatch is reduced
+to little more than it actually is, one virtual function call followed
+by a linear search for a suitable reaction. For instance, in the case
+of the 1-bit Bitmachine, Intel9.0 seems to produce dispatch code that
+is equally efficient like the two virtual function calls in the
+Handcrafted
+machine<br>
+
+100%状态内反应比例与速度优化RTTI的数据点显示，现代的编译器似乎内联了看起来有点复杂的分派代码，所以说，分派被减少至略多于它
+的实际情况，即一个虚拟函数调用加一个对合适反应的线性查找。例如，在 1-bit Bitmachine 的情况下，Intel9.0
+产生的分派代码似乎相当于在
+Handcrafted 中的两次虚拟函数调用的效果</li>
+
+  <li>On all compilers and in all variants the time spent in
+event dispatch is dwarfed by the time spent to exit the current state
+and enter the target state. It is worth noting that BitMachine is a
+flat and non-orthogonal state machine, representing a close-to-worst
+case. Real-world machines will often exit and enter multiple states
+during a transition, what further dwarfs pure dispatch time. This makes
+the implementation of constant-time dispatch (as requested by a few
+people during formal review) an undertaking with little merit. Instead,
+the future optimization effort will concentrate on state-entry and
+state-exit<br>
+
+在所有编译器和所有不同情况下，花费在事件分派上的时间与花费在退出当前状态并进入目标状态的时间相比，是微不足道的。值得注意的
+是，BitMachine
+是一个平面而没有正交区域的状态机，接近于最坏的情况。真实世界的状态机往往会在转换中退出和进入多个状态，这使得分派的时间更加微不足道。这样，常量分
+派时间(应少数人的请求，正在官方审核中)的承诺没有什么好处。相反，今后的优化努力将集中在状态的进入和退出方面</li>
+
+  <li>Intel9.0 seems to have problems to optimize/inline code as
+soon as the amount of code grows over a certain threshold. Unlike with
+the other two compilers, I needed to compile the tests for the 1, 2, 3
+and 4-bit BitMachine into separate executables to get good performance.
+Even then was the performance overly bad for the 4-bit BitMachine. It
+was much worse when I compiled all 4 tests into the same executable.
+This surely looks like a bug in the compiler<br>
+
+Intel9.0
+似乎在代码数量超过某个阈值时，优化/内联代码就会有问题。和其实两个编译器不同，我需要为 1, 2, 3 和 4-bit BitMachine
+分别编译可执行代码，以获得好的性能。即使这样，4-bit BitMachine
+的性能还是太差了。如果我将所有4个测试编译进同一个可执行代码，情况就更糟了。这看起来肯定是编译器的一个bug</li>
+
+</ul>
+
+<h4>Out of the box 缺省配置</h4>
+
+<p>The library is used as is, without any
+optimizations/modifications.<br>
+
+使用缺省配置的库，不带任何优化/修改。</p>
+
+<p><img alt="PerformanceNormal1" src="PerformanceNormal1.gif" border="0" height="284" width="371"><img alt="PerformanceNormal2" src="PerformanceNormal2.gif" border="0" height="284" width="371"><img alt="PerformanceNormal3" src="PerformanceNormal3.gif" border="0" height="284" width="371"><img alt="PerformanceNormal4" src="PerformanceNormal4.gif" border="0" height="284" width="371"></p>
+
+<h4>Native RTTI 原生RTTI</h4>
+
+<p>The library is used with <code><a href="configuration.html#ApplicationDefinedMacros">BOOST_STATECHART_USE_NATIVE_RTTI</a></code>
+defined.<br>
+
+使用带 <code><a href="configuration.html#ApplicationDefinedMacros">BOOST_STATECHART_USE_NATIVE_RTTI</a></code>
+定义的库。</p>
+
+<p><img alt="PerformanceNative1" src="PerformanceNative1.gif" border="0" height="284" width="371"><img alt="PerformanceNative2" src="PerformanceNative2.gif" border="0" height="284" width="371"><img alt="PerformanceNative3" src="PerformanceNative3.gif" border="0" height="284" width="371"><img alt="PerformanceNative4" src="PerformanceNative4.gif" border="0" height="284" width="371"></p>
+
+<h4>Customized memory-management 定制内存管理</h4>
+
+<p>The library is used with customized memory management (<code>boost::fast_pool_allocator</code>).<br>
+
+使用带定制的内存管理(<code>boost::fast_pool_allocator</code>) 的库。</p>
+
+<p><img alt="PerformanceCustom1" src="PerformanceCustom1.gif" border="0" height="284" width="371"><img alt="PerformanceCustom2" src="PerformanceCustom2.gif" border="0" height="284" width="371"><img alt="PerformanceCustom3" src="PerformanceCustom3.gif" border="0" height="284" width="371"><img alt="PerformanceCustom4" src="PerformanceCustom4.gif" border="0" height="284" width="371"></p>
+
+<h3><a name="DoubleDispatch" id="DoubleDispatch">Double
+dispatch 双重分派</a></h3>
+
+<p>At the heart of every state machine lies an implementation of
+double dispatch. This is due to the fact that the incoming event <b>and</b>
+the active state define exactly which <a href="definitions.html#Reaction">reaction</a> the
+state machine will produce. For each event dispatch, one virtual call
+is followed by a linear search for the appropriate reaction, using one
+RTTI comparison per reaction. The following alternatives were
+considered but rejected:<br>
+
+在每个状态机的核心都有一个双重分派的实现。这是因为以下事实，输入的事件<span style="font-weight: bold;">和</span>活
+动状态一起精确地定义了状态机要产生的 <a href="definitions.html#Reaction">反应</a>。
+对于每一个事件分派，将有一次虚拟函数调用加一个对合适反应的线性查找，每个反应使用一个RTTI比较。以下替代方法曾经被考虑但否决：</p>
+
+<ul>
+
+  <li><a href="http://www.objectmentor.com/resources/articles/acv.pdf">Acyclic
+visitor</a>: This double-dispatch variant satisfies all
+scalability requirements but performs badly due to costly inheritance
+tree cross-casts. Moreover, a state must store one v-pointer for <b>each</b>
+reaction what slows down construction and makes memory management
+customization inefficient. In addition, C++ RTTI must inevitably be
+turned on, with negative effects on executable size. Boost.Statechart
+originally employed acyclic visitor and was about 4 times slower than
+it is now (MSVC7.1 on Intel Pentium M). The dispatch speed might be
+better on other platforms but the other negative effects will remain<br>
+
+    <a href="http://www.objectmentor.com/resources/articles/acv.pdf">无
+环访问者</a>：这种双重分派满足所有可扩展性的要求，但由于昂贵的继承树交叉转型而难于执行。而且，每个状态必须为<span style="font-weight: bold;">每个</span>反应保存一个v-指针，这减慢了状态的构
+造，也使得内存管理不能定制。另外，必须打开 C++ RTTI，这对可执行代码的大小产生负面影响。Boost.Statechart
+原先使用了无环访问者，要比现在慢4倍(MSVC7.1 on Intel Pentium
+M)。分派的速度可能在其它平台上会好一些，但其它负面影响同样存在 </li>
+
+  <li><a href="http://en.wikipedia.org/wiki/Visitor_pattern">GOF
+Visitor</a>: The GOF Visitor pattern inevitably makes the whole
+machine depend upon all events. That is, whenever a new event is added
+there is no way around recompiling the whole state machine. This is
+contrary to the scalability requirements<br>
+
+    <a href="http://en.wikipedia.org/wiki/Visitor_pattern">GOF
+访问者</a>：GOF
+访问者模式必然使得整个状态机依赖于所有事件。即，无论何时增加一个新的事件，都无法避免重编译整个状态机。这与可扩展性的要求是相反的</li>
+
+  <li>Single two-dimensional array of function pointers: To
+satisfy requirement 6, it should be possible to spread a single state
+machine over several translation units. This however means that the
+dispatch table must be filled at runtime and the different translation
+units must somehow make themselves "known", so that their part of the
+state machine can be added to the table. There simply is no way to do
+this automatically <b>and</b> portably. The only portable
+way that a state machine distributed over several translation units
+could employ table-based double dispatch relies on the user. The
+programmer(s) would somehow have to <b>manually</b> tie
+together the various pieces of the state machine. Not only does this
+scale badly but is also quite
+error-prone<br>
+
+单个函数指针两维数组：为满足要求6，可能需要将单个状态机分解到多个编译单元。但是这意味着分派表必须在运行期填写，不同的编译
+单元必须有办法让他们自己"被知道"，以便它们的那部分状态机可以被填写到表格中。显然没有办法可以自动<span style="font-weight: bold;">且</span>可移植地完成这一工作。唯一可以移植的方法
+是依赖于用户。程序员必须<span style="font-weight: bold;">手工</span>将
+状态机的各个部分拼接起来。这样做不仅可扩展性差，而且极易出错</li>
+
+</ul>
+
+<h2><a name="MemoryManagementCustomization" id="MemoryManagementCustomization">Memory management
+customization 内存管理定制化</a></h2>
+
+<p>Out of the box, everything (event objects, state objects,
+internal data, etc.) is allocated through <code>std::allocator&lt;
+void &gt;</code> (the default for the Allocator template
+parameter). This should be satisfactory for applications meeting the
+following prerequisites:<br>
+
+缺省情况下，所有东西(事件对象、状态对象、内部数据等等)都是通过 <code>std::allocator&lt;
+void &gt;</code> (Allocator
+模板参数的缺省值)来分配的。这对于符合以下条件的应用来说是可以满足的：</p>
+
+<ul>
+
+  <li>There are no deterministic reaction time (hard real-time)
+requirements<br>
+
+对反应时间没有确定的(严格的实时性)要求</li>
+
+  <li>The application will never run long enough for heap
+fragmentation to become a problem. This is of course an issue for all
+long running programs not only the ones employing this library.
+However, it should be noted that fragmentation problems could show up
+earlier than with traditional FSM
+frameworks<br>
+
+应用程序不会运行很长的时间，以致于堆的碎片成为问题。当然，这是所有需要长时间运行的程序的共同问题，而不仅仅是使用了本库的。不
+过要注意，与传统的FSM框架相比，碎片问题会更早地呈现</li>
+
+</ul>
+
+<p>Should an application not meet these prerequisites,
+Boost.Statechart's memory management can be customized as follows:<br>
+
+如果一个应用程序不符合以上条件，那么&nbsp;Boost.Statechart 的内存管理可以按以下方法进行定制：</p>
+
+<ul>
+
+  <li>By passing a model of the standard Allocator concept to the
+class templates that support a corresponding parameter (<code>event&lt;&gt;</code>,
+    <code>state_machine&lt;&gt;</code>, <code>asynchronous_state_machine&lt;&gt;</code>,
+    <code>fifo_scheduler&lt;&gt;</code>, <code>fifo_worker&lt;&gt;</code>).
+This redirects all allocations to the passed custom allocator and
+should satisfy the needs of just about any project<br>
+
+通过传递一个符合标准分配器概念的类型给支持相
+应参数的模板(<code>event&lt;&gt;</code>, <code>state_machine&lt;&gt;</code>,
+    <code>asynchronous_state_machine&lt;&gt;</code>,
+    <code>fifo_scheduler&lt;&gt;</code>, <code>fifo_worker&lt;&gt;</code>)。
+这样可以将所有分配操作重定向到传入的定制分配器，以满足任意项目的需要</li>
+
+  <li>Additionally, it is possible to <b>separately</b>
+customize <b>state</b> memory management by overloading <code>operator
+new()</code> and <code>operator delete()</code> for
+all state classes but this is probably only useful under rare
+circumstances<br>
+
+另外，还可以<span style="font-weight: bold;">单独</span>对<span style="font-weight: bold;">状态</span>的内存管理进行定制，重载用于所有状态类
+的 <code>operator
+new()</code> 和 <code>operator delete()</code>，但这只在极少数
+情况下有用</li>
+
+</ul>
+
+<h2><a name="RttiCustomization" id="RttiCustomization">RTTI
+customization RTTI定制化</a></h2>
+
+<p>RTTI is used for event dispatch and <code>state_downcast&lt;&gt;()</code>.
+Currently, there are exactly two options:<br>
+
+RTTI用于事件的分派和 <code>state_downcast&lt;&gt;()</code>。
+目前有两种选择：<code></code></p>
+
+<ol>
+
+  <li>By default, a speed-optimized internal implementation is
+employed缺省，使用一个速度优化的内部实现</li>
+
+  <li>The library can be instructed to use native C++ RTTI
+instead by defining <code><a href="configuration.html#ApplicationDefinedMacros">BOOST_STATECHART_USE_NATIVE_RTTI</a></code>本
+库可以定义 <code><a href="configuration.html#ApplicationDefinedMacros">BOOST_STATECHART_USE_NATIVE_RTTI</a></code>
+改为指定使用原生的 C++ RTTI<code></code></li>
+
+</ol>
+
+<p>There are 2 reasons to favor 2:<br>
+
+对于选择2有2个原因：</p>
+
+<ul>
+
+  <li>When a state machine (or parts of it) are compiled into a
+DLL, problems could arise from the use of the internal RTTI mechanism
+(see the FAQ item "<a href="faq.html#Dll">How can I
+compile a state machine into a dynamic link library (DLL)?</a>").
+Using option 2 is one way to work around such problems (on some
+platforms, it seems to be the only way)<br>
+
+如果一个状态机(或其部分)被编译到一个DLL,
+那么使用内部RTTI机制就会出现问题(请见FAQ中的 "<a href="faq.html#Dll">如何将一个状态机
+编译到动态链接库(DLL)?</a>")。使用选择2是解决这一问题的一个方法(在某些平台上，它似乎也是唯一的方法)</li>
+
+  <li>State and event objects need to store one pointer less,
+meaning that in the best case the memory footprint of a state machine
+object could shrink by 15% (an empty event is typically 30% smaller,
+what can be an advantage when there are bursts of events rather than a
+steady flow). However, on most platforms executable size grows when C++
+RTTI is turned on. So, given the small per machine object savings, this
+only makes sense in applications where both of the following conditions
+hold:<br>
+
+状态和事件对象可以少保存一个指针，这意味着在最好情况下状态机的内存占用可以减少15%
+(空的事件可以减小30%，这在发生事件爆炸时是一个优点)。不过，在多数平台上，打开 C++
+RTTI 后可执行代码的大小会增加。所以，由于每个状态机对象的节省较小，只有同时具备以下条件时才值得这样做：
+    <ul>
+
+      <li>Event dispatch will never become a bottleneck<br>
+
+事件的分派不会成为瓶颈</li>
+
+      <li>There is a need to reduce the memory allocated at
+runtime (at the cost of a larger executable)<br>
+
+有必要在运行期减小内存的分配(以较大的可执行代码为代价)</li>
+
+    </ul>
+
+    <p>Obvious candidates are embedded systems where the
+executable resides in ROM. Other candidates are applications running a
+large number of identical state machines where this measure could even
+reduce the <b>overall</b> memory
+footprint<br>
+
+明显的候选者是将可执行代码保存在ROM中的嵌入式系统。其它候选者是运行大量相同的状态机的应用程序，甚至可能减少<span style="font-weight: bold;">总的</span>内存占用</p>
+
+  </li>
+
+</ul>
+
+<h2><a name="ResourceUsage" id="ResourceUsage">Resource
+usage 资源使用</a></h2>
+
+<h3>Memory 内存</h3>
+
+<p>On a 32-bit box, one empty active state typically needs less
+than 50 bytes of memory. Even <b>very</b> complex machines
+will usually have less than 20 simultaneously active states so just
+about every machine should run with less than one kilobyte of memory
+(not counting event queues). Obviously, the per-machine memory
+footprint is offset by whatever state-local members the user adds.<br>
+
+在32位环境下，一个空的活动状态典型需要小于50个字节的内存。即使是<span style="font-weight: bold;">非
+常</span>复杂的状态机，通常都低于20个同时活动的状态，所以每个状态机运行时只需要不到1K字节的内存(不算事件队列)。显然，每
+个状态机的内存占用要加上用户增加的状态局部成员。</p>
+
+<h3>Processor cycles 处理器周期</h3>
+
+<p>The following ranking should give a rough picture of what
+feature will consume how many cycles:<br>
+
+以下排名可以粗略地了解到哪些特性要消耗多少周期：</p>
+
+<ol>
+
+  <li><code>state_cast&lt;&gt;()</code>: By
+far the most cycle-consuming feature. Searches linearly for a suitable
+state, using one <code>dynamic_cast</code> per visited
+state<br>
+    <code>state_cast&lt;&gt;()</code>:
+目前消耗最多周期的特性。线性查找一个合适的状态，对每个被访问的状态使用一次 <code>dynamic_cast</code>&nbsp;</li>
+
+  <li>State entry and exit: Profiling of the fully optimized
+1-bit-BitMachine suggested that roughly 3 quarters of the total event
+processing time is spent destructing the exited state and constructing
+the entered state. Obviously, transitions where the <a href="definitions.html#InnermostCommonContext">innermost
+common context</a> is "far" from the leaf states and/or with lots
+of orthogonal states can easily cause the destruction and construction
+of quite a few states leading to significant amounts of time spent for
+a transition<br>
+
+状态进入和退出：对全优化的
+1-bit-BitMachine 的性能测试表明，总的事件处理时间中大约3/4花费在析构被退出的状态和构造被进入的状态。显然，对于 <a href="definitions.html#InnermostCommonContext">最内层公共上下文</a>
+"远"离叶子状态的，和/或带有大量正交状态的转换，很容易会引起相当多状态的析构和构造，这将导致一次转换花费大量的时间</li>
+
+  <li><code>state_downcast&lt;&gt;()</code>:
+Searches linearly for the requested state, using one virtual call and
+one RTTI comparison per visited state<br>
+
+    <code>state_downcast&lt;&gt;()</code>:
+线性查找被请求的状态，对每个被访问的状态使用一次虚拟调用和一次 RTTI 比较</li>
+
+  <li>Deep history: For all innermost states inside a state
+passing either <code>has_deep_history</code> or <code>has_full_history</code>
+to its state base class, a binary search through the (usually small)
+history map must be performed on each exit. History slot allocation is
+performed exactly once, at first exit<br>
+
+深历史：对一个其状态基类带有 <code>has_deep_history</code>
+或 <code>has_full_history</code>
+的状态，在每次退出时，要对其内部的所有最内层状态通过(通常是小的)历史图执行二分查找。在第一次退出时，执行一次历史插槽分配</li>
+
+  <li>Shallow history: For all direct inner states of a state
+passing either <code>has_shallow_history</code> or <code>has_full_history</code>
+to its state base class, a binary search through the (usually small)
+history map must be performed on each exit. History slot allocation is
+performed exactly once, at first exit<br>
+
+浅历史：对于一个其状态基类带有 <code>has_shallow_history</code>
+或 <code>has_full_history</code>
+的状态，在每次退出时，要对其所有直接内层状态通过(通常
+是小的)历史图执行二分查找。在第一次退出时，执行一次历史插槽分配</li>
+
+  <li>Event dispatch: One virtual call followed by a linear
+search for a suitable <a href="definitions.html#Reaction">reaction</a>,
+using one RTTI comparison per visited reaction<br>
+
+事件分派：一次虚拟调用，加一次对适合的 <a href="definitions.html#Reaction">反应</a>
+线性查找，对每个被访问的反应使用一次 RTTI 比较</li>
+
+  <li>Orthogonal states: One additional virtual call for each
+exited state <b>if</b> there is more than one active leaf
+state before a transition. It should also be noted that the worst-case
+event dispatch time is multiplied in the presence of orthogonal states.
+For example, if two orthogonal leaf states are added to a given state
+configuration, the worst-case time is tripled<br>
+
+正交状态：<span style="font-weight: bold;">如果</span>在一次转换之
+前有一个以上的活动叶子状
+态，则每个被退出状态要额外增加一次虚拟调用。还要注意，最坏情况下事件分派的时间要倍乘以正交状态的数量。例如，如果两个正交叶子状态被增加到一个给定
+的状态配置，最坏情况下，消耗时间为3倍</li>
+
+</ol>
+
+<hr>
+<p><a href="http://validator.w3.org/check?uri=referer"><img src="http://www.w3.org/Icons/valid-html401" alt="Valid HTML 4.01 Transitional" border="0" height="31" width="88"></a></p>
+
+<p>Revised<!--webbot bot="Timestamp" s-type="EDITED" s-format="%d %B, %Y" startspan -->
+03 December, 2006<!--webbot bot="Timestamp" endspan i-checksum="38512" --></p>
+
+<p><i>Copyright &copy; 2003-<!--webbot bot="Timestamp" s-type="EDITED" s-format="%Y" startspan -->2006<!--webbot bot="Timestamp" endspan i-checksum="770" -->
+<a href="contact.html">Andreas Huber D&ouml;nni</a></i></p>
+
+<p><i>Distributed under the Boost Software License, Version
+1.0. (See accompanying file <a href="../../../LICENSE_1_0.txt">LICENSE_1_0.txt</a>
+or copy at <a href="http://www.boost.org/LICENSE_1_0.txt">http://www.boost.org/LICENSE_1_0.txt</a>)</i></p>
+
+</body>
+</html>

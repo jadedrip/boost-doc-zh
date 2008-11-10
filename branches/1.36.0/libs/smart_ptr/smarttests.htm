@@ -1,0 +1,485 @@
+﻿<!DOCTYPE HTML PUBLIC "-//W3C//DTD HTML 4.01 Transitional//EN">
+
+<html>
+
+<head>
+<title>智能指针测时</title>
+<meta http-equiv="Content-Type" content="text/html; charset=UTF-8">
+</head>
+
+<body bgcolor="#FFFFFF">
+
+<h1><img src="../../boost.png" alt="boost.png (6897 bytes)" align="middle" WIDTH="277" HEIGHT="86">智能指针测时</h1>
+
+<p>2000 年 1 月后期，Mark Borgerding 给 boost 提出一项建议，为智能指针提出一种新的设计，借助一个双向链表将所有共享同一个给定的裸指针的智能指针实例连接在一起。这样就避免了 boost::shared_ptr 的当时版本的初始的构造过程中为引用计数进行的一次代价高昂的堆分配。当然，天下没有免费的午餐，这里要付出增大的大小和更加昂贵的拷贝操作的代价。在 boost 邮件列表中的一场辩论接踵而至，而这个页面记述的测试也开始进行，这为当前和未来的智能指针的实现策略的研究提供了指南。</p>
+<p>感谢 <a href="../../people/dave_abrahams.htm">Dave Abrahams</a>，Gavin Collings，<a href="../../people/greg_colvin.htm">Greg Colvin</a> 和 <a href="../../people/beman_dawes.html">Beman Dawes</a> 的测试代码和试验用实现，在<a href="smarttest.zip">这里</a>能找到最终版本的 .zip 格式。</p>
+<h2>Description 描述</h2>
+<p>进行了两项测试：第一个的目的在于获得两个基本的独立操作的时间：</p>
+<ol type="i">
+  <li>从裸指针开始的初始构造。</li>
+  <li>一个已分摊成本的由半个赋值和半个拷贝构造组成的拷贝操作——为反映日常应用而设计。</li>
+</ol>
+<p>第二个实验的目的是通过用不同的智能指针对 vectors 和 list 的填充和排序算法进行测时以获得更多的了解。</p>
+<p>对五种智能指针的实现策略进行了测试：</p>
+<ol type="i">
+  <li>使用一个堆分配的引用计数的 counted pointer，这相当于 <b>simple counted</b>。</li>
+  <li>使用一个专用于引用计数目的的分配器的 counted pointer - <b>special counted</b>。</li>
+  <li>使用一个侵入式引用计数的 counted pointer - <b>intrusive</b>。</li>
+  <li>上面描述的 linked pointer - <b>linked</b>。</li>
+  <li>cyclic pointer，使用一个 std::deque 用于分配，并为弱指针和指针循环中的垃圾收集提供后备的 counted pointer – <b>cyclic</b>。</li>
+</ol>
+<p>使用了两种编译器：</p>
+<ol type="i">
+  <li>MSVC 6.0 service pack 3，使用缺省发布优化模式 (/O2 - optimized for speed, no inlining of functions defined outside a class body unless specified as inline)。</li>
+  <li>gcc 2.95.2，使用全部优化 (-O3 -DNDEBUG)。</li>
+</ol>
+<p>另外，生成的指针大小（考虑了 struct 中的对齐）也进行了比较，由 MSVC 生成的代码大小主要是通过手工检查生成的汇编代码——其必要性主要是由于函数的内联化。</p>
+<p>所有的测试都运行在运行 Windows NT version 4.0 的 PII-200 机器上</p>
+<h2>&nbsp;</h2>
+<h2>Operation Timing Test Results 操作测时测试结果</h2>
+<p>下面的图表以纳秒为单位展示了“获得一个指针（缺省构造），并在其上执行 n 次已分摊成本的拷贝操作，最后再释放它”的总体时间。内含指针的最初分配时间没有包括在内，但是包括了它被释放的时间。内含指针指向一个微不足道的类，但是为了获得侵入式计数共享指针的好处包含了一个侵入式引用计数。一个 dumb pointer（哑指针）（例如，一个只是简单地取得和释放它的内含指针而没有额外成本的智能指针）和一个 raw pointer（裸指针）也参加了比较。</p>
+<table border="0" align="center">
+  <tr> 
+    <td width="20" height="20">&nbsp;</td>
+    <td>&nbsp;</td>
+    <td width="20">&nbsp;</td>
+  </tr>
+  <tr> 
+    <td width="20">&nbsp; </td>
+    <td><img src="msvcspeed.gif" width="560" height="355" alt="MSVC speed graph"></td>
+    <td width="20">&nbsp;</td>
+  </tr>
+  <tr> 
+    <td height="20">&nbsp;</td>
+    <td>&nbsp;</td>
+    <td>&nbsp;</td>
+  </tr>
+  <tr> 
+    <td>&nbsp;</td>
+    <td><img src="gccspeed.gif" width="560" height="355" alt="GCC speed graph"></td>
+    <td>&nbsp;</td>
+  </tr>
+  <tr> 
+    <td height="20">&nbsp;</td>
+    <td>&nbsp;</td>
+    <td>&nbsp;</td>
+  </tr>
+</table>
+<p>&nbsp;</p>
+<p>从上图可以看出平滑的线性关系，据此可以给出以下对于两种不同的编译器初始化和分摊式拷贝操作的数字（时间以纳秒为单位，误差为 2 标准偏差）：-</p>
+<p>&nbsp;</p>
+<h4 align="center">MSVC</h4>
+<table align="center" cellpadding="5" cellspacing="0" class="codetable" width="400">
+  <tr> 
+    <th width="170"> 
+      <div align="right"></div>
+    </th>
+    <th class="codetabletop" width="120"> 
+      <div align="center">initialization</div>
+    </th>
+    <th class="codetabletop" width="120">copy operation</th>
+  </tr>
+  <tr> 
+    <th class="codetableleft"> 
+      <div align="right">simple counted</div>
+    </th>
+    <td class="codetablecell" align="center">3000 +/- 170</td>
+    <td class="codetablecell" align="center">104 +/- 31</td>
+  </tr>
+  <tr> 
+    <th class="codetableleft"> 
+      <div align="right">special counted</div>
+    </th>
+    <td class="codetablecell" align="center">1330 +/- 50</td>
+    <td class="codetablecell" align="center">85 +/- 9</td>
+  </tr>
+  <tr> 
+    <th class="codetableleft"> 
+      <div align="right">intrusive</div>
+    </th>
+    <td class="codetablecell" align="center">1000 +/- 20</td>
+    <td class="codetablecell" align="center">71 +/- 3</td>
+  </tr>
+  <tr> 
+    <th class="codetableleft" align="right">linked</th>
+    <td class="codetablecell" align="center">970 +/- 60</td>
+    <td class="codetablecell" align="center">136 +/- 10</td>
+  </tr>
+  <tr>
+    <th class="codetableleft" align="right">cyclic</th>
+    <td class="codetablecell" align="center">1290 +/- 70</td>
+    <td class="codetablecell" align="center">112 +/- 12</td>
+  </tr>
+  <tr> 
+    <th class="codetableleft" align="right">dumb</th>
+    <td class="codetablecell" align="center">1020 +/- 20</td>
+    <td class="codetablecell" align="center">10 +/- 4</td>
+  </tr>
+  <tr> 
+    <th class="codetableleft"> 
+      <div align="right">raw</div>
+    </th>
+    <td class="codetablecell" align="center">1038 +/- 30</td>
+    <td class="codetablecell" align="center">10 +/- 5</td>
+  </tr>
+</table>
+<h4 align="center">&nbsp;</h4>
+<h4 align="center">GCC</h4>
+<table align="center" cellpadding="5" cellspacing="0" class="codetable" width="400">
+  <tr> 
+    <th width="170"> 
+      <div align="right"></div>
+    </th>
+    <th class="codetabletop" width="120"> 
+      <div align="center">initialization</div>
+    </th>
+    <th class="codetabletop" width="120">copy operation</th>
+  </tr>
+  <tr> 
+    <th class="codetableleft"> 
+      <div align="right">simple counted</div>
+    </th>
+    <td class="codetablecell" align="center">4620 +/- 150</td>
+    <td class="codetablecell" align="center">301 +/- 28</td>
+  </tr>
+  <tr> 
+    <th class="codetableleft"> 
+      <div align="right">special counted</div>
+    </th>
+    <td class="codetablecell" align="center">1990 +/- 40</td>
+    <td class="codetablecell" align="center">264 +/- 7</td>
+  </tr>
+  <tr> 
+    <th class="codetableleft"> 
+      <div align="right">intrusive</div>
+    </th>
+    <td class="codetablecell" align="center">1590 +/- 70</td>
+    <td class="codetablecell" align="center">181 +/- 12</td>
+  </tr>
+  <tr> 
+    <th class="codetableleft" align="right">linked</th>
+    <td class="codetablecell" align="center">1470 +/- 140</td>
+    <td class="codetablecell" align="center">345 +/- 26</td>
+  </tr>
+  <tr>
+    <th class="codetableleft" align="right">cyclic</th>
+    <td class="codetablecell" align="center">2180 +/- 100</td>
+    <td class="codetablecell" align="center">330 +/- 18</td>
+  </tr>
+  <tr> 
+    <th class="codetableleft" align="right">dumb</th>
+    <td class="codetablecell" align="center">1590 +/- 70</td>
+    <td class="codetablecell" align="center">74 +/- 12</td>
+  </tr>
+  <tr> 
+    <th class="codetableleft" align="right"> 
+      <div align="right">raw</div>
+    </th>
+    <td class="codetablecell" align="center">1430 +/- 60</td>
+    <td class="codetablecell" align="center">27 +/- 11</td>
+  </tr>
+</table>
+<p>注意，上面的时间包括一个确定的循环的成本等的总和。针对每一此操作。一个大致的纯智能指针操作时间可以通过从智能指针时间中减去哑指针或裸指针数字获得。</p>
+<h3>Detail 细节</h3>
+<p>测试中包含了一个反复创建裸指针的循环。这些指针随后被数量（set 的大小）不等的智能指针共享。使用了一系列 set 的大小并得到与初始化和拷贝构造数量的线性关系。用了一个电子表格软件产生了上面的性能图表。</p>
+<h2>&nbsp;</h2>
+<h2>Container Test Results 容器测试结果</h2>
+<p>为了洞察在真正的程序中的操作效率，设计了这个测试。智能指针在这里被用来填充标准容器，然后被排序。</p>
+<p>在这种情况下，容器中的指针指向一个类，这个类在它的缺省构造函数中用一个随机值初始化它的一个私有数据成员。这个值后来被用来进行排序比较测试。那个类中还包含一个侵入式引用计数以辅助 intrusive counted pointer（侵入式计数指针）。</p>
+<p>包含 300,000 个指针的全部时间（以秒为单位）。</p>
+<h4 align="center">GCC</h4>
+<table align="center" cellpadding="5" cellspacing="0" class="codetable" width="500">
+  <tr> 
+    <th>&nbsp;</th>
+    <th class="codetabletop" colspan="2">vector</th>
+    <th class="codetabletop" colspan="2">list</th>
+  </tr>
+  <tr> 
+    <th width="140"> 
+      <div align="right"></div>
+    </th>
+    <th class="codetabletop2" width="80"> 
+      <div align="center">fill</div>
+    </th>
+    <th class="codetabletop2" width="80">sort</th>
+    <th class="codetabletop2" width="80">fill</th>
+    <th class="codetabletop2" width="80">sort</th>
+  </tr>
+  <tr> 
+    <th class="codetableleft"> 
+      <div align="right">simple counted</div>
+    </th>
+    <td class="codetablecell" align="center">46.54</td>
+    <td class="codetablecell" align="center">2.44</td>
+    <td class="codetablecell" align="center">47.09</td>
+    <td class="codetablecell" align="center">3.22</td>
+  </tr>
+  <tr> 
+    <th class="codetableleft"> 
+      <div align="right">special counted</div>
+    </th>
+    <td class="codetablecell" align="center">14.02</td>
+    <td class="codetablecell" align="center">2.83</td>
+    <td class="codetablecell" align="center">7.28</td>
+    <td class="codetablecell" align="center">3.21</td>
+  </tr>
+  <tr> 
+    <th class="codetableleft"> 
+      <div align="right">intrusive</div>
+    </th>
+    <td class="codetablecell" align="center">12.15</td>
+    <td class="codetablecell" align="center">1.91</td>
+    <td class="codetablecell" align="center">7.99</td>
+    <td class="codetablecell" align="center">3.08</td>
+  </tr>
+  <tr> 
+    <th class="codetableleft" align="right">linked</th>
+    <td class="codetablecell" align="center">12.46</td>
+    <td class="codetablecell" align="center">2.32</td>
+    <td class="codetablecell" align="center">8.14</td>
+    <td class="codetablecell" align="center">3.27</td>
+  </tr>
+  <tr> 
+    <th class="codetableleft" align="right">cyclic</th>
+    <td class="codetablecell" align="center">22.60</td>
+    <td class="codetablecell" align="center">3.19</td>
+    <td class="codetablecell" align="center">1.63</td>
+    <td class="codetablecell" align="center">3.18</td>
+  </tr>
+  <tr> 
+    <th class="codetableleft" align="right"> 
+      <div align="right">raw</div>
+    </th>
+    <td class="codetablecell" align="center">11.81</td>
+    <td class="codetablecell" align="center">0.24</td>
+    <td class="codetablecell" align="center">27.51</td>
+    <td class="codetablecell" align="center">0.77</td>
+  </tr>
+</table>
+<p>&nbsp;</p>
+<h4 align="center">MSVC</h4>
+<table align="center" cellpadding="5" cellspacing="0" class="codetable" width="500">
+  <tr> 
+    <th>&nbsp;</th>
+    <th class="codetabletop" colspan="2">vector</th>
+    <th class="codetabletop" colspan="2">list</th>
+  </tr>
+  <tr> 
+    <th width="140"> 
+      <div align="right"></div>
+    </th>
+    <th class="codetabletop2" width="80"> 
+      <div align="center">fill</div>
+    </th>
+    <th class="codetabletop2" width="80">sort</th>
+    <th class="codetabletop2" width="80">fill</th>
+    <th class="codetabletop2" width="80">sort</th>
+  </tr>
+  <tr> 
+    <th class="codetableleft"> 
+      <div align="right">simple counted</div>
+    </th>
+    <td class="codetablecell" align="center">1.83</td>
+    <td class="codetablecell" align="center">2.37</td>
+    <td class="codetablecell" align="center">1.86</td>
+    <td class="codetablecell" align="center">4.85</td>
+  </tr>
+  <tr> 
+    <th class="codetableleft"> 
+      <div align="right">special counted</div>
+    </th>
+    <td class="codetablecell" align="center">1.04</td>
+    <td class="codetablecell" align="center">2.35</td>
+    <td class="codetablecell" align="center">1.38</td>
+    <td class="codetablecell" align="center">4.58</td>
+  </tr>
+  <tr> 
+    <th class="codetableleft"> 
+      <div align="right">intrusive</div>
+    </th>
+    <td class="codetablecell" align="center">1.04</td>
+    <td class="codetablecell" align="center">1.84</td>
+    <td class="codetablecell" align="center">1.16</td>
+    <td class="codetablecell" align="center">4.29</td>
+  </tr>
+  <tr> 
+    <th class="codetableleft" align="right">linked</th>
+    <td class="codetablecell" align="center">1.08</td>
+    <td class="codetablecell" align="center">2.00</td>
+    <td class="codetablecell" align="center">1.21</td>
+    <td class="codetablecell" align="center">4.33</td>
+  </tr>
+  <tr> 
+    <th class="codetableleft" align="right">cyclic</th>
+    <td class="codetablecell" align="center">1.38</td>
+    <td class="codetablecell" align="center">2.84</td>
+    <td class="codetablecell" align="center">1.47</td>
+    <td class="codetablecell" align="center">4.73</td>
+  </tr>
+  <tr> 
+    <th class="codetableleft" align="right"> 
+      <div align="right">raw</div>
+    </th>
+    <td class="codetablecell" align="center">0.67</td>
+    <td class="codetablecell" align="center">0.28</td>
+    <td class="codetablecell" align="center">1.24</td>
+    <td class="codetablecell" align="center">1.81</td>
+  </tr>
+</table>
+<p>&nbsp;</p>
+<h2>Code Size 代码大小</h2>
+<p>下面的代码大小仅仅检测了由 MSVC 生成的代码。大小数据给出了 N / M / I 三种形式：</p>
+<ul type="circle">
+  <li>N 是操作的指令数</li>
+  <li>M 是代码以 bytes 为单位的大小</li>
+  <li>I 取决于生成的代码是否内联化，I = inline, O = "outline"</li>
+</ul>
+<p>&nbsp;</p>
+<table align="center" cellpadding="5" cellspacing="0" class="codetable" width="570">
+  <tr> 
+    <th height="28" width="170"> 
+      <div align="right"></div>
+    </th>
+    <th height="28" class="codetabletop" width="80"> 
+      <div align="center">ptr()</div>
+    </th>
+    <th height="28" class="codetabletop" width="80">ptr(p)</th>
+    <th height="28" class="codetabletop" width="80">ptr(ptr)</th>
+    <th height="28" class="codetabletop" width="80">op=()</th>
+    <th height="28" class="codetabletop" width="80"> 
+      <div align="center">~ptr()</div>
+    </th>
+  </tr>
+  <tr> 
+    <th class="codetableleft"> 
+      <div align="right">simple counted</div>
+    </th>
+    <td class="codetablecell" align="center">38/110/O</td>
+    <td class="codetablecell" align="center">38/110/O</td>
+    <td class="codetablecell" align="center">9/23/I</td>
+    <td class="codetablecell" align="center">22/57/I</td>
+    <td class="codetablecell" align="center">17/40/I</td>
+  </tr>
+  <tr> 
+    <th class="codetableleft"> 
+      <div align="right">special counted</div>
+    </th>
+    <td class="codetablecell" align="center"><font size="-1">50/141/O</font></td>
+    <td class="codetablecell" align="center"><font size="-1">50/141/O</font></td>
+    <td class="codetablecell" align="center"><font size="-1">9/23/I</font></td>
+    <td class="codetablecell" align="center"><font size="-1">23/64/I</font></td>
+    <td class="codetablecell" align="center"><font size="-1">13/38/I</font></td>
+  </tr>
+  <tr> 
+    <th class="codetableleft"> 
+      <div align="right">intrusive</div>
+    </th>
+    <td class="codetablecell" align="center"><font size="-1">1/2/I</font></td>
+    <td class="codetablecell" align="center"><font size="-1">3/6/I</font></td>
+    <td class="codetablecell" align="center"><font size="-1">3/6/I</font></td>
+    <td class="codetablecell" align="center"><font size="-1">6/11/I</font></td>
+    <td class="codetablecell" align="center"><font size="-1">6/11/I</font></td>
+  </tr>
+  <tr> 
+    <th class="codetableleft"> 
+      <div align="right">linked</div>
+    </th>
+    <td class="codetablecell" align="center"><font size="-1">5/19/I</font></td>
+    <td class="codetablecell" align="center"><font size="-1">5/15/I</font></td>
+    <td class="codetablecell" align="center"><font size="-1">10/30/I</font></td>
+    <td class="codetablecell" align="center"><font size="-1">27/59/I</font></td>
+    <td class="codetablecell" align="center"><font size="-1">14/38/I</font></td>
+  </tr>
+</table>
+<p>通过代码检测，有几个次要问题需要注意：-</p>
+<ul>
+  <li>•	函数内联化严重影响性能。</li>
+  <li>•	对于 MSVC 来说，至少，一个 &quot;delete 0&quot; 导致执行 11 条汇编指令，还包含一个函数调用。所以，万一遇到性能成为一个绝对因素的时候，加入一些额外的手工测试还是值得的。</li>
+</ul>
+<h2>&nbsp;</h2>
+<h2>Data Size 数据大小</h2>
+<p>下面的智能指针大小以 bytes 为单位</p>
+<table align="center" cellpadding="5" cellspacing="0" class="codetable" width="270">
+  <tr> 
+    <th height="28" width="180"> 
+      <div align="right"></div>
+    </th>
+    <th height="28" class="codetabletop" width="60"> 
+      <div align="center">MSVC</div>
+    </th>
+    <th height="28" class="codetabletop" width="60"> 
+      <div align="center">GCC</div>
+    </th>
+  </tr>
+  <tr> 
+    <th class="codetableleft"> 
+      <div align="right">simple counted</div>
+    </th>
+    <td class="codetablecell"> 
+      <div align="center">8</div>
+    </td>
+    <td class="codetablecell"> 
+      <div align="center">8</div>
+    </td>
+  </tr>
+  <tr> 
+    <th class="codetableleft"> 
+      <div align="right">special counted</div>
+    </th>
+    <td class="codetablecell"> 
+      <div align="center">8</div>
+    </td>
+    <td class="codetablecell"> 
+      <div align="center">12</div>
+    </td>
+  </tr>
+  <tr> 
+    <th class="codetableleft"> 
+      <div align="right">intrusive</div>
+    </th>
+    <td class="codetablecell"> 
+      <div align="center">4</div>
+    </td>
+    <td class="codetablecell"> 
+      <div align="center">4</div>
+    </td>
+  </tr>
+  <tr> 
+    <th class="codetableleft"> 
+      <div align="right">linked</div>
+    </th>
+    <td class="codetablecell"> 
+      <div align="center">12</div>
+    </td>
+    <td class="codetablecell"> 
+      <div align="center">12</div>
+    </td>
+  </tr>
+  <tr> 
+    <th class="codetableleft"> 
+      <div align="right">cyclic</div>
+    </th>
+    <td class="codetablecell"> 
+      <div align="center">8</div>
+    </td>
+    <td class="codetablecell"> 
+      <div align="center">8</div>
+    </td>
+  </tr>
+</table>
+<h2>&nbsp;</h2>
+<h2>Summary 摘要</h2>
+<p>测时的结果主要表明了以下事项：很明显，一个侵入式指针胜过所有其它指针，也胜过一个简单的基于堆相对于其它实现来说性能比较糟糕的计数指针。即便如此，一个最佳的非侵入式智能指针实现仍是更多应用程序所依靠的选择。如果预期拷贝的数量比较少，看上去那个链表实现似乎比较有优势。相反，对于大量拷贝的情况，一个智能指针带几种特定目的的分配器的类型就取得了胜利。其他需要铭记在心的因素是：-</p>
+<ul>
+  <li>特定个体（比如禁止分摊）的操作时间。这一权衡反对任何只依靠一个分配器的实现。</li>
+  <li>多线程同步。这一权衡反对某种散布它的信息（类似于 linked pointer）的实现。</li>
+</ul>
+<hr>
+<p>Revised <!--webbot bot="Timestamp" S-Type="EDITED" S-Format="%d %B %Y" startspan -->19 August 2001<!--webbot bot="Timestamp" endspan i-checksum="14767" -->
+</p>
+<p> Copyright Gavin Collings 2000. Permission to copy, use, modify, sell
+and distribute this document is granted provided this copyright notice appears in all
+copies. This document is provided &quot;as is&quot; without express or implied warranty,
+and with no claim as to its suitability for any purpose.</p>
+</body>
+</html>

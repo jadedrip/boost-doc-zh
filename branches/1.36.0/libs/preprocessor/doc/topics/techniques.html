@@ -1,0 +1,312 @@
+<!DOCTYPE HTML PUBLIC "-//W3C//DTD HTML 4.01 Transitional//EN">
+<html>
+<head>
+
+  
+  <meta content="text/html; charset=UTF-8" http-equiv="content-type">
+
+
+	
+	
+  
+  
+  <title>techniques.html</title>
+  <link rel="stylesheet" type="text/css" href="../styles.css">
+
+
+	
+  
+  <style>
+		u { font-weight:  normal; text-decoration:  none; }
+	</style>
+</head>
+
+
+<body>
+
+
+<h4>技术</h4>
+
+
+<div>预处理器元编程的技术在以下例子中有所表现。
+</div>
+
+
+
+<h4>例子<u> - 用局部宏来避免小作用域中的重复。</u></h4>
+
+
+<div class="code">
+<pre>#define BOOST_PP_DEF(op) /* ..................................... */ \<br>   template&lt;class T, int n&gt;                                          \<br>   vec&lt;T, n&gt; operator op ## =(vec&lt;T, n&gt; lhs, const vec&lt;T, n&gt;&amp; rhs) { \<br>      for (int i = 0; i &lt; n; ++i) {                                  \<br>         lhs(i) op ## = rhs(i);                                      \<br>      }                                                              \<br>   }                                                                 \<br>   /**/<br><br>BOOST_PP_DEF(+)<br>BOOST_PP_DEF(-)<br>BOOST_PP_DEF(*)<br>BOOST_PP_DEF(/)<br><br>#undef BOOST_PP_DEF<br></pre>
+
+</div>
+
+
+<div>
+	<b>提示:</b>&nbsp; 为这类代码使用一个标准的宏名 <code>BOOST_PP_DEF</code> 通常是OK的，因为这个宏在使用的地方马上就去定义了。
+</div>
+
+
+<div>
+	<b>提示:</b>&nbsp; 当行连接符是对齐时，可以更容易地检查它们是否正确使用。
+</div>
+
+
+<div>
+	<b>注意:</b>&nbsp; 你可以扩展这个例子以定义更多的不同操作符。在这样做之前，请考虑使用 <a href="../bibliography.html#barton">[Barton]</a> 中介绍的 <i>algebraic categories</i> 技术或 <i>分层体系</i> (请看 <a href="../bibliography.html#czarnecki">[Czarnecki]</a> 中的例子)。不过，你都必须在某处键入操作符符号 <code>*</code>, <code>/</code>, <code>+</code>, <code>-</code>, 等等，因为它们是不可能用模板来生成的。符号的 <i>绝对重复</i> 可以通过使用预处理器元编程为消除。
+</div>
+
+
+
+<h4>例子<u> - 在局部宏实例化中使用 BOOST_PP_EMPTY 作为一个无用的参数。</u></h4>
+
+
+<div class="code">
+<pre>#define BOOST_PP_DEF(cv) /* ... */ \<br>   template&lt;class base&gt;            \<br>   cv() typename implement_subscript_using_begin_subscript&lt;base&gt;::value_type&amp; \<br>   implement_subscript_using_begin_subscript&lt;base&gt;::operator[](index_type i) cv() { \<br>      return base::begin()[i];     \<br>   }                               \<br>   /**/<br><br>   BOOST_PP_DEF(BOOST_PP_EMPTY)<br>   BOOST_PP_DEF(BOOST_PP_IDENTITY(const))<br></pre>
+
+</div>
+
+
+<div>
+	<b>用法:</b>&nbsp; BOOST_PP_EMPTY() 被扩展为空，可以当作一个无用参数来使用。
+</div>
+
+
+<div>
+	<b>注意:</b>&nbsp; BOOST_PP_EMPTY 必须带有 ()，以执行一个类似于函数的宏。
+</div>
+
+
+<div>
+	<b>警告:</b>&nbsp; 在使用 BOOST_PP_EMPTY() 时不可以使用串联。
+</div>
+
+
+<div>
+	<b>提示:</b>&nbsp; 有时候，有那么一两行代码比其它行要长一点。这时可以不强求行连接符的对齐，并不会令代码太过难读。
+</div>
+
+
+<div>
+	<b>提示:</b>&nbsp; 让预处理器元编程的宏标识符突出显示，如：
+	
+<ul>
+
+
+		<li>BOOST_PP_DEF</li>
+
+
+		<li>BOOST_PP_EMPTY</li>
+
+
+		<li>BOOST_PP_REPEAT</li>
+
+
+		<li>...</li>
+
+
+	
+</ul>
+
+这样可以大大提高可读性。
+</div>
+
+
+
+<h4>例子<u> - 只要有需要，就用 BOOST_PP_CAT 替代 ##.</u></h4>
+
+
+<div class="code">
+<pre>#define STATIC_ASSERT(expr) \<br>   enum { BOOST_PP_CAT(static_check_, __LINE__) = (expr) ? 1 : -1 }; \<br>   typedef char \<br>      BOOST_PP_CAT(static_assert_, __LINE__)[BOOST_PP_CAT(static_check_, __LINE__)] \<br>   /**/<br><br>// ...<br><br>STATIC_ASSERT(sizeof(int) &lt;= sizeof(long));<br></pre>
+
+</div>
+
+
+<div>
+	<b>原因:</b>&nbsp; 宏的扩展是按"层"来递归执行的。Token pasting 阻止了预处理器执行宏扩展，因此它经常需要用来延迟符号的串联。
+</div>
+
+
+
+<h4>例子<u> - 只要有需要，就用 BOOST_PP_STRINGIZE 代替 #.</u></h4>
+
+
+<div class="code">
+<pre>#define NOTE(str) \<br>   message(__FILE__ "(" BOOST_PP_STRINGIZE(__LINE__) ") : " str) \<br>   /**/<br><br>// ...<br><br>#pragma NOTE("TBD!")<br></pre>
+
+</div>
+
+
+<div>
+	<b>原因:</b>&nbsp; 宏的扩展是按"层"来递归执行的。Stringization 阻止了预处理器执行宏扩展，因此它经常需要用来延迟 stringization.
+</div>
+
+
+
+<h4>例子<u> - 用 BOOST_PP_ENUM_PARAMS (及其变体) 或 BOOST_PP_REPEAT 和 BOOST_PP_COMMA_IF 来避免 <i>O</i>(<i>n</i>) 次重复列表。</u></h4>
+
+
+<div class="code">
+<pre>struct make_type_list_end;<br><br>template&lt;<br>   BOOST_PP_ENUM_PARAMS_WITH_A_DEFAULT(<br>      MAKE_TYPE_LIST_MAX_LENGTH, <br>      class T, <br>      make_type_list_end<br>   )<br>&gt;<br>struct make_type_list {<br>   private:<br>      enum { end = is_same&lt;T0, make_type_list_end&gt;::value };<br>   public:<br>      typedef typename type_if&lt;<br>         end, type_cons_empty,<br>         type_cons&lt;<br>            T0,<br>            typename type_inner_if&lt;<br>               end, type_identity&lt;end&gt;,<br>               make_type_list&lt;<br>                  BOOST_PP_ENUM_SHIFTED_PARAMS(<br>                     MAKE_TYPE_LIST_MAX_LENGTH,<br>                     T<br>                  )<br>               &gt;<br>            &gt;::type<br>         &gt;<br>      &gt;::type type;<br>};<br></pre>
+
+</div>
+
+
+<div>
+	<b>用法:</b>&nbsp; BOOST_PP_REPEAT 使用递归模仿(伪代码):
+</div>
+
+
+<div>
+<pre>#define BOOST_PP_REPEAT(n, m, p) BOOST_PP_REPEAT ## n(m, p)<br><br>#define BOOST_PP_REPEAT0(m, p)<br>#define BOOST_PP_REPEAT1(m, p) m(0, p)<br>#define BOOST_PP_REPEAT2(m, p) m(0, p) m(1, p)<br>#define BOOST_PP_REPEAT3(m, p) BOOST_PP_REPEAT2(m, p) m(2, p)<br>#define BOOST_PP_REPEAT4(m, p) BOOST_PP_REPEAT3(m, p) m(3, p)<br>// ...<br></pre>
+
+</div>
+
+
+<div>
+	<i>注:&nbsp; 以上已不再是 BOOST_PP_REPEAT 的实现方法，因此这些代码只是示例而已！</i>
+</div>
+
+
+<div>
+	BOOST_PP_ENUM_PARAMS 及其变体使用了 BOOST_PP_REPEAT.&nbsp;
+	BOOST_PP_COMMA_IF(I) 扩展为一个逗号选择 I != 0.&nbsp;
+	BOOST_PP_INC(I) 则扩展为 "I+1," 而 BOOST_PP_DEC(I) 则扩展为 "I-1,".
+</div>
+
+
+
+<h4>例子<u> - 用 <i>条件宏定义</i> 来让用户可以按需将代码的重复次数上限配置为某个 "合理的" 上限。</u></h4>
+
+
+<div class="code">
+<pre>#ifndef MAKE_TYPE_LIST_MAX_LENGTH<br>#define MAKE_TYPE_LIST_MAX_LENGTH 8<br>#endif<br></pre>
+
+</div>
+
+
+<div>这样用户就可以配置 <code>make_type_list</code> 而不用更改库的代码。
+</div>
+
+
+
+<h4>例子<u> - 用 BOOST_PP_REPEAT 和 <i>记号查找函数</i> 来消除绝对重复。</u></h4>
+
+
+<div class="code">
+<pre>// CAVEAT:  My compiler is not standard on arithmetic types.<br>#define ARITHMETIC_TYPE(I) ARITHMETIC_TYPE ## I<br><br>#define ARITHMETIC_TYPE0    bool<br>#define ARITHMETIC_TYPE1    char<br>#define ARITHMETIC_TYPE2    signed char<br>#define ARITHMETIC_TYPE3    unsigned char<br>#define ARITHMETIC_TYPE4    short<br>#define ARITHMETIC_TYPE5    unsigned short<br>#define ARITHMETIC_TYPE6    int<br>#define ARITHMETIC_TYPE7    unsigned int<br>#define ARITHMETIC_TYPE8    long<br>#define ARITHMETIC_TYPE9    unsigned long<br>#define ARITHMETIC_TYPE10   float<br>#define ARITHMETIC_TYPE11   double<br>#define ARITHMETIC_TYPE12   long double<br><br>#define ARITHMETIC_TYPE_CNT 13<br><br>// ...<br><br>#define BOOST_PP_DEF(z, I, _) /* ... */ \<br>   catch (ARITHMETIC_TYPE(I) t) {       \<br>      report_typeid(t);                 \<br>      report_value(t);                  \<br>   }                                    \<br>   /**/<br><br>BOOST_PP_REPEAT(ARITHMETIC_TYPE_CNT, BOOST_PP_DEF, _)<br><br>#undef BOOST_PP_DEF<br></pre>
+
+</div>
+
+
+<div>
+	<b>备注:</b>&nbsp; 上例中的重复也可以用模板元编程<a href="../bibliography.html#czarnecki">[Czarnecki]</a>来消除。但是操作符记号的绝对重复就不能完全用模板元编程中消除了。
+</div>
+
+
+
+<h4>例子<u> - 用 BOOST_PP_REPEAT 来避免 <i>O</i>(<i>n</i>*<i>n</i>) 重复。</u></h4>
+
+
+<div class="code">
+<pre>#ifndef MAX_VEC_ARG_CNT<br>#define MAX_VEC_ARG_CNT 8<br>#endif<br><br>// ...<br><br>#define ARG_FUN(z, i, _) BOOST_PP_COMMA_IF(i) T a ## i<br>#define ASSIGN_FUN(z, i, ) (*this)[i] = a ## i;<br><br>#define DEF_VEC_CTOR_FUN(z, i, _) /* ... */ \<br>   vec(BOOST_PP_REPEAT(i, ARG_FUN, _)) { \<br>      BOOST_PP_REPEAT(i, ASSIGN_FUN, _)  \<br>   }                                     \<br>   /**/<br><br>BOOST_PP_REPEAT(BOOST_PP_INC(MAX_VEC_ARG_CNT), DEF_VEC_CTOR_FUN, _)<br><br>#undef ARG_FUN<br>#undef ASSIGN_FUN<br>#undef DEF_VEC_CTOR_FUN<br><br>// ...<br></pre>
+
+</div>
+
+
+<div>
+	<b>用法:</b>&nbsp; BOOST_PP_REPEAT 是以特殊的方法实现的，以支持 <i>自动递归</i>。
+</div>
+
+
+
+<h4>例子<u> - 用 BOOST_PP_IF 来实现第一元素的特殊情形。</u></h4>
+
+
+<div class="code">
+<pre>#define COMMA_IF(c) \<br>   BOOST_PP_IF(c, BOOST_PP_COMMA, BOOST_PP_EMPTY)() \<br>   /**/<br><br>BOOST_PP_IF(0, true, false) == false;<br>BOOST_PP_IF(1, true, false) == true;<br></pre>
+
+</div>
+
+
+<div>
+	BOOST_PP_IF 可以方便地用 BOOST_PP_REPEAT 生成列表。
+</div>
+
+
+<div>
+	<b>备注:</b>&nbsp; <i>THEN</i> 和 <i>ELSE</i> 不必一定是宏。不过，如果它们其中之一是类似于函数的宏，并且你希望它按条件进行扩展，则你必须让另一个也成为类似于函数的宏。这通常可以用 BOOST_PP_IDENTITY 来实现。考虑以下例子(来自 Aleksey Gurtovoy):
+</div>
+
+
+<div>
+<pre>#define NUMBERED_EXPRESSION(i, x) /* ... */ \<br>   BOOST_PP_IF(                             \<br>      i,                                    \<br>      BOOST_PP_IDENTITY(x ## i)             \<br>      BOOST_PP_EMPTY                        \<br>   )()                                      \<br>   /**/<br></pre>
+
+</div>
+
+
+<div>
+	<b>备注:</b>&nbsp; 正如以上的 COMMA_IF 实现，BOOST_PP_IF 的结果通常是被调用而不是 <i>THEN</i> 和 <i>ELSE</i> 参数。如果这些参数被调用，代码就不能正确地被扩展，因为 BOOST_PP_EMPTY 参数会在 <b>BOOST_PP_IF</b> 被正确扩展之前就被扩展为空。
+</div>
+
+
+<div>
+	<b>用法:</b>&nbsp; BOOST_PP_IF 被定义用于整个重复的范围(伪代码):
+</div>
+
+
+<div>
+<pre>#define BOOST_PP_IF(c, THEN, ELSE) BOOST_PP_IF ## c(THEN, ELSE)<br><br>#define BOOST_PP_IF0(THEN, ELSE) ELSE<br>#define BOOST_PP_IF1(THEN, ELSE) THEN<br>#define BOOST_PP_IF1(THEN, ELSE) THEN<br>// ...<br></pre>
+
+</div>
+
+
+
+<h4>例子:<u>&nbsp; 在需要时使用算术、逻辑和比较操作符。</u></h4>
+
+
+<div class="code">
+<pre>#define SPECIAL_NUMBERED_LIST(n, i, elem, special) \<br>   BOOST_PP_ASSERT_MSG(                     \<br>      BOOST_PP_LESS(i, n),                  \<br>      bad params for SPECIAL_NUMBERED_LIST! \<br>   )                                        \<br>   BOOST_PP_ENUM_PARAMS(i, elem)            \<br>   BOOST_PP_COMMA_IF(i) special             \<br>   BOOST_PP_REPEAT(                         \<br>      BOOST_PP_SUB(BOOST_PP_DEC(n), i),     \<br>      SPECIAL_NUMBERED_LIST_HELPER,         \<br>      (elem, i)                             \<br>   )                                        \<br>   /**/<br><br>#define SPECIAL_NUMBERED_LIST_HELPER(z, i, elem_base) \<br>   ,                                          \<br>   BOOST_PP_CAT(                              \<br>      BOOST_PP_TUPLE_ELEM(2, 0, elem_base),   \<br>      BOOST_PP_ADD(                           \<br>         i,                                   \<br>         BOOST_PP_TUPLE_ELEM(2, 1, elem_base) \<br>      )                                       \<br>   )                                          \<br>   /**/<br><br>SPECIAL_NUMBERED_LIST(3, 0, E, S)<br>SPECIAL_NUMBERED_LIST(3, 1, E, S)<br>SPECIAL_NUMBERED_LIST(3, 2, E, S)<br>SPECIAL_NUMBERED_LIST(3, 3, E, S)<br></pre>
+
+</div>
+
+
+
+<hr size="1">
+<div style="margin-left: 0px;">
+	<i>&copy; Copyright <a href="http://www.housemarque.com" target="_top">Housemarque Oy</a> 2002</i>
+</div>
+
+
+<div style="margin-left: 0px;">Permission to copy, use, modify, sell
+and distribute this document is granted provided this copyright notice
+appears in all copies.&nbsp;
+This document is provided "as is" without express or implied warranty
+and with no claim as to its suitability for any purpose.
+</div>
+
+
+	
+<hr size="1">
+	
+<div style="margin-left: 0px;">
+		<i>&copy; Copyright <a href="http://www.housemarque.com" target="_top">Housemarque Oy</a> 2002</i>
+		<br>
+
+<i>&copy; Copyright Paul Mensonides 2002</i>
+	</div>
+
+
+	
+<div style="margin-left: 0px;">
+		
+<p><small>Distributed under the Boost Software License, Version 1.0. (See
+		accompanying file <a href="../../../../LICENSE_1_0.txt">LICENSE_1_0.txt</a> or
+		copy at <a href="http://www.boost.org/LICENSE_1_0.txt">www.boost.org/LICENSE_1_0.txt</a>)</small></p>
+
+
+	</div>
+
+
+</body>
+</html>

@@ -1,0 +1,2084 @@
+<!DOCTYPE html PUBLIC "-//W3C//DTD HTML 4.01 Transitional//EN">
+<html>
+<head>
+
+
+  
+  <meta http-equiv="Content-Language" content="en-us">
+
+
+  
+  <meta http-equiv="Content-Type" content="text/html; charset=UTF-8">
+
+
+  
+  <meta name="GENERATOR" content="Microsoft FrontPage 6.0">
+
+
+  
+  <meta name="ProgId" content="FrontPage.Editor.Document">
+
+
+  
+  <link rel="stylesheet" type="text/css" href="../../../boost.css">
+
+  
+  <title>The Boost Statechart Library - Tutorial</title>
+</head>
+
+
+<body link="#0000ff" vlink="#800080">
+
+
+<table summary="header" border="0" cellpadding="7" cellspacing="0" width="100%">
+
+
+  <tbody>
+
+
+    <tr>
+
+
+      <td valign="top" width="300">
+      
+      <h3><a href="../../../index.htm"><img alt="C++ Boost" src="../../../boost.png" border="0" height="86" width="277"></a></h3>
+
+
+      </td>
+
+
+      <td valign="top">
+      
+      <h1 align="center">Boost Statechart 库</h1>
+
+
+      
+      <h2 align="center">Tutorial 指南</h2>
+
+
+      </td>
+
+
+    </tr>
+
+
+  
+  </tbody>
+</table>
+
+
+<hr>
+<p>A Japanese translation of an earlier version of this tutorial
+can be found at <a href="http://prdownloads.sourceforge.jp/jyugem/7127/fsm-tutorial-jp.pdf">http://prdownloads.sourceforge.jp/jyugem/7127/fsm-tutorial-jp.pdf</a>.
+Kindly contributed by Mitsuo Fukasawa.</p>
+
+
+<p>本指南早期版本的日语译文请见 <a href="http://prdownloads.sourceforge.jp/jyugem/7127/fsm-tutorial-jp.pdf">http://prdownloads.sourceforge.jp/jyugem/7127/fsm-tutorial-jp.pdf</a>.
+这是 Mitsuo Fukasawa 的贡献。</p>
+
+
+<h2>Contents 目录</h2>
+
+
+<dl class="page-index">
+
+
+  <dt><a href="#Introduction">Introduction 简介</a></dt>
+
+
+  <dd><a href="#HowToReadThisTutorial">How to read
+this tutorial 如何阅读本指南</a></dd>
+
+
+  <dt><a href="#HelloWorld">Hello World!</a></dt>
+
+
+  <dt><a href="#BasicTopicsAStopWatch">Basic topics:
+A stop watch 基本议题：秒表</a></dt>
+
+
+  <dd><a href="#DefiningStatesAndEvents">Defining
+states and events 定义状态和事件</a></dd>
+
+
+  <dd><a href="#AddingReactions">Adding reactions
+加入反应</a></dd>
+
+
+  <dd><a href="#StateLocalStorage">State-local
+storage 状态局部存储</a></dd>
+
+
+  <dd><a href="#GettingStateInformationOutOfTheMachine">Getting
+state information out of the machine 从状态机之外获取状态信息</a></dd>
+
+
+  <dt><a href="#IntermediateTopicsADigitalCamera">Intermediate
+topics: A digital camera 中级议题：数码相机</a></dt>
+
+
+  <dd><a href="#SpreadingAStateMachineOverMultipleTranslationUnits">Spreading
+a state machine over multiple translation units 将一个状态机分到多个编译单元</a></dd>
+
+
+  <dd><a href="#DeferringEvents">Deferring events
+事件延迟</a></dd>
+
+
+  <dd><a href="#Guards">Guards 警戒</a></dd>
+
+
+  <dd><a href="#InStateReactions">In-state reactions
+状态内反应</a></dd>
+
+
+  <dd><a href="#TransitionActions">Transition
+actions 转换动作</a></dd>
+
+
+  <dt><a href="#AdvancedTopics">Advanced topics 高级议题</a></dt>
+
+
+  <dd><a href="#SpecifyingMultipleReactionsForAState">Specifying
+multiple reactions for a state 为一个状态指定多个反应</a></dd>
+
+
+  <dd><a href="#PostingEvents">Posting events 置入事件</a></dd>
+
+
+  <dd><a href="#History">History 历史</a></dd>
+
+
+  <dd><a href="#OrthogonalStates">Orthogonal states
+正交状态</a></dd>
+
+
+  <dd><a href="#StateQueries">State queries 状态查询</a></dd>
+
+
+  <dd><a href="#StateTypeInformation">State type
+information 状态类型信息</a></dd>
+
+
+  <dd><a href="#ExceptionHandling">Exception
+handling 异常处理</a></dd>
+
+
+  <dd><a href="#SubmachinesAndParameterizedStates">Submachines
+&amp; Parametrized States 子状态机与参数化状态</a></dd>
+
+
+  <dd><a href="#AsynchronousStateMachines">Asynchronous
+state machines 异步状态机</a></dd>
+
+
+</dl>
+
+
+<hr>
+<h2><a name="Introduction" id="Introduction">Introduction
+简介</a></h2>
+
+
+<p>The Boost Statechart library is a framework that allows you to
+quickly transform a UML statechart into executable C++ code, <b>without</b>
+needing to use a code generator. Thanks to support for almost all UML
+features the transformation is straight-forward and the resulting C++
+code is a nearly redundancy-free textual description of the statechart.<br>
+
+
+Boost Statechart 库是一个允许你将一个 UML 状态图快速转换为可执行C++代码的框架，不需要使用代码生成器。得益于对几乎所有
+UML 特性的支持，这一转换工作是很直接了当的，得到的C++代码也接近于对状态图的无冗余文本描述。</p>
+
+
+<h3><a name="HowToReadThisTutorial" id="HowToReadThisTutorial">How to read this tutorial 如何阅读本指南</a></h3>
+
+
+<p>This tutorial was designed to be read linearly. First time
+users should start reading right at the beginning and stop as soon as
+they know enough for the task at hand. Specifically:<br>
+
+
+本指南被设计为按顺序来阅读。用户第一次阅读应该从最前面开始，在弄清楚如何解决手上的问题就可以停下来。具体地说：</p>
+
+
+<ul>
+
+
+  <li>Small and simple machines with just a handful of states can
+be implemented reasonably well by using the features described under <a href="#BasicTopicsAStopWatch">Basic topics: A stop watch</a></li>
+
+
+  <li>For larger machines with up to roughly a dozen states the
+features described under <a href="#IntermediateTopicsADigitalCamera">Intermediate
+topics: A digital camera</a> are often helpful</li>
+
+
+  <li>Finally, users wanting to create even more complex machines
+and project architects evaluating Boost.Statechart should also read the
+    <a href="#AdvancedTopics">Advanced topics</a>
+section at the end. Moreover, reading the <a href="rationale.html#Limitations">Limitations</a>
+section in the Rationale is strongly suggested </li>
+
+
+  <li>对于小且简单的状态机，只带有少量几个状态，可以通过使用 <a href="tutorial.html#BasicTopicsAStopWatch">基本议题：秒表</a>
+一节中所介绍的特性来实现</li>
+
+
+  <li>对于稍大一点的状态机，具有一打左右数量的状态，那么 <a href="tutorial.html#IntermediateTopicsADigitalCamera">中级议题：数码
+相机</a> 一节中介绍的特性通常会有帮助</li>
+
+
+  <li>最后，如果用户想创建一个非常复杂的状态机和反射构架来测试 Boost.Statechart，则还要阅读最后的 <a href="tutorial.html#AdvancedTopics">高级议题</a>
+一节。此外，我们还强烈建议你阅读"原理"中的 <a href="rationale.html#Limitations">局
+限性</a> 一节。</li>
+
+
+</ul>
+
+
+<h2><a name="HelloWorld" id="HelloWorld">Hello
+World!</a></h2>
+
+
+<p>We will use the simplest possible program to make our first
+steps. The statechart ...<br>
+
+
+我们用一个最简单的程序来开始第一步。状态图 ...</p>
+
+
+<p><img alt="HelloWorld" src="HelloWorld.gif" border="0" height="94" width="379"></p>
+
+
+<p>... is implemented with the following code:<br>
+
+
+... 可以用以下代码来实现：</p>
+
+
+<pre>#include &lt;boost/statechart/state_machine.hpp&gt;<br>#include &lt;boost/statechart/simple_state.hpp&gt;<br>#include &lt;iostream&gt;<br><br>namespace sc = boost::statechart;<br><br>// We are declaring all types as <code>struct</code>s only to avoid having to<br>// type <code>public</code>. If you don't mind doing so, you can just as well<br>// use <code>class. 我们将所有类型定义为 struct，只是为了避免输入 public 关键字。<br>// 如果你不介意的话，你也可以使用 class<br><br></code>// We need to forward-declare the initial state because it can<br>// only be defined at a point where the state machine is<br>// defined. 我们需要前向声明初始的状态，因为它只能在定义了状态机之后再定义。<br>struct Greeting;<br><br>// Boost.Statechart makes heavy use of the curiously recurring<br>// template pattern. The deriving class must always be passed as<br>// the first parameter to all base class templates. <br>// Boost.Statechart 大量使用了CRTP。派生类必须作为第一个参数传给所有基类模板。<br>//<br>// The state machine must be informed which state it has to<br>// enter when the machine is initiated. That's why Greeting is<br>// passed as the second template parameter. 状态机必须知道在初始化时要<br>// 进入哪个状态。所以 Greeting 要作为第二个模板参数传入。<br>struct Machine : sc::state_machine&lt; Machine, Greeting &gt; {};<br><br>// For each state we need to define which state machine it<br>// belongs to and where it is located in the statechart. Both is<br>// specified with Context argument that is passed to<br>// simple_state&lt;&gt;. For a flat state machine as we have it here,<br>// the context is always the state machine. Consequently,<br>// Machine must be passed as the second template parameter to<br>// Greeting's base (the Context parameter is explained in more<br>// detail in the next example). 对于每个状态，我们都需要定义它属于哪个状态<br>// 机，以及它位于状态图的哪个位置。这两者由传给 simple_state&lt;&gt; 的 Context <br>// 参数来指定。对于一个象这个例子这样的平面状态机，其上下文永远都是状态机本身。<br>// 因此，Machine 必须作为第二个模板参数传给 Greeting 的基类(在后面的例子中，<br>// 会更加详细地解释 Context 参数)。<br>struct Greeting : sc::simple_state&lt; Greeting, Machine &gt;<br>{<br> // Whenever the state machine enters a state, it creates an<br> // object of the corresponding state class. The object is then<br> // kept alive as long as the machine remains in the state.<br> // Finally, the object is destroyed when the state machine<br> // exits the state. Therefore, a state entry action can be<br> // defined by adding a constructor and a state exit action can<br> // be defined by adding a destructor. 无论何时，当状态机进入一个状态时，<br> // 它会创建相应状态类的一个对象。这个对象在状态机处于该状态的期间保持其生命。最<br> // 后，当状态机退出该状态时，该对象被销毁。因此，状态的进入动作可以通过增加一个<br> // 构造函数来定义，而状态的退出动作则可以通过增加一个析构函数来定义。<br> Greeting() { std::cout &lt;&lt; "Hello World!\n"; } // entry 进入<br> ~Greeting() { std::cout &lt;&lt; "Bye Bye World!\n"; } // exit 退出<br>};<br><br>int main()<br>{<br> Machine myMachine;<br> // The machine is not yet running after construction. We start<br> // it by calling initiate(). This triggers the construction of<br> // the initial state Greeting. 状态机在构造后并不马上运行。我们要通过<br> // 调用 initiate() 来让它开始运行。这时才触发初始状态 Greeting 的构造。&nbsp;<br> myMachine.initiate();<br> // When we leave main(), myMachine is destructed what leads to<br> // the destruction of all currently active states. 当我们离开<br> //&nbsp;main() 时，myMachine 将被析构并引起所有当前活动的状态的析构。<br> return 0;<br>}<br></pre>
+
+
+<p>This prints <code>Hello World!</code> and <code>Bye
+Bye World!</code> before exiting.<br>
+
+
+这个程序在退出前将打印 <code>Hello World!</code> 和 <code>Bye
+Bye World!</code>&nbsp;</p>
+
+
+<h2><a name="BasicTopicsAStopWatch" id="BasicTopicsAStopWatch">Basic topics: A stop watch 基本议题：秒表</a></h2>
+
+
+<p>Next we will model a simple mechanical stop watch with a state
+machine. Such watches typically have two buttons:<br>
+
+
+接下来我们将用状态机来模拟一个简单的秒表。这种秒表通常有两个按钮：</p>
+
+
+<ul>
+
+
+  <li>Start/Stop 开始/结束</li>
+
+
+  <li>Reset 重置</li>
+
+
+</ul>
+
+
+<p>And two states:<br>
+
+
+和两个状态：</p>
+
+
+<ul>
+
+
+  <li>Stopped: The hands reside in the position where they were
+last stopped:
+    
+    <ul>
+
+
+      <li>Pressing the reset button moves the hands back to the 0
+position. The watch remains in the Stopped state</li>
+
+
+      <li>Pressing the start/stop button leads to a transition to
+the Running state</li>
+
+
+    
+    </ul>
+
+
+  </li>
+
+
+  <li>Running: The hands of the watch are in motion and
+continually show the elapsed time
+    
+    <ul>
+
+
+      <li>Pressing the reset button moves the hands back to the 0
+position and leads to a transition to the Stopped state</li>
+
+
+      <li>Pressing the start/stop button leads to a transition to
+the Stopped state</li>
+
+
+    
+    </ul>
+
+
+  </li>
+
+
+</ul>
+
+
+<ul>
+
+
+  <li>Stopped：指针停止在最后到达的位置：
+    
+    <ul>
+
+
+      <li>按"重置"按钮可以让指针回到0位置。秒表保持在 Stopped 状态</li>
+
+
+      <li>按"开始/结束"按钮则转为 Running 状态</li>
+
+
+    
+    </ul>
+
+
+  </li>
+
+
+  <li>Running：秒表的指针在运动且持续地给出测量到的时间
+    
+    <ul>
+
+
+      <li>按"重置"按钮让指针回到0位置，且转为 Stopped 状态</li>
+
+
+      <li>按"开始/结束"按钮则转为 Stopped 状态</li>
+
+
+    
+    </ul>
+
+
+  </li>
+
+
+</ul>
+
+
+<p>Here is one way to specify this in UML:<br>
+
+
+以下是以UML方式给出的状态图：</p>
+
+
+<p><img alt="StopWatch" src="StopWatch.gif" border="0" height="184" width="560"></p>
+
+
+<h3><a name="DefiningStatesAndEvents" id="DefiningStatesAndEvents">Defining states and events
+定义状态和事件</a></h3>
+
+
+<p>The two buttons are modeled by two events. Moreover, we also
+define the necessary states and the initial state. <b>The
+following code is our starting point, subsequent code snippets must be
+inserted</b>:<br>
+
+
+两个按钮被模拟为两个事件。此外，我们还将定义所需的状态和初始状态。<b>以下代码只是我们的开始，后面还要插入一些代码片断：</b></p>
+
+
+<pre>#include &lt;boost/statechart/event.hpp&gt;<br>#include &lt;boost/statechart/state_machine.hpp&gt;<br>#include &lt;boost/statechart/simple_state.hpp&gt;<br><br>namespace sc = boost::statechart;<br><br>struct EvStartStop : sc::event&lt; EvStartStop &gt; {};<br>struct EvReset : sc::event&lt; EvReset &gt; {};<br><br>struct Active;<br>struct StopWatch : sc::state_machine&lt; StopWatch, Active &gt; {};<br><br>struct Stopped;<br><br>// The simple_state class template accepts up to four parameters:<br>// simple_state 类模板接受四个参数：<br>// - The third parameter specifies the inner initial state, if<br>// there is one. Here, only Active has inner states, which is<br>// why it needs to pass its inner initial state Stopped to its<br>// base. 第三个参数指定内层的初始状态，如果有的话。这里，只有 Active 具有内<br>// 层状态，因此要将它的内层初始状态 Stopped 传给它的基类。<br>// - The fourth parameter specifies whether and what kind of<br>// history is kept. 第四个参数指定是否保持历史及保持何种历史<br><br>// Active is the outermost state and therefore needs to pass the<br>// state machine class it belongs to. Active是最外层的状态，因此要被传<br>// 递给所属的状态机。<br>struct Active : sc::simple_state&lt;<br> Active, StopWatch, Stopped &gt; {};<br><br>// Stopped and Running both specify Active as their Context,<br>// which makes them nested inside Active. Stopped和Running都将Active<br>// 指定为它们的Context，这样就将它们嵌套在Active的里面了。<br>struct Running : sc::simple_state&lt; Running, Active &gt; {};<br>struct Stopped : sc::simple_state&lt; Stopped, Active &gt; {};<br><br>// Because the context of a state must be a complete type (i.e.<br>// not forward declared), a machine must be defined from<br>// "outside to inside". That is, we always start with the state<br>// machine, followed by outermost states, followed by the direct<br>// inner states of outermost states and so on. We can do so in a<br>// breadth-first or depth-first way or employ a mixture of the<br>// two. 因为一个状态的context必须是一个完整的类型(即不可以是前向声明的)，所以<br>// 状态机必须"由外而内"地进行定义。即，我们总是从状态机开始，接下来是最外层的状态，<br>// 然后是最外层状态的直接内层状态，等等。我们可以以宽度优先、深度优先或两者混合的<br>// 方式来进行。<br><br>int main()<br>{<br> StopWatch myWatch;<br> myWatch.initiate();<br> return 0;<br>}<br></pre>
+
+
+<p>This compiles but doesn't do anything observable yet.<br>
+
+
+这段代码可以编译，但还没有任何看得见的动作。</p>
+
+
+<h3><a name="AddingReactions" id="AddingReactions">Adding
+reactions&nbsp;加入反应</a></h3>
+
+
+<p>For the moment we will use only one type of reaction:
+transitions. We <b>insert</b> the bold parts of the
+following code:<br>
+
+
+在这一刻，我们只使用一种反应类型：转换。我们<span style="font-weight: bold;">插入</span>以
+下代码的粗体部分：</p>
+
+
+<pre><b>#include &lt;boost/statechart/transition.hpp&gt;<br></b><br>// ...<br>struct Stopped;<br>struct Active : sc::simple_state&lt; Active, StopWatch, Stopped &gt;<br>{<br><b>typedef sc::transition&lt; EvReset, Active &gt; reactions;</b><br>};<br>struct Running : sc::simple_state&lt; Running, Active &gt;<br>{<br><b>typedef sc::transition&lt; EvStartStop, Stopped &gt; reactions;</b><br>};<br>struct Stopped : sc::simple_state&lt; Stopped, Active &gt;<br>{<br><b>typedef sc::transition&lt; EvStartStop, Running &gt; reactions;</b><br>};<br><br>// A state can define an arbitrary number of reactions. That's<br>// why we have to put them into an mpl::list&lt;&gt; as soon as there<br>// is more than one of them (see <a href="tutorial.html#SpecifyingMultipleReactionsForAState">Specifying multiple reactions </a><br>// <a href="tutorial.html#SpecifyingMultipleReactionsForAState">for a state</a>). 一个状态可以定义任意数量的反应。因此当反应多于一个时，我们<br>// 要将它们放入一个 mpl::list&lt;&gt; 中 (请见 <a href="#SpecifyingMultipleReactionsForAState">对一个状态指定多个反应</a>)。<br><br>int main()<br>{<br> StopWatch myWatch;<br> myWatch.initiate();<br> <b>myWatch.process_event( EvStartStop() );<br></b> <b>myWatch.process_event( EvStartStop() );<br></b> <b>myWatch.process_event( EvStartStop() );<br></b> <b>myWatch.process_event( EvReset() );<br></b> return 0;<br>}<br></pre>
+
+
+<p>Now we have all the states and all the transitions in place
+and a number of events are also sent to the stop watch. The machine
+dutifully makes the transitions we would expect, but no actions are
+executed yet.<br>
+
+
+现我们有了所有的状态和所有的转换，而且还有一系列事件被发送给了这个秒表。这个状态机将忠实地按我们的期望进行状态的转换，不过仍然没有动作被执行。</p>
+
+
+<h3><a name="StateLocalStorage" id="StateLocalStorage">State-local
+storage 状态局部存储</a></h3>
+
+
+<p>Next we'll make the stop watch actually measure time.
+Depending on the state the stop watch is in, we need different
+variables:<br>
+
+
+接下来我们将让这个秒表真正进行时间的测量。取决于秒表所处的状态，我们需要一些不同的变量：</p>
+
+
+<ul>
+
+
+  <li>Stopped: One variable holding the elapsed time</li>
+
+
+  <li>Running: One variable holding the elapsed time <b>and</b>
+one variable storing the point in time at which the watch was last
+started.</li>
+
+
+  <li>Stopped: 一个保存已测量时间的变量</li>
+
+
+  <li>Running: 一个保存已测量时间的变量，<span style="font-weight: bold;">以
+及</span>一个保存秒表最后一次开始的时间点的变量。</li>
+
+
+</ul>
+
+
+<p>We observe that the elapsed time variable is needed no matter
+what state the machine is in. Moreover, this variable should be reset
+to 0 when we send an <code>EvReset</code> event to the
+machine. The other variable is only needed while the machine is in the
+Running state. It should be set to the current time of the system clock
+whenever we enter the Running state. Upon exit we simply subtract the
+start time from the current system clock time and add the result to the
+elapsed time.<br>
+
+
+我们看到无论状态机处于哪个状态，保存已测量时间的变量都是需要的。此外，这个变量会在我们向状态机发出一个 <code>EvReset</code>
+事件时被重置为0。另一个变量则只在状态机处于 Running 状态时才需要。它应在我们进入 Running
+状态时被设置为系统时钟的当前时间。到退出时，我们只要从系统时钟的当前时间中减去这个开始时间，再将结果加到已测量时间上就可以了。</p>
+
+
+<pre><b>#include &lt;ctime&gt;<br></b><br>// ...<br>struct Stopped;<br>struct Active : sc::simple_state&lt; Active, StopWatch, Stopped &gt;<br>{<br><b>public:</b><br>typedef sc::transition&lt; EvReset, Active &gt; reactions;<br><b>Active() : elapsedTime_( 0.0 ) {}<br></b> <b>double ElapsedTime() const { return elapsedTime_; }<br></b> <b>double &amp; ElapsedTime() { return elapsedTime_; }<br></b> <b>private:<br></b> <b>double elapsedTime_;<br></b>};<br><br>struct Running : sc::simple_state&lt; Running, Active &gt;<br>{<br> <b>public:</b><br>typedef sc::transition&lt; EvStartStop, Stopped &gt; reactions;<br><b>Running() : startTime_( std::time( 0 ) ) {}<br></b> <b>~Running()<br></b> <b>{</b><br>// Similar to when a derived class object accesses its<br>// base class portion, context&lt;&gt;() is used to gain<br>// access to the direct or indirect context of a state.<br>// This can either be a direct or indirect outer state<br>// or the state machine itself (e.g. here: context&lt; StopWatch &gt;()).<br>// 与一个派生类对象访问它的基类部分相类似，context&lt;&gt;() 用于访问一个<br> // 状态的直接或间接上下文。这可以是直接或间接外层状态，或者是状态机本身<br> // (如：context&lt; StopWatch &gt;())。<br> <b>context&lt; Active &gt;().ElapsedTime() +=<br></b> <b>std::difftime( std::time( 0 ), startTime_ );<br></b> <b>}<br></b> <b>private:<br></b> <b>std::time_t startTime_;<br></b>};<br><br>// ...<br></pre>
+
+
+<p>The machine now measures the time, but we cannot yet retrieve
+it from the main program.<br>
+
+
+现在这个状态机可以测量时间了，但是我们还不能在主程序中取出这个测量的结果。</p>
+
+
+<p>At this point, the advantages of state-local storage (which is
+still a relatively little-known feature) may not yet have become
+apparent. The FAQ item "<a href="faq.html#StateLocalStorage">What's
+so cool about state-local storage?</a>" tries to explain them in
+more detail by comparing this StopWatch with one that does not make use
+of state-local storage.<br>
+
+
+到目前为止，状态局部存储(还只是一个相对不太知名的特性)的好处还不是很明显。FAQ条目"<a href="faq.html#StateLocalStorage">状态局部存储有什么好处？</a>"试图给出
+更加详细的解释，那里会将这个秒表实现与另一个不使用状态局存储的实现进行比较。</p>
+
+
+<h3><a name="GettingStateInformationOutOfTheMachine" id="GettingStateInformationOutOfTheMachine">Getting state
+information out of the machine 从状态机之外获取状态信息</a></h3>
+
+
+<p>To retrieve the measured time, we need a mechanism to get
+state information out of the machine. With our current machine design
+there are two ways to do that. For the sake of simplicity we use the
+less efficient one: <code>state_cast&lt;&gt;()</code>
+(StopWatch2.cpp shows the slightly more complex alternative). As the
+name suggests, the semantics are very similar to the ones of <code>dynamic_cast</code>.
+For example, when we call <code>myWatch.state_cast&lt; const
+Stopped &amp; &gt;()</code> <b>and</b> the
+machine is currently in the Stopped state, we get a reference to the <code>Stopped</code>
+state. Otherwise <code>std::bad_cast</code> is thrown. We
+can use this functionality to implement a <code>StopWatch</code>
+member function that returns the elapsed time. However, rather than ask
+the machine in which state it is and then switch to different
+calculations for the elapsed time, we put the calculation into the
+Stopped and Running states and use an interface to retrieve the elapsed
+time:<br>
+
+
+要获得被测量的时间量，我们需要一个机制从状态机之外获取状态的信息。对于我们现在的状态机设计，有两种方法。为简单起见，我们使用效率较差的一种：<code>state_cast&lt;&gt;()</code>
+(StopWatch2.cpp 示范了稍微复杂一点的另一种方法)。顾名思义，它的语义非常类似于 <code>dynamic_cast</code>.
+例如，当我们调用&nbsp;<code>myWatch.state_cast&lt; const Stopped
+&amp; &gt;()</code> <b>且</b>状态机正处于 Stopped
+状态时，我们将得到一个 <code>Stopped</code> 状态的引用。否则抛出 <code>std::bad_cast</code>
+异常。我们可以利用这个功能来实现一个 <code>StopWatch</code>
+成员函数，返回被测量的时间。不过，与其询问状态机处于何种状态然后转换到不同的运算以获得被测量时间，我们不如将这个运算置入 Stopped 和
+Running 状态，然后用一个接口来取出被测量时间：</p>
+
+
+<pre><b>#include &lt;iostream&gt;<br><br></b>// ...<br><br><b>struct IElapsedTime<br>{<br></b> <b>virtual double ElapsedTime() const = 0;<br>};<br><br></b>struct Active;<br>struct StopWatch : sc::state_machine&lt; StopWatch, Active &gt;<br>{<br> <b>double ElapsedTime() const<br></b> <b>{<br></b> <b>return state_cast&lt; const IElapsedTime &amp; &gt;().ElapsedTime();<br></b> <b>}<br></b>};<br><b><br></b>// ...<br><br>struct Running : <b>IElapsedTime,</b><br>sc::simple_state&lt; Running, Active &gt;<br>{<br>public:<br>typedef sc::transition&lt; EvStartStop, Stopped &gt; reactions;<br>Running() : startTime_( std::time( 0 ) ) {}<br>~Running()<br>{<br><b>context&lt; Active &gt;().ElapsedTime() = ElapsedTime();<br></b> }<br><b><br></b> <b>virtual double ElapsedTime() const<br></b> <b>{<br></b> <b>return context&lt; Active &gt;().ElapsedTime() +<br></b> <b>std::difftime( std::time( 0 ), startTime_ );<br></b> <b>}<br></b> private:<br> std::time_t startTime_;<br>};<br><br>struct Stopped : <b>IElapsedTime,</b><br>sc::simple_state&lt; Stopped, Active &gt;<br>{<br>typedef sc::transition&lt; EvStartStop, Running &gt; reactions;<br><b>virtual double ElapsedTime() const<br></b> <b>{<br></b> <b>return context&lt; Active &gt;().ElapsedTime();<br></b> <b>}<br></b>};<br><br>int main()<br>{<br> StopWatch myWatch;<br> myWatch.initiate();<br> <b>std::cout &lt;&lt; myWatch.ElapsedTime() &lt;&lt; "\n";<br></b> myWatch.process_event( EvStartStop() );<br> <b>std::cout &lt;&lt; myWatch.ElapsedTime() &lt;&lt; "\n";<br></b> myWatch.process_event( EvStartStop() );<br> <b>std::cout &lt;&lt; myWatch.ElapsedTime() &lt;&lt; "\n";<br></b> myWatch.process_event( EvStartStop() );<br> <b>std::cout &lt;&lt; myWatch.ElapsedTime() &lt;&lt; "\n";<br></b> myWatch.process_event( EvReset() );<br> <b>std::cout &lt;&lt; myWatch.ElapsedTime() &lt;&lt; "\n";<br></b> return 0;<br>}<br></pre>
+
+
+<p>To actually see time being measured, you might want to
+single-step through the statements in <code>main()</code>.
+The StopWatch example extends this program to an interactive console
+application.<br>
+
+
+要真正看到被测量的时间，你可能需要单步执行 <code>main()</code> 中的语句。例子
+StopWatch 将以上程序扩展为交互式的控制台应用。</p>
+
+
+<h2><a name="IntermediateTopicsADigitalCamera" id="IntermediateTopicsADigitalCamera">Intermediate topics: A
+digital camera 中级议题：数码相机</a></h2>
+
+
+<p>So far so good. However, the approach presented above has a
+few limitations:<br>
+
+
+到目前为止还都不错。不过，前面介绍的方法具有一些局限性：</p>
+
+
+<ul>
+
+
+  <li>Bad scalability: As soon as the compiler reaches the point
+where <code>state_machine::initiate()</code> is called, a
+number of template instantiations take place, which can only succeed if
+the full declaration of each and every state of the machine is known.
+That is, the whole layout of a state machine must be implemented in one
+single translation unit (actions can be compiled separately, but this
+is of no importance here). For bigger (and more real-world) state
+machines, this leads to the following limitations:
+    
+    <ul>
+
+
+      <li>At some point compilers reach their internal template
+instantiation limits and give up. This can happen even for
+moderately-sized machines. For example, in debug mode one popular
+compiler refused to compile earlier versions of the BitMachine example
+for anything above 3 bits. This means that the compiler reached its
+limits somewhere between 8 states, 24 transitions and 16 states, 64
+transitions</li>
+
+
+      <li>Multiple programmers can hardly work on the same state
+machine simultaneously because every layout change will inevitably lead
+to a recompilation of the whole state machine</li>
+
+
+    
+    </ul>
+
+
+  </li>
+
+
+  <li>Maximum one reaction per event: According to UML a state
+can have multiple reactions triggered by the same event. This makes
+sense when all reactions have mutually exclusive guards. The interface
+we used above only allows for at most one unguarded reaction for each
+event. Moreover, the UML concepts junction and choice point are not
+directly supported</li>
+
+
+  <li>可伸缩性差：一旦编译器到达调用&nbsp;<code>state_machine::initiate()</code>
+的地方，就会发生一系列模板实例化，这些实例化只有当该状态机的每一个状态都有完整的声明时才可以成功。即，状态机的整个布局必须位于单个编译单元内(动
+作可以单独编译，但在此这一点并不重要)。对于较大的(也是更真实的)状态机，将导致以下局限：
+    
+    <ul>
+
+
+      <li>编译器可能在某处达到它们的内部模板实例化限制而放弃。这一点对于中等大小的状态机都有可能发生。例如，一个常用的编译
+器在调试模式下拒绝编译3位以上的旧版本的 BitMachine
+例子。这意味着这个编译器在8个状态、24个转换与16个状态、64个转换之间达到了它的限制。</li>
+
+
+      <li>很难让多个程序同时为一个状态机工作，因为状态机布局的每一次变化都不可避免地引起整个状态机的重编译。</li>
+
+
+    
+    </ul>
+
+
+  </li>
+
+
+  <li>每个事件最多一个反应：按照UML，一个状态可以有由同一个事件触发的多个反应。这一点在所有反应具有互斥的警戒时非常有用。我
+们在前面使用的接口只允许每个事件最多一个无警戒反应。此外，UML的概念"连接"和"选择点"也没有直接的支持。</li>
+
+
+</ul>
+
+
+<p>All these limitations can be overcome with custom reactions. <b>Warning:
+It is easy to abuse custom reactions up to the point of invoking
+undefined behavior. Please study the documentation before employing
+them!</b><br>
+
+
+所有这些局限可以通过定制化反应来克服。<b>警告：滥用定制化反应很容易导致未定义行为。在使用它们之前请学习本文档！</b></p>
+
+
+<h3><a name="SpreadingAStateMachineOverMultipleTranslationUnits" id="SpreadingAStateMachineOverMultipleTranslationUnits">Spreading
+a state machine over multiple translation units 将一个状态机分到多个编译单元</a></h3>
+
+
+<p>Let's say your company would like to develop a digital camera.
+The camera has the following controls:<br>
+
+
+下面我们假设你的公司要开发一个数码相机。该相机有以下控制键：</p>
+
+
+<ul>
+
+
+  <li>Shutter button, which can be half-pressed and
+fully-pressed. The associated events are <code>EvShutterHalf</code>,
+    <code>EvShutterFull</code> and <code>EvShutterReleased</code>
+  </li>
+
+
+  <li>Config button, represented by the <code>EvConfig</code>
+event </li>
+
+
+  <li>A number of other buttons that are not of interest here </li>
+
+
+  <li>快门键，它可以分为半按和全按。对应的事件为 <code>EvShutterHalf</code>,
+    <code>EvShutterFull</code> 和 <code>EvShutterReleased</code></li>
+
+
+  <li>配置键，以 <code>EvConfig</code> 事件表示</li>
+
+
+  <li>几个其它键，不过在这里先不用管它</li>
+
+
+</ul>
+
+
+<p>One use case for the camera says that the photographer can
+half-press the shutter <b>anywhere</b> in the
+configuration mode and the camera will immediately go into shooting
+mode. The following statechart is one way to achieve this behavior:<br>
+
+
+这个相机的一个用例是，摄像者可以在配置模式的<span style="font-weight: bold;">任何地方</span>半
+按快门，相机会立即进入照相模式。以下状态图是完成这一行为的一个方法：</p>
+
+
+<p><img alt="Camera" src="Camera.gif" border="0" height="317" width="544"></p>
+
+
+<p>The Configuring and Shooting states will contain numerous
+nested states while the Idle state is relatively simple. It was
+therefore decided to build two teams. One will implement the shooting
+mode while the other will implement the configuration mode. The two
+teams have already agreed on the interface that the shooting team will
+use to retrieve the configuration settings. We would like to ensure
+that the two teams can work with the least possible interference. So,
+we put the two states in their own translation units so that machine
+layout changes within the Configuring state will never lead to a
+recompilation of the inner workings of the Shooting state and vice
+versa.<br>
+
+
+Configuring 和 Shooting 状态中包含有多个嵌套状态，而 Idle
+状态则相对简单。因此我们决定建立两个团队。一个负责实现照相模式而另一个负责实现配置模式。这两个团队已经对接口达到一致，shooting
+团队使用这一接口获取配置设置。我们应该确认这两个团队可以以最小的冲突一起工作。因此，我们将这两个状态放入各自的编译单元，以便在
+Configuring 状态内的状态机布局的变化不会引起 Shooting 状态内部的重编译，反之亦然。</p>
+
+
+<p><b>Unlike in the previous example, the excerpts
+presented here often outline different options to achieve the same
+effect. That's why the code is often not equal to the Camera example
+code.</b> Comments mark the parts where this is the case.<br>
+
+
+<b>与前一个例子不同，这里给出的摘录描述了达到同一效果的不同选项。所以这些代码与 Camera 例子的代码是不同的。</b>我
+们用注释标出有这种情况的地方。</p>
+
+
+<p>Camera.hpp:</p>
+
+
+<pre>#ifndef CAMERA_HPP_INCLUDED<br>#define CAMERA_HPP_INCLUDED<br><br>#include &lt;boost/statechart/event.hpp&gt;<br>#include &lt;boost/statechart/state_machine.hpp&gt;<br>#include &lt;boost/statechart/simple_state.hpp&gt;<br>#include &lt;boost/statechart/custom_reaction.hpp&gt;<br><br>namespace sc = boost::statechart;<br><br>struct EvShutterHalf : sc::event&lt; EvShutterHalf &gt; {};<br>struct EvShutterFull : sc::event&lt; EvShutterFull &gt; {};<br>struct EvShutterRelease : sc::event&lt; EvShutterRelease &gt; {};<br>struct EvConfig : sc::event&lt; EvConfig &gt; {};<br><br>struct NotShooting;<br>struct Camera : sc::state_machine&lt; Camera, NotShooting &gt;<br>{<br> bool IsMemoryAvailable() const { return true; }<br> bool IsBatteryLow() const { return false; }<br>};<br><br>struct Idle;<br>struct NotShooting : sc::simple_state&lt;<br> NotShooting, Camera, Idle &gt;<br>{<br> // With a custom reaction we only specify that we <b>might</b> do<br> // something with a particular event, but the actual reaction<br> // is defined in the react member function, which can be<br> // implemented in the .cpp file. 对于定制化反应，我们只需指定对于特定<br> // 事件我们<span style="font-weight: bold;">可能</span>做些什么，而实际的反应是定义在 react 成员函数中的，它可以在<br> // .cpp 文件中实现。<br> <b>typedef sc::custom_reaction&lt; EvShutterHalf &gt; reactions;</b><br>// ...<br><b>sc::result react( const EvShutterHalf &amp; );</b><br>};<br>struct Idle : sc::simple_state&lt; Idle, NotShooting &gt;<br>{<br><b>typedef sc::custom_reaction&lt; EvConfig &gt; reactions;</b><br>// ...<br><b>sc::result react( const EvConfig &amp; );</b><br>};<br>#endif<br></pre>
+
+
+<p>Camera.cpp:</p>
+
+
+<pre>#include "Camera.hpp"<br><br>// The following includes are only made here but not in<br>// Camera.hpp<br>// The Shooting and Configuring states can themselves apply the<br>// same pattern to hide their inner implementation, which<br>// ensures that the two teams working on the Camera state<br>// machine will never need to disturb each other.<br>// 以下头文件是只用于本文件而不用于 Camera.hpp 的<br>// Shooting 和 Configuring 状态可以使用相同的模式来隐藏它们内部的实现，<br>// 以确保实现 Camera 状态机的这两个团队不会相互干扰。<br>#include "Configuring.hpp"<br>#include "Shooting.hpp"<br><br>// ...<br><br>// not part of the Camera example 这不是 Camera 例子的一部分<br>sc::result NotShooting::react( const EvShutterHalf &amp; )<br>{<br> return transit&lt; Shooting &gt;();<br>}<br><br>sc::result Idle::react( const EvConfig &amp; )<br>{<br> return transit&lt; Configuring &gt;();<br>}<br></pre>
+
+
+<p><b><font color="#ff0000">Caution: Any call
+to <code>simple_state&lt;&gt;::transit&lt;&gt;()</code>
+or <code>simple_state&lt;&gt;::terminate()</code>
+(see <a href="reference.html#transit1">reference</a>)
+will inevitably destruct the state object (similar to <code>delete
+this;</code>)! That is, code executed after any of these calls
+may invoke undefined behavior!</font></b> That's why these
+functions should only be called as part of a return statement.<b><font color="#ff0000"><br>
+
+
+警告：任何对 <code>simple_state&lt;&gt;::transit&lt;&gt;()</code>
+或 <code>simple_state&lt;&gt;::terminate()</code>
+(请见<a href="reference.html#transit1">参考</a>)的调用都不可避免地
+会析构这个状态对象(类似于 <code>delete this;</code>)!
+即，任何在这些调用之后的代码执行都会引起未定义行为！</font></b>所以这些函数只能作为 return
+语句的一部分来调用。</p>
+
+
+<h3><a name="DeferringEvents" id="DeferringEvents">Deferring
+events 事件延迟</a></h3>
+
+
+<p>The inner workings of the Shooting state could look as follows:<br>
+
+
+Shooting 状态的内部工作可能会如下图：</p>
+
+
+<p><img alt="Camera2" src="Camera2.gif" border="0" height="427" width="427"></p>
+
+
+<p>When the user half-presses the shutter, Shooting and its inner
+initial state Focusing are entered. In the Focusing entry action the
+camera instructs the focusing circuit to bring the subject into focus.
+The focusing circuit then moves the lenses accordingly and sends the
+EvInFocus event as soon as it is done. Of course, the user can
+fully-press the shutter while the lenses are still in motion. Without
+any precautions, the resulting EvShutterFull event would simply be lost
+because the Focusing state does not define a reaction for this event.
+As a result, the user would have to fully-press the shutter again after
+the camera has finished focusing. To prevent this, the EvShutterFull
+event is deferred inside the Focusing state. This means that all events
+of this type are stored in a separate queue, which is emptied into the
+main queue when the Focusing state is exited.<br>
+
+
+当用户半按快门时，将进入 Shooting 及其内部初始状态 Focusing. 在进入 Focusing
+的动作中，相机将指示聚焦电路将被照物聚焦。聚焦电路据此移动镜头，并在完成聚焦后立即发送 EvInFocus
+事件。当然，用户也可以在镜头仍在移动时就完全按下快门。由此产生的 EvShutterFull 事件会在没有任何警告下被抛弃，因为
+Focusing 状态没有为该事件定义反应。因此，必须在相机聚焦完成后再全按快门。为防止这种情况，EvShutterFull 事件将在
+Focusing 状态内被延迟。这意味着所有这类事件将被保存在一个独立的序列中，在退出 Focusing 状态时，该队列将被全部转移到主队列中。</p>
+
+
+<pre>struct Focusing : sc::state&lt; Focusing, Shooting &gt;<br>{<br> typedef mpl::list&lt;<br> sc::custom_reaction&lt; EvInFocus &gt;,<br> <b>sc::deferral&lt; EvShutterFull &gt;</b><br>&gt; reactions;<br>Focusing( my_context ctx );<br>sc::result react( const EvInFocus &amp; );<br>};<br></pre>
+
+
+<h3><a name="Guards" id="Guards">Guards 警戒</a></h3>
+
+
+<p>Both transitions originating at the Focused state are
+triggered by the same event but they have mutually exclusive guards.
+Here is an appropriate custom reaction:<br>
+
+
+在 Focused 状态发生的两个转换是由同一个事件触发的，但是它们具有互斥的警戒。以下是一个恰当的定制化反应：</p>
+
+
+<pre>// not part of the Camera example 不是 Camera 例子中的一部分<br>sc::result Focused::react( const EvShutterFull &amp; )<br>{<br> if ( context&lt; Camera &gt;().IsMemoryAvailable() )<br> {<br> return transit&lt; Storing &gt;();<br> }<br> else<br> {<br> // The following is actually a mixture between an in-state<br> // reaction and a transition. See later on how to implement<br> // proper transition actions. 以下实际上是状态内反应和状态转换的一<br> // 个混合物。如何实现正确的转换动作请见下文。<br> std::cout &lt;&lt; "Cache memory full. Please wait...\n";<br> return transit&lt; Focused &gt;();<br> }<br>}<br></pre>
+
+
+<p>Custom reactions can of course also be implemented directly in
+the state declaration, which is often preferable for easier browsing.<br>
+
+
+当然，定制化反应也可以直接在状态声明中实现，对于易读性来说这样做更可取。</p>
+
+
+<p>Next we will use a guard to prevent a transition and let outer
+states react to the event if the battery is low:<br>
+
+
+下面我们将使用一个警戒来在电池不足时阻止状态转换，并让外层的状态对此事件作出反应：</p>
+
+
+<p>Camera.cpp:</p>
+
+
+<pre>// ...<br>sc::result NotShooting::react( const EvShutterHalf &amp; )<br>{<br> if ( context&lt; Camera &gt;().IsBatteryLow() )<br> {<br> // We cannot react to the event ourselves, so we forward it<br> // to our outer state (this is also the default if a state<br> // defines no reaction for a given event). 我们不能自己对此事件<br> // 作出反应，因此我们将它前转到外层的状态(这也是一个状态没有对给定的事件<br> // 定义反应时的缺省行为)。<br> <b>return forward_event();</b><br>}<br>else<br>{<br>return transit&lt; Shooting &gt;();<br>}<br>}<br>// ...<br></pre>
+
+
+<h3><a name="InStateReactions" id="InStateReactions">In-state
+reactions 状态内反应</a></h3>
+
+
+<p>The self-transition of the Focused state could also be
+implemented as an <a href="definitions.html#InStateReaction">in-state
+reaction</a>, which has the same effect as long as Focused does
+not have any entry or exit actions:<br>
+
+
+Focused 状态的自转换也可以实现为一个 <a href="definitions.html#InStateReaction">状
+态内反应</a>，只要 Focused 没有任何进入或退出动作，其效果就是一样的：</p>
+
+
+<p>Shooting.cpp:</p>
+
+
+<pre>// ...<br>sc::result Focused::react( const EvShutterFull &amp; )<br>{<br> if ( context&lt; Camera &gt;().IsMemoryAvailable() )<br> {<br> return transit&lt; Storing &gt;();<br> }<br> else<br> {<br> std::cout &lt;&lt; "Cache memory full. Please wait...\n";<br> // Indicate that the event can be discarded. So, the <br> // dispatch algorithm will stop looking for a reaction<br> // and the machine remains in the Focused state. 表示该<br> // 事件可以被抛弃。因此，事件分派算法将停止查找反应，且状态机保持为<br> // Focused 状态。<br> <b>return discard_event();</b><br>}<br>}<br>// ...<br></pre>
+
+
+<p>Because the in-state reaction is guarded, we need to employ a <code>custom_reaction&lt;&gt;</code>
+here. For unguarded in-state reactions <code><a href="reference.html#ClassTemplatein_state_reaction">in_state_reaction</a>&lt;&gt;</code>
+should be used for better code-readability.<br>
+
+
+因为状态内反应是被警戒的，我们需要在这里使用一个 <code>custom_reaction&lt;&gt;</code>&nbsp;.
+对于无警戒的状态内反应，可以使用 <code><a href="reference.html#ClassTemplatein_state_reaction">in_state_reaction</a>&lt;&gt;</code>
+来增加代码可读性。</p>
+
+
+<h3><a name="TransitionActions" id="TransitionActions">Transition
+actions 转换动作</a></h3>
+
+
+<p>As an effect of every transition, actions are executed in the
+following order:<br>
+
+
+作为每次转换的结果，动作将按以下顺序被执行：</p>
+
+
+<ol>
+
+
+  <li>Starting from the innermost active state, all exit actions
+up to but excluding the <a href="definitions.html#InnermostCommonContext">innermost
+common context</a></li>
+
+
+  <li>The transition action (if present)</li>
+
+
+  <li>Starting from the innermost common context, all entry
+actions down to the target state followed by the entry actions of the
+initial states</li>
+
+
+</ol>
+
+
+<ol>
+
+
+  <li>从最内层的活动状态开始，向上逐层执行所有退出动作，直到但不包括 <a href="definitions.html#InnermostCommonContext">最内层的公共上下文</a></li>
+
+
+  <li>执行转换动作(如果有)</li>
+
+
+  <li>从最内层的公共上下文开始，向下逐层执行所有进入动作，直到目标状态，然后执行其初始状态的进入动作</li>
+
+
+</ol>
+
+
+<p>Example:<br>
+
+
+例子：</p>
+
+
+<p><img alt="LCA" src="LCA.gif" border="0" height="304" width="604"></p>
+
+
+<p>Here the order is as follows: ~D(), ~C(), ~B(), ~A(), t(),
+X(), Y(), Z(). The transition action t() is therefore executed in the
+context of the InnermostCommonOuter state because the source state has
+already been left (destructed) and the target state has not yet been
+entered (constructed).<br>
+
+
+这里的执行顺序如下：~D(), ~C(), ~B(), ~A(), t(), X(), Y(), Z(). 因此转换动作 t() 是在
+InnermostCommonOuter 状态的上下文中执行的，因为原来的状态已经离开(析构)而目标状态尚未进入(构造)。</p>
+
+
+<p>With Boost.Statechart, a transition action can be a member of <b>any</b>
+common outer context. That is, the transition between Focusing and
+Focused could be implemented as follows:<br>
+
+
+对于 Boost.Statechart, 转换动作可以是<span style="font-weight: bold;">任
+何</span>公共外层上下文的成员。即，Focusing 和 Focused 间的转换应该实现如下：</p>
+
+
+<p>Shooting.hpp:</p>
+
+
+<pre>// ...<br>struct Focusing;<br>struct Shooting : sc::simple_state&lt; Shooting, Camera, Focusing &gt;<br>{<br> typedef sc::transition&lt;<br> EvShutterRelease, NotShooting &gt; reactions; <br><br> // ...<br> <b>void DisplayFocused( const EvInFocus &amp; );</b><br>};<br>// ...<br>// not part of the Camera example 不是 Camera 例子的一部分<br>struct Focusing : sc::simple_state&lt; Focusing, Shooting &gt;<br>{<br>typedef sc::transition&lt; EvInFocus, Focused<b>,</b><br><b>Shooting, &amp;Shooting::DisplayFocused</b> &gt; reactions;<br>};<br></pre>
+
+
+<p><b>Or</b>, the following is also possible (here
+the state machine itself serves as the outermost context):<b><br>
+
+
+或者，</b>下面这样也可以(这时，状态机自己被当作最外层的上下文)：</p>
+
+
+<pre>// not part of the Camera example 不是 Camera 例子的一部分 <br>struct Camera : sc::state_machine&lt; Camera, NotShooting &gt;<br>{<br> <b>void DisplayFocused( const EvInFocus &amp; );</b><br>};<br></pre>
+
+
+<pre>// not part of the Camera example 不是 Camera 例子的一部分<br>struct Focusing : sc::simple_state&lt; Focusing, Shooting &gt;<br>{<br> typedef sc::transition&lt; EvInFocus, Focused<b>,</b><br><b>Camera, &amp;Camera::DisplayFocused</b> &gt; reactions;<br>};<br></pre>
+
+
+<p>Naturally, transition actions can also be invoked from custom
+reactions:<br>
+
+
+自然，转换动作也可以从定制化反应中进行调用：</p>
+
+
+<p>Shooting.cpp:</p>
+
+
+<pre>// ...<br>sc::result Focusing::react( const EvInFocus &amp; evt )<br>{<br> // We have to manually forward evt 我们必须手工前转 evt<br> return transit&lt; Focused &gt;( <b>&amp;Shooting::DisplayFocused</b>, evt );<br>}<br></pre>
+
+
+<h2><a name="AdvancedTopics" id="AdvancedTopics">Advanced
+topics 高级议题</a></h2>
+
+
+<h3><a name="SpecifyingMultipleReactionsForAState" id="SpecifyingMultipleReactionsForAState">Specifying
+multiple reactions for a state 为一个状态指定多个反应</a></h3>
+
+
+<p>Often a state must define reactions for more than one event.
+In this case, an <code>mpl::list&lt;&gt;</code>
+must be used as outlined below:<br>
+
+
+通常，一个状态必须为多个事件定义反应。在这种情况下，必须如下所示使用 <code>mpl::list&lt;&gt;</code>:</p>
+
+
+<pre>// ...<br><br><b>#include &lt;boost/mpl/list.hpp&gt;<br></b><br><b>namespace mpl = boost::mpl;<br></b><br>// ...<br>struct Playing : sc::simple_state&lt; Playing, Mp3Player &gt;<br>{<br>typdef <b>mpl::list&lt;</b><br>sc::custom_reaction&lt; EvFastForward &gt;,<br>sc::transition&lt; EvStop, Stopped &gt; <b>&gt;</b> reactions;<br><br> /* ... */<br>};<br></pre>
+
+
+<h3><a name="PostingEvents" id="PostingEvents">Posting
+events 置入事件</a></h3>
+
+
+<p>Non-trivial state machines often need to post internal events.
+Here's an example of how to do this:<br>
+
+
+非平凡的状态机通常都需要置入内部事件。以下是关于如何做这件事的一个例子：</p>
+
+
+<pre>Pumping::~Pumping()<br>{<br> post_event( EvPumpingFinished() );<br>}<br></pre>
+
+
+<p>The event is pushed into the main queue. The events in the
+queue are processed as soon as the current reaction is completed.
+Events can be posted from inside <code>react</code>
+functions, entry-, exit- and transition actions. However, posting from
+inside entry actions is a bit more complicated (see e.g. <code>Focusing::Focusing()</code>
+in <code>Shooting.cpp</code> in the Camera example):<br>
+
+
+该事件被放入主队列。一旦当前反应完成后，就会立即处理队列中的事件。事件可以由内部的 <code>react</code>
+函数、或进入、退出和转换动作来置入。但是，由内部进入动作来置入事件有一点复杂(请见 Camera 例子的 <code>Shooting.cpp</code>
+中的 <code>Focusing::Focusing()</code>)：</p>
+
+
+<pre>struct Pumping : <b>sc::state</b>&lt; Pumping, Purifier &gt;<br>{<br> <b>Pumping( my_context ctx ) : my_base( ctx )</b><br>{<br>post_event( EvPumpingStarted() );<br>}<br>// ...<br>};<br></pre>
+
+
+<p>As soon as an entry action of a state needs to contact the
+"outside world" (here: the event queue in the state machine), the state
+must derive from <code>state&lt;&gt;</code> rather
+than from <code>simple_state&lt;&gt;</code> and
+must implement a forwarding constructor as outlined above (apart from
+the constructor, <code>state&lt;&gt;</code> offers
+the same interface as <code>simple_state&lt;&gt;</code>).
+Hence, this must be done whenever an entry action makes one or more
+calls to the following functions:<br>
+
+
+一旦状态的进入动作要联系"外部世界"(在此即为：状态机的事件队列)，那么该状态必须要派生自 <code>state&lt;&gt;</code>
+而不是 <code>simple_state&lt;&gt;</code>
+且必须实现一个前转构造函数，如上所示(除了构造函数以外，<code>state&lt;&gt;</code>
+提供了与 <code>simple_state&lt;&gt;</code>
+相同的接口)。因此，无论何时一个进入动作要调用以下一个或多个函数，都必须这样做：</p>
+
+
+<ul>
+
+
+  <li><code>simple_state&lt;&gt;::post_event()</code></li>
+
+
+  <li> <code>simple_state&lt;&gt;::clear_shallow_history&lt;&gt;()</code></li>
+
+
+  <li><code>simple_state&lt;&gt;::clear_deep_history&lt;&gt;()</code></li>
+
+
+  <li><code>simple_state&lt;&gt;::outermost_context()</code></li>
+
+
+  <li><code>simple_state&lt;&gt;::context&lt;&gt;()</code></li>
+
+
+  <li><code>simple_state&lt;&gt;::state_cast&lt;&gt;()</code></li>
+
+
+  <li><code>simple_state&lt;&gt;::state_downcast&lt;&gt;()</code></li>
+
+
+  <li><code>simple_state&lt;&gt;::state_begin()</code></li>
+
+
+  <li><code>simple_state&lt;&gt;::state_end()</code></li>
+
+
+</ul>
+
+
+<p>In my experience, these functions are needed only rarely in
+entry actions so this workaround should not uglify user code too much.<br>
+
+
+以我的经验，在进入动作中很少需要这些函数，所以这一方法不会使得用户代码太过难看。</p>
+
+
+<h3><a name="History" id="History">History 历史</a></h3>
+
+
+<p>Photographers testing beta versions of our <a href="#SpreadingAStateMachineOverMultipleTranslationUnits">digital
+camera</a> said that they really liked that half-pressing the
+shutter anytime (even while the camera is being configured) immediately
+readies the camera for picture-taking. However, most of them found it
+unintuitive that the camera always goes into the idle mode after
+releasing the shutter. They would rather see the camera go back into
+the state it had before half-pressing the shutter. This way they can
+easily test the influence of a configuration setting by modifying it,
+half- and then fully-pressing the shutter to take a picture. Finally,
+releasing the shutter will bring them back to the screen where they
+have modified the setting. To implement this behavior we'd change the
+state chart as follows:<br>
+
+
+对我们的<a href="tutorial.html#SpreadingAStateMachineOverMultipleTranslationUnits">数
+码相机</a>进
+行测试的摄像者说，他们希望无论何时半按快门(即使相机正在配置中)都可以让相机立即准备好照相。不过，多数人觉得在释放快门后相机总是进入空闲模式，这
+一点不太直观。他们希望看到相机可以回到半按快门之前的状态。这样他们可以很容易地通过修改配置项的设置、半按再全按快门照相，来测试配置项的影响。最
+后，释放快门后会将他们带回到修改设置的屏幕。要实现这一行为，我们要将状态图修改如下：</p>
+
+
+<p><img alt="CameraWithHistory1" src="CameraWithHistory1.gif" border="0" height="378" width="542"></p>
+
+
+<p>As mentioned earlier, the Configuring state contains a fairly
+complex and deeply nested inner machine. Naturally, we'd like to
+restore the previous state down to the <a href="definitions.html#InnermostState">innermost state</a>(s)
+in Configuring, that's why we use a deep history pseudo state. The
+associated code looks as follows:<br>
+
+
+前面提到过，Configuring 状态包含了相当复杂且具有一定深度的内层嵌套状态机。自然，我们要恢复 Configuring 中直至<a href="definitions.html#InnermostState">最内层状态</a>的旧状态，所以
+我们要使用深历史伪状态。有关代码如下：</p>
+
+
+<pre>// not part of the Camera example 不是 Camera 例子的一部分<br>struct NotShooting : sc::simple_state&lt;<br> NotShooting, Camera, Idle, <b>sc::has_deep_history</b> &gt;<br>{<br> // ...<br>};<br><br>// ...<br><br>struct Shooting : sc::simple_state&lt; Shooting, Camera, Focusing &gt;<br>{<br> typedef sc::transition&lt;<br> EvShutterRelease, <b>sc::deep_history&lt; Idle &gt;</b> &gt; reactions;<br><br> // ...<br>};<br></pre>
+
+
+<p>History has two phases: Firstly, when the state containing the
+history pseudo state is exited, information about the previously active
+inner state hierarchy must be saved. Secondly, when a transition to the
+history pseudo state is made later, the saved state hierarchy
+information must be retrieved and the appropriate states entered. The
+former is expressed by passing either <code>has_shallow_history</code>,
+<code>has_deep_history</code> or <code>has_full_history</code>
+(which combines shallow and deep history) as the last parameter to the <code>simple_state</code>
+and <code>state</code> class templates. The latter is
+expressed by specifying either <code>shallow_history&lt;&gt;</code>
+or <code>deep_history&lt;&gt;</code> as a
+transition destination or, as we'll see in an instant, as an inner
+initial state. Because it is possible that a state containing a history
+pseudo state has never been entered before a transition to history is
+made, both class templates demand a parameter specifying the default
+state to enter in such situations.<br>
+
+
+历史具有两个阶段：首先，当包含历史伪状态的状态被退出时，有关旧的活动内层状态层次的信息必须被保存。其次，当稍后要转换到该历史伪状态时，被保存的层
+次信息必须被取回并进入到相应的状态。前者通过将 <code>has_shallow_history</code>, <code>has_deep_history</code>
+或 <code>has_full_history</code> (其结合了浅历史和深历史) 作为 <code>simple_state</code>
+和 <code>state</code> 类模板的最后一个参数传入来表示。后者则通过将 <code>shallow_history&lt;&gt;</code>
+或 <code>deep_history&lt;&gt;</code>
+指定为状态转换目标，或者象我们在这个例子中所做的那样，指定为一个内层初始状态。因为一个包含了历史伪状态的状态有可能在需要转换到它的历史之前从未被
+进入过，所以这两个类模板需要一个参数来指定在这种情况下要进入的缺省状态。</p>
+
+
+<p>The redundancy necessary for using history is checked for
+consistency at compile time. That is, the state machine wouldn't have
+compiled had we forgotten to pass <code>has_deep_history</code>
+to the base of <code>NotShooting</code>.<br>
+
+
+为了使用历史，需要在编译期对一致性进行检查。即，如果我们忘记将 <code>has_deep_history</code>
+传入到 <code>NotShooting</code> 的基类，这个状态机将无法编译。</p>
+
+
+<p>Another change request filed by a few beta testers says that
+they would like to see the camera go back into the state it had before
+turning it off when they turn it back on. Here's the implementation:<br>
+
+
+少数测试者提出了另一个修改要求，他们希望看到在相机重新开机时可以回到关机前的状态。以下是相应的实现：</p>
+
+
+<p><img alt="CameraWithHistory2" src="CameraWithHistory2.gif" border="0" height="483" width="468"></p>
+
+
+<pre>// ...<br><br>// not part of the Camera example 不是 Camera 例子的一部分<br>struct NotShooting : sc::simple_state&lt; NotShooting, Camera,<br> <b>mpl::list&lt; sc::deep_history&lt; Idle &gt; &gt;</b>,<br> <b>sc::has_deep_history</b> &gt;<br>{<br> // ...<br>};<br><br>// ...<br></pre>
+
+
+<p>Unfortunately, there is a small inconvenience due to some
+template-related implementation details. When the inner initial state
+is a class template instantiation we always have to put it into an <code>mpl::list&lt;&gt;</code>,
+although there is only one inner initial state. Moreover, the current
+deep history implementation has some <a href="rationale.html#Limitations">limitations</a>.<br>
+
+
+不幸的是，这里有一个小麻烦，是由一些与模板相关的实现细节所引起的。当内层的初始状态是一个类模板的实例时，我们就必须将它放入一个 <code>mpl::list&lt;&gt;</code>
+中，即使只有一个内层初始状态。此外，当前的深历史实现还有一些<a href="rationale.html#Limitations">局
+限性</a>。</p>
+
+
+<h3><a name="OrthogonalStates" id="OrthogonalStates">Orthogonal
+states 正交状态</a></h3>
+
+
+<p><img alt="OrthogonalStates" src="OrthogonalStates.gif" border="0" height="393" width="633"></p>
+
+
+<p>To implement this statechart you simply specify more than one
+inner initial state (see the Keyboard example):<br>
+
+
+要实现这个状态图，你只需指定一个以上的内层初始状态就可以了(请见 Keyboard 例子)：</p>
+
+
+<pre>struct Active;<br>struct Keyboard : sc::state_machine&lt; Keyboard, Active &gt; {};<br><br>struct NumLockOff;<br>struct CapsLockOff;<br>struct ScrollLockOff;<br>struct Active: sc::simple_state&lt; Active, Keyboard,<br> <b>mpl::list&lt; NumLockOff, CapsLockOff, ScrollLockOff &gt;</b> &gt; {};<br></pre>
+
+
+<p>Active's inner states must declare which orthogonal region
+they belong to:<br>
+
+
+Active 的内层状态必须声明它们所属的正交区域：</p>
+
+
+<pre>struct EvNumLockPressed : sc::event&lt; EvNumLockPressed &gt; {};<br>struct EvCapsLockPressed : sc::event&lt; EvCapsLockPressed &gt; {};<br>struct EvScrollLockPressed :<br> sc::event&lt; EvScrollLockPressed &gt; {};<br><br>struct NumLockOn : sc::simple_state&lt;<br> NumLockOn, Active<b>::orthogonal&lt; 0 &gt;</b> &gt;<br>{<br> typedef sc::transition&lt;<br> EvNumLockPressed, NumLockOff &gt; reactions;<br>};<br><br>struct NumLockOff : sc::simple_state&lt;<br> NumLockOff, Active<b>::orthogonal&lt; 0 &gt;</b> &gt;<br>{<br> typedef sc::transition&lt;<br> EvNumLockPressed, NumLockOn &gt; reactions;<br>};<br><br>struct CapsLockOn : sc::simple_state&lt;<br> CapsLockOn, Active<b>::orthogonal&lt; 1 &gt;</b> &gt;<br>{<br> typedef sc::transition&lt;<br> EvCapsLockPressed, CapsLockOff &gt; reactions;<br>};<br><br>struct CapsLockOff : sc::simple_state&lt;<br> CapsLockOff, Active<b>::orthogonal&lt; 1 &gt;</b> &gt;<br>{<br> typedef sc::transition&lt;<br> EvCapsLockPressed, CapsLockOn &gt; reactions;<br>};<br><br>struct ScrollLockOn : sc::simple_state&lt;<br> ScrollLockOn, Active<b>::orthogonal&lt; 2 &gt;</b> &gt;<br>{<br> typedef sc::transition&lt;<br> EvScrollLockPressed, ScrollLockOff &gt; reactions;<br>};<br><br>struct ScrollLockOff : sc::simple_state&lt;<br> ScrollLockOff, Active<b>::orthogonal&lt; 2 &gt;</b> &gt;<br>{<br> typedef sc::transition&lt;<br> EvScrollLockPressed, ScrollLockOn &gt; reactions; <br>};<br></pre>
+
+
+<p><code>orthogonal&lt; 0 &gt;</code> is the
+default, so <code>NumLockOn</code> and <code>NumLockOff</code>
+could just as well pass <code>Active</code> instead of <code>Active::orthogonal&lt;
+0 &gt;</code> to specify their context. The numbers passed to
+the <code>orthogonal</code> member template must
+correspond to the list position in the outer state. Moreover, the
+orthogonal position of the source state of a transition must correspond
+to the orthogonal position of the target state. Any violations of these
+rules lead to compile time errors. Examples:<br>
+
+
+<code>orthogonal&lt; 0 &gt;</code> 是缺省的，所以 <code>NumLockOn</code>
+和 <code>NumLockOff</code> 可以用 <code>Active</code>
+来代替 <code>Active::orthogonal&lt; 0 &gt;</code>&nbsp;
+指定其上下文。传递给 <code>orthogonal</code> 成员模板的数字必须与在外层状态的 list
+中位置相对应。此外，一个转换的源状态的正交位置必须与目标状态的正交位置相对应。对这些规则的任何违反都会导致编译期错误。例如：</p>
+
+
+<pre>// Example 1: does not compile because Active specifies<br>// only 3 orthogonal regions<br>// 例1：因为 Active 只指定了3个正交区域，所以不能编译<br>struct WhateverLockOn: sc::simple_state&lt;<br> WhateverLockOn, Active<b>::</b>orthogonal&lt; <b>3</b> &gt; &gt; {};<br><br>// Example 2: does not compile because Active specifies<br>// that NumLockOff is part of the "0th" orthogonal region<br>// 例2：因为 Active 指定了 NumLockOff 属于第0个正交区域，所以不能编译<br>struct NumLockOff : sc::simple_state&lt;<br> NumLockOff, Active<b>::</b>orthogonal&lt; <b>1</b> &gt; &gt; {};<br><br>// Example 3: does not compile because a transition between<br>// different orthogonal regions is not permitted<br>// 例3：因为不允许不同正交区域间的转换，所以不能编译<br>struct CapsLockOn : sc::simple_state&lt;<br> CapsLockOn, Active<b>::</b>orthogonal&lt; <b>1</b> &gt; &gt;<br>{<br> typedef sc::transition&lt;<br> EvCapsLockPressed, CapsLockOff &gt; reactions;<br>};<br><br>struct CapsLockOff : sc::simple_state&lt;<br> CapsLockOff, Active<b>::</b>orthogonal&lt; <b>2</b> &gt; &gt;<br>{<br> typedef sc::transition&lt;<br> EvCapsLockPressed, CapsLockOn &gt; reactions;<br>};<br></pre>
+
+
+<h3><a name="StateQueries" id="StateQueries">State
+queries 状态查询</a></h3>
+
+
+<p>Often reactions in a state machine depend on the active state
+in one or more orthogonal regions. This is because orthogonal regions
+are not completely orthogonal or a certain reaction in an outer state
+can only take place if the inner orthogonal regions are in particular
+states. For this purpose, the <code>state_cast&lt;&gt;</code>
+function introduced under <a href="#GettingStateInformationOutOfTheMachine">Getting state
+information out of the machine</a> is also available within
+states.<br>
+
+
+通常，一个状态机中的反应是依赖于一个或多个正交区域的活动状态的。这是因为正交区域并非完全正交的，或者因为外层状态的某个反应仅当内层正交区域处于某
+个特定状态时才能发生。为此，在 <a href="tutorial.html#GettingStateInformationOutOfTheMachine">从
+状态机之外获取状态信息</a> 中介绍的 <code>state_cast&lt;&gt;</code>
+函数可以在状态内部使用。</p>
+
+
+<p>As a somewhat far-fetched example, let's assume that our <a href="#OrthogonalStates">keyboard</a> also accepts <code>EvRequestShutdown</code>
+events, the reception of which makes the keyboard terminate only if all
+lock keys are in the off state. We would then modify the Keyboard state
+machine as follows:<br>
+
+
+作为一个有点牵强的例子，我们假定我们的 <a href="tutorial.html#OrthogonalStates">键
+盘</a> 还接受 <code>EvRequestShutdown</code>
+事件，该事件仅在所有锁定键处于关闭状态时终止键盘。我们需要修改 Keyboard 状态机如下：</p>
+
+
+<pre>struct EvRequestShutdown : sc::event&lt; EvRequestShutdown &gt; {};<br><br>struct NumLockOff;<br>struct CapsLockOff;<br>struct ScrollLockOff;<br>struct Active: sc::simple_state&lt; Active, Keyboard, <br> mpl::list&lt; NumLockOff, CapsLockOff, ScrollLockOff &gt; &gt;<br>{<br> typedef sc::custom_reaction&lt; EvRequestShutdown &gt; reactions;<br><br> sc::result react( const EvRequestShutdown &amp; )<br> {<br> if ( ( state_downcast&lt; const NumLockOff * &gt;() != 0 ) &amp;&amp;<br> ( state_downcast&lt; const CapsLockOff * &gt;() != 0 ) &amp;&amp;<br> ( state_downcast&lt; const ScrollLockOff * &gt;() != 0 ) )<br> {<br> return terminate();<br> }<br> else<br> {<br> return discard_event();<br> }<br> }<br>};<br></pre>
+
+
+<p>Passing a pointer type instead of reference type results in 0
+pointers being returned instead of <code>std::bad_cast</code>
+being thrown when the cast fails. Note also the use of <code>state_downcast&lt;&gt;()</code>
+instead of <code>state_cast&lt;&gt;()</code>.
+Similar to the differences between <code>boost::polymorphic_downcast&lt;&gt;()</code>
+and <code>dynamic_cast</code>, <code>state_downcast&lt;&gt;()</code>
+is a much faster variant of <code>state_cast&lt;&gt;()</code>
+and can only be used when the passed type is a most-derived type. <code>state_cast&lt;&gt;()</code>
+should only be used if you want to query an additional base.<br>
+
+
+通过传入一个指针类型来替代引用类型，可以在转型失败时返回一个0指针而不是抛出 <code>std::bad_cast</code>。
+还需要留意使用的是 <code>state_downcast&lt;&gt;()</code>
+而不是 <code>state_cast&lt;&gt;()</code>. 它们之间的区别类似于 <code>boost::polymorphic_downcast&lt;&gt;()</code>
+和 <code>dynamic_cast</code> 间的区别，<code>state_downcast&lt;&gt;()</code>
+是比 <code>state_cast&lt;&gt;()</code>
+更快且只能用于传入的类型是派生层次最底层的类型的情况下。如果你想查询其它基类，则只能使用 <code>state_cast&lt;&gt;()</code>.</p>
+
+
+<h4>Custom state queries 定制化状态查询</h4>
+
+
+<p>It is often desirable to find out exactly which state(s) a
+machine currently resides in. To some extent this is already possible
+with <code>state_cast&lt;&gt;()</code> and <code>state_downcast&lt;&gt;()</code>
+but their utility is rather limited because both only return a yes/no
+answer to the question "Are you in state X?". It is possible to ask
+more sophisticated questions when you pass an additional base class
+rather than a state class to <code>state_cast&lt;&gt;()</code>
+but this involves more work (all states need to derive from and
+implement the additional base), is slow (under the hood <code>state_cast&lt;&gt;()</code>
+uses <code>dynamic_cast</code>), forces projects to
+compile with C++ RTTI turned on and has a negative impact on state
+entry/exit speed.<br>
+
+
+通常我们想精确地找出状态机正处于哪个(些)状态。<code>state_cast&lt;&gt;()</code>
+和 <code>state_downcast&lt;&gt;()</code>
+在一定程度上已经可以达到此目的，但是它们的使用还是有局限，因为它们都只是对"你是否处于状态X?"这样的问题给出是/否的回答。你可以将其它基类而不
+是状态类传给 <code>state_cast&lt;&gt;()</code>
+来询问更为复杂的问题，但是这需要更多的工作(所有状态必须派生自且实现该基类)，也更慢(由于 <code>state_cast&lt;&gt;()</code>
+使用了 <code>dynamic_cast</code>)，并且强制要求工程编译时要打开 C++
+RTTI，这对于状态的进入/退出速度带来了负面的影响。</p>
+
+
+<p>Especially for debugging it would be so much more useful being
+able to ask "In which state(s) are you?". For this purpose it is
+possible to iterate over all active <b>innermost</b>
+states with <code>state_machine&lt;&gt;::state_begin()</code>
+and <code>state_machine&lt;&gt;::state_end()</code>.
+Dereferencing the returned iterator returns a reference to <code>const
+state_machine&lt;&gt;::state_base_type</code>, the common
+base of all states. We can thus print the currently active state
+configuration as follows (see the Keyboard example for the complete
+code):<br>
+
+
+特别是在调试时，如果可以询问 "你正处于哪个(些)状态?"，是非常有用的。为此，可能需要对所有<span style="font-weight: bold;">最内层</span>的状态进行迭代，可以使用 <code>state_machine&lt;&gt;::state_begin()</code>
+和 <code>state_machine&lt;&gt;::state_end()</code>.
+对返回的迭代器进行提领操作，将返回一个对 <code>const
+state_machine&lt;&gt;::state_base_type</code>
+的引用，该类型是所有状态的公共基类。所以我们可以象下面这样打印出当前活动的状态配置(完整的代码请见 Keyboard 例子)：</p>
+
+
+<pre>void DisplayStateConfiguration( const Keyboard &amp; kbd )<br>{<br> char region = 'a';<br><br> for (<br> Keyboard::state_iterator pLeafState = kbd.state_begin();<br> pLeafState != kbd.state_end(); ++pLeafState )<br> {<br> std::cout &lt;&lt; "Orthogonal region " &lt;&lt; region &lt;&lt; ": ";<br> // The following use of typeid assumes that<br> // BOOST_STATECHART_USE_NATIVE_RTTI is defined<br> // 以下对 typeid 的使用假设 BOOST_STATECHART_USE_NATIVE_RTTI 已定义<br> std::cout &lt;&lt; typeid( *pLeafState ).name() &lt;&lt; "\n";<br> ++region;<br> }<br>}<br></pre>
+
+
+<p>If necessary, the outer states can be accessed with <code>state_machine&lt;&gt;::state_base_type::outer_state_ptr()</code>,
+which returns a pointer to <code>const
+state_machine&lt;&gt;::state_base_type</code>. When
+called on an outermost state this function simply returns 0.<br>
+
+
+如果有必要，可以通过 <code>state_machine&lt;&gt;::state_base_type::outer_state_ptr()</code>
+访问外层的状态，它返回一个指向 <code>const
+state_machine&lt;&gt;::state_base_type</code>
+的指针。如果是对一个最外层状态进行调用，则该函数返回0。</p>
+
+
+<h3><a name="StateTypeInformation" id="StateTypeInformation">State type information 状态类型信息</a></h3>
+
+
+<p>To cut down on executable size some applications must be
+compiled with C++ RTTI turned off. This would render the ability to
+iterate over all active states pretty much useless if it weren't for
+the following two functions:<br>
+
+
+为了减少可执行程序的大小，有些应用程序必须在编译时关闭 C++ RTTI.
+这样将导致对所有活动状态进行迭代这一能力变得几乎毫无用处，如果不是有以下两个函数：</p>
+
+
+<ul>
+
+
+  <li><code>static <i>unspecified_type</i>
+simple_state&lt;&gt;::static_type()</code></li>
+
+
+  <li><code><i>unspecified_type<br>
+
+
+    </i> &nbsp;
+state_machine&lt;&gt;::state_base_type::dynamic_type() const</code></li>
+
+
+</ul>
+
+
+<p>Both return a value that is comparable via <code>operator==()</code>
+and <code>std::less&lt;&gt;</code>. This alone
+would be enough to implement the <code>DisplayStateConfiguration</code>
+function above without the help of <code>typeid</code> but
+it is still somewhat cumbersome as a map must be used to associate the
+type information values with the state names.<br>
+
+
+这两个函数均返回一个可以通过 <code>operator==()</code> 和 <code>std::less&lt;&gt;</code>
+进行比较的值。它们足以实现前面的 <code>DisplayStateConfiguration</code>
+函数而不需要 <code>typeid</code> 的帮助，不过它还是有点麻烦的，因为必须使用一个 map
+来将类型信息和状态名对应起来。</p>
+
+
+<h4><a name="CustomStateTypeInformation" id="CustomStateTypeInformation">Custom state type
+information 定制化状态类型信息</a></h4>
+
+
+<p>That's why the following functions are also provided (only
+available when <a href="configuration.html#ApplicationDefinedMacros">BOOST_STATECHART_USE_NATIVE_RTTI</a>
+is <b>not</b> defined):<br>
+
+
+这就是为什么要提供以下函数的原因(仅当<span style="font-weight: bold;">未</span>定
+义 <a href="configuration.html#ApplicationDefinedMacros">BOOST_STATECHART_USE_NATIVE_RTTI</a>
+时有效):</p>
+
+
+<ul>
+
+
+  <li><code>template&lt; class T &gt;<br>
+
+
+static void simple_state&lt;&gt;::custom_static_type_ptr( const
+T * );</code></li>
+
+
+  <li><code>template&lt; class T &gt;<br>
+
+
+static const T * simple_state&lt;&gt;::custom_static_type_ptr();</code></li>
+
+
+  <li><code>template&lt; class T &gt;<br>
+
+
+const T * state_machine&lt;&gt;::<br>
+
+
+&nbsp; state_base_type::custom_dynamic_type_ptr() const;</code></li>
+
+
+</ul>
+
+
+<p>These allow us to directly associate arbitrary state type
+information with each state ...<br>
+
+
+这允许我们直接将任意的状态类型信息与各个状态对应起来 ...</p>
+
+
+<pre>// ...<br><br>int main()<br>{<br> NumLockOn::custom_static_type_ptr( "NumLockOn" );<br> NumLockOff::custom_static_type_ptr( "NumLockOff" );<br> CapsLockOn::custom_static_type_ptr( "CapsLockOn" );<br> CapsLockOff::custom_static_type_ptr( "CapsLockOff" );<br> ScrollLockOn::custom_static_type_ptr( "ScrollLockOn" );<br> ScrollLockOff::custom_static_type_ptr( "ScrollLockOff" );<br><br> // ...<br>}<br></pre>
+
+
+<p>... and rewrite the display function as follows:<br>
+
+
+... 下面重写了前面的显示函数：</p>
+
+
+<pre>void DisplayStateConfiguration( const Keyboard &amp; kbd )<br>{<br> char region = 'a';<br><br> for (<br> Keyboard::state_iterator pLeafState = kbd.state_begin();<br> pLeafState != kbd.state_end(); ++pLeafState )<br> {<br> std::cout &lt;&lt; "Orthogonal region " &lt;&lt; region &lt;&lt; ": ";<br> std::cout &lt;&lt;<br> pLeafState-&gt;custom_dynamic_type_ptr&lt; char &gt;() &lt;&lt; "\n";<br> ++region;<br> }<br>}<br></pre>
+
+
+<h3><a name="ExceptionHandling" id="ExceptionHandling">Exception
+handling 异常处理</a></h3>
+
+
+<p>Exceptions can be propagated from all user code except from
+state destructors. Out of the box, the state machine framework is
+configured for simple exception handling and does not catch any of
+these exceptions, so they are immediately propagated to the state
+machine client. A scope guard inside the <code>state_machine&lt;&gt;</code>
+ensures that all state objects are destructed before the exception is
+caught by the client. The scope guard does not attempt to call any <code>exit</code>
+functions (see <a href="#TwoStageExit">Two stage exit</a>
+below) that states might define as these could themselves throw other
+exceptions which would mask the original exception. Consequently, if a
+state machine should do something more sensible when exceptions are
+thrown, it has to catch them before they are propagated into the
+Boost.Statechart framework. This exception handling scheme is often
+appropriate but it can lead to considerable code duplication in state
+machines where many actions can trigger exceptions that need to be
+handled inside the state machine (see <a href="rationale.html#ErrorHandling">Error handling</a>
+in the Rationale).<br>
+
+
+异常可以从除了状态的析构函数以外的所有用户代码中抛出。缺省情况下，状态机的框架被配置为仅对异常进行简单的处理，并不捕获所有异常，因此这些异常会立
+即传播到状态机的客户代码处。在 <code>state_machine&lt;&gt;</code>
+内的作用域保护确保所有状态对象在异常被客户代码捕获前均已析构。作用域保护不会试图调用任何 <code>exit</code>
+函数(请见后面的 <a href="tutorial.html#TwoStageExit">两阶段退出</a>)，
+状态可以定义为抛出自己的异常来掩盖原来的异常。因此，如果一个状态机想在抛出异常时做一些更有意义的事情，它必须在异常被传播到
+Boost.Statechart
+框架之前将它们捕获。这个异常处理机制通常是合适的，但是对于那些有许多动作可以触发需要在状态机内部处理的异常的状态机来说，这会导致相当多的代码重复
+(请见"原理"中的 <a href="rationale.html#ErrorHandling">错误处理</a>)。<br>
+
+
+That's why exception handling can be customized through the <code>ExceptionTranslator</code>
+parameter of the <code>state_machine</code> class
+template. Since the out-of-the box behavior is to <b>not</b>
+translate any exceptions, the default argument for this parameter is <code>null_exception_translator</code>.
+A <code>state_machine&lt;&gt;</code> subtype can
+be configured for advanced exception handling by specifying the
+library-supplied <code>exception_translator&lt;&gt;</code>
+instead. This way, the following happens when an exception is
+propagated from user code:&nbsp;<br>
+
+
+这正是为什么可以通过 <code>state_machine</code> 类模板的 <code>ExceptionTranslator</code>
+参数对异常处理进行定制的原因。由于缺省的行为是<span style="font-weight: bold;">不</span>对
+任何异常进行转换，所以这个参数的缺省值是 <code>null_exception_translator</code>.&nbsp;<code>state_machine&lt;&gt;</code>
+的子类可以通过指定 <code>exception_translator&lt;&gt;</code>
+来配置为高级的异常处理。这种情况下，当用户代码传出异常时，将发生以下动作：</p>
+
+
+<ol>
+
+
+  <li>The exception is caught inside the framework</li>
+
+
+  <li>In the catch block, an <code>exception_thrown</code>
+event is allocated on the stack</li>
+
+
+  <li>Also in the catch block, an <b>immediate</b>
+dispatch of the <code>exception_thrown</code> event is
+attempted. That is, possibly remaining events in the queue are
+dispatched only after the exception has been handled successfully</li>
+
+
+  <li>If the exception was handled successfully, the state
+machine returns to the client normally. If the exception could not be
+handled successfully, the original exception is rethrown so that the
+client of the state machine can handle the exception</li>
+
+
+</ol>
+
+
+<ol>
+
+
+  <li>异常在框架内部被捕获</li>
+
+
+  <li>在 catch 块中，一个 <code>exception_thrown</code>
+事件被分配在栈上</li>
+
+
+  <li>还是在 catch 块中，<span style="font-weight: bold;">立
+即</span>尝试分派 <code>exception_thrown</code>
+事件。即，在事件队列中剩余的事件只能在异常处理成功后再分派</li>
+
+
+  <li>如果异常处理成功，状态机将正常返回客户代码处。如果异常不能处理成功，则原来的异常被重新抛出，状态机的客户可以继续处理该异
+常</li>
+
+
+</ol>
+
+
+<p>On platforms with buggy exception handling implementations
+users would probably want to implement their own model of the <a href="reference.html#ExceptionTranslator">ExceptionTranslator
+concept</a> (see also <a href="#DiscriminatingExceptions">Discriminating
+exceptions</a>).<br>
+
+
+在缺陷较多的平台上，要实现异常处理的用户可能希望实现他们自己的 <a href="reference.html#ExceptionTranslator">ExceptionTranslator
+概念</a> (请见 <a href="tutorial.html#DiscriminatingExceptions">可
+识别的异常</a>)。</p>
+
+
+<h4>Successful exception handling 成功的异常处理</h4>
+
+
+<p>An exception is considered handled successfully, if:<br>
+
+
+一个异常被认为处理成功，如果：</p>
+
+
+<ul>
+
+
+  <li>an appropriate reaction for the <code>exception_thrown</code>
+event has been found, <b>and</b></li>
+
+
+  <li>the state machine is in a stable state after the reaction
+has completed.</li>
+
+
+  <li>已找到 <code>exception_thrown</code> 事件的一个适当的反应，<b>且</b></li>
+
+
+  <li>在该反应完成后，状态机处于一个稳定的状态。</li>
+
+
+</ul>
+
+
+<p>The second condition is important for scenarios 2 and 3 in the
+next section. In these scenarios, the state machine is in the middle of
+a transition when the exception is handled. The machine would be left
+in an invalid state, should the reaction simply discard the event
+without doing anything else. <code>exception_translator&lt;&gt;</code>
+simply rethrows the original exception if the exception handling was
+unsuccessful. Just as with simple exception handling, in this case a
+scope guard inside the <code>state_machine&lt;&gt;</code>
+ensures that all state objects are destructed before the exception is
+caught by the client.<br>
+
+
+对于下一节中的第2和第3种情形，上述第二个条件非常重要。在这些情形下，状态机在处理异常时正处于转换动作之中。状态机将可能处于一个无效的状态，如果
+对异常事件的反应只是忽略事件而不做任何事。如果异常的异常未能成功，<code>exception_translator&lt;&gt;</code>
+将只是重新抛出原来的异常。和简单的异常处理一样，这种情况下 <code>state_machine&lt;&gt;</code>
+内部的作用域保护将确保在异常被客户捕获之前，所有状态对象均被析构。</p>
+
+
+<h4>Which states can react to an <code>exception_thrown</code>
+event? 哪个状态可以对 <code>exception_thrown</code> 事件作出反应？</h4>
+
+
+<p>Short answer: If the state machine is stable when the
+exception is thrown, the state that caused the exception is first tried
+for a reaction. Otherwise the outermost <a href="definitions.html#UnstableState">unstable state</a>
+is first tried for a reaction.<br>
+
+
+简短的回答：如果在异常抛出时，状态机是稳定的，则引起异常的状态会首先尝试作出反应。否则，最外层的 <a href="definitions.html#UnstableState">不稳定状态</a>
+首先尝试作出反应。</p>
+
+
+<p>Longer answer: There are three scenarios:<br>
+
+
+详细的回答：存在三种情况：</p>
+
+
+<ol>
+
+
+  <li>A <code>react</code> member function
+propagates an exception <b>before</b> calling any of the
+reaction functions or the action executed during an in-state reaction
+propagates an exception. The state that caused the exception is first
+tried for a reaction, so the following machine will transit to
+Defective after receiving an EvStart event:<br>
+
+
+    <code>react</code> 成员函数在调用任何反应函数<span style="font-weight: bold;">之前</span>传出一个异常，或者在状态内部反应传出异
+常期间，动作已执行。引发异常的状态被首先尝试作出反应，因此以下状态机将在接收到一个 EvStart 事件时转至 Defective:<br>
+
+
+    <img alt="ThrowingInStateReaction" src="ThrowingInStateReaction.gif" border="0" height="182" width="362"><br>
+
+
+    <br>
+
+
+  </li>
+
+
+  <li>A state entry action (constructor) propagates an exception:<br>
+
+
+状态进入动作(构造函数)传出一个异常：
+    
+    <ul>
+
+
+      <li>If there are no orthogonal regions, the direct outer
+state of the state that caused the exception is first tried for a
+reaction, so the following machine will transit to Defective after
+trying to enter Stopped:<br>
+
+
+如果没有正交区域，则引发异常的状态的直接外层状态被首先尝试作出反应，因此以下状态机将在尝试进入
+Stopped 后转至 Defective:<br>
+
+
+        <img alt="ThrowingEntryAction" src="ThrowingEntryAction.gif" border="0" height="241" width="438"><br>
+
+
+      </li>
+
+
+      <li>If there are orthogonal regions, the outermost <a href="definitions.html#UnstableState">unstable state</a>
+is first tried for a reaction. The outermost unstable state is found by
+first selecting the direct outer state of the state that caused the
+exception and then moving outward until a state is found that is
+unstable but has no direct or indirect outer states that are unstable.
+This more complex rule is necessary because only reactions associated
+with the outermost unstable state (or any of its direct or indirect
+outer states) are able to bring the machine back into a stable state.
+Consider the following statechart:<br>
+
+
+如果存在正交区域，则最外层的 <a href="definitions.html#UnstableState">不稳
+定状态</a>
+被首先尝试作出反应。最外层不稳定状态是这样查找的：首先选中引发异常的状态的直接外层状态，然后向外移动直至找到满足以下条件的状态：该状态是不稳定
+的，且不存在它的直接或间接外层状态是不稳定的。这个复杂的规则是必须的，因为只有与最外层不稳定状态(或其直接或间接外层状态)相关联的反应才可以将状
+态机带回到稳定的状态。考虑以下状态图：<br>
+
+
+        <img alt="OutermostUnstableState" src="OutermostUnstableState.gif" border="0" height="572" width="467"><br>
+
+
+        <br>
+
+
+Whether this state machine will ultimately transition to E or F after
+initiation depends on which of the two orthogonal regions is initiated
+first. If the upper orthogonal region is initiated first, the entry
+sequence is as follows: A, D, B,&nbsp;(exception is thrown). Both D
+and B
+were successfully entered, so B is the outermost unstable state when
+the exception is thrown and the machine will therefore transition to F.
+However, if the lower orthogonal region is initiated first, the
+sequence is as follows: A, B, (exception is thrown). D was never
+entered so A is the outermost unstable state when the exception is
+thrown and the machine will therefore transition to E.
+        <br>
+
+
+这个状态机在初始化后最终会转至 E 或是 F，取决于两个正交区域中的哪一个先被初始化。如果上面的正交区域首先初始化，则进入的顺序是：A, D,
+B, (抛出异常)。D 和 B
+均已成功进入，所以在异常抛出时 B 是最外层不稳定状态，因此状态机将转至 F.
+但是，如果下面的正交区域首先初始化，则顺序是：A, B, (抛出异常)。D 尚未进入，所以在异常抛出时 A
+是最外层不稳定状态，因此状态机将转至 E.<br>
+
+
+In practice these differences rarely matter as top-level error recovery
+is adequate for most state machines. However, since the sequence of
+initiation is clearly defined (orthogonal region 0 is always initiated
+first, then region 1 and so forth), users <b>can</b>
+accurately control when and where they want to handle exceptions
+        <br>
+
+
+在实际中，这些区别没什么关系，因为顶层的错误恢复对于多数状态机来说已经足够了。不过，由于初始化的顺序是明确定义的(先初始化正交区域0，然后是区域
+1，等等)，用户<span style="font-weight: bold;">可以</span>精确地
+控制异常处理的时间和地点。
+      </li>
+
+
+    
+    </ul>
+
+
+  </li>
+
+
+  <li>A transition action propagates an exception: The innermost
+common outer state of the source and the target state is first tried
+for a reaction, so the following machine will transit to Defective
+after receiving an EvStartStop event:<br>
+
+
+转换动作传出一个异常：由源状态与目标状态的公共外层状态的最内层状态首先尝试作出反应，因此以下状态机将在接收到 EvStartStop
+事件后转至 Defective:<br>
+
+
+    <img alt="ThrowingTransitionAction" src="ThrowingTransitionAction.gif" border="0" height="362" width="422"></li>
+
+
+</ol>
+
+
+<p>As with a normal event, the dispatch algorithm will move
+outward to find a reaction if the first tried state does not provide
+one (or if the reaction explicitly returned <code>forward_event();</code>).
+However, <b>in contrast to normal events, it will give up once
+it has unsuccessfully tried an outermost state</b>, so the
+following machine will <b>not</b> transit to Defective
+after receiving an EvNumLockPressed event:<br>
+
+
+和普通事件处理一样，分派算法在第一次尝试作出反应的状态没有提供反应(或者如果该反应显式返回 <code>forward_event();</code>)
+时，将向外层移动查找可用的反应。但是，<span style="font-weight: bold;">与普通事件处理
+不同的是，它在尝试了最外层状态失败后就会放弃</span>，所以以下状态机在接收到 EvNumLockPressed 事件后<span style="font-weight: bold;">不</span>会转至 Defective:</p>
+
+
+<p><img alt="ExceptionsAndOrthStates" src="ExceptionsAndOrthStates.gif" border="0" height="331" width="571"></p>
+
+
+<p>Instead, the machine is terminated and the original exception
+rethrown.<br>
+
+
+该状态机将会终止执行，并重新抛出原来的异常。</p>
+
+
+<h4><a name="DiscriminatingExceptions" id="DiscriminatingExceptions">Discriminating exceptions
+可识别的异常</a></h4>
+
+
+<p>Because the <code>exception_thrown</code> event
+is dispatched from within the catch block, we can rethrow and catch the
+exception in a custom reaction:<br>
+
+
+因为 <code>exception_thrown</code> 事件是从 catch
+块中被分派的，所以我们可以在一个定制的反应中重新抛出和捕获异常：</p>
+
+
+<pre>struct Defective : sc::simple_state&lt;<br> Defective, Purifier &gt; {};<br><br>// Pretend this is a state deeply nested in the Purifier<br>// state machine 假设这是 Purifier 状态机中的一个深层嵌套的状态<br>struct Idle : sc::simple_state&lt; Idle, Purifier &gt;<br>{<br> typedef mpl::list&lt;<br> sc::custom_reaction&lt; EvStart &gt;,<br> sc::custom_reaction&lt; sc::exception_thrown &gt;<br> &gt; reactions; <br><br> sc::result react( const EvStart &amp; )<br> {<br> throw std::runtime_error( "" );<br> }<br><br> sc::result react( const sc::exception_thrown &amp; )<br> {<br> try<br> {<br> <b>throw;</b><br>}<br>catch ( const std::runtime_error &amp; )<br>{<br>// only std::runtime_errors will lead to a transition<br>// to Defective ... <br>// 只有 std::runtime_errors 会引发转换到 Defective ...<br>return transit&lt; Defective &gt;();<br>}<br>catch ( ... )<br>{<br>// ... all other exceptions are forwarded to our outer<br>// state(s). The state machine is terminated and the<br>// exception rethrown if the outer state(s) can't<br>// handle it either... 所有其它异常均被前转到我们的外层状态。<br>// 如果外层状态也不能处理该异常，则状态机将被终止，异常被重新抛出<br>return forward_event();<br>}<br>// Alternatively, if we want to terminate the machine<br>// immediately, we can also either rethrow or throw<br>// a different exception. 另外，如果我们想马上终止状态机，也<br>// 可以重抛出或抛出一个不同的异常。<br>}<br>};<br></pre>
+
+
+<p><b>Unfortunately, this idiom (using <code>throw;</code>
+inside a <code>try</code> block nested inside a <code>catch</code>
+block) does not work on at least one very popular compiler.</b>
+If you have to use one of these platforms, you can pass a customized
+exception translator class to the <code>state_machine</code>
+class template. This will allow you to generate different events
+depending on the type of the exception.<b><br>
+
+
+不幸的是，这种用法(在嵌套在一个</b><b> <code>catch</code></b><b>
+块中的</b><b> <code>try</code></b><b>
+块里使用 <code>throw;</code>)至少在一个常用的编译器上不能使用。</b>如果你必须使用
+这个平台，你可以将一个定制的异常转译类传给 <code>state_machine</code>
+类模板。这样可以让你根据异常的类型生成不同的事件。</p>
+
+
+<h4><a name="TwoStageExit" id="TwoStageExit">Two
+stage exit 两阶段退出</a></h4>
+
+
+<p>If a <code>simple_state&lt;&gt;</code> or
+<code>state&lt;&gt;</code> subtype declares a
+public member function with the signature <code>void exit()</code>
+then this function is called just before the state object is
+destructed. As explained under <a href="rationale.html#ErrorHandling">Error handling</a>
+in the Rationale, this is useful for two things that would otherwise be
+difficult or cumbersome to achieve with destructors only:<br>
+
+
+如果一个 <code>simple_state&lt;&gt;</code> 或
+<code>state&lt;&gt;</code> 子类声明了一个签名为 <code>void
+exit()</code>
+的公有成员函数，则该函数会在状态对象被析构前被调用。正如在"原理"中的 <a href="rationale.html#ErrorHandling">错误处理</a>
+一节中所解释的，它对于以下两件事情非常有用，没有它的话，就只能用析构函数来处理，这既困难又麻烦：</p>
+
+
+<ol>
+
+
+  <li>To signal a failure in an exit action</li>
+
+
+  <li>To execute certain exit actions <b>only</b>
+during a transition or a termination but not when the state machine
+object is destructed</li>
+
+
+</ol>
+
+
+<ol>
+
+
+  <li>在退出动作中发出失败信号</li>
+
+
+  <li><span style="font-weight: bold;">仅</span>在
+转换或终止时执行特定的退出动作，这些动作不在状态机对象析构时执行</li>
+
+
+</ol>
+
+
+<p>A few points to consider before employing <code>exit()</code>:<br>
+
+
+在使用 <code>exit()</code> 之前要考虑以下几点：</p>
+
+
+<ul>
+
+
+  <li>There is no guarantee that <code>exit()</code>
+will be called:<br>
+
+
+以下情况不保证调用&nbsp;<code>exit()</code>:
+    
+    <ul>
+
+
+      <li>If the client destructs the state machine object
+without calling <code>terminate()</code> beforehand then
+the currently active states are destructed without calling <code>exit()</code>.
+This is necessary because an exception that is possibly thrown from <code>exit()</code>
+could not be propagated on to the state machine client<br>
+
+
+如果客户在析构状态机对象之前没有调用 <code>terminate()</code>，则当前活动状态将被析构而不会调
+用 <code>exit()</code>.
+这是必须的，因为 <code>exit()</code>
+可能会抛出异常，该异常不能被传播到状态机的客户处</li>
+
+
+      <li><code>exit()</code> is not called when a
+previously executed action propagated an exception and that exception
+has not (yet) been handled successfully. This is because a new
+exception that could possibly be thrown from <code>exit()</code>
+would mask the original exception<br>
+
+
+当之前被执行动作传出一个异常而该异常尚未处理成功，<code>exit()</code> 不会被调用。这是因为 <code>exit()</code>
+有可能抛出一个新的异常从而掩盖了原来的异常</li>
+
+
+    
+    </ul>
+
+
+  </li>
+
+
+  <li>A state is considered exited, even if its <code>exit</code>
+function propagated an exception. That is, the state object is
+inevitably destructed right after calling <code>exit()</code>,
+regardless of whether <code>exit()</code> propagated an
+exception or not. A state machine configured for advanced exception
+handling is therefore always unstable while handling an exception
+propagated from an <code>exit</code> function<br>
+
+
+即使一个状态的 <code>exit</code>
+函数抛出一个异常，该状态也会被认为已退出。即，该状态对象在 <code>exit()</code>
+调用后不可避免要被析构，无论 <code>exit()</code>
+是否抛出异常。因此，配置为高级异常处理的状态机在处理一个从 <code>exit</code>
+函数传出的异常时总是不稳定的</li>
+
+
+  <li>In a state machine configured for advanced exception
+handling the processing rules for an exception event resulting from an
+exception propagated from <code>exit()</code> are
+analogous to the ones defined for exceptions propagated from state
+constructors. That is, the outermost unstable state is first tried for
+a reaction and the dispatcher then moves outward until an appropriate
+reaction is found<br>
+
+在被配置为高级异常处理的状态机中，对于从 <code>exit()</code> 传出的异常所导致的异常事件的处理规则，类似于对从状态的构造函数传出的异常的处理规则。即，最外层的不稳定状态首先尝试作出反应，然后分派器向外移动，直至找到合适的反应</li>
+
+
+</ul>
+
+
+<h3><a name="SubmachinesAndParameterizedStates" id="SubmachinesAndParameterizedStates">Submachines &amp;
+parameterized states 子状态机和参数化状态</a></h3>
+
+
+<p>Submachines are to event-driven programming what functions are
+to procedural programming, reusable building blocks implementing often
+needed functionality. The associated UML notation is not entirely clear
+to me. It seems to be severely limited (e.g. the same submachine cannot
+appear in different orthogonal regions) and does not seem to account
+for obvious stuff like e.g. parameters.<br>
+子状态机是事件驱动式编程，而函数则是过程式编程，可重用构建块的实现通常都需要功能性。相关的UML符号对我来说不够清晰。它好象有很多局限(如中：同一个子状态机不能出现在不同的正交区域中)且不能使用象参数这样明显的材料。</p>
+
+
+<p>Boost.Statechart is completely unaware of submachines but they
+can be implemented quite nicely with templates. Here, a submachine is
+used to improve the copy-paste implementation of the keyboard machine
+discussed under <a href="#OrthogonalStates">Orthogonal
+states</a>:<br>
+Boost.Statechart 完全不知道子状态机，但是它们可以用模板很漂亮地实现。下面，我们用一个子状态机来改进在 <a href="tutorial.html#OrthogonalStates">正交状态</a> 中以"复制-粘贴"方式实现的键盘状态机：</p>
+
+
+<pre>enum LockType<br>{<br> NUM_LOCK,<br> CAPS_LOCK,<br> SCROLL_LOCK<br>};<br><br>template&lt; LockType lockType &gt;<br>struct Off;<br>struct Active : sc::simple_state&lt;<br> Active, Keyboard, mpl::list&lt;<br> Off&lt; NUM_LOCK &gt;, Off&lt; CAPS_LOCK &gt;, Off&lt; SCROLL_LOCK &gt; &gt; &gt; {};<br><br>template&lt; LockType lockType &gt;<br>struct EvPressed : sc::event&lt; EvPressed&lt; lockType &gt; &gt; {};<br><br>template&lt; LockType lockType &gt;<br>struct On : sc::simple_state&lt;<br> On&lt; lockType &gt;, Active::orthogonal&lt; lockType &gt; &gt;<br>{<br> typedef sc::transition&lt;<br> EvPressed&lt; lockType &gt;, Off&lt; lockType &gt; &gt; reactions;<br>};<br><br>template&lt; LockType lockType &gt;<br>struct Off : sc::simple_state&lt;<br> Off&lt; lockType &gt;, Active::orthogonal&lt; lockType &gt; &gt;<br>{<br> typedef sc::transition&lt;<br> EvPressed&lt; lockType &gt;, On&lt; lockType &gt; &gt; reactions;<br>};<br></pre>
+
+
+<h3><a name="AsynchronousStateMachines" id="AsynchronousStateMachines">Asynchronous state machines 异步状态机</a></h3>
+
+
+<h4>Why asynchronous state machines are necessary 为何需要异步状态机</h4>
+
+
+<p>As the name suggests, a synchronous state machine processes
+each event synchronously. This behavior is implemented by the <code>state_machine</code>
+class template, whose <code>process_event</code> function
+only returns after having executed all reactions (including the ones
+provoked by internal events that actions might have posted). This
+function is strictly non-reentrant (just like all other member
+functions, so <code>state_machine&lt;&gt;</code>
+is not thread-safe). This makes it difficult for two <code>state_machine&lt;&gt;</code>
+subtype objects to communicate via events in a bi-directional fashion
+correctly, <b>even in a single-threaded program</b>. For
+example, state machine <code>A</code> is in the middle of
+processing an external event. Inside an action, it decides to send a
+new event to state machine <code>B</code> (by calling <code>B::process_event()</code>).
+It then "waits" for B to send back an answer via a <code>boost::function&lt;&gt;</code>-like
+call-back, which references <code>A::process_event()</code>
+and was passed as a data member of the event. However, while <code>A</code>
+is "waiting" for <code>B</code> to send back an event, <code>A::process_event()</code>
+has not yet returned from processing the external event and as soon as <code>B</code>
+answers via the call-back, <code>A::process_event()</code>
+is <b>unavoidably</b> reentered. This all really happens
+in a single thread, that's why "wait" is in quotes.<br>
+顾名思义，同步状态机以同步方式处理每个事件。该行为通过 <code>state_machine</code>
+类模板来实现，这个类模板的 <code>process_event</code> 函数在执行完所有反应(包括那些由内部事件引发的动作)后才会返回。该函数是不可重入的(其它所有成员函数也是如此，所以 <code>state_machine&lt;&gt;</code>
+不是线程安全的)。这样，要让两个 <code>state_machine&lt;&gt;</code>
+子类型的对象通过事件来进行正确的双向通信是很难的，<b>即使是在一个单线程程序中。</b>例如，状态机 <code>A</code> 正处于一个外部事件的处理中。在某个动作内部，它决定发送一个新的事件给状态机 <code>B</code> (通过调用 <code>B::process_event()</code>)。然后它将"等待" B 通过一个类似于 <code>boost::function&lt;&gt;</code> 的回调发回结果，该回调函数引用 <code>A::process_event()</code>
+将被作为事件的一个数据成员被传递。但是，<code>A</code>
+正在"等待" <code>B</code> 发回一个事件，<code>A::process_event()</code>
+尚未从外部事件的处理中返回，而一旦 <code>B</code>
+通过回调函数进行回答时，<code>A::process_event()</code>
+就<span style="font-weight: bold;">必然</span>要被重入。这一切在单线程中都是真实发生的，所以我们说的"等待"是用引号引起来的。</p>
+
+
+
+
+<h4>How it works 它是如何工作的</h4>
+
+
+<p>The <code>asynchronous_state_machine</code> class
+template has none of the member functions the <code>state_machine</code>
+class template has. Moreover, <code>asynchronous_state_machine&lt;&gt;</code>
+subtype objects cannot even be created or destroyed directly. Instead,
+all these operations must be performed through the <code>Scheduler</code>
+object each asynchronous state machine is associated with. All these <code>Scheduler</code>
+member functions only push an appropriate item into the schedulers'
+queue and then return immediately. A dedicated thread will later pop
+the items out of the queue to have them processed.<br>
+<code>asynchronous_state_machine</code> 类模板的成员函数与 <code>state_machine</code>
+完全不同。此外， <code>asynchronous_state_machine&lt;&gt;</code>&nbsp;子类型的对象不能直接创建或销毁。相反，所有这些操作必须通过与每一个异步状态机相关联的 <code>Scheduler</code>
+对象来执行。所有这些 <code>Scheduler</code>
+成员函数只是将一个适当的项推入调度器的队列然后立即返回。一个专用线程稍后会从队列中取出这些项并处理它们。</p>
+
+
+<p>Applications will usually first create a <code>fifo_scheduler&lt;&gt;</code>
+object and then call <code>fifo_scheduler&lt;&gt;::create_processor&lt;&gt;()</code>
+and <code>fifo_scheduler&lt;&gt;::initiate_processor()</code>
+to schedule the creation and initiation of one or more <code>asynchronous_state_machine&lt;&gt;</code>
+subtype objects. Finally, <code>fifo_scheduler&lt;&gt;::operator()()</code>
+is either called directly to let the machine(s) run in the current
+thread, or, a <code>boost::function&lt;&gt;</code>
+object referencing <code>operator()()</code> is passed to
+a new <code>boost::thread</code>. Alternatively, the
+latter could also be done right after constructing the <code>fifo_scheduler&lt;&gt;</code>
+object. In the following code, we are running one state machine in a
+new <code>boost::thread</code> and the other in the main
+thread (see the PingPong example for the full source code):<br>
+应用程序通常首先创建一个 <code>fifo_scheduler&lt;&gt;</code>
+对象，然后调用 <code>fifo_scheduler&lt;&gt;::create_processor&lt;&gt;()</code> 和 <code>fifo_scheduler&lt;&gt;::initiate_processor()</code>
+来调度一个或多外 <code>asynchronous_state_machine&lt;&gt;</code>
+子类型对象的创建和初始化。最后，或者直接调用 <code>fifo_scheduler&lt;&gt;::operator()()</code>，让状态机在当前线程中运行，或者一个引向 <code>operator()()</code> 的 <code>boost::function&lt;&gt;</code>
+对象被传递给一个新的 <code>boost::thread</code>. 两者相比，后者也可以在 <code>fifo_scheduler&lt;&gt;</code>
+对象构造后正确使用。在以下代码中，我们在一个新的 <code>boost::thread</code> 运行一个状态机，且在主线程中运行另一个(完整的源码请见 PingPong 例子):</p>
+
+
+<pre>struct Waiting;<br>struct Player :<br> sc::asynchronous_state_machine&lt; Player, Waiting &gt;<br>{<br> // ...<br>};<br><br>// ...<br><br>int main()<br>{<br> // Create two schedulers that will wait for new events<br> // when their event queue runs empty 创建两个调度器，它们<br> // 在其事件队列为空时等待新的事件<br> sc::fifo_scheduler&lt;&gt; scheduler1( true );<br> sc::fifo_scheduler&lt;&gt; scheduler2( true );<br><br> // Each player is serviced by its own scheduler<br> // 每一方由它自己的调度器进行服务<br> sc::fifo_scheduler&lt;&gt;::processor_handle player1 = <br> scheduler1.create_processor&lt; Player &gt;( /* ... */ );<br> scheduler1.initiate_processor( player1 );<br> sc::fifo_scheduler&lt;&gt;::processor_handle player2 = <br> scheduler2.create_processor&lt; Player &gt;( /* ... */ );<br> scheduler2.initiate_processor( player2 );<br><br> // the initial event that will start the game<br> // 初始事件，开始游戏<br> boost::intrusive_ptr&lt; BallReturned &gt; pInitialBall =<br> new BallReturned();<br><br> // ...<br><br> scheduler2.queue_event( player2, pInitialBall );<br><br> // ...<br><br> // Up until here no state machines exist yet. They<br> // will be created when operator()() is called<br> // 到此为止还没有状态机存在。它们将在调用 operator()() 时创建<br><br> // Run first scheduler in a new thread<br> // 在一个新的线程中运行第一个调度器<br> boost::thread otherThread( boost::bind(<br> &amp;sc::fifo_scheduler&lt;&gt;::operator(), &amp;scheduler1, 0 ) );<br> scheduler2(); // Run second scheduler in this thread<br> otherThread.join();<br><br> return 0;<br>}<br></pre>
+
+
+<p>We could just as well use two boost::threads:<br>
+我们也可以使用两个 boost::threads:</p>
+
+
+<pre>int main()<br>{<br> // ...<br><br> boost::thread thread1( boost::bind(<br> &amp;sc::fifo_scheduler&lt;&gt;::operator(), &amp;scheduler1, 0 ) );<br> boost::thread thread2( boost::bind(<br> &amp;sc::fifo_scheduler&lt;&gt;::operator(), &amp;scheduler2, 0 ) );<br><br> // do something else ... 做一些其它事情<br><br> thread1.join();<br> thread2.join();<br><br> return 0;<br>}<br></pre>
+
+
+<p>Or, run both machines in the same thread:<br>
+或者，在同一个线程中运行两个状态机：</p>
+
+
+<pre>int main()<br>{<br> sc::fifo_scheduler&lt;&gt; scheduler1( true );<br><br> sc::fifo_scheduler&lt;&gt;::processor_handle player1 = <br> scheduler1.create_processor&lt; Player &gt;( /* ... */ );<br> sc::fifo_scheduler&lt;&gt;::processor_handle player2 = <br> scheduler1.create_processor&lt; Player &gt;( /* ... */ );<br><br> // ...<br><br> scheduler1();<br><br> return 0;<br>}<br></pre>
+
+
+<p>In all the examples above, <code>fifo_scheduler&lt;&gt;::operator()()</code>
+waits on an empty event queue and will only return after a call to <code>fifo_scheduler&lt;&gt;::terminate()</code>.
+The <code>Player</code> state machine calls this function
+on its scheduler object right before terminating.<br>
+在以上所有例子中，<code>fifo_scheduler&lt;&gt;::operator()()</code>
+在一个空的事件队列上等待，并且只在调用 <code>fifo_scheduler&lt;&gt;::terminate()</code> 后返回。<code>Player</code> 状态机在终止前在其调度器对象上调用这一函数。</p>
+
+
+<hr>
+<p><a href="http://validator.w3.org/check?uri=referer"><img src="http://www.w3.org/Icons/valid-html401" alt="Valid HTML 4.01 Transitional" border="0" height="31" width="88"></a></p>
+
+
+<p>Revised<!--webbot bot="Timestamp" s-type="EDITED" s-format="%d %B, %Y" startspan -->
+03 December, 2006<!--webbot bot="Timestamp" endspan i-checksum="38512" --></p>
+
+
+<p><i>Copyright &copy; 2003-<!--webbot bot="Timestamp" s-type="EDITED" s-format="%Y" startspan -->2006<!--webbot bot="Timestamp" endspan i-checksum="770" -->
+<a href="contact.html">Andreas Huber D&ouml;nni</a></i></p>
+
+
+<p><i>Distributed under the Boost Software License, Version
+1.0. (See accompanying file <a href="../../../LICENSE_1_0.txt">LICENSE_1_0.txt</a>
+or copy at <a href="http://www.boost.org/LICENSE_1_0.txt">http://www.boost.org/LICENSE_1_0.txt</a>)</i></p>
+
+
+</body>
+</html>

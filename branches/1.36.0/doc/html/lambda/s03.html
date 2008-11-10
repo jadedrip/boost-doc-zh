@@ -1,0 +1,152 @@
+﻿<html>
+<head>
+<meta http-equiv="Content-Type" content="text/html; charset=UTF-8">
+<title>Introduction 简介</title>
+<link rel="stylesheet" href="../boostbook.css" type="text/css">
+<meta name="generator" content="DocBook XSL Stylesheets V1.68.1">
+<link rel="start" href="../index.html" title="The Boost C++ Libraries BoostBook Documentation Subset">
+<link rel="up" href="../lambda.html" title="Chapter 8. Boost.Lambda">
+<link rel="prev" href="getting_started.html" title="Getting Started">
+<link rel="next" href="using_library.html" title="Using the library">
+</head>
+<body bgcolor="white" text="black" link="#0000FF" vlink="#840084" alink="#0000FF">
+<table cellpadding="2" width="100%">
+<td valign="top"><img alt="Boost C++ Libraries" width="277" height="86" src="../../../boost.png"></td>
+<td align="center"><a href="../../../index.htm">Home</a></td>
+<td align="center"><a href="../../../libs/libraries.htm">Libraries</a></td>
+<td align="center"><a href="../../../people/people.htm">People</a></td>
+<td align="center"><a href="../../../more/faq.htm">FAQ</a></td>
+<td align="center"><a href="../../../more/index.htm">More</a></td>
+</table>
+<hr>
+<div class="spirit-nav">
+<a accesskey="p" href="getting_started.html"><img src="../images/prev.png" alt="Prev"></a><a accesskey="u" href="../lambda.html"><img src="../images/up.png" alt="Up"></a><a accesskey="h" href="../index.html"><img src="../images/home.png" alt="Home"></a><a accesskey="n" href="using_library.html"><img src="../images/next.png" alt="Next"></a>
+</div>
+<div class="section" lang="en">
+<div class="titlepage"><div><div><h2 class="title" style="clear: both">
+<a name="id1243282"></a>Introduction 简介</h2></div></div></div>
+<div class="toc"><dl>
+<dt><span class="section"><a href="s03.html#id1243287">Motivation 动机</a></span></dt>
+<dt><span class="section"><a href="s03.html#id1243548">Introduction to lambda expressions lambda 表达式简介</a></span></dt>
+</dl></div>
+<div class="section" lang="en">
+<div class="titlepage"><div><div><h3 class="title">
+<a name="id1243287"></a>Motivation 动机</h3></div></div></div>
+<p>标准模板库 (STL) [<a href="../lambda.html#cit:stepanov:94" title="[STL94]"><span class="abbrev">STL94</span></a>]，现在是 C++ 标准库 [<a href="../lambda.html#cit:c++:98" title="[C++98]"><span class="abbrev">C++98</span></a>] 的一部分，是一个泛型容器和算法库。通常，STL 算法通过 <span class="emphasis"><em>function objects</em></span>（函数对象）操作容器元素。这些函数对象作为参数传递给算法。</p>
+<p>能够用函数调用语法调用的任何 C++ 结构都是一个函数对象。STL 容器为一些通常情况定义了一些预定义的函数对象（比如 <code class="literal">plus</code>，<code class="literal">less</code> 和 <code class="literal">not1</code>）。例如，这是标准 <code class="literal">plus</code> 模板的一种可能的实现：</p>
+<pre class="programlisting">
+template &lt;class T&gt; 
+struct plus : public binary_function&lt;T, T, T&gt; {
+  T operator()(const T&amp; i, const T&amp; j) const {
+    return i + j; 
+  }
+};
+</pre>
+<p>基类 <code class="literal">binary_function&lt;T, T, T&gt;</code> 包含了函数对象的参数和返回值类型的 typedefs，这些是让这个函数对象成为 <span class="emphasis"><em>adaptable</em></span>（可适配的）的需要。</p>
+<p>除了像上面那个一样的基本函数对象类之外，还有 STL 容器 <span class="emphasis"><em>binder</em></span>（绑定器）模板，可以用来将一个可适配的二元函数对象通过将其中一个参数修改为一个常数而创建一个一元函数对象。例如，为了替代像下面这样不得不显式写出的函数对象类：</p>
+<pre class="programlisting">
+class plus_1 {
+  int _i;
+public:
+  plus_1(const int&amp; i) : _i(i) {}
+  int operator()(const int&amp; j) { return _i + j; }
+};
+</pre>
+<p>
+使用 <code class="literal">plus</code> 模板和绑定器模板之一（<code class="literal">bind1st</code>）也能得到等价的功能。例如，下面两个表达式创建了功能相同的函数对象，在调用的时候，都会返回在函数对象的参数上加 <code class="literal">1</code> 之后的结果：</p>
+<pre class="programlisting">
+plus_1(1)
+bind1st(plus&lt;int&gt;(), 1)
+</pre>
+<p>上面最后一行中的子表达式 <code class="literal">plus&lt;int&gt;()</code> 是一个计算两个整数之和的二元函数对象，而 <code class="literal">bind1st</code> 调用这个函数对象，将第一个参数 partially binding（部分绑定）为 <code class="literal">1</code>。作为使用上面的函数对象的一个示例，下面的代码在某个容器 <code class="literal">a</code> 的每一个元素上加 <code class="literal">1</code>，并且将结果输出到标准输出流 <code class="literal">cout</code> 中。</p>
+<pre class="programlisting">
+transform(a.begin(), a.end(), ostream_iterator&lt;int&gt;(cout),
+          bind1st(plus&lt;int&gt;(), 1));
+</pre>
+<p>
+
+</p>
+<p>
+为了让绑定器模板更加通用，STL 包含了 <span class="emphasis"><em>adaptors</em></span>（适配器），它可以使指向函数的指针或引用和指向成员函数的指针可以被适配。最终，作为对标准的扩展，某些 STL 实现包含了函数合成操作 [<a href="../lambda.html#cit:sgi:02" title="[SGI02]"><span class="abbrev">SGI02</span></a>]。</p>
+<p>所有这些工具都指向一个目标：让“在一个 STL 算法的调用中指定 <span class="emphasis"><em>unnamed functions</em></span>（无名函数）”成为可能，换句话说，就是将代码片段作为一个参数传递给一个函数。然而，这个目标只实现了一部分。上面的简单示例展示了使用标准工具的无名函数定义是如何的麻烦。调用仿函数，适配器，绑定器和函数合成操作的复杂表达式越来越难以理解。除此之外，应用标准工具也有很大的限制。例如，标准绑定器只允许绑定一个二元函数的一个参数，而且也没有三元，四元等等函数的绑定器。</p>
+<p>Boost Lambda 库为上面描述的问题提供了解决方案：</p>
+<div class="itemizedlist"><ul type="disc">
+<li>
+<p>无名函数能够通过符合直觉的语法简单地创建。上面的示例可以被写为：</p>
+<pre class="programlisting">
+transform(a.begin(), a.end(), ostream_iterator&lt;int&gt;(cout), 
+          1 + _1);
+</pre>
+<p>或者更符合直觉的：</p>
+<pre class="programlisting">
+for_each(a.begin(), a.end(), cout &lt;&lt; (1 + _1));
+</pre>
+<p>
+</p>
+</li>
+<li><p>消除了参数绑定的大多数限制，几乎任何 C++ 函数的任意参数都能被绑定。</p></li>
+<li><p>不再需要单独的函数合成操作，因为函数合成已被隐含支持。</p></li>
+</ul></div>
+<p>
+
+</p>
+</div>
+<div class="section" lang="en">
+<div class="titlepage"><div><div><h3 class="title">
+<a name="id1243548"></a>Introduction to lambda expressions lambda 表达式简介</h3></div></div></div>
+<div class="toc"><dl>
+<dt><span class="section"><a href="s03.html#lambda.partial_function_application">Partial function application 部分函数应用</a></span></dt>
+<dt><span class="section"><a href="s03.html#lambda.terminology">Terminology 术语</a></span></dt>
+</dl></div>
+<p>lambda 表达式在函数式编程语言中很普通。在不同的语言之间（以及不同的 lambda 演算形式之间）语法有所区别，但是一个 lambda 表达式的基本形式如下：</p>
+<pre class="programlisting">
+lambda x<sub>1</sub> ... x<sub>n</sub>.e
+</pre>
+<p>一个 lambda 表达式定义一个无名函数，并由以下部分组成：</p>
+<div class="itemizedlist"><ul type="disc">
+<li><p>这个函数的参数：<code class="literal">x<sub>1</sub> ... x<sub>n</sub></code>。</p></li>
+<li><p>表达式 e，这就是根据参数 <code class="literal">x<sub>1</sub> ... x<sub>n</sub></code> 要求其值的那个函数。</p></li>
+</ul></div>
+<p>一个简单的 lambda 表达式示例如下：</p>
+<pre class="programlisting">
+lambda x y.x+y
+</pre>
+<p>应用 lambda 函数意味着用实际参数取代形式参数：</p>
+<pre class="programlisting">
+(lambda x y.x+y) 2 3 = 2 + 3 = 5 
+</pre>
+<p></p>
+<p>在 lambda 表达式的 C++ 版本中，缺少 <code class="literal">lambda x<sub>1</sub> ... x<sub>n</sub></code> 部分，而且形式参数有预定义的名字。在库的当前版本中，有三个这样的预定义形式参数，称为 <span class="emphasis"><em>placeholders</em></span>（占位符）：<code class="literal">_1</code>，<code class="literal">_2</code> 和 <code class="literal">_3</code>。它们分别与通过 lambda 表达式定义的函数的第一个，第二个和第三个参数相关，例如，定义</p>
+<pre class="programlisting">lambda x y.x+y</pre>
+<p>的 C++ 版本为</p>
+<pre class="programlisting">_1 + _2</pre>
+<p>
+</p>
+<p>因此，C++ lambda 表达式没有专门的句法关键字。作为一个操作数使用的占位符暗示这个操作符调用是一个 lambda 表达式。然而，也仅仅对于操作符调用来说这是真的。lambda 表达式包含的函数调用，控制结构，强制转型等都需要特殊的语法结构。最重要的是，函数调用需要被包装在一个 <code class="literal">bind</code> 函数之内。例如，考虑这个 lambda 表达式：</p>
+<pre class="programlisting">lambda x y.foo(x,y)</pre>
+<p>这个 lambda 表达式的 C++ 对等物不是 <code class="literal">foo(_1, _2)</code>，而是：</p>
+<pre class="programlisting">bind(foo, _1, _2)</pre>
+<p>我们将这种类型的 C++ lambda 表达式称为 <span class="emphasis"><em>bind expressions</em></span>（bind 表达式）。</p>
+<p>一个 lambda 表达式定义一个函数对象，因此函数应用语法就像调用任何其它的函数对象，例如：<code class="literal">(_1 + _2)(i, j)</code>。</p>
+<div class="section" lang="en">
+<div class="titlepage"><div><div><h4 class="title">
+<a name="lambda.partial_function_application"></a>Partial function application 部分函数应用</h4></div></div></div>
+<p>一个 bind 表达式本质上就是一个 <span class="emphasis"><em>partial function application</em></span>（部分函数应用）。在部分函数应用中，一个函数的某些参数被绑定到固定的值。结果是另一个函数，可能还带有更多的参数。当使用未绑定参数调用它的时候，这个新的函数合并绑定和未绑定参数的参数列表并调用原始函数。</p>
+</div>
+<div class="section" lang="en">
+<div class="titlepage"><div><div><h4 class="title">
+<a name="lambda.terminology"></a>Terminology 术语</h4></div></div></div>
+<p>一个 lambda 表达式定义一个函数。在求值的时候，一个 C++ lambda 表达式实际上构造了一个函数对象，一个 <span class="emphasis"><em>functor</em></span>（仿函数）。我们用名字 <span class="emphasis"><em>lambda functor</em></span>（lambda 仿函数）来指涉这样一个函数对象。因此，在此采纳的术语中，一个 lambda 表达式的求值结果是一个 lambda 仿函数。</p>
+</div>
+</div>
+</div>
+<table width="100%"><tr>
+<td align="left"></td>
+<td align="right"><small>Copyright  1999-2004 Jaakko Jrvi, Gary Powell</small></td>
+</tr></table>
+<hr>
+<div class="spirit-nav">
+<a accesskey="p" href="getting_started.html"><img src="../images/prev.png" alt="Prev"></a><a accesskey="u" href="../lambda.html"><img src="../images/up.png" alt="Up"></a><a accesskey="h" href="../index.html"><img src="../images/home.png" alt="Home"></a><a accesskey="n" href="using_library.html"><img src="../images/next.png" alt="Next"></a>
+</div>
+</body>
+</html>

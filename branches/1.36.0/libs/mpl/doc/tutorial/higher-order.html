@@ -1,0 +1,182 @@
+<!DOCTYPE html PUBLIC "-//W3C//DTD XHTML 1.0 Transitional//EN" "http://www.w3.org/TR/xhtml1/DTD/xhtml1-transitional.dtd">
+<html xmlns="http://www.w3.org/1999/xhtml" xml:lang="en" lang="en">
+<head>
+<!-- Copyright Aleksey Gurtovoy 2006. Distributed under the Boost --><!-- Software License, Version 1.0. (See accompanying --><!-- file LICENSE_1_0.txt or copy at http://www.boost.org/LICENSE_1_0.txt) -->
+
+  
+  <meta http-equiv="Content-Type" content="text/html; charset=utf-8" />
+
+
+  
+  <meta name="generator" content="Docutils 0.3.6: http://docutils.sourceforge.net/" />
+
+
+
+  
+  
+  <title>THE BOOST MPL LIBRARY: Higher-Order Metafunctions</title>
+  <link rel="stylesheet" href="../style.css" type="text/css" />
+</head>
+
+
+<body class="docframe">
+
+
+<table class="header">
+
+  <tbody>
+
+    <tr class="header">
+
+      <td class="header-group navigation-bar"><span class="navigation-group"><a href="./implementing-division.html" class="navigation-link">Prev</a>&nbsp;<a href="./handling-placeholders.html" class="navigation-link">Next</a></span><span class="navigation-group-separator">&nbsp;|&nbsp;</span><span class="navigation-group"><a href="./dimensional-analysis.html" class="navigation-link">Back</a>&nbsp;<a href="./handling-placeholders.html" class="navigation-link">Along</a></span><span class="navigation-group-separator">&nbsp;|&nbsp;</span><span class="navigation-group"><a href="./tutorial-metafunctions.html" class="navigation-link">Up</a>&nbsp;<a href="../index.html" class="navigation-link">Home</a></span><span class="navigation-group-separator">&nbsp;|&nbsp;</span><span class="navigation-group"><a href="./tutorial_toc.html" class="navigation-link">Full TOC</a></span></td>
+
+
+      <td class="header-group page-location"><a href="../index.html" class="navigation-link">标题页</a> / <a href="./tutorial-metafunctions.html" class="navigation-link">教程：元函数和高阶元编程</a> / <a href="./higher-order.html" class="navigation-link">高阶元函数</a></td>
+
+
+    </tr>
+
+  
+  </tbody>
+</table>
+
+<div class="header-separator"></div>
+
+
+<div class="section" id="higher-order">
+<h1><a class="toc-backref" href="./tutorial-metafunctions.html#id47" name="higher-order">高阶元函数</a></h1>
+
+
+<p>在前一节中，我们用了两种不同的方式 &mdash;
+元函数类和占位符表达式 &mdash;&nbsp;将元函数象其它元数据那样用作传递和返回。将元函数绑定为 "头等元数据" 使得
+<tt class="literal"><span class="pre">transform</span></tt> 可以实现多种多样的不同操作：在我们的例子中是量纲的乘法和除法。虽然使用函数来操作其它函数这个想法看起来很简单，但是它是强有力和灵活的<a class="citation-reference" href="#hudak89" id="id9" name="id9">[Hudak89]</a>，并得到了一个奇特的名字：<strong>高阶函数式编程</strong>。一个操作其它函数的函数被称为 
+<strong>高阶函数</strong>。<tt class="literal"><span class="pre">transform</span></tt> 就是一个高阶元函数：即操作其它元函数的元函数。</p>
+
+
+<table class="citation" id="hudak89" frame="void" rules="none">
+
+
+  <colgroup><col class="label" /><col /></colgroup>
+  <tbody valign="top">
+
+
+    <tr>
+
+      <td class="label"><a class="fn-backref" href="#id9" name="hudak89">[Hudak89]</a></td>
+
+      <td>Paul Hudak. "Conception, Evolution, and Application of
+Functional Programming Languages," ACM Computing Surveys 21,
+no. 3 Pages: 359 - 411. New York: ACM Press. 1989.
+ISSN:0360-0300. http://doi.acm.org/10.1145/72551.72554.</td>
+
+    </tr>
+
+
+  
+  </tbody>
+</table>
+
+
+<p>我们已经看到过高阶元函数的威力，如果可以创建一个新的高阶元函数就更好了。为了探究其中的基本机制，我们来尝试一个简单的例子。我们的任务是编写一个名为 <tt class="literal"><span class="pre">twice</span></tt> 的元函数 &mdash; 给定一个单参元函数 <em>f</em> 以及任意的元数据 <em>x</em> &mdash; 有：</p>
+
+
+<blockquote>
+  <em>twice</em>(<em>f</em>, <em>x</em>) := <em>f</em>(<em>f</em>(<em>x</em>))</blockquote>
+
+
+<p>看起来这是一个简单的例子，的确如此。在真实的代码中，你找不到太多可以使用 <tt class="literal"><span class="pre">twice</span></tt> 的地方。无论如何，希望你可以忍受：因为它除了接受和调用一个元函数之外，并不做别的事情，<tt class="literal"><span class="pre">twice</span></tt> 具有 "高阶" 的所有必要元素，而没有任何其它细节：</p>
+
+
+<p>如果 <em>f</em> 是一个元函数类，<tt class="literal"><span class="pre">twice</span></tt> 的定义就非常简单：</p>
+
+
+<pre class="literal-block">template &lt;class F, class X&gt;<br />struct twice<br />{<br />    typedef typename F::template apply&lt;X&gt;::type once;    // f(x)<br />    typedef typename F::template apply&lt;once&gt;::type type; // f(f(x))<br />};<br /></pre>
+
+
+<!-- @ prefix.append(
+ '''#include <boost/type_traits/add_pointer.hpp>
+    #include <boost/static_assert.hpp>
+    #include <boost/type_traits/is_same.hpp>''')
+
+twice_test = '''
+#include <boost/mpl/assert.hpp>
+struct add_pointer_f
+{ 
+    template <class T> struct apply : boost::add_pointer<T>
+    {};
+};
+BOOST_MPL_ASSERT((boost::is_same<twice<add_pointer_f,int>::type,int**>));
+'''
+example.append(twice_test)
+compile() -->
+<!-- @litre_translator.line_offset -= 7 -->
+<p>或者，使用元函数前转：</p>
+
+
+<pre class="literal-block">template &lt;class F, class X&gt;<br />struct twice<br />  : F::template apply&lt;<br />       typename F::template apply&lt;X&gt;::type<br />    &gt;<br />{};<br /></pre>
+
+
+<!-- @ example.append(twice_test)
+compile() -->
+<div class="admonition-c-language-note admonition">
+<p class="admonition-title first">C++ 语言的说明</p>
+
+
+<p>C++ 标准要求在使用一个代表成员模板的 <strong>依赖名字</strong> 时，需要 <tt class="literal"><span class="pre">template</span></tt> 关键字。<tt class="literal"><span class="pre">F::apply</span></tt> 可能是也可能不是一个模板，这<span style="font-style: italic;">取决</span>于传入的 <tt class="literal"><span class="pre">F</span></tt>.  关于 <tt class="literal"><span class="pre">template</span></tt> 的更多信息请看 <a class="reference" href="./resources.html">本书的</a> 附录 B<tt class="literal"><span class="pre"></span></tt>.</p>
+
+
+</div>
+
+
+<p>我们的代码中多次出现 <tt class="literal"><span class="pre">template</span></tt> 关键字，最好可以减少调用元函数类所带来的语法负担。通常，解决的方法是将这一模式提取到一个元函数中：</p>
+
+
+<pre class="literal-block">template &lt;class UnaryMetaFunctionClass, class Arg&gt;<br />struct apply1<br />  : UnaryMetaFunctionClass::template apply&lt;Arg&gt;<br />{};<br /></pre>
+
+
+<p>现在 <tt class="literal"><span class="pre">twice</span></tt> 只需定义为：</p>
+
+
+<pre class="literal-block">template &lt;class F, class X&gt;<br />struct twice<br />  : apply1&lt;F, typename apply1&lt;F,X&gt;::type&gt;<br />{};<br /></pre>
+
+
+<p>为了看看 <tt class="literal"><span class="pre">twice</span></tt> 能否工作，我们将它应用于一个小的元函数类，该元函数类由 <tt class="literal"><span class="pre">add_pointer</span></tt> 元函数构造而来：</p>
+
+
+<pre class="literal-block">struct add_pointer_f<br />{<br />    template &lt;class T&gt;<br />    struct apply : boost::add_pointer&lt;T&gt; {};<br />};<br /></pre>
+
+
+<!-- @litre_translator.line_offset -= 7 -->
+<p>现在我们可以用 <tt class="literal"><span class="pre">twice</span></tt> 和 <tt class="literal"><span class="pre">add_pointer_f</span></tt> 来构建指针的指针：</p>
+
+
+<pre class="literal-block">BOOST_STATIC_ASSERT((<br />    boost::is_same&lt;<br />         twice&lt;add_pointer_f, int&gt;::type<br />       , int**<br />    &gt;::value<br />));<br /></pre>
+
+
+<!-- @ apply1 = stack[-4]
+add_pointer_f = stack[-2]
+compile('all', pop = 0) -->
+</div>
+
+
+
+<div class="footer-separator"></div>
+
+
+<table class="footer">
+
+  <tbody>
+
+    <tr class="footer">
+
+      <td class="header-group navigation-bar"><span class="navigation-group"><a href="./implementing-division.html" class="navigation-link">Prev</a>&nbsp;<a href="./handling-placeholders.html" class="navigation-link">Next</a></span><span class="navigation-group-separator">&nbsp;|&nbsp;</span><span class="navigation-group"><a href="./dimensional-analysis.html" class="navigation-link">Back</a>&nbsp;<a href="./handling-placeholders.html" class="navigation-link">Along</a></span><span class="navigation-group-separator">&nbsp;|&nbsp;</span><span class="navigation-group"><a href="./tutorial-metafunctions.html" class="navigation-link">Up</a>&nbsp;<a href="../index.html" class="navigation-link">Home</a></span><span class="navigation-group-separator">&nbsp;|&nbsp;</span><span class="navigation-group"><a href="./tutorial_toc.html" class="navigation-link">Full TOC</a></span></td>
+
+
+    </tr>
+
+  
+  </tbody>
+</table>
+
+</body>
+</html>

@@ -1,0 +1,196 @@
+﻿<!DOCTYPE HTML PUBLIC "-//W3C//DTD HTML 4.0 Transitional//EN"
+            "http://www.w3.org/TR/REC-html40/loose.dtd">
+<HTML>
+<HEAD><TITLE>enable_if</TITLE>
+
+<META http-equiv="Content-Type" content="text/html; charset=UTF-8">
+<META name="GENERATOR" content="Microsoft FrontPage 5.0">
+</HEAD>
+<BODY >
+<!--HEVEA command line is: hevea -nosymb -noiso -pedantic -v enable_if_docs_for_boost.tex -->
+<!--HTMLHEAD-->
+<!--ENDHTML-->
+<!--PREFIX <ARG ></ARG>-->
+<!--CUT DEF section 1 -->
+<BR>
+<BR>
+
+
+<h1>
+<img border="0" src="../../boost.png" align="center" width="277" height="86">enable_if</h1>
+<BR>
+<BR>
+Copyright 2003 Jaakko J&auml;rvi, Jeremiah Willcock, Andrew Lumsdaine.<BR>
+<BR>
+<h2>
+  <a name="htoc1">1</a>&nbsp; 导言
+</h2>
+<br/>
+使用 <tt>enable_if</tt>
+系列模板可以控制一个函数模板或类模板偏特化是否包含在基于模板参数属性的一系列匹配函数或偏特化中。比如，我们可以定义一个只对某些类型（通过特征类[traits
+class]定义）有效——当然也只匹配这些类型——的函数模板。<tt>enable_if</tt> 也可以对类模板偏特化实现同样的效果。<tt>enable_if</tt> 的应用在
+[<a href="#jarvi:03:cuj_arbitrary_overloading"><cite>1</cite></a>]
+和
+[<a href="#jarvi:03:c++typeclasses"><cite>2</cite></a>]
+中有详细的介绍。<br/>
+<br/>
+<br/>
+<h3>
+  <a name="htoc2">1.1</a>&nbsp; 大纲
+</h3>
+<a name="sec:synopsis"></a>
+<pre>namespace boost {<br/>  template &lt;class Cond, class T = void&gt; struct enable_if;<br/>  template &lt;class Cond, class T = void&gt; struct disable_if;<br/>  template &lt;class Cond, class T&gt; struct lazy_enable_if;<br/>  template &lt;class Cond, class T&gt; struct lazy_disable_if;<br/><br/>  template &lt;bool B, class T = void&gt; struct enable_if_c;<br/>  template &lt;bool B, class T = void&gt; struct disable_if_c;<br/>  template &lt;bool B, class T&gt; struct lazy_enable_if_c;<br/>  template &lt;bool B, class T&gt; struct lazy_disable_if_c;<br/>}<br/></pre>
+<h3>
+  <a name="htoc3">1.2</a>&nbsp; 背景
+</h3>
+C++ 中“类型敏感的”模板函数重载依赖于 <i>SFINAE</i> (substitution-failure-is-not-an-error) 原则
+[<a href="#vandevoorde2002:templates"><cite>3</cite></a>]：
+在函数模板的实例化过程中，如果形成的某个参数或返回值类型无效那么这个实例将从重载决议集中去掉而不是引发一个编译错误。下面这个例子，出自
+[<a href="#jarvi:03:cuj_arbitrary_overloading"><cite>1</cite></a>]，演示了这个原则的重要性。<br/>
+<pre>int negate(int i) { return -i; }<br/><br/>template &lt;class F&gt;<br/>typename F::result_type negate(const F&amp; f) { return -f(); }<br/><br/></pre>
+我们假设编译器遇到了 <tt>negate(1) 的调用</tt>。很明显第一个定义是个好选择，但是编译器必须在检查所有的定义后才能作出决定，这个检查过程包含对模板的实例化。使用 <tt>int 作为类型 </tt><tt>F 对第二个定义进行实例化将产生：</tt><br/>
+<pre>int::result_type negate(const int&amp;);<br/><br/></pre>
+这里的返回值类型是无效的。 如果把这种情况看作是一种错误，那么添加一个无关的函数模板（从来不会被调用）也将导致原本有效的代码无法通过编译。由于 SFINAE
+原则的存在，上面的例子不会产生编译错误，当然也不是良好的编程风格。在这种情况下编译器会简单地从重载决议集中抛弃后一个 <tt>negate</tt> 的定义。<br/>
+<br/>
+<tt>enable_if</tt> 模板就是一个控制是否形成符合 SFINAE&nbsp; 条件的工具。<br/>
+<br/>
+<h2>
+  <a name="htoc4">2</a>&nbsp; <tt>enable_if</tt>模板
+</h2>
+<a name="enable_if"></a><tt>enable_if</tt> 面板的名称分为三部分：一个可选的 <tt>lazy_</tt> 标记、<tt>enable_if</tt> 或 <tt>disable_if和一个可选的</tt> <tt>_c</tt> 标记。这三部分的 8
+种组合都存在于该库中。 <tt>lazy_</tt> 标记的作用在
+<a href="#sec:enable_if_lazy">3.3</a>
+中讨论。名称的第二部分表示使用值为 true 的参数启用当前重载还是禁用当前重载。名称的第三部分表示参数是一个 bool 值（有 _c 后缀）还是一个包含名称为
+value 的静态 bool 值的类型。后者与 Boost.MPL 配合使用。<br/>
+<br/>
+<tt>enable_if_c</tt> 和 <tt>enable_if</tt> 的定义如下：（下面我们只写 <tt>enable_if</tt>，其实他们是被包含在 boost 命名空间中的。）<br/>
+<pre>template &lt;bool B, class T = void&gt;<br/>struct enable_if_c {<br/>  typedef T type;<br/>};<br/><br/>template &lt;class T&gt;<br/>struct enable_if_c&lt;false, T&gt; {};<br/><br/>template &lt;class Cond, class T = void&gt;<br/>struct enable_if : public enable_if_c&lt;Cond::value, T&gt; {};<br/><br/></pre>
+如果参数 B 为 true， <tt>enable_if_c</tt> 模板的实例包含一个成员类型 type，被定义为类型 T。如果 B 为 false 则不会定义这样的成员类型。所以 <tt>enable_if_c&lt;B, T&gt;::type</tt>
+可以是一个有效的或者无效的类型表达式，这取决于 B 的值。当有效时，<tt>enable_if_c&lt;B, T&gt;::type</tt> 等价于 <tt>T</tt>。<tt>因此 enable_if_c</tt>
+模板可以用来控制函数何时参与重载决议何时不参与。比如，下面这个函数对所有的算术类型（根据
+<a href="../type_traits/index.html">Boost type_traits library</a> 的分类）有效:<br/>
+<br/>
+<pre>template &lt;class T&gt;<br/>typename enable_if_c&lt;boost::is_arithmetic&lt;T&gt;::value, T&gt;::type <br/>foo(T t) { return t; }<br/><br/></pre>
+<tt>disable_if_c</tt> 和 <tt>enable_if_c</tt> 的功能一样，只是参数的含义相反。下面着函数对所有的“非算术类型”有效：
+<pre>template &lt;class T&gt;<br/>typename disable_if_c&lt;boost::is_arithmetic&lt;T&gt;::value, T&gt;::type <br/>bar(T t) { return t; }<br/><br/></pre>
+为了和 Boost.MPL 一起使用，我们提供了接收任何包含名为 value 的 bool 型常量成员的类型作为参数的 <tt>enable_if</tt> 模板。MPL <tt>bool_、</tt> <tt>and_</tt>、
+<tt>or_</tt>、 和 <tt>not_</tt> 都可以用来构建这种类型。Boost.Type_traits 库中的特征类也符合这个惯例。比如，上面例子中的 foo 函数也可以这样写：
+<pre>template &lt;class T&gt;<br/>typename enable_if&lt;boost::is_arithmetic&lt;T&gt;, T&gt;::type <br/>foo(T t) { return t; }<br/><br/></pre>
+<h2>
+  <a name="htoc5">3</a>&nbsp; <tt>使用 enable_if</tt>
+</h2>
+<a name="sec:using_enable_if"></a><tt>enable_if</tt> 模板在 <tt>boost/utility/enable_if.hpp 中定义，这个文件被</tt> <tt>boost/utility.hpp 所包含</tt>。<br/>
+<br/>
+<tt>enable_if</tt> 既可以作为返回值也可以作为一个额外的参数。比如，上一节中的函数 <tt>foo</tt> 也可以这么些：
+<pre>template &lt;class T&gt;<br/>T foo(T t, typename enable_if&lt;boost::is_arithmetic&lt;T&gt; &gt;::type* dummy = 0); <br/><br/></pre>
+我们给这个函数添加了一个额外的 void* 类型的参数但是为它指定了一个默认值，所以这个参数对调用该函数的客户代码是不可见的。<tt>注意 enable_if 的第二个模板参数没有给出，因为默认的 </tt><tt>void</tt> 正好满足需要。<br/>
+<br/>
+把控制条件作为一个参数或是返回值很大程度上取决于编程风格，但是对于某些函数来说只有一个可选项：
+<ul>
+  <li>
+    运算符的参数个数是固定的，所以 <tt>enable_if</tt> 只能用作返回值。
+  </li>
+  <li>
+    构造函数和析构函数没有返回值，所以只能添加一个额外的参数。
+  </li>
+  <li>
+    对于类型转换运算符，好像还没有办法使用此机制。但是类型转换构造函数可以使用添加一个额外的参数的方法来使用此机制。
+  </li>
+</ul>
+<h3>
+  <a name="htoc6">3.1</a> 模板类偏特化的启用与禁用
+</h3>
+类模板偏特化可以使用 <tt>enable_if 来控制其启用与禁用。为达到这个目的，需要为模板添加一个额外的模板参数用于控制启用与禁用。这个参数的默认值是 void。比如：</tt>
+<pre>template &lt;class T, class Enable = void&gt; <br/>class A { ... };<br/><br/>template &lt;class T&gt;<br/>class A&lt;T, typename enable_if&lt;is_integral&lt;T&gt; &gt;::type&gt; { ... };<br/><br/>template &lt;class T&gt;<br/>class A&lt;T, typename enable_if&lt;is_float&lt;T&gt; &gt;::type&gt; { ... };<br/><br/></pre>
+使用任何整数类型实例化的 A
+与第一个偏特化匹配，任何浮点类型与二个相匹配。任何其他类型匹配主模板。条件可以是任何依赖模板参数的编译期逻辑型表达式。同样需要注意的是，<tt>enable_if</tt>
+的第二个参数不需要给出；默认值（<tt>void）在这里可以胜任。</tt><br/>
+<br/>
+<h3>
+  <a name="htoc7">3.2</a>&nbsp; 重叠的控制条件
+</h3>
+<a name="sec:overlapping_conditions"></a>一旦编译器在检查控制条件后把这个函数包含进重载决议集中，那么它就会进一步使用普通的
+C++ 重载决议规则来选择最匹配的函数。具体来说，各个控制条件之间没有顺序之分，使用了控制条件的各个函数之间如果不能相互排斥，将导致二义性。比如：
+<pre>template &lt;class T&gt;<br/>typename enable_if&lt;boost::is_integral&lt;T&gt;, void&gt;::type <br/>foo(T t) {}<br/><br/>template &lt;class T&gt;<br/>typename enable_if&lt;boost::is_arithmetic&lt;T&gt;, void&gt;::type <br/>foo(T t) {}<br/><br/></pre>
+所有的整数类型也是算数类型。所以，对于 <tt>foo(1)</tt> 这样的调用，两个条件都是
+true，于是两个都将包含进重载决议集中。它们都可以很好地被匹配，于是二义性就产生了。当然，如果通过其他的参数可以解决二义性，一个或多个控制条件同时为 true
+是可以的。<br/>
+<br/>
+以上讨论同样适用于在类模板片特化中使用 <tt>enable_if</tt> 。<br/>
+<br/>
+<h3>
+  <a name="htoc8">3.3</a>&nbsp; 惰性（lazy） <tt>enable_if</tt>
+</h3>
+<a name="sec:enable_if_lazy"></a>在某些情况下，在某个控制条件不为 true
+时避免实例化一个函数签名的某个部分是很有用的。比如：
+<pre>template &lt;class T, class U&gt; class mult_traits;<br/><br/>template &lt;class T, class U&gt;<br/>typename enable_if&lt;is_multipliable&lt;T, U&gt;, typename mult_traits&lt;T, U&gt;::type&gt;::type<br/>operator*(const T&amp; t, const U&amp; u) { ... }<br/><br/></pre>
+假设类模板 <tt>mult_traits</tt> 是一个定义一个乘法运算符结果类型的特征类，<tt>is_multipliable</tt> 是一个定义可以用于该运算符的类型的特征类。只要对于某些类型 A 和 B， <tt>is_multipliable&lt;A, B&gt;::value</tt> 为
+<tt>true</tt> 那么 <tt>mult_traits&lt;A, B&gt;::type</tt> 就会被定义出来。<br/>
+<br/>
+现在，试着用类型 C 和 D 调用运算符 * （还有其他一些重载），其中 <tt>is_multipliable&lt;C, D&gt;::value</tt> 是 <tt>false</tt> 且 <tt>mult_traits&lt;C, D&gt;::type</tt>
+未定义。这种情况在某些编译器上是一种错误。这时，SFINAE 不起作用因为无效的类型是另外一个模板的参数。<tt>在这种情况下可以使用 lazy_enable_if</tt> 和 <tt>lazy_disable_if</tt> （还有它们的 <tt>_c</tt> 版本）：
+<pre>template&lt;class T, class U&gt;<br/>typename lazy_enable_if&lt;is_multipliable&lt;T, U&gt;, mult_traits&lt;T, U&gt; &gt;::type<br/>operator*(const T&amp; t, const U&amp; u) { ... }<br/><br/></pre>
+<tt>lazy_enable_if 的</tt>第二个参数必须是一个在第一个参数（条件）为 true 时定义了一个名字为 type 的的内嵌类型。<br/>
+<br/>
+<h5>
+  注意
+</h5>
+使用了一个特征类的一个成员类型或静态常量将导致这个特化的所有成员（类型和静态常量）被实例化。因此，如果你的特征类在某些情况下包含无效类型，那么你应该使用两个不同的模板来描述条件和类型映射（conditions
+and the type mappings）。在上面的例子中，<tt>is_multipliable&lt;T, U&gt;::value</tt> 定义了何时 when <tt>mult_traits&lt;T, U&gt;::type</tt> 有效。<br/>
+<br/>
+<h3>
+  <a name="htoc9">3.4</a>&nbsp; 编译器变通解决方案
+</h3>
+<a name="sec:workarounds"></a>如果在控制者（enabler）中唯一用于解决二义性的因子是另外一个条件，那么某些编译器标志会导致二义性。比如，某些编译器（例如
+GCC 3.2）将会把下面两个函数诊断为具有二义性：
+<pre>template &lt;class T&gt;<br/>typename enable_if&lt;boost::is_arithmetic&lt;T&gt;, T&gt;::type <br/>foo(T t);<br/><br/>template &lt;class T&gt;<br/>typename disable_if&lt;boost::is_arithmetic&lt;T&gt;, T&gt;::type <br/>foo(T t);<br/><br/></pre>
+有两个临时解决方案：
+<ul>
+  <li>
+    使用一个额外的参数用于解决二义性。使用默认值使它对调用者不可见。比如：
+    <pre>template &lt;int&gt; struct dummy { dummy(int) {} };<br/><br/>template &lt;class T&gt;<br/>typename enable_if&lt;boost::is_arithmetic&lt;T&gt;, T&gt;::type <br/>foo(T t, dummy&lt;0&gt; = 0);<br/><br/>template &lt;class T&gt;<br/>typename disable_if&lt;boost::is_arithmetic&lt;T&gt;, T&gt;::type <br/>foo(T t, dummy&lt;1&gt; = 0);<br/></pre>
+    <br/>
+    <br/>
+  </li>
+  <li>
+    在不同的命名空间中定义这两个函数，然后使用 <tt>using</tt> 把它们带到同一个命名空间中：
+    <pre>namespace A {<br/>  template &lt;class T&gt;<br/>  typename enable_if&lt;boost::is_arithmetic&lt;T&gt;, T&gt;::type <br/>  foo(T t);<br/>}<br/><br/>namespace B {<br/>  template &lt;class T&gt;<br/>  typename disable_if&lt;boost::is_arithmetic&lt;T&gt;, T&gt;::type <br/>  foo(T t);<br/>}<br/><br/>using A::foo;<br/>using B::foo;<br/><br/></pre>
+    注意，第二个解决方案不能用在成员模板中。另一方面，运算符不能接受额外的参数，所以第一个解决方案不可使用。总结一下：这两个解决方案都不能用于需要定义为成员方法的模板化的运算符（赋值和下标运算符）。
+  </li>
+</ul>
+<h2>
+  <a name="htoc10">4</a>&nbsp;&nbsp;Acknowledgements
+</h2>
+We are grateful to Howard Hinnant, Jason Shirk, Paul Mensonides, and Richard
+Smith whose findings have influenced the library.<br/>
+<br/>
+<h2>
+  References
+</h2>
+<dl compact="compact">
+  <dt><a name="jarvi:03:cuj_arbitrary_overloading"><font color="purple">[1]</font></a></dt><dd>
+  Jaakko Järvi, Jeremiah Willcock, Howard Hinnant, and Andrew Lumsdaine.
+  Function overloading based on arbitrary properties of types. <i>C/C++ Users
+  Journal</i>, 21(6):25--32, June 2003.<br/>
+  <br/>
+  </dd><dt><a name="jarvi:03:c++typeclasses"><font color="purple">[2]</font></a></dt><dd>
+  Jaakko Järvi, Jeremiah Willcock, and Andrew Lumsdaine. Concept-controlled
+  polymorphism. In Frank Pfennig and Yannis Smaragdakis, editors, <i>Generative
+  Programming and Component Engineering</i>, volume 2830 of <i>LNCS</i>, pages
+  228--244. Springer Verlag, September 2003.<br/>
+  <br/>
+  </dd><dt><a name="vandevoorde2002:templates"><font color="purple">[3]</font></a></dt><dd>
+  David Vandevoorde and Nicolai&nbsp;M. Josuttis. <i>C++ Templates: The Complete
+  Guide</i>. Addison-Wesley, 2002.</dd>
+</dl>
+<hr/> <b>Contributed by:</b><br/>
+Jaakko Järvi, Jeremiah Willcock and Andrew Lumsdaine<br/>
+<i>{jajarvi|jewillco|lums}@osl.iu.edu</i><br/>
+Indiana University<br/>
+Open Systems Lab <hr size="2"/>
+<blockquote>
+  <i>This document was translated from L<sup>A</sup>T<sub>E</sub>X by
+  </i><a href="http://pauillac.inria.fr/%7Emaranget/hevea/index.html"><i>H<font size="2"><sup>E</sup></font>V<font size="2"><sup>E</sup></font>A</i></a><i>.
+  </i>
+</blockquote>

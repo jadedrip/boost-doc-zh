@@ -1,0 +1,158 @@
+<!DOCTYPE html PUBLIC "-//W3C//DTD XHTML 1.0 Transitional//EN" "http://www.w3.org/TR/xhtml1/DTD/xhtml1-transitional.dtd">
+<html xmlns="http://www.w3.org/1999/xhtml" xml:lang="en" lang="en">
+<head>
+<!-- Copyright Aleksey Gurtovoy 2006. Distributed under the Boost --><!-- Software License, Version 1.0. (See accompanying --><!-- file LICENSE_1_0.txt or copy at http://www.boost.org/LICENSE_1_0.txt) -->
+  <meta http-equiv="Content-Type" content="text/html; charset=utf-8" />
+
+  <meta name="generator" content="Docutils 0.3.6: http://docutils.sourceforge.net/" />
+
+
+  <title>THE BOOST MPL LIBRARY: Implementing Division</title>
+  <link rel="stylesheet" href="../style.css" type="text/css" />
+</head>
+
+
+
+
+
+
+<body class="docframe">
+
+<table class="header">
+  <tbody>
+    <tr class="header">
+      <td class="header-group navigation-bar"><span class="navigation-group"><a href="./implementing.html" class="navigation-link">Prev</a>&nbsp;<a href="./higher-order.html" class="navigation-link">Next</a></span><span class="navigation-group-separator">&nbsp;|&nbsp;</span><span class="navigation-group"><a href="./implementing.html" class="navigation-link">Back</a>&nbsp;Along</span><span class="navigation-group-separator">&nbsp;|&nbsp;</span><span class="navigation-group"><a href="./dimensional-analysis.html" class="navigation-link">Up</a>&nbsp;<a href="../index.html" class="navigation-link">Home</a></span><span class="navigation-group-separator">&nbsp;|&nbsp;</span><span class="navigation-group"><a href="./tutorial_toc.html" class="navigation-link">Full TOC</a></span></td>
+
+      <td class="header-group page-location"><a href="../index.html" class="navigation-link">标题页</a> / <a href="./tutorial-metafunctions.html" class="navigation-link">教程：元函数和高阶元编程</a> / <a href="./dimensional-analysis.html" class="navigation-link">量纲分析</a> / <a href="./implementing-division.html" class="navigation-link">除法的实现</a></td>
+
+    </tr>
+  </tbody>
+</table>
+<div class="header-separator"></div>
+
+<div class="section" id="implementing-division">
+<h1><a class="toc-backref" href="./dimensional-analysis.html#id46" name="implementing-division">除法的实现</a></h1>
+
+<p>除法与乘法相类似，不过不是将指数相加，而是相减。这次我们不照抄 <tt class="literal"><span class="pre">plus_f</span></tt>，而是使用以下技巧来使得
+<tt class="literal"><span class="pre">minus_f</span></tt> 更为简单：</p>
+
+<pre class="literal-block">struct minus_f<br />{<br />    template &lt;class T1, class T2&gt;<br />    struct apply<br />      : mpl::minus&lt;T1,T2&gt; {};<br />};<br /></pre>
+
+<!-- @ # The following is OK because we showed how to get at mpl_plus
+prefix.append('#include <boost/mpl/minus.hpp>')
+compile(1)  -->
+<p>这里的 <tt class="literal"><span class="pre">minus_f::apply</span></tt>&nbsp;用继承来暴露其基类 <tt class="literal"><span class="pre">mpl::minus</span></tt> 中的嵌套
+<tt class="literal"><span class="pre">type</span></tt>，因此我们不需要写：</p>
+
+<pre class="literal-block">typedef typename ...::type type<br /></pre>
+
+<!-- @ignore() -->
+<p>这里我们不需要写
+<tt class="literal"><span class="pre">typename</span></tt> (实际上，在这里用它是非法的)，因为编译器知道在 <tt class="literal"><span class="pre">apply</span></tt> 的初始化列表中出现的依赖名肯定是基类。<a class="footnote-reference" href="#plus-too" id="id7" name="id7">[2]</a>  这种简化的方法被称为 <strong>元函数前转</strong>；在本书中还会经常用到。<a class="footnote-reference" href="#edg" id="id8" name="id8">[3]</a></p>
+
+<table class="footnote" id="plus-too" frame="void" rules="none">
+
+  <colgroup><col class="label" /><col /></colgroup>
+  <tbody valign="top">
+
+    <tr>
+      <td class="label"><a class="fn-backref" href="#id7" name="plus-too">[2]</a></td>
+      <td>同样的方法也可以用于 <tt class="literal"><span class="pre">plus_f</span></tt>，不过由于它有一点微妙，所以我们首先介绍的是简单但冗长的写法。</td>
+    </tr>
+
+  </tbody>
+</table>
+
+<table class="footnote" id="edg" frame="void" rules="none">
+
+  <colgroup><col class="label" /><col /></colgroup>
+  <tbody valign="top">
+
+    <tr>
+      <td class="label"><a class="fn-backref" href="#id8" name="edg">[3]</a></td>
+      <td>基于 EDG 的编译器的用户应参考一下 <a class="reference" href="./resources.html">本书的</a> 附录 C，那里有关于元函数前转的一些警告。你可以通过检查预处理符号
+      <tt class="literal"><span class="pre">__EDG_VERSION__</span></tt> 来确认是否正在使用 EDG 编译器，该符号会由所有基于 EDG 的编译器所定义。</td>
+    </tr>
+
+  </tbody>
+</table>
+
+<p>编写这样一些简单的类来包装已有的元函数很快就会变得令人厌烦。虽然 <tt class="literal"><span class="pre">minus_f</span></tt> 的定义已经比 <tt class="literal"><span class="pre">plus_f</span></tt> 简化了不少，不过还是不够好。幸好，MPL给了我们更简单的方法来传递元函数。不需要构建一个完整的元函数类，我们可以这样来调用 <tt class="literal"><span class="pre">transform</span></tt> ：</p>
+
+<pre class="literal-block">typename mpl::transform&lt;D1,D2, <strong>mpl::minus&lt;_1,_2&gt;</strong> &gt;::type<br /></pre>
+
+<!-- @# Make it harmless but legit C++ so we can syntax check later
+example.wrap('template <class D1,class D2>', 'fff(D1,D2);')
+
+# We explain placeholders below, so we can henceforth use them
+# without qualification -->
+<p>这两个有趣的参数(<tt class="literal"><span class="pre">_1</span></tt> 和 <tt class="literal"><span class="pre">_2</span></tt>)称为
+<strong>占位符</strong>，表示在调用 <tt class="literal"><span class="pre">transform</span></tt> 的
+<tt class="literal"><span class="pre">BinaryOperation</span></tt> 时，该模板的第一个和第二个参数将按 <tt class="literal"><span class="pre">_1</span></tt> 和
+<tt class="literal"><span class="pre">_2</span></tt> 所表示的位置分别传递给 <tt class="literal"><span class="pre">minus</span></tt>。整个 <tt class="literal"><span class="pre">mpl::minus&lt;_1,_2&gt;</span></tt> 称为 <strong>占位符表达式</strong>。</p>
+
+<div class="note">
+<p class="admonition-title first">备注</p>
+
+<p>MPL的占位符位于 <tt class="literal"><span class="pre">mpl::placeholders</span></tt>
+名字空间，定义于 <tt class="literal"><span class="pre">boost/mpl/placeholders.hpp</span></tt>.  本书中我们假定你已经写了：</p>
+
+<pre class="literal-block">#include&lt;boost/mpl/placeholders.hpp&gt;<br />using namespace mpl::placeholders;<br /></pre>
+
+<p>所以它们不需要限定符就可以被访问。</p>
+
+</div>
+
+<!-- @ prefix.append(str(example)) # move to common prefix
+ignore() -->
+<p>以下是使用占位符表达式来编写的除法操作符：</p>
+
+<pre class="literal-block">template &lt;class T, class D1, class D2&gt;<br />quantity&lt; <br />    T<br />  , typename mpl::transform&lt;D1,D2,<strong>mpl::minus&lt;_1,_2&gt;</strong> &gt;::type<br />&gt;<br />operator/(quantity&lt;T,D1&gt; x, quantity&lt;T,D2&gt; y)<br />{<br />   typedef typename <br />     mpl::transform&lt;D1,D2,<strong>mpl::minus&lt;_1,_2&gt;</strong> &gt;::type dim;<br /><br />   return quantity&lt;T,dim&gt;( x.value() / y.value() );<br />}<br /></pre>
+
+<!-- @compile('all', pop = 1) -->
+<p>这些代码已经相当简单了。我们还可以再进一步，将其中计算新量纲的代码提取到一个元函数中：</p>
+
+<pre class="literal-block">template &lt;class D1, class D2&gt;<br />struct <strong>divide_dimensions</strong>
+  : mpl::transform&lt;D1,D2,mpl::minus&lt;_1,_2&gt; &gt; // 前转
+{};
+
+template &lt;class T, class D1, class D2&gt;
+quantity&lt;T, typename <strong>divide_dimensions&lt;D1,D2&gt;</strong>::type&gt;<br />operator/(quantity&lt;T,D1&gt; x, quantity&lt;T,D2&gt; y)<br />{<br />   return quantity&lt;T, typename <strong>divide_dimensions&lt;D1,D2&gt;</strong>::type&gt;(<br />      x.value() / y.value());<br />}<br /></pre>
+
+<!-- @compile('all', pop = None) -->
+<p>现在我们可以用逆运算来验证我们对 "手提电脑所受重力" 的计算了：</p>
+
+<pre class="literal-block">quantity&lt;float,mass&gt; m2 = f/a;<br />float rounding_error = std::abs((m2 - m).value());<br /></pre>
+
+<!-- @example.wrap('''
+#include <cassert>
+#include <cmath>
+int main()
+{
+    quantity<float,mass> m(5.0f);
+    quantity<float,acceleration> a(9.8f);
+    quantity<float,force> f = m * a;
+''','''
+    assert(rounding_error < .001);
+}''')
+
+dimensional_analysis = stack[:-1] # save for later
+
+run('all') -->
+<p>如果一切正常，<tt class="literal"><span class="pre">rounding_error</span></tt> 应该非常接近于0。这是很枯燥的计算，但是它们正是那些你如果弄错了就会摧毁整个程序(或者更糟)的事情。如果我们写了 <tt class="literal"><span class="pre">a/f</span></tt> 则不是 <tt class="literal"><span class="pre">f/a</span></tt>，就会产生一个编译错误，以防止错误被传播到整个程序。</p>
+
+</div>
+
+
+<div class="footer-separator"></div>
+
+<table class="footer">
+  <tbody>
+    <tr class="footer">
+      <td class="header-group navigation-bar"><span class="navigation-group"><a href="./implementing.html" class="navigation-link">Prev</a>&nbsp;<a href="./higher-order.html" class="navigation-link">Next</a></span><span class="navigation-group-separator">&nbsp;|&nbsp;</span><span class="navigation-group"><a href="./implementing.html" class="navigation-link">Back</a>&nbsp;Along</span><span class="navigation-group-separator">&nbsp;|&nbsp;</span><span class="navigation-group"><a href="./dimensional-analysis.html" class="navigation-link">Up</a>&nbsp;<a href="../index.html" class="navigation-link">Home</a></span><span class="navigation-group-separator">&nbsp;|&nbsp;</span><span class="navigation-group"><a href="./tutorial_toc.html" class="navigation-link">Full TOC</a></span></td>
+
+    </tr>
+  </tbody>
+</table>
+</body>
+</html>

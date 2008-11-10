@@ -1,0 +1,194 @@
+﻿<html>
+<head>
+<meta http-equiv="Content-Type" content="text/html; charset=UTF-8">
+<title>Other considerations and tips（其它考虑和提示）</title>
+<link rel="stylesheet" href="../boostbook.css" type="text/css">
+<meta name="generator" content="DocBook XSL Stylesheets V1.68.1">
+<link rel="start" href="../index.html" title="The Boost C++ Libraries BoostBook Documentation Subset">
+<link rel="up" href="../typeof.html" title="Chapter 19. Boost.Typeof">
+<link rel="prev" href="refe.html" title=" Reference">
+<link rel="next" href="cont.html" title=" Contributed By:">
+</head>
+<body bgcolor="white" text="black" link="#0000FF" vlink="#840084" alink="#0000FF">
+<table cellpadding="2" width="100%">
+<td valign="top"><img alt="Boost C++ Libraries" width="277" height="86" src="../../../boost.png"></td>
+<td align="center"><a href="../../../index.htm">Home</a></td>
+<td align="center"><a href="../../../libs/libraries.htm">Libraries</a></td>
+<td align="center"><a href="../../../people/people.htm">People</a></td>
+<td align="center"><a href="../../../more/faq.htm">FAQ</a></td>
+<td align="center"><a href="../../../more/index.htm">More</a></td>
+</table>
+<hr>
+<div class="spirit-nav">
+<a accesskey="p" href="refe.html"><img src="../images/prev.png" alt="Prev"></a><a accesskey="u" href="../typeof.html"><img src="../images/up.png" alt="Up"></a><a accesskey="h" href="../index.html"><img src="../images/home.png" alt="Home"></a><a accesskey="n" href="cont.html"><img src="../images/next.png" alt="Next"></a>
+</div>
+<div class="section" lang="en">
+<div class="titlepage"><div><div><h2 class="title" style="clear: both">
+<a name="typeof.other"></a>Other considerations and tips（其它考虑和提示）</h2></div></div></div>
+<div class="toc"><dl>
+<dt><span class="section"><a href="other.html#typeof.natem"> Native typeof support and emulation（原生 typeof 支持及仿真）</a></span></dt>
+<dt><span class="section"><a href="other.html#typeof.parties"> The three participating parties（三个参与方）</a></span></dt>
+<dt><span class="section"><a href="other.html#typeof.features"> Supported features（支持的特性）</a></span></dt>
+<dt><span class="section"><a href="other.html#typeof.what"> What needs to be registered?（需要注册什么？）</a></span></dt>
+<dt><span class="section"><a href="other.html#typeof.limi"> Limitations（限制）</a></span></dt>
+</dl></div>
+<div class="section" lang="en">
+<div class="titlepage"><div><div><h3 class="title">
+<a name="typeof.natem"></a> Native typeof support and emulation（原生 typeof 支持及仿真）</h3></div></div></div>
+<p>很多编译器已经支持了 typeof，最值得关注的是 GCC 和 Metrowerks。</p>
+<p>Igor Chesnokov 发现一个允许在 VC 系列编辑器上实现 <code class="computeroutput"><span class="identifier">typeof</span></code> 的方法。它利用了微软编译器的一个 bug，这个 bug 允许一个基类的内嵌类定义在从基类派生出的类中：</p>
+<pre class="programlisting">
+<span class="keyword">template</span><span class="special">&lt;</span><span class="keyword">int</span> <span class="identifier">ID</span><span class="special">&gt;</span> <span class="keyword">struct</span> <span class="identifier">typeof_access</span>
+<span class="special">{</span>
+    <span class="keyword">struct</span> <span class="identifier">id2type</span><span class="special">;</span> <span class="comment">//not defined
+</span><span class="special">};</span>
+
+<span class="keyword">template</span><span class="special">&lt;</span><span class="keyword">class</span> <span class="identifier">T</span><span class="special">,</span> <span class="keyword">int</span> <span class="identifier">ID</span><span class="special">&gt;</span> <span class="keyword">struct</span> <span class="identifier">typeof_register</span> <span class="special">:</span> <span class="identifier">typeof_access</span>
+<span class="special">{</span>
+    <span class="comment">// define base's nested class here
+</span>    <span class="keyword">struct</span> <span class="identifier">typeof_access</span><span class="special">::</span><span class="identifier">id2type</span>
+    <span class="special">{</span>
+        <span class="keyword">typedef</span> <span class="identifier">T</span> <span class="identifier">type</span><span class="special">;</span>
+    <span class="special">};</span>
+<span class="special">};</span>
+
+<span class="comment">//Type registration function 
+</span><span class="identifier">typeof_register</span><span class="special">&lt;</span><span class="identifier">T</span><span class="special">,</span> <span class="identifier">compile</span><span class="special">-</span><span class="identifier">time</span><span class="special">-</span><span class="identifier">constant</span><span class="special">&gt;</span> <span class="identifier">register_type</span><span class="special">(</span><span class="keyword">const</span> <span class="identifier">T</span><span class="special">&amp;);</span>
+
+<span class="comment">//Actually register type by instantiating typeof_register for the correct type
+</span><span class="keyword">sizeof</span><span class="special">(</span><span class="identifier">register_type</span><span class="special">(</span><span class="identifier">some</span><span class="special">-</span><span class="identifier">type</span><span class="special">));</span> 
+
+<span class="comment">//Use the base class to access the type.
+</span><span class="keyword">typedef</span> <span class="identifier">typeof_access</span><span class="special">::</span><span class="identifier">id2type</span><span class="special">::</span><span class="identifier">type</span> <span class="identifier">type</span><span class="special">;</span> 
+</pre>
+<p>当内嵌类是一个在派生类中特化的模板类时，这个方法也适合于 VC7.0。不过，这个漏洞在 VC8.0 中被修复，因此在这个编译器上这个方法不能工作。</p>
+<p>VC8.0 和许多其它编译器既没有原生 <code class="computeroutput"><span class="identifier">typeof</span></code> 支持，也没有像上面描述的诀窍作为一种选择。对于这样的编译器仿真方法就是实现 <code class="computeroutput"><span class="identifier">typeof</span></code> 的唯一出路。</p>
+<p>根据一个大体的预测，在写这篇文章的时候，<code class="computeroutput"><span class="identifier">typeof</span></code>，<code class="computeroutput"><span class="keyword">auto</span></code> 等被引入 C++ 标准的事情可能还不会马上发生。即使在那之后，依然需要一段时间，大多数编译器才能实现这个特性。但是即使在那之后，总还有一些老旧的编译器需要支持（例如，现在，2005 年，VC7.x 出现很长时间了，甚至 VC8.0 beta 已经可以使用了，很多人依然使用 VC6）。</p>
+<p>要想立刻使用这个非常有用的特性，把它实现在库的层次显然是很合理的。</p>
+<p>仿真方式显然很重要，即使在一些特定编译器上提供了更好的选择。如果一个库作者想要使用 <code class="computeroutput"><span class="identifier">typeof</span></code> 开发可移植代码，她需要使用仿真方式并注册她的类型和模板。那些仿真是唯一选择的用户可以使用它，而那些有着更好选择的用户也依然可以使用它，因为在这样的编译器上注册宏被定义为 no-op（什么都不做）。</p>
+<p>还有一些其它考虑适用于 VC7.1 的用户。即使有更方便的 <code class="computeroutput"><span class="identifier">typeof</span></code> 诀窍可用，也应该考虑到升级到 VC8 的可能性，在那个编译器上仿真是唯一的选择。</p>
+<p>通过定义 <code class="computeroutput"><span class="identifier">BOOST_TYPEOF_COMPLIANT</span></code> 符号，可以将仿真模式强加于那些缺省时不使用它的编译器：</p>
+<pre class="programlisting">
+<span class="identifier">g</span><span class="special">++</span> <span class="special">-</span><span class="identifier">D</span> <span class="identifier">BOOST_TYPEOF_COMPLIANT</span> <span class="special">-</span><span class="identifier">I</span> <span class="special">\</span><span class="identifier">boost</span><span class="special">\</span><span class="identifier">boost_1_32_0</span> <span class="identifier">main</span><span class="special">.</span><span class="identifier">cpp</span>
+</pre>
+</div>
+<div class="section" lang="en">
+<div class="titlepage"><div><div><h3 class="title">
+<a name="typeof.parties"></a> The three participating parties</h3></div></div></div>
+<p>动机部分的 Lambda 示例需要如下注册：</p>
+<pre class="programlisting">
+<span class="preprocessor">#include</span> <span class="identifier">BOOST_TYPEOF_INCREMENT_REGISTRATION_GROUP</span><span class="special">()</span>
+ 
+<span class="identifier">BOOST_TYPEOF_REGISTER_TEMPLATE</span><span class="special">(</span><span class="identifier">boost</span><span class="special">::</span><span class="identifier">tuples</span><span class="special">::</span><span class="identifier">tuple</span><span class="special">,</span> <span class="number">2</span><span class="special">);</span>
+<span class="identifier">BOOST_TYPEOF_REGISTER_TEMPLATE</span><span class="special">(</span><span class="identifier">boost</span><span class="special">::</span><span class="identifier">lambda</span><span class="special">::</span><span class="identifier">lambda_functor</span><span class="special">,</span> <span class="number">1</span><span class="special">);</span>
+<span class="identifier">BOOST_TYPEOF_REGISTER_TEMPLATE</span><span class="special">(</span><span class="identifier">boost</span><span class="special">::</span><span class="identifier">lambda</span><span class="special">::</span><span class="identifier">lambda_functor_base</span><span class="special">,</span> <span class="number">2</span><span class="special">);</span>
+<span class="identifier">BOOST_TYPEOF_REGISTER_TEMPLATE</span><span class="special">(</span><span class="identifier">boost</span><span class="special">::</span><span class="identifier">lambda</span><span class="special">::</span><span class="identifier">relational_action</span><span class="special">,</span> <span class="number">1</span><span class="special">);</span>
+<span class="identifier">BOOST_TYPEOF_REGISTER_TEMPLATE</span><span class="special">(</span><span class="identifier">boost</span><span class="special">::</span><span class="identifier">lambda</span><span class="special">::</span><span class="identifier">logical_action</span><span class="special">,</span> <span class="number">1</span><span class="special">);</span>
+<span class="identifier">BOOST_TYPEOF_REGISTER_TEMPLATE</span><span class="special">(</span><span class="identifier">boost</span><span class="special">::</span><span class="identifier">lambda</span><span class="special">::</span><span class="identifier">other_action</span><span class="special">,</span> <span class="number">1</span><span class="special">);</span>
+<span class="identifier">BOOST_TYPEOF_REGISTER_TYPE</span><span class="special">(</span><span class="identifier">boost</span><span class="special">::</span><span class="identifier">lambda</span><span class="special">::</span><span class="identifier">greater_action</span><span class="special">);</span>
+<span class="identifier">BOOST_TYPEOF_REGISTER_TYPE</span><span class="special">(</span><span class="identifier">boost</span><span class="special">::</span><span class="identifier">lambda</span><span class="special">::</span><span class="identifier">less_action</span><span class="special">);</span>
+<span class="identifier">BOOST_TYPEOF_REGISTER_TYPE</span><span class="special">(</span><span class="identifier">boost</span><span class="special">::</span><span class="identifier">lambda</span><span class="special">::</span><span class="identifier">and_action</span><span class="special">);</span>
+<span class="identifier">BOOST_TYPEOF_REGISTER_TEMPLATE</span><span class="special">(</span><span class="identifier">boost</span><span class="special">::</span><span class="identifier">lambda</span><span class="special">::</span><span class="identifier">placeholder</span><span class="special">,</span> <span class="special">(</span><span class="keyword">int</span><span class="special">));</span>
+</pre>
+<p>看上去，为了具有发现表达式的类型的能力所付出的代价太高了：需要相当大量的注册。然而请注意，上面所有这些注册只需要做一次，在那之后，已注册类型和模板的任意组合都可以被处理。此外，这些注册一般不需要最终用户的参与，而是由一些库的建构者来做（在本例中是 Boost.Lambda）。</p>
+<p>在考虑这些的时候，考虑一下参与的三方是有帮助的：typeof 设施，库（很可能基于表达式模板法则），和最终用户。typeof 设施负责注册基本类型。库可以注册它自己的类型和模板。</p>
+<p>在最理想的状态下，如果表达式总是由基本类型和库定义的类型与模板组成，一个库的作者可能会觉得 <code class="computeroutput"><span class="identifier">typeof</span></code> 是被它的库原生支持的。另一方面，表达式越经常地包含用户定义类型，就有越多的责任落在最终用户身上，并由此这个方法就变得越不吸引人。</p>
+<p>这样一来，当决定是否要应用 typeof 设施时，表达式中用户定义类型的比例成为要考虑的主要因素。</p>
+</div>
+<div class="section" lang="en">
+<div class="titlepage"><div><div><h3 class="title">
+<a name="typeof.features"></a>Supported features（支持的特性）</h3></div></div></div>
+<p>Typeof 预先注册了基本类型。对于这些类型，以及由用户库和最终用户注册的任何类型/模板，与以下的任意组合都已被支持：</p>
+<div class="itemizedlist"><ul type="disc">
+<li>指针；</li>
+<li>引用（顶层除外）；</li>
+<li>Consts（顶层除外）；</li>
+<li>Volatiles（顶层除外）；</li>
+<li>数组；</li>
+<li>函数，函数指针，及引用；</li>
+<li>指向成员函数的指针；</li>
+<li>指向数据成员的指针。</li>
+</ul></div>
+<p>例如，下面的类型：</p>
+<pre class="programlisting">
+<span class="keyword">int</span><span class="special">&amp;</span> <span class="special">(*)(</span><span class="keyword">const</span> <span class="keyword">volatile</span> <span class="keyword">char</span><span class="special">*,</span> <span class="keyword">double</span><span class="special">[</span><span class="number">5</span><span class="special">],</span> <span class="keyword">void</span><span class="special">(*)(</span><span class="keyword">short</span><span class="special">))</span>
+</pre>
+<p>被毫无疑问地支持，而下面这样的：</p>
+<pre class="programlisting">
+<span class="keyword">void</span> <span class="special">(</span><span class="identifier">MyClass</span><span class="special">::*)(</span><span class="keyword">int</span> <span class="identifier">MyClass</span><span class="special">::*,</span> <span class="identifier">MyClass</span><span class="special">[</span><span class="number">10</span><span class="special">])</span> <span class="keyword">const</span>
+</pre>
+<p>如果 <code class="computeroutput"><span class="identifier">MyClass</span></code> 被注册，即可被支持。</p>
+<p>Typeof 库为大多数 STL 类/模板提供了注册文件。这些文件位于 std 子目录内，命名与相应的 STL 头文件相同。这些文件没有被 typeof 系统包含，必须由用户根据需要显式包含：</p>
+<pre class="programlisting">
+<span class="preprocessor">#include</span> <span class="special">&lt;</span><span class="identifier">boost</span><span class="special">/</span><span class="identifier">typeof</span><span class="special">/</span><span class="identifier">std</span><span class="special">/</span><span class="identifier">functional</span><span class="special">.</span><span class="identifier">hpp</span><span class="special">&gt;</span>
+<span class="identifier">BOOST_AUTO</span><span class="special">(</span><span class="identifier">fun</span><span class="special">,</span> <span class="identifier">std</span><span class="special">::</span><span class="identifier">bind2nd</span><span class="special">(</span><span class="identifier">std</span><span class="special">::</span><span class="identifier">less</span><span class="special">&lt;</span><span class="keyword">int</span><span class="special">&gt;(),</span> <span class="number">21</span><span class="special">));</span> <span class="comment">//create named function object for future use.
+</span></pre>
+</div>
+<div class="section" lang="en">
+<div class="titlepage"><div><div><h3 class="title">
+<a name="typeof.what"></a>What needs to be registered?（需要注册什么？）</h3></div></div></div>
+<p>为 Typeof 库注册类型的时候利用编译器是可能的。即使当前还没有在语言中直接支持 typeof，如果编译器遇到无法正确处理的表达式，它可以觉察到表达式的类型是什么并给出错误信息。在 <code class="computeroutput"><span class="identifier">typeof</span></code> 上下文中，这个错误信息包含的线索能给你一些启发，告诉你为了使 <code class="computeroutput"><span class="identifier">BOOST_TYPEOF</span></code> 可以工作，需要为 Typeof 库注册什么类型。</p>
+<pre class="programlisting">
+<span class="keyword">struct</span> <span class="identifier">X</span> <span class="special">{};</span>
+ 
+<span class="keyword">template</span><span class="special">&lt;</span><span class="keyword">typename</span> <span class="identifier">A</span><span class="special">,</span><span class="keyword">bool</span> <span class="identifier">B</span><span class="special">&gt;</span>
+<span class="keyword">struct</span> <span class="identifier">Y</span> <span class="special">{};</span>
+
+<span class="identifier">std</span><span class="special">::</span><span class="identifier">pair</span><span class="special">&lt;</span><span class="identifier">X</span><span class="special">,</span><span class="identifier">Y</span><span class="special">&lt;</span><span class="keyword">int</span><span class="special">,</span><span class="keyword">true</span><span class="special">&gt;</span> <span class="special">&gt;</span> <span class="identifier">a</span><span class="special">;</span>
+
+<span class="identifier">BOOST_AUTO</span><span class="special">(</span><span class="identifier">a</span><span class="special">,</span><span class="identifier">b</span><span class="special">);</span>
+</pre>
+<p>我们从 VC7.1 得到如下错误信息</p>
+<pre class="programlisting">error C2504: 'boost::type_of::'anonymous-namespace'::encode_type_impl&lt;V,Type_Not_Registered_With_Typeof_System&gt;' : base
+    class undefined
+        with 
+        [
+            V=boost::type_of::'anonymous-namespace'::encode_type_impl&lt;boost::mpl::vector0&lt;boost::mpl::na&gt;,std::pair&lt;X,Y&lt;int,true&gt;&gt;&gt;::V0,
+            Type_Not_Registered_With_Typeof_System=X
+        ]
+</pre>
+<p>检查这个错误信息，我们看到编译器在抱怨 <code class="computeroutput"><span class="identifier">X</span></code></p>
+<pre class="programlisting">
+<span class="identifier">BOOST_TYPEOF_REGISTER_TYPE</span><span class="special">(</span><span class="identifier">X</span><span class="special">);</span> <span class="comment">//register X with the typeof system
+</span></pre>
+<p>再编译，我们从 VC7.1 得到一个新的错误信息</p>
+<pre class="programlisting">error C2504: 'boost::type_of::'anonymous-namespace'::encode_type_impl&lt;V,Type_Not_Registered_With_Typeof_System&gt;' : base
+    class undefined
+        with
+        [
+            V=boost::type_of::'anonymous-namespace'::encode_type_impl&lt;boost::mpl::vector0&lt;boost::mpl::na&gt;,std::pair&lt;X,Y&lt;int,true&gt;&gt;&gt;::V1,
+            Type_Not_Registered_With_Typeof_System=Y&lt;int,true&gt;
+        ]
+</pre>
+<p>检查这个错误信息，我们看到编译器在抱怨 <code class="computeroutput"><span class="identifier">Y</span><span class="special">&lt;</span><span class="keyword">int</span><span class="special">,</span><span class="keyword">true</span><span class="special">&gt;</span></code>。因为 <code class="computeroutput"><span class="identifier">Y</span></code> 是一个模板，并且包含整型常量，注册时我们需要更加小心：</p>
+<pre class="programlisting">
+<span class="identifier">BOOST_TYPEOF_REGISTER_TEMPLATE</span><span class="special">(</span><span class="identifier">Y</span><span class="special">,(</span><span class="keyword">typename</span><span class="special">)(</span><span class="keyword">bool</span><span class="special">));</span> <span class="comment">//register template class Y
+</span></pre>
+<p>当 <code class="computeroutput"><span class="identifier">Y</span></code> 包含整型常量时，查寻它的精确定义是个好主意。对于只包含 typenames 的简单模板类，你可以完全依赖编译器错误。</p>
+<p>上面的代码现在可以编译了。</p>
+<p>这一技术可以用于得到一个“为了让一个给定的项目支持 <code class="computeroutput"><span class="identifier">typeof</span></code>，有哪些类型需要被注册”的概览。</p>
+</div>
+<div class="section" lang="en">
+<div class="titlepage"><div><div><h3 class="title">
+<a name="typeof.limi"></a>Limitations（限制）</h3></div></div></div>
+<p>不支持嵌套的 template template parameters（模板模板参数），比如：</p>
+<pre class="programlisting">
+<span class="keyword">template</span><span class="special">&lt;</span><span class="keyword">template</span><span class="special">&lt;</span><span class="keyword">template</span><span class="special">&lt;</span><span class="keyword">class</span><span class="special">&gt;</span> <span class="keyword">class</span><span class="special">&gt;</span> <span class="keyword">class</span> <span class="identifier">Tpl</span><span class="special">&gt;</span> 
+<span class="keyword">class</span> <span class="identifier">A</span><span class="special">;</span> <span class="comment">// can't register!
+</span></pre>
+<p>嵌套在其它模板中的类和模板也由于 nondeduced context（非推演上下文）的问题而不能注册。这一限制在涉及到 Dinkumware STL 的标准迭代器时最应该引起注意，它们被实现为嵌套类。作为替代，它们的实例是可以被注册的：</p>
+<pre class="programlisting">
+<span class="identifier">BOOST_TYPEOF_REGISTER_TYPE</span><span class="special">(</span><span class="identifier">std</span><span class="special">::</span><span class="identifier">list</span><span class="special">&lt;</span><span class="keyword">int</span><span class="special">&gt;::</span><span class="identifier">const_iterator</span><span class="special">)</span>
+</pre>
+</div>
+</div>
+<table width="100%"><tr>
+<td align="left"></td>
+<td align="right"><small>Copyright  2004, 2005 Arkadiy Vertleyb, Peder Holt</small></td>
+</tr></table>
+<hr>
+<div class="spirit-nav">
+<a accesskey="p" href="refe.html"><img src="../images/prev.png" alt="Prev"></a><a accesskey="u" href="../typeof.html"><img src="../images/up.png" alt="Up"></a><a accesskey="h" href="../index.html"><img src="../images/home.png" alt="Home"></a><a accesskey="n" href="cont.html"><img src="../images/next.png" alt="Next"></a>
+</div>
+</body>
+</html>
