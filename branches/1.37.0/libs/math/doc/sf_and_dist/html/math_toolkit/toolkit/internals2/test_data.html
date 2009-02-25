@@ -1,0 +1,464 @@
+﻿<html>
+<head>
+<meta http-equiv="Content-Type" content="text/html; charset=UTF-8">
+<title>Graphing, Profiling, and Generating Test Data for Special Functions</title>
+<link rel="stylesheet" href="../../../../../../../../doc/html/boostbook.css" type="text/css">
+<meta name="generator" content="DocBook XSL Stylesheets Vsnapshot_2006-12-17_0120">
+<link rel="start" href="../../../index.html" title="Math Toolkit">
+<link rel="up" href="../internals2.html" title="Testing and Development">
+<link rel="prev" href="error_test.html" title="Relative Error and Testing">
+<link rel="next" href="../../using_udt.html" title="Use with User-Defined Floating-Point Types">
+</head>
+<body bgcolor="white" text="black" link="#0000FF" vlink="#840084" alink="#0000FF">
+<table cellpadding="2" width="100%"><tr>
+<td valign="top"><img alt="Boost C++ Libraries" width="277" height="86" src="../../../../../../../../boost.png"></td>
+<td align="center"><a href="../../../../../../../../index.html">Home</a></td>
+<td align="center"><a href="../../../../../../../../libs/libraries.htm">Libraries</a></td>
+<td align="center"><a href="http://www.boost.org/users/people.html">People</a></td>
+<td align="center"><a href="http://www.boost.org/users/faq.html">FAQ</a></td>
+<td align="center"><a href="../../../../../../../../more/index.htm">More</a></td>
+</tr></table>
+<hr>
+<div class="spirit-nav">
+<a accesskey="p" href="error_test.html"><img src="../../../../../../../../doc/html/images/prev.png" alt="Prev"></a><a accesskey="u" href="../internals2.html"><img src="../../../../../../../../doc/html/images/up.png" alt="Up"></a><a accesskey="h" href="../../../index.html"><img src="../../../../../../../../doc/html/images/home.png" alt="Home"></a><a accesskey="n" href="../../using_udt.html"><img src="../../../../../../../../doc/html/images/next.png" alt="Next"></a>
+</div>
+<div class="section" lang="en">
+<div class="titlepage"><div><div>
+  <h4 class="title">
+<a name="math_toolkit.toolkit.internals2.test_data"></a><a href="test_data.html" title="Graphing, Profiling, and Generating Test Data for Special Functions"> 为特殊函数作图，绘制轮廓以及生成测试数据(Graphing,
+        Profiling, and Generating Test Data for Special Functions)</a>
+</h4>
+</div></div></div>
+<p>          设计类<code class="computeroutput"><span class="identifier">test_data</span></code> 以及相关的辅助函数使得你可以只使用几行代码就可以做到：</p>
+<div class="itemizedlist"><ul type="disc">
+<li>
+      为一个连分数(continued fraction)，或无限级数(infinite series)的收敛性绘制轮廓。</li>
+<li>
+      从特殊函数中生成可以导入到你所喜欢的绘图程序中进行更进一步的分析的数据。</li>
+<li>生成高精度的测试数据。</li>
+</ul></div>
+<a name="math_toolkit.toolkit.internals2.test_data.synopsis"></a>
+<h5>
+<a name="id800026"></a>
+          <a href="test_data.html#math_toolkit.toolkit.internals2.test_data.synopsis">概要</a>
+  </h5>
+<pre class="programlisting"><span class="keyword">namespace</span> <span class="identifier">boost</span><span class="special">{</span> <span class="keyword">namespace</span> <span class="identifier">math</span><span class="special">{</span> <span class="keyword">namespace</span> <span class="identifier">tools</span><span class="special">{</span>
+
+<span class="keyword">enum</span> <span class="identifier">parameter_type</span>
+<span class="special">{</span>
+   <span class="identifier">random_in_range</span> <span class="special">=</span> <span class="number">0</span><span class="special">,</span>
+   <span class="identifier">periodic_in_range</span> <span class="special">=</span> <span class="number">1</span><span class="special">,</span>
+   <span class="identifier">power_series</span> <span class="special">=</span> <span class="number">2</span><span class="special">,</span>
+   <span class="identifier">dummy_param</span> <span class="special">=</span> <span class="number">0x80</span><span class="special">,</span>
+<span class="special">};</span>
+
+<span class="keyword">template</span> <span class="special">&lt;</span><span class="keyword">class</span> <span class="identifier">T</span><span class="special">&gt;</span>
+<span class="keyword">struct</span> <span class="identifier">parameter_info</span><span class="special">;</span>
+
+<span class="keyword">template</span> <span class="special">&lt;</span><span class="keyword">class</span> <span class="identifier">T</span><span class="special">&gt;</span>
+<span class="identifier">parameter_info</span><span class="special">&lt;</span><span class="identifier">T</span><span class="special">&gt;</span> <span class="identifier">make_random_param</span><span class="special">(</span><span class="identifier">T</span> <span class="identifier">start_range</span><span class="special">,</span> <span class="identifier">T</span> <span class="identifier">end_range</span><span class="special">,</span> <span class="keyword">int</span> <span class="identifier">n_points</span><span class="special">);</span>
+
+<span class="keyword">template</span> <span class="special">&lt;</span><span class="keyword">class</span> <span class="identifier">T</span><span class="special">&gt;</span>
+<span class="identifier">parameter_info</span><span class="special">&lt;</span><span class="identifier">T</span><span class="special">&gt;</span> <span class="identifier">make_periodic_param</span><span class="special">(</span><span class="identifier">T</span> <span class="identifier">start_range</span><span class="special">,</span> <span class="identifier">T</span> <span class="identifier">end_range</span><span class="special">,</span> <span class="keyword">int</span> <span class="identifier">n_points</span><span class="special">);</span>
+
+<span class="keyword">template</span> <span class="special">&lt;</span><span class="keyword">class</span> <span class="identifier">T</span><span class="special">&gt;</span>
+<span class="identifier">parameter_info</span><span class="special">&lt;</span><span class="identifier">T</span><span class="special">&gt;</span> <span class="identifier">make_power_param</span><span class="special">(</span><span class="identifier">T</span> <span class="identifier">basis</span><span class="special">,</span> <span class="keyword">int</span> <span class="identifier">start_exponent</span><span class="special">,</span> <span class="keyword">int</span> <span class="identifier">end_exponent</span><span class="special">);</span>
+
+<span class="keyword">template</span> <span class="special">&lt;</span><span class="keyword">class</span> <span class="identifier">T</span><span class="special">&gt;</span>
+<span class="keyword">bool</span> <span class="identifier">get_user_parameter_info</span><span class="special">(</span><span class="identifier">parameter_info</span><span class="special">&lt;</span><span class="identifier">T</span><span class="special">&gt;&amp;</span> <span class="identifier">info</span><span class="special">,</span> <span class="keyword">const</span> <span class="keyword">char</span><span class="special">*</span> <span class="identifier">param_name</span><span class="special">);</span>
+
+<span class="keyword">template</span> <span class="special">&lt;</span><span class="keyword">class</span> <span class="identifier">T</span><span class="special">&gt;</span>
+<span class="keyword">class</span> <span class="identifier">test_data</span>
+<span class="special">{</span>
+<span class="keyword">public</span><span class="special">:</span>
+   <span class="keyword">typedef</span> <span class="identifier">std</span><span class="special">::</span><span class="identifier">vector</span><span class="special">&lt;</span><span class="identifier">T</span><span class="special">&gt;</span> <span class="identifier">row_type</span><span class="special">;</span>
+   <span class="keyword">typedef</span> <span class="identifier">row_type</span> <span class="identifier">value_type</span><span class="special">;</span>
+<span class="keyword">private</span><span class="special">:</span>
+   <span class="keyword">typedef</span> <span class="identifier">std</span><span class="special">::</span><span class="identifier">set</span><span class="special">&lt;</span><span class="identifier">row_type</span><span class="special">&gt;</span> <span class="identifier">container_type</span><span class="special">;</span>
+<span class="keyword">public</span><span class="special">:</span>
+   <span class="keyword">typedef</span> <span class="keyword">typename</span> <span class="identifier">container_type</span><span class="special">::</span><span class="identifier">reference</span> <span class="identifier">reference</span><span class="special">;</span>
+   <span class="keyword">typedef</span> <span class="keyword">typename</span> <span class="identifier">container_type</span><span class="special">::</span><span class="identifier">const_reference</span> <span class="identifier">const_reference</span><span class="special">;</span>
+   <span class="keyword">typedef</span> <span class="keyword">typename</span> <span class="identifier">container_type</span><span class="special">::</span><span class="identifier">iterator</span> <span class="identifier">iterator</span><span class="special">;</span>
+   <span class="keyword">typedef</span> <span class="keyword">typename</span> <span class="identifier">container_type</span><span class="special">::</span><span class="identifier">const_iterator</span> <span class="identifier">const_iterator</span><span class="special">;</span>
+   <span class="keyword">typedef</span> <span class="keyword">typename</span> <span class="identifier">container_type</span><span class="special">::</span><span class="identifier">difference_type</span> <span class="identifier">difference_type</span><span class="special">;</span>
+   <span class="keyword">typedef</span> <span class="keyword">typename</span> <span class="identifier">container_type</span><span class="special">::</span><span class="identifier">size_type</span> <span class="identifier">size_type</span><span class="special">;</span>
+
+   <span class="comment">// 构造:
+</span>   <span class="identifier">test_data</span><span class="special">(){}</span>
+   <span class="keyword">template</span> <span class="special">&lt;</span><span class="keyword">class</span> <span class="identifier">F</span><span class="special">&gt;</span>
+   <span class="identifier">test_data</span><span class="special">(</span><span class="identifier">F</span> <span class="identifier">func</span><span class="special">,</span> <span class="keyword">const</span> <span class="identifier">parameter_info</span><span class="special">&lt;</span><span class="identifier">T</span><span class="special">&gt;&amp;</span> <span class="identifier">arg1</span><span class="special">);</span>
+
+   <span class="comment">// 插入:
+</span>   <span class="keyword">template</span> <span class="special">&lt;</span><span class="keyword">class</span> <span class="identifier">F</span><span class="special">&gt;</span>
+   <span class="identifier">test_data</span><span class="special">&amp;</span> <span class="identifier">insert</span><span class="special">(</span><span class="identifier">F</span> <span class="identifier">func</span><span class="special">,</span> <span class="keyword">const</span> <span class="identifier">parameter_info</span><span class="special">&lt;</span><span class="identifier">T</span><span class="special">&gt;&amp;</span> <span class="identifier">arg1</span><span class="special">);</span>
+
+   <span class="keyword">template</span> <span class="special">&lt;</span><span class="keyword">class</span> <span class="identifier">F</span><span class="special">&gt;</span>
+   <span class="identifier">test_data</span><span class="special">&amp;</span> <span class="identifier">insert</span><span class="special">(</span><span class="identifier">F</span> <span class="identifier">func</span><span class="special">,</span> <span class="keyword">const</span> <span class="identifier">parameter_info</span><span class="special">&lt;</span><span class="identifier">T</span><span class="special">&gt;&amp;</span> <span class="identifier">arg1</span><span class="special">,</span> 
+                     <span class="keyword">const</span> <span class="identifier">parameter_info</span><span class="special">&lt;</span><span class="identifier">T</span><span class="special">&gt;&amp;</span> <span class="identifier">arg2</span><span class="special">);</span>
+
+   <span class="keyword">template</span> <span class="special">&lt;</span><span class="keyword">class</span> <span class="identifier">F</span><span class="special">&gt;</span>
+   <span class="identifier">test_data</span><span class="special">&amp;</span> <span class="identifier">insert</span><span class="special">(</span><span class="identifier">F</span> <span class="identifier">func</span><span class="special">,</span> <span class="keyword">const</span> <span class="identifier">parameter_info</span><span class="special">&lt;</span><span class="identifier">T</span><span class="special">&gt;&amp;</span> <span class="identifier">arg1</span><span class="special">,</span> 
+                     <span class="keyword">const</span> <span class="identifier">parameter_info</span><span class="special">&lt;</span><span class="identifier">T</span><span class="special">&gt;&amp;</span> <span class="identifier">arg2</span><span class="special">,</span> 
+                     <span class="keyword">const</span> <span class="identifier">parameter_info</span><span class="special">&lt;</span><span class="identifier">T</span><span class="special">&gt;&amp;</span> <span class="identifier">arg3</span><span class="special">);</span>
+
+   <span class="keyword">void</span> <span class="identifier">clear</span><span class="special">();</span>
+
+   <span class="comment">// 访问:
+</span>   <span class="identifier">iterator</span> <span class="identifier">begin</span><span class="special">();</span>
+   <span class="identifier">iterator</span> <span class="identifier">end</span><span class="special">();</span>
+   <span class="identifier">const_iterator</span> <span class="identifier">begin</span><span class="special">()</span><span class="keyword">const</span><span class="special">;</span>
+   <span class="identifier">const_iterator</span> <span class="identifier">end</span><span class="special">()</span><span class="keyword">const</span><span class="special">;</span>
+   <span class="keyword">bool</span> <span class="keyword">operator</span><span class="special">==(</span><span class="keyword">const</span> <span class="identifier">test_data</span><span class="special">&amp;</span> <span class="identifier">d</span><span class="special">)</span><span class="keyword">const</span><span class="special">;</span>
+   <span class="keyword">bool</span> <span class="keyword">operator</span><span class="special">!=(</span><span class="keyword">const</span> <span class="identifier">test_data</span><span class="special">&amp;</span> <span class="identifier">d</span><span class="special">)</span><span class="keyword">const</span><span class="special">;</span>
+   <span class="keyword">void</span> <span class="identifier">swap</span><span class="special">(</span><span class="identifier">test_data</span><span class="special">&amp;</span> <span class="identifier">other</span><span class="special">);</span>
+   <span class="identifier">size_type</span> <span class="identifier">size</span><span class="special">()</span><span class="keyword">const</span><span class="special">;</span>
+   <span class="identifier">size_type</span> <span class="identifier">max_size</span><span class="special">()</span><span class="keyword">const</span><span class="special">;</span>
+   <span class="keyword">bool</span> <span class="identifier">empty</span><span class="special">()</span><span class="keyword">const</span><span class="special">;</span>
+
+   <span class="keyword">bool</span> <span class="keyword">operator</span> <span class="special">&lt;</span> <span class="special">(</span><span class="keyword">const</span> <span class="identifier">test_data</span><span class="special">&amp;</span> <span class="identifier">dat</span><span class="special">)</span><span class="keyword">const</span><span class="special">;</span>
+   <span class="keyword">bool</span> <span class="keyword">operator</span> <span class="special">&lt;=</span> <span class="special">(</span><span class="keyword">const</span> <span class="identifier">test_data</span><span class="special">&amp;</span> <span class="identifier">dat</span><span class="special">)</span><span class="keyword">const</span><span class="special">;</span>
+   <span class="keyword">bool</span> <span class="keyword">operator</span> <span class="special">&gt;</span> <span class="special">(</span><span class="keyword">const</span> <span class="identifier">test_data</span><span class="special">&amp;</span> <span class="identifier">dat</span><span class="special">)</span><span class="keyword">const</span><span class="special">;</span>
+   <span class="keyword">bool</span> <span class="keyword">operator</span> <span class="special">&gt;=</span> <span class="special">(</span><span class="keyword">const</span> <span class="identifier">test_data</span><span class="special">&amp;</span> <span class="identifier">dat</span><span class="special">)</span><span class="keyword">const</span><span class="special">;</span>
+<span class="special">};</span>
+
+<span class="keyword">template</span> <span class="special">&lt;</span><span class="keyword">class</span> <span class="identifier">charT</span><span class="special">,</span> <span class="keyword">class</span> <span class="identifier">traits</span><span class="special">,</span> <span class="keyword">class</span> <span class="identifier">T</span><span class="special">&gt;</span>
+<span class="identifier">std</span><span class="special">::</span><span class="identifier">basic_ostream</span><span class="special">&lt;</span><span class="identifier">charT</span><span class="special">,</span> <span class="identifier">traits</span><span class="special">&gt;&amp;</span> <span class="identifier">write_csv</span><span class="special">(</span>
+            <span class="identifier">std</span><span class="special">::</span><span class="identifier">basic_ostream</span><span class="special">&lt;</span><span class="identifier">charT</span><span class="special">,</span> <span class="identifier">traits</span><span class="special">&gt;&amp;</span> <span class="identifier">os</span><span class="special">,</span>
+            <span class="keyword">const</span> <span class="identifier">test_data</span><span class="special">&lt;</span><span class="identifier">T</span><span class="special">&gt;&amp;</span> <span class="identifier">data</span><span class="special">);</span>
+
+<span class="keyword">template</span> <span class="special">&lt;</span><span class="keyword">class</span> <span class="identifier">charT</span><span class="special">,</span> <span class="keyword">class</span> <span class="identifier">traits</span><span class="special">,</span> <span class="keyword">class</span> <span class="identifier">T</span><span class="special">&gt;</span>
+<span class="identifier">std</span><span class="special">::</span><span class="identifier">basic_ostream</span><span class="special">&lt;</span><span class="identifier">charT</span><span class="special">,</span> <span class="identifier">traits</span><span class="special">&gt;&amp;</span> <span class="identifier">write_csv</span><span class="special">(</span>
+            <span class="identifier">std</span><span class="special">::</span><span class="identifier">basic_ostream</span><span class="special">&lt;</span><span class="identifier">charT</span><span class="special">,</span> <span class="identifier">traits</span><span class="special">&gt;&amp;</span> <span class="identifier">os</span><span class="special">,</span>
+            <span class="keyword">const</span> <span class="identifier">test_data</span><span class="special">&lt;</span><span class="identifier">T</span><span class="special">&gt;&amp;</span> <span class="identifier">data</span><span class="special">,</span>
+            <span class="keyword">const</span> <span class="identifier">charT</span><span class="special">*</span> <span class="identifier">separator</span><span class="special">);</span>
+
+<span class="keyword">template</span> <span class="special">&lt;</span><span class="keyword">class</span> <span class="identifier">T</span><span class="special">&gt;</span>
+<span class="identifier">std</span><span class="special">::</span><span class="identifier">ostream</span><span class="special">&amp;</span> <span class="identifier">write_code</span><span class="special">(</span><span class="identifier">std</span><span class="special">::</span><span class="identifier">ostream</span><span class="special">&amp;</span> <span class="identifier">os</span><span class="special">,</span>
+                         <span class="keyword">const</span> <span class="identifier">test_data</span><span class="special">&lt;</span><span class="identifier">T</span><span class="special">&gt;&amp;</span> <span class="identifier">data</span><span class="special">,</span> 
+                         <span class="keyword">const</span> <span class="keyword">char</span><span class="special">*</span> <span class="identifier">name</span><span class="special">);</span>
+                         
+<span class="special">}}}</span> <span class="comment">// namespaces
+</span></pre>
+<a name="math_toolkit.toolkit.internals2.test_data.description"></a>
+<h5>
+<a name="id802951"></a>
+          <a href="test_data.html#math_toolkit.toolkit.internals2.test_data.description">说明</a>
+  </h5>
+<p>
+  这些工具由下面的级数例子进行了很好的说明说明：</p>
+<p>
+          test_data 的功能分为以下几个部分：</p>
+<div class="itemizedlist"><ul type="disc">
+<li>
+      实现将要为其生成测试数据的函数对象：这是你需要编写的代码。</li>
+<li>
+      一个或多个传递给这个函数对象的参数，这以一种相当抽象的方式描述： 给我N个类似于<span class="emphasis"><em>这样</em></span> 分布的点。</li>
+<li>
+      test_data类， 带有这个函数对象和这些参数的描述以及要求输出的点的个数，这些点存储在一个已排序的容器中。</li>
+<li>
+            迭代整数 test_data 容器的函数以及将数据以 csv 格式，或 C++ 源代码的方式输出 (使用 Boost.Array 作为一个数值表)。</li>
+</ul></div>
+<a name="math_toolkit.toolkit.internals2.test_data.example_1__output_data_for_graph_plotting"></a>
+<h5>
+<a name="id803025"></a>
+        <a href="test_data.html#math_toolkit.toolkit.internals2.test_data.example_1__output_data_for_graph_plotting">例一：输出数据用于绘图</a></h5>
+<p>
+          假如，假设我们想要在 -3 到
+          100之间为函数lgamma绘图，可以通过下面的代码做到：</p>
+<pre class="programlisting"><span class="preprocessor">#include</span> <span class="special">&lt;</span><span class="identifier">boost</span><span class="special">/</span><span class="identifier">math</span><span class="special">/</span><span class="identifier">tools</span><span class="special">/</span><span class="identifier">test_data</span><span class="special">.</span><span class="identifier">hpp</span><span class="special">&gt;</span>
+<span class="preprocessor">#include</span> <span class="special">&lt;</span><span class="identifier">boost</span><span class="special">/</span><span class="identifier">math</span><span class="special">/</span><span class="identifier">special_functions</span><span class="special">/</span><span class="identifier">gamma</span><span class="special">.</span><span class="identifier">hpp</span><span class="special">&gt;</span>
+
+<span class="keyword">int</span> <span class="identifier">main</span><span class="special">()</span>
+<span class="special">{</span>
+   <span class="keyword">using</span> <span class="keyword">namespace</span> <span class="identifier">boost</span><span class="special">::</span><span class="identifier">math</span><span class="special">::</span><span class="identifier">tools</span><span class="special">;</span>
+   
+   <span class="comment">// 生成一个对象来保存这些数据:
+</span>   <span class="identifier">test_data</span><span class="special">&lt;</span><span class="keyword">double</span><span class="special">&gt;</span> <span class="identifier">data</span><span class="special">;</span>
+   
+   <span class="comment">// 在 -3 到 100之间均匀插入500个点:
+</span>   <span class="keyword">double</span> <span class="special">(*</span><span class="identifier">pf</span><span class="special">)(</span><span class="keyword">double</span><span class="special">)</span> <span class="special">=</span> <span class="identifier">boost</span><span class="special">::</span><span class="identifier">math</span><span class="special">::</span><span class="identifier">lgamma</span><span class="special">;</span>
+   <span class="identifier">data</span><span class="special">.</span><span class="identifier">insert</span><span class="special">(</span><span class="identifier">pf</span><span class="special">,</span> <span class="identifier">make_periodic_param</span><span class="special">(-</span><span class="number">3.0</span> <span class="special">+</span> <span class="number">0.00001</span><span class="special">,</span> <span class="number">100.0</span><span class="special">,</span> <span class="number">500</span><span class="special">));</span>
+   
+   <span class="comment">// 以 csv 格式打印:
+</span>   <span class="identifier">write_csv</span><span class="special">(</span><span class="identifier">std</span><span class="special">::</span><span class="identifier">cout</span><span class="special">,</span> <span class="identifier">data</span><span class="special">,</span> <span class="string">", "</span><span class="special">);</span>
+   <span class="keyword">return</span> <span class="number">0</span><span class="special">;</span>
+<span class="special">}</span>
+</pre>
+<p>
+  当将结果进行绘图时，图像为：</p>
+<p>
+          <span class="inlinemediaobject"><img src="../../../../graphs/lgamma.png" align="middle"></span>
+  </p>
+<a name="math_toolkit.toolkit.internals2.test_data.example_2__creating_test_data"></a>
+<h5>
+<a name="id803582"></a>
+          <a href="test_data.html#math_toolkit.toolkit.internals2.test_data.example_2__creating_test_data">例2：生成测试数据</a>
+        </h5>
+<p>
+  作为第二个例子，假设我们想要为一个特殊函数生成高精度的测试数据。因为许多测试函数有两个或更多的相互独立的参数，在没有耗费巨大的计算量的情况下生成千兆字节的测试数据很难有效地完全覆盖所有可能的参数空间。一个好的方法是为用户提供一个可以在一个指定区间上快速生成测试数据的工具。</p>
+<p>
+  在这个例子中，我们将使用精度为1000bit的<a href="http://shoup.net/ntl/doc/RR.txt" target="_top">NTL::RR</a> 库为β函数生成测试数据。我们使用lgamma函数有意地实现了一个相当简单的β函数而没有使用库中实现的通用版本的β函数，并依赖于高精度的数据类型来获取精度至少为128bit的结果。通过这种方式，我们的测试数据就会完全独立于我们在β函数内部所使用的所有的技巧。</p>
+<p>
+  让我们定义生成测试数据的函数对象：</p>
+<pre class="programlisting"><span class="preprocessor">#include</span> <span class="special">&lt;</span><span class="identifier">boost</span><span class="special">/</span><span class="identifier">math</span><span class="special">/</span><span class="identifier">tools</span><span class="special">/</span><span class="identifier">ntl</span><span class="special">.</span><span class="identifier">hpp</span><span class="special">&gt;</span>
+<span class="preprocessor">#include</span> <span class="special">&lt;</span><span class="identifier">boost</span><span class="special">/</span><span class="identifier">math</span><span class="special">/</span><span class="identifier">special_functions</span><span class="special">/</span><span class="identifier">gamma</span><span class="special">.</span><span class="identifier">hpp</span><span class="special">&gt;</span>
+<span class="preprocessor">#include</span> <span class="special">&lt;</span><span class="identifier">boost</span><span class="special">/</span><span class="identifier">math</span><span class="special">/</span><span class="identifier">tools</span><span class="special">/</span><span class="identifier">test_data</span><span class="special">.</span><span class="identifier">hpp</span><span class="special">&gt;</span>
+<span class="preprocessor">#include</span> <span class="special">&lt;</span><span class="identifier">fstream</span><span class="special">&gt;</span>
+
+<span class="preprocessor">#include</span> <span class="special">&lt;</span><span class="identifier">boost</span><span class="special">/</span><span class="identifier">math</span><span class="special">/</span><span class="identifier">tools</span><span class="special">/</span><span class="identifier">test_data</span><span class="special">.</span><span class="identifier">hpp</span><span class="special">&gt;</span>
+
+<span class="keyword">using</span> <span class="keyword">namespace</span> <span class="identifier">boost</span><span class="special">::</span><span class="identifier">math</span><span class="special">::</span><span class="identifier">tools</span><span class="special">;</span>
+
+<span class="keyword">struct</span> <span class="identifier">beta_data_generator</span>
+<span class="special">{</span>
+   <span class="identifier">NTL</span><span class="special">::</span><span class="identifier">RR</span> <span class="keyword">operator</span><span class="special">()(</span><span class="identifier">NTL</span><span class="special">::</span><span class="identifier">RR</span> <span class="identifier">a</span><span class="special">,</span> <span class="identifier">NTL</span><span class="special">::</span><span class="identifier">RR</span> <span class="identifier">b</span><span class="special">)</span>
+   <span class="special">{</span>
+      <span class="comment">//
+</span>      <span class="comment">// 如果我们抛出一个定义域错误的异常，那么 test_data 
+</span>      <span class="comment">// 将会忽略这个输出点，我们将会使用这种方式来过滤
+</span>      <span class="comment">//  a &lt; b 的情况，因为β函数
+</span>      <span class="comment">// 在a和b上是对象的:
+</span>      <span class="comment">//
+</span>      <span class="keyword">if</span><span class="special">(</span><span class="identifier">a</span> <span class="special">&lt;</span> <span class="identifier">b</span><span class="special">)</span>
+         <span class="keyword">throw</span> <span class="identifier">std</span><span class="special">::</span><span class="identifier">domain_error</span><span class="special">(</span><span class="string">""</span><span class="special">);</span>
+         
+      <span class="comment">// very naively calculate spots with lgamma:
+</span>      <span class="identifier">NTL</span><span class="special">::</span><span class="identifier">RR</span> <span class="identifier">g1</span><span class="special">,</span> <span class="identifier">g2</span><span class="special">,</span> <span class="identifier">g3</span><span class="special">;</span>
+      <span class="keyword">int</span> <span class="identifier">s1</span><span class="special">,</span> <span class="identifier">s2</span><span class="special">,</span> <span class="identifier">s3</span><span class="special">;</span>
+      <span class="identifier">g1</span> <span class="special">=</span> <span class="identifier">boost</span><span class="special">::</span><span class="identifier">math</span><span class="special">::</span><span class="identifier">lgamma</span><span class="special">(</span><span class="identifier">a</span><span class="special">,</span> <span class="special">&amp;</span><span class="identifier">s1</span><span class="special">);</span>
+      <span class="identifier">g2</span> <span class="special">=</span> <span class="identifier">boost</span><span class="special">::</span><span class="identifier">math</span><span class="special">::</span><span class="identifier">lgamma</span><span class="special">(</span><span class="identifier">b</span><span class="special">,</span> <span class="special">&amp;</span><span class="identifier">s2</span><span class="special">);</span>
+      <span class="identifier">g3</span> <span class="special">=</span> <span class="identifier">boost</span><span class="special">::</span><span class="identifier">math</span><span class="special">::</span><span class="identifier">lgamma</span><span class="special">(</span><span class="identifier">a</span><span class="special">+</span><span class="identifier">b</span><span class="special">,</span> <span class="special">&amp;</span><span class="identifier">s3</span><span class="special">);</span>
+      <span class="identifier">g1</span> <span class="special">+=</span> <span class="identifier">g2</span> <span class="special">-</span> <span class="identifier">g3</span><span class="special">;</span>
+      <span class="identifier">g1</span> <span class="special">=</span> <span class="identifier">exp</span><span class="special">(</span><span class="identifier">g1</span><span class="special">);</span>
+      <span class="identifier">g1</span> <span class="special">*=</span> <span class="identifier">s1</span> <span class="special">*</span> <span class="identifier">s2</span> <span class="special">*</span> <span class="identifier">s3</span><span class="special">;</span>
+      <span class="keyword">return</span> <span class="identifier">g1</span><span class="special">;</span>
+   <span class="special">}</span>
+<span class="special">};</span>
+</pre>
+<p>
+          为了生成数据，我们需要输出将进行测试的 a 和 b的定义域：函数<code class="computeroutput"><span class="identifier">get_user_parameter_info</span></code>
+          函数是出于这个目的而设计的。main函数的开始看起来是这样的：</p>
+<pre class="programlisting"><span class="comment">// 设置 RR 库的精度:
+</span><span class="identifier">NTL</span><span class="special">::</span><span class="identifier">RR</span><span class="special">::</span><span class="identifier">SetPrecision</span><span class="special">(</span><span class="number">1000</span><span class="special">);</span> <span class="comment">// bits.
+</span><span class="identifier">NTL</span><span class="special">::</span><span class="identifier">RR</span><span class="special">::</span><span class="identifier">SetOutputPrecision</span><span class="special">(</span><span class="number">40</span><span class="special">);</span> <span class="comment">// 十进制数字个数.
+</span>
+<span class="identifier">parameter_info</span><span class="special">&lt;</span><span class="identifier">NTL</span><span class="special">::</span><span class="identifier">RR</span><span class="special">&gt;</span> <span class="identifier">arg1</span><span class="special">,</span> <span class="identifier">arg2</span><span class="special">;</span>
+<span class="identifier">test_data</span><span class="special">&lt;</span><span class="identifier">NTL</span><span class="special">::</span><span class="identifier">RR</span><span class="special">&gt;</span> <span class="identifier">data</span><span class="special">;</span>
+
+<span class="identifier">std</span><span class="special">::</span><span class="identifier">cout</span> <span class="special">&lt;&lt;</span> <span class="string">"Welcome.\n"</span>
+   <span class="string">"This program will generate spot tests for the beta function:\n"</span>
+   <span class="string">"  beta(a, b)\n\n"</span><span class="special">;</span>
+
+<span class="keyword">bool</span> <span class="identifier">cont</span><span class="special">;</span>
+<span class="identifier">std</span><span class="special">::</span><span class="identifier">string</span> <span class="identifier">line</span><span class="special">;</span>
+
+<span class="keyword">do</span><span class="special">{</span>
+   <span class="comment">// 提示用户 a 和 b 的定义域:
+</span>   <span class="identifier">get_user_parameter_info</span><span class="special">(</span><span class="identifier">arg1</span><span class="special">,</span> <span class="string">"a"</span><span class="special">);</span>
+   <span class="identifier">get_user_parameter_info</span><span class="special">(</span><span class="identifier">arg2</span><span class="special">,</span> <span class="string">"b"</span><span class="special">);</span>
+   
+   <span class="comment">// 生成测试数据:
+</span>   <span class="identifier">data</span><span class="special">.</span><span class="identifier">insert</span><span class="special">(</span><span class="identifier">beta_data_generator</span><span class="special">(),</span> <span class="identifier">arg1</span><span class="special">,</span> <span class="identifier">arg2</span><span class="special">);</span>
+   
+   <span class="comment">// 判断用户是否希望进行更多的测试:
+</span>   <span class="identifier">std</span><span class="special">::</span><span class="identifier">cout</span> <span class="special">&lt;&lt;</span> <span class="string">"Any more data [y/n]?"</span><span class="special">;</span>
+   <span class="identifier">std</span><span class="special">::</span><span class="identifier">getline</span><span class="special">(</span><span class="identifier">std</span><span class="special">::</span><span class="identifier">cin</span><span class="special">,</span> <span class="identifier">line</span><span class="special">);</span>
+   <span class="identifier">boost</span><span class="special">::</span><span class="identifier">algorithm</span><span class="special">::</span><span class="identifier">trim</span><span class="special">(</span><span class="identifier">line</span><span class="special">);</span>
+   <span class="identifier">cont</span> <span class="special">=</span> <span class="special">(</span><span class="identifier">line</span> <span class="special">==</span> <span class="string">"y"</span><span class="special">);</span>
+<span class="special">}</span><span class="keyword">while</span><span class="special">(</span><span class="identifier">cont</span><span class="special">);</span>
+</pre>
+<div class="caution"><table border="0" summary="Caution">
+<tr>
+<td rowspan="2" align="center" valign="top" width="25"><img alt="[Caution]" src="../../../../../../../../doc/html/images/caution.png"></td>
+<th align="left">注意</th>
+</tr>
+<tr><td align="left" valign="top"><p>
+            在这里，一个潜在的障碍需要提及：当有两个或更多参数的时候，函数test_data&lt;&gt;::insert
+            交付生成测试数据的一个矩阵，所以，如果我们有两个参数，并且对于每个参数我们需要1000个测试数据，那么会有<span class="emphasis"><em>总共会有一百万个测试点</em></span> <em>。</em>不要说没有提醒过你!
+          </p></td></tr>
+</table></div>
+<p>
+  这里是程序的最后一步，将测试数据写入到文件中：</p>
+<pre class="programlisting"><span class="identifier">std</span><span class="special">::</span><span class="identifier">cout</span> <span class="special">&lt;&lt;</span> <span class="string">"Enter name of test data file [default=beta_data.ipp]"</span><span class="special">;</span>
+<span class="identifier">std</span><span class="special">::</span><span class="identifier">getline</span><span class="special">(</span><span class="identifier">std</span><span class="special">::</span><span class="identifier">cin</span><span class="special">,</span> <span class="identifier">line</span><span class="special">);</span>
+<span class="identifier">boost</span><span class="special">::</span><span class="identifier">algorithm</span><span class="special">::</span><span class="identifier">trim</span><span class="special">(</span><span class="identifier">line</span><span class="special">);</span>
+<span class="keyword">if</span><span class="special">(</span><span class="identifier">line</span> <span class="special">==</span> <span class="string">""</span><span class="special">)</span>
+   <span class="identifier">line</span> <span class="special">=</span> <span class="string">"beta_data.ipp"</span><span class="special">;</span>
+<span class="identifier">std</span><span class="special">::</span><span class="identifier">ofstream</span> <span class="identifier">ofs</span><span class="special">(</span><span class="identifier">line</span><span class="special">.</span><span class="identifier">c_str</span><span class="special">());</span>
+<span class="identifier">write_code</span><span class="special">(</span><span class="identifier">ofs</span><span class="special">,</span> <span class="identifier">data</span><span class="special">,</span> <span class="string">"beta_data"</span><span class="special">);</span>
+</pre>
+<p>
+  测试数据的格式类似于下面：</p>
+<pre class="programlisting"><span class="preprocessor">#define</span> <span class="identifier">SC_</span><span class="special">(</span><span class="identifier">x</span><span class="special">)</span> <span class="keyword">static_cast</span><span class="special">&lt;</span><span class="identifier">T</span><span class="special">&gt;(</span><span class="identifier">BOOST_JOIN</span><span class="special">(</span><span class="identifier">x</span><span class="special">,</span> <span class="identifier">L</span><span class="special">))</span>
+   <span class="keyword">static</span> <span class="keyword">const</span> <span class="identifier">boost</span><span class="special">::</span><span class="identifier">array</span><span class="special">&lt;</span><span class="identifier">boost</span><span class="special">::</span><span class="identifier">array</span><span class="special">&lt;</span><span class="identifier">T</span><span class="special">,</span> <span class="number">3</span><span class="special">&gt;,</span> <span class="number">1830</span><span class="special">&gt;</span>
+   <span class="identifier">beta_med_data</span> <span class="special">=</span> <span class="special">{</span>
+      <span class="identifier">SC_</span><span class="special">(</span><span class="number">0.4883005917072296142578125</span><span class="special">),</span>
+      <span class="identifier">SC_</span><span class="special">(</span><span class="number">0.4883005917072296142578125</span><span class="special">),</span>
+      <span class="identifier">SC_</span><span class="special">(</span><span class="number">3.245912809500479157065104747353807392371</span><span class="special">),</span> 
+      <span class="identifier">SC_</span><span class="special">(</span><span class="number">3.5808107852935791015625</span><span class="special">),</span>
+      <span class="identifier">SC_</span><span class="special">(</span><span class="number">0.4883005917072296142578125</span><span class="special">),</span>
+      <span class="identifier">SC_</span><span class="special">(</span><span class="number">1.007653173802923954909901438393379243537</span><span class="special">),</span> 
+      <span class="comment">/* ... lots of rows skipped */</span>
+<span class="special">};</span>
+</pre>
+<p>
+  第五行开始的两个数据是我们作递给函数对象的参数，而最后一个数据是从函数对象中返回的结果。如果我们的函数对象返回一个元组(tuple)，那么除了输入参数之外 ，对于元组中的每个元素我们还可以有一个入口 (entry)。</p>
+<p>
+          开始的 #define 满足两个目的：</p>
+<div class="itemizedlist"><ul type="disc">
+<li>显著地减小文件的大小：否则所有的<code class="computeroutput"><span class="keyword">static_cast</span></code>将会使每个数据多增加许多字节 (当类型T比一个long double更窄时，使用这些static_cast来消除编译器的warning)。</li>
+<li>它提供了一个有用的定制点( customisation point )：例如，如果我们测试一个用户定义的精度大于long double的类型，那么我们可以将其改变为：</li>
+</ul></div>
+<p>
+          <code class="literal">#define SC_(x) lexical_cast&lt;T&gt;(BOOST_STRINGIZE(x))</code>
+  </p>
+<p>
+  来确保在转换为类型T之前没有数值截断。注意，这并不是缺省的设置，因为当表太大时，对于编译器将是一项艰难的工作。</p>
+<a name="math_toolkit.toolkit.internals2.test_data.example_3__profiling_a_continued_fraction_for_convergence_and_accuracy"></a>
+<h5>
+<a name="id806062"></a>
+          <a href="test_data.html#math_toolkit.toolkit.internals2.test_data.example_3__profiling_a_continued_fraction_for_convergence_and_accuracy">例
+          3:为连分数的收敛和精度绘图</a>
+        </h5>
+<p>
+          另一方面，假设我们想要为一个连分数的收敛和误差绘图。作为一个例子，我们将使用上部不完全γ函数(upper
+          incomplete gamma function)的连分数，在每次调用这个函数对象时，它返回连分数的下一个
+  a<sub>N </sub> 和 b<sub>N </sub> ： </p>
+<pre class="programlisting"><span class="keyword">template</span> <span class="special">&lt;</span><span class="keyword">class</span> <span class="identifier">T</span><span class="special">&gt;</span>
+<span class="keyword">struct</span> <span class="identifier">upper_incomplete_gamma_fract</span>
+<span class="special">{</span>
+<span class="keyword">private</span><span class="special">:</span>
+   <span class="identifier">T</span> <span class="identifier">z</span><span class="special">,</span> <span class="identifier">a</span><span class="special">;</span>
+   <span class="keyword">int</span> <span class="identifier">k</span><span class="special">;</span>
+<span class="keyword">public</span><span class="special">:</span>
+   <span class="keyword">typedef</span> <span class="identifier">std</span><span class="special">::</span><span class="identifier">pair</span><span class="special">&lt;</span><span class="identifier">T</span><span class="special">,</span><span class="identifier">T</span><span class="special">&gt;</span> <span class="identifier">result_type</span><span class="special">;</span>
+
+   <span class="identifier">upper_incomplete_gamma_fract</span><span class="special">(</span><span class="identifier">T</span> <span class="identifier">a1</span><span class="special">,</span> <span class="identifier">T</span> <span class="identifier">z1</span><span class="special">)</span>
+      <span class="special">:</span> <span class="identifier">z</span><span class="special">(</span><span class="identifier">z1</span><span class="special">-</span><span class="identifier">a1</span><span class="special">+</span><span class="number">1</span><span class="special">),</span> <span class="identifier">a</span><span class="special">(</span><span class="identifier">a1</span><span class="special">),</span> <span class="identifier">k</span><span class="special">(</span><span class="number">0</span><span class="special">)</span>
+   <span class="special">{</span>
+   <span class="special">}</span>
+
+   <span class="identifier">result_type</span> <span class="keyword">operator</span><span class="special">()()</span>
+   <span class="special">{</span>
+      <span class="special">++</span><span class="identifier">k</span><span class="special">;</span>
+      <span class="identifier">z</span> <span class="special">+=</span> <span class="number">2</span><span class="special">;</span>
+      <span class="keyword">return</span> <span class="identifier">result_type</span><span class="special">(</span><span class="identifier">k</span> <span class="special">*</span> <span class="special">(</span><span class="identifier">a</span> <span class="special">-</span> <span class="identifier">k</span><span class="special">),</span> <span class="identifier">z</span><span class="special">);</span>
+   <span class="special">}</span>
+<span class="special">};</span>
+</pre>
+<p>
+          我们想要测试连分数的相对误差和收敛速率，因此我们写出一个将两个值做为一个元组返回的函数： test_data 类将为我们取出这个元组，并为元组中的每个数据生成一列数据 (除了输出参数之外)：</p>
+<pre class="programlisting"><span class="preprocessor">#include</span> <span class="special">&lt;</span><span class="identifier">boost</span><span class="special">/</span><span class="identifier">math</span><span class="special">/</span><span class="identifier">tools</span><span class="special">/</span><span class="identifier">test_data</span><span class="special">.</span><span class="identifier">hpp</span><span class="special">&gt;</span>
+<span class="preprocessor">#include</span> <span class="special">&lt;</span><span class="identifier">boost</span><span class="special">/</span><span class="identifier">math</span><span class="special">/</span><span class="identifier">tools</span><span class="special">/</span><span class="identifier">test</span><span class="special">.</span><span class="identifier">hpp</span><span class="special">&gt;</span>
+<span class="preprocessor">#include</span> <span class="special">&lt;</span><span class="identifier">boost</span><span class="special">/</span><span class="identifier">math</span><span class="special">/</span><span class="identifier">special_functions</span><span class="special">/</span><span class="identifier">gamma</span><span class="special">.</span><span class="identifier">hpp</span><span class="special">&gt;</span>
+<span class="preprocessor">#include</span> <span class="special">&lt;</span><span class="identifier">boost</span><span class="special">/</span><span class="identifier">math</span><span class="special">/</span><span class="identifier">tools</span><span class="special">/</span><span class="identifier">ntl</span><span class="special">.</span><span class="identifier">hpp</span><span class="special">&gt;</span>
+<span class="preprocessor">#include</span> <span class="special">&lt;</span><span class="identifier">boost</span><span class="special">/</span><span class="identifier">tr1</span><span class="special">/</span><span class="identifier">tuple</span><span class="special">.</span><span class="identifier">hpp</span><span class="special">&gt;</span>
+
+<span class="keyword">template</span> <span class="special">&lt;</span><span class="keyword">class</span> <span class="identifier">T</span><span class="special">&gt;</span>
+<span class="keyword">struct</span> <span class="identifier">profile_gamma_fraction</span>
+<span class="special">{</span>
+   <span class="keyword">typedef</span> <span class="identifier">std</span><span class="special">::</span><span class="identifier">tr1</span><span class="special">::</span><span class="identifier">tuple</span><span class="special">&lt;</span><span class="identifier">T</span><span class="special">,</span> <span class="identifier">T</span><span class="special">&gt;</span> <span class="identifier">result_type</span><span class="special">;</span>
+
+   <span class="identifier">result_type</span> <span class="keyword">operator</span><span class="special">()(</span><span class="identifier">T</span> <span class="identifier">val</span><span class="special">)</span>
+   <span class="special">{</span>
+      <span class="keyword">using</span> <span class="keyword">namespace</span> <span class="identifier">boost</span><span class="special">::</span><span class="identifier">math</span><span class="special">::</span><span class="identifier">tools</span><span class="special">;</span>
+      <span class="comment">// 估测真值，使用任意精度的算术
+</span>      <span class="comment">// 以及 NTL::RR库:
+</span>      <span class="identifier">NTL</span><span class="special">::</span><span class="identifier">RR</span> <span class="identifier">rval</span><span class="special">(</span><span class="identifier">val</span><span class="special">);</span>
+      <span class="identifier">upper_incomplete_gamma_fract</span><span class="special">&lt;</span><span class="identifier">NTL</span><span class="special">::</span><span class="identifier">RR</span><span class="special">&gt;</span> <span class="identifier">f1</span><span class="special">(</span><span class="identifier">rval</span><span class="special">,</span> <span class="identifier">rval</span><span class="special">);</span>
+      <span class="identifier">NTL</span><span class="special">::</span><span class="identifier">RR</span> <span class="identifier">true_val</span> <span class="special">=</span> <span class="identifier">continued_fraction_a</span><span class="special">(</span><span class="identifier">f1</span><span class="special">,</span> <span class="number">1000</span><span class="special">);</span>
+      <span class="comment">//
+</span>      <span class="comment">// 在double精确度获得近似值以及要求的迭代次数</span><span class="comment">:
+</span>      <span class="identifier">boost</span><span class="special">::</span><span class="identifier">uintmax_t</span> <span class="identifier">iters</span> <span class="special">=</span> <span class="identifier">std</span><span class="special">::</span><span class="identifier">numeric_limits</span><span class="special">&lt;</span><span class="identifier">boost</span><span class="special">::</span><span class="identifier">uintmax_t</span><span class="special">&gt;::</span><span class="identifier">max</span><span class="special">();</span>
+      <span class="identifier">upper_incomplete_gamma_fract</span><span class="special">&lt;</span><span class="identifier">T</span><span class="special">&gt;</span> <span class="identifier">f2</span><span class="special">(</span><span class="identifier">val</span><span class="special">,</span> <span class="identifier">val</span><span class="special">);</span>
+      <span class="identifier">T</span> <span class="identifier">found_val</span> <span class="special">=</span> <span class="identifier">continued_fraction_a</span><span class="special">(</span><span class="identifier">f2</span><span class="special">,</span> <span class="identifier">std</span><span class="special">::</span><span class="identifier">numeric_limits</span><span class="special">&lt;</span><span class="identifier">T</span><span class="special">&gt;::</span><span class="identifier">digits</span><span class="special">,</span> <span class="identifier">iters</span><span class="special">);</span>
+      <span class="comment">//
+</span>      <span class="comment">// 算出相对误差， 以10的-5次方为单位:
+</span>      <span class="identifier">T</span> <span class="identifier">err</span> <span class="special">=</span> <span class="identifier">real_cast</span><span class="special">&lt;</span><span class="identifier">T</span><span class="special">&gt;(</span><span class="identifier">relative_error</span><span class="special">(</span><span class="identifier">true_val</span><span class="special">,</span> <span class="identifier">NTL</span><span class="special">::</span><span class="identifier">RR</span><span class="special">(</span><span class="identifier">found_val</span><span class="special">))</span> <span class="special">/</span> <span class="identifier">std</span><span class="special">::</span><span class="identifier">numeric_limits</span><span class="special">&lt;</span><span class="identifier">T</span><span class="special">&gt;::</span><span class="identifier">epsilon</span><span class="special">());</span>
+      <span class="comment">//
+</span>      <span class="comment">// 将结果作为一个元组(tuple)返回:
+</span>      <span class="keyword">return</span> <span class="identifier">std</span><span class="special">::</span><span class="identifier">tr1</span><span class="special">::</span><span class="identifier">make_tuple</span><span class="special">(</span><span class="identifier">err</span><span class="special">,</span> <span class="identifier">iters</span><span class="special">);</span>
+   <span class="special">}</span>
+<span class="special">};</span>
+</pre>
+<p>
+          将这个函数对象传入到类 test_data 中可以快速生成 csv 数据，对于任何我们感兴趣的类型T：</p>
+<pre class="programlisting"><span class="keyword">int</span> <span class="identifier">main</span><span class="special">()</span>
+<span class="special">{</span>
+   <span class="keyword">using</span> <span class="keyword">namespace</span> <span class="identifier">boost</span><span class="special">::</span><span class="identifier">math</span><span class="special">::</span><span class="identifier">tools</span><span class="special">;</span>
+   <span class="comment">// 生成一个对象来保存这些数据:
+</span>   <span class="identifier">test_data</span><span class="special">&lt;</span><span class="keyword">double</span><span class="special">&gt;</span> <span class="identifier">data</span><span class="special">;</span>
+   <span class="comment">// 在 0之后 到 100之间均匀插入500个点:
+</span>   <span class="identifier">data</span><span class="special">.</span><span class="identifier">insert</span><span class="special">(</span><span class="identifier">profile_gamma_fraction</span><span class="special">&lt;</span><span class="keyword">double</span><span class="special">&gt;(),</span> <span class="identifier">make_periodic_param</span><span class="special">(</span><span class="number">0.01</span><span class="special">,</span> <span class="number">100.0</span><span class="special">,</span> <span class="number">100</span><span class="special">));</span>
+   <span class="comment">// 以 csv 格式打印:
+</span>   <span class="identifier">write_csv</span><span class="special">(</span><span class="identifier">std</span><span class="special">::</span><span class="identifier">cout</span><span class="special">,</span> <span class="identifier">data</span><span class="special">,</span> <span class="string">", "</span><span class="special">);</span>
+   <span class="keyword">return</span> <span class="number">0</span><span class="special">;</span>
+<span class="special">}</span>
+</pre>
+<p>
+  这一次没有必要生成图像，开始的一些输出结果为：</p>
+<pre class="programlisting"><span class="identifier">a</span> <span class="keyword">and</span> <span class="identifier">z</span><span class="special">,</span>  <span class="identifier">Error</span><span class="special">/</span><span class="identifier">epsilon</span><span class="special">,</span>  <span class="identifier">Iterations</span> <span class="identifier">required</span>
+
+<span class="number">0.01</span><span class="special">,</span>     <span class="number">9723.14</span><span class="special">,</span>        <span class="number">4726</span>
+<span class="number">1.0099</span><span class="special">,</span>   <span class="number">9.54818</span><span class="special">,</span>        <span class="number">87</span>
+<span class="number">2.0098</span><span class="special">,</span>   <span class="number">3.84777</span><span class="special">,</span>        <span class="number">40</span>
+<span class="number">3.0097</span><span class="special">,</span>   <span class="number">0.728358</span><span class="special">,</span>       <span class="number">25</span>
+<span class="number">4.0096</span><span class="special">,</span>   <span class="number">2.39712</span><span class="special">,</span>        <span class="number">21</span>
+<span class="number">5.0095</span><span class="special">,</span>   <span class="number">0.233263</span><span class="special">,</span>       <span class="number">16</span>
+</pre>
+<p>
+  所以，非常明显，对于小的a和z不应当使用这个分数。</p>
+<a name="math_toolkit.toolkit.internals2.test_data.reference"></a>
+<h5>
+<a name="id808301"></a>
+          <a href="test_data.html#math_toolkit.toolkit.internals2.test_data.reference">参考</a>
+  </h5>
+<a name="test_data_reference"></a><p>
+        </p>
+<p>
+  这些工具中的大部分都在上面的例子中进行了介绍，我们将只对非成员函数增加下面的说明：</p>
+<p><span class="keyword">template</span> <span class="special">&lt;</span><span class="keyword">class</span> <span class="identifier">T</span><span class="special">&gt;</span>
+    <span class="identifier">parameter_info</span><span class="special">&lt;</span><span class="identifier">T</span><span class="special">&gt;</span> <span class="identifier">make_random_param</span><span class="special">(</span><span class="identifier">T</span> <span class="identifier">start_range</span><span class="special">,</span> <span class="identifier">T</span> <span class="identifier">end_range</span><span class="special">,</span> <span class="keyword">int</span> <span class="identifier">n_points</span><span class="special">);</span>
+</p>
+<p>
+  指示类 test_data 在区间 [start_range,end_range]中只测试 <span class="emphasis"><em>n_points</em></span> 个随机值。</p>
+<pre class="programlisting"><span class="keyword">template</span> <span class="special">&lt;</span><span class="keyword">class</span> <span class="identifier">T</span><span class="special">&gt;</span>
+<span class="identifier">parameter_info</span><span class="special">&lt;</span><span class="identifier">T</span><span class="special">&gt;</span> <span class="identifier">make_periodic_param</span><span class="special">(</span><span class="identifier">T</span> <span class="identifier">start_range</span><span class="special">,</span> <span class="identifier">T</span> <span class="identifier">end_range</span><span class="special">,</span> <span class="keyword">int</span> <span class="identifier">n_points</span><span class="special">);</span>
+</pre>
+<p>
+          指示类 test_data 在区间 [start_range,end_range]中只测试 <span class="emphasis"><em>n_points</em></span> 个均匀分布的值。</p>
+<pre class="programlisting"><span class="keyword">template</span> <span class="special">&lt;</span><span class="keyword">class</span> <span class="identifier">T</span><span class="special">&gt;</span>
+<span class="identifier">parameter_info</span><span class="special">&lt;</span><span class="identifier">T</span><span class="special">&gt;</span> <span class="identifier">make_power_param</span><span class="special">(</span><span class="identifier">T</span> <span class="identifier">basis</span><span class="special">,</span> <span class="keyword">int</span> <span class="identifier">start_exponent</span><span class="special">,</span> <span class="keyword">int</span> <span class="identifier">end_exponent</span><span class="special">);</span>
+</pre>
+<p>
+          指示类 test_data 测试形式为<span class="emphasis"><em> + R *
+          2<sup>expon</sup></em></span> 的数据，其中每个<span class="emphasis"><em>expon</em></span> 都在区间 [start_exponent,
+          end_exponent]中，而每个<span class="emphasis"><em>R</em></span> 是一个在 [0.5, 1]中的随机值。</p>
+<pre class="programlisting"><span class="keyword">template</span> <span class="special">&lt;</span><span class="keyword">class</span> <span class="identifier">T</span><span class="special">&gt;</span>
+<span class="keyword">bool</span> <span class="identifier">get_user_parameter_info</span><span class="special">(</span><span class="identifier">parameter_info</span><span class="special">&lt;</span><span class="identifier">T</span><span class="special">&gt;&amp;</span> <span class="identifier">info</span><span class="special">,</span> <span class="keyword">const</span> <span class="keyword">char</span><span class="special">*</span> <span class="identifier">param_name</span><span class="special">);</span>
+</pre>
+<p>
+  提示用户参数的范围以及使用形式。</p>
+<p>
+          最后，如果我们不想参数包含在输出结果中，我们可以通过设置"dummy parameter"来指示 test_data 类：</p>
+<pre class="programlisting"><span class="identifier">parameter_info</span><span class="special">&lt;</span><span class="keyword">double</span><span class="special">&gt;</span> <span class="identifier">p</span> <span class="special">=</span> <span class="identifier">make_random_param</span><span class="special">(</span><span class="number">2.0</span><span class="special">,</span> <span class="number">5.0</span><span class="special">,</span> <span class="number">10</span><span class="special">);</span>
+<span class="identifier">p</span><span class="special">.</span><span class="identifier">type</span> <span class="special">|=</span> <span class="identifier">dummy_param</span><span class="special">;</span>
+</pre>
+<p>
+  在函数对象在将这个参数传递给正在测试的函数之前通过某种形式将参数进行了变化时，这就很有用，通常，函数对象会以一个元组的形式(tuple)将转换参数和转换结果输出，所以，这就没有必要使初始的伪参数(pseudo-parameter)出现在程序的输出结果中。</p>
+</div>
+<table xmlns:rev="http://www.cs.rpi.edu/~gregod/boost/tools/doc/revision" width="100%"><tr>
+<td align="left"></td>
+<td align="right"><div class="copyright-footer">Copyright ?2006 , 2007, 2008 John Maddock, Paul A. Bristow, Hubert
+      Holin, Xiaogang Zhang and Bruno Lalande<p>
+        Distributed under the Boost Software License, Version 1.0. (See accompanying
+        file LICENSE_1_0.txt or copy at <a href="http://www.boost.org/LICENSE_1_0.txt" target="_top">http://www.boost.org/LICENSE_1_0.txt</a>)
+      </p>
+</div></td>
+</tr></table>
+<hr>
+<div class="spirit-nav">
+<a accesskey="p" href="error_test.html"><img src="../../../../../../../../doc/html/images/prev.png" alt="Prev"></a><a accesskey="u" href="../internals2.html"><img src="../../../../../../../../doc/html/images/up.png" alt="Up"></a><a accesskey="h" href="../../../index.html"><img src="../../../../../../../../doc/html/images/home.png" alt="Home"></a><a accesskey="n" href="../../using_udt.html"><img src="../../../../../../../../doc/html/images/next.png" alt="Next"></a>
+</div>
+</body>
+</html>

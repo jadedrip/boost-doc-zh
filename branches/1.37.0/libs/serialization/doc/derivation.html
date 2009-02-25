@@ -1,0 +1,172 @@
+<!DOCTYPE HTML PUBLIC "-//W3C//DTD HTML 4.01 Transitional//EN" "http://www.w3.org/TR/html4/loose.dtd">
+<html>
+<head>
+<!--
+(C) Copyright 2002-4 Robert Ramey - http://www.rrsd.com .
+Use, modification and distribution is subject to the Boost Software
+License, Version 1.0. (See accompanying file LICENSE_1_0.txt or copy at
+http://www.boost.org/LICENSE_1_0.txt)
+-->
+  <meta http-equiv="Content-Type" content="text/html; charset=UTF-8">
+
+  <link rel="stylesheet" type="text/css" href="../../../boost.css">
+
+  <link rel="stylesheet" type="text/css" href="style.css">
+
+  <title>Serialization - Derivation from an Existing Archive</title>
+</head>
+
+
+
+<body link="#0000ff" vlink="#800080">
+
+<table summary="header" border="0" cellpadding="7" cellspacing="0" width="100%">
+
+  <tbody>
+    <tr>
+ 
+    <td valign="top" width="300"> 
+      
+      <h3><a href="../../../index.htm"><img alt="C++ Boost" src="../../../boost.png" border="0" height="86" width="277"></a></h3>
+
+    </td>
+
+    <td valign="top"> 
+      
+      <h1 align="center">Serialization序列化</h1>
+
+      
+      <h2 align="center">从已有的存档类派生</h2>
+
+    </td>
+
+  </tr>
+
+  </tbody>
+</table>
+
+<hr>
+<dl class="page-index">
+
+  <dt><a target="detail" href="#portable_archives">可移植的二进制存档</a>
+  </dt>
+  <dt><a target="detail" href="#fast_archives">快速二进制存档</a>
+  </dt>
+</dl>
+
+
+<a name="portable_archives">
+</a>
+<h3><a name="portable_archives">可移植的二进制存档</a></h3>
+
+<a name="portable_archives">有可能你想从一个已有的存档类派生创建出一个新的存档类。本库中已经包含了相关的例子程序来示范如何从一个已有的存档类派生一个新的存档类。第一个例子是
+</a><a href="../example/demo_portable_archive.cpp" target="demo_portable_archive_cpp">demo_portable_archive.cpp</a>.
+这个二进制存档将以可移植的格式来保存/导入整数。它派生自原生二进制存档，以特定的版本重载了整数的保存/导入函数，在需要的时候将整数转换为高位在后
+的格式。它还实现了一个异常，用于表示在一个平台上保存的整数在另一个平台导入时数值过大。该例子没有处理浮点类型。该例子示范了必须要处理的几个问题。
+以下讨论仅针对输出存档，不过对于输入存档是相似的。
+
+<ol>
+
+    <li><i>派生自</i> <code style="white-space: normal;">binary_oarchive_impl<portable_binary_oarchive> <span style="font-weight: bold;">而不是</span><b></b> <code style="white-space: normal;">binary_oarchive</code> <br>
+正如
+    <a href="../../../boost/archive/binary_oarchive.hpp" target="binary_oarchive_hpp">binary_oarchive.hpp</a> 中的注释所说，<code style="white-space: normal;">binary_oarchive</code> 其实是 
+    <code style="white-space: normal;">binary_oarchive_impl&lt;binary_oarchive&gt;</code> 的缩写。所以我们应该派生自 <code style="white-space: normal;">binary_oarchive_impl&lt;portable_binary_oarchive&gt;</code> 而不是 <code style="white-space: normal;">binary_oarchive</code>.
+    </portable_binary_oarchive></code>
+    <pre><code>
+class portable_binary_oarchive :
+    // 不要派生自 binary_oarchive !!!
+    public binary_oarchive_impl&lt;portable_binary_oarchive&gt;
+{
+...
+</code></pre>
+
+    </li>
+  <li><i>注意</i> &lt;&gt;<i> 中的</i> <code style="white-space: normal;">portable_binary_oarchive</code>，这是必须的，以便基类可以将它们的 <code style="white-space: normal;">this</code> 指针向下转型为最底层的派生类。这被称为 <b>C</b>uriously <b>R</b>ecurring
+    <b>T</b>emplate <b>P</b>attern (<b>CRTP</b>) <a href="bibliography.html#11">[11]</a>.  
+用于实现静态的多态。
+    </li>
+  <li><i>必须显式指明基类可以访问派生类。</i>方法可以是让成员公有，或是包含基类的友元声明。
+    <pre><code>
+    typedef portable_binary_oarchive derived_t;
+    friend class detail::common_oarchive&lt;derived_t&gt;;
+    friend class basic_binary_oarchive&lt;derived_t&gt;;
+    friend class basic_binary_oprimitive&lt;
+        derived_t, 
+        std::ostream::char_type, 
+        std::ostream::traits_type
+    &gt;;
+    friend class boost::serialization::save_access;
+</code></pre>
+
+    </li>
+  <li><i>必须显式调用基类函数。</i>我们要为保存基本类型而重载函数名 <code style="white-space: normal;">save</code>.
+这很容易。在派生类中使用一个函数名字会
+"隐藏" 基类中的同名函数。即，重载的函数名不会自动包含。为此，我们可以用：
+    <pre><code>
+    using binary_oarchive_impl&lt;derived_t&gt;::save;
+    void save(const unsigned int t);
+    ...
+</code></pre>
+这在符合标准的编译器下是可用的。不过，我发现以下的等价方法可以用于更多的编译器。
+    <pre><code>
+    // 对于这里未指定的任意类型，缺省会失败
+    template&lt;class T&gt;
+    void save(const T &amp; t){
+        binary_oarchive_impl&lt;derived_t&gt;::save(t);
+    }
+    void save(const unsigned int t);
+    ...
+</code></pre>
+所以，这是我用的办法。
+    </li>
+  <li><i>必须包含基类的模板定义。</i>该示例包含：
+    <pre><code><br>// 为该二进制流的类型</code><code>进行显式实例化</code><code><br>#include &lt;boost/archive/basic_binary_oprimitive.ipp&gt;<br></code></pre>
+就是为此目的。没有包含所需的模板定义将会导致程序在链接时产生未定义符号的错误。
+    </li>
+  <li><i>不进行改造的话，该类不可以再进行派生</i><br>
+用于 <b>CRTP</b> 的基类必须是以最底层派生类为参数的模板。正如这里所示，该类不可以用作基类。为了从该类进一步派生，就必须参照原有的 <code style="white-space: normal;">binary_oarchive</code> 进行改造。应该修改如下：
+    <pre><code>
+template&lt;class Archive&gt;
+class portable_binary_oarchive_impl :
+    // 不要派生自 binary_oarchive !!!
+    public binary_oarchive_impl&lt;Archive&gt;
+{
+    ...
+);
+
+// 不要派生自本类 !!!
+class portable_binary_oarchive : 
+    public portable_binary_oarchive_impl&lt;portable_binary_oarchive&gt;
+{
+public:
+    portable_binary_oarchive(std::ostream &amp; os, unsigned int flags = 0) :
+        portable_binary_oarchive_impl&lt;binary_oarchive&gt;(os, flags)
+    {}
+};
+</code></pre>
+
+
+  </li>
+</ol>
+  
+
+<a name="fast_archives">
+</a>
+<h3><a name="fast_archives">快速二进制存档</a></h3>
+
+<a name="fast_archives">第二个例子 
+</a><a href="../example/demo_fast_archive.cpp" target="demo_fast_archive_cpp">demo_fast_archive.cpp</a>与
+第一个相似。差别在于它会在调用缺省的序列化之前截取序列化。在这个例子中，我们要将C整数数组的缺省序列化替换为一个更快的版本。缺省版本会对数组中的
+每一个元素调用序列化函数。如果这是一个整数数组，而且我们不考虑存档会移植到其它平台，那么我们可以将整个数组作为一个二进制字节串来保存/导入。这要
+比缺省的一个个元素处理更快。
+
+<p>前面提到过的基本类型的保存/导入函数的重载在这里同样适用，所以代码也非常相似。
+</p>
+<hr>
+<p><i>&copy; Copyright <a href="http://www.rrsd.com">Robert Ramey</a> 2002-2004. 
+Distributed under the Boost Software License, Version 1.0. (See
+accompanying file LICENSE_1_0.txt or copy at http://www.boost.org/LICENSE_1_0.txt)
+</i></p>
+
+</body>
+</html>

@@ -1,0 +1,224 @@
+<!DOCTYPE HTML PUBLIC "-//W3C//DTD HTML 4.01 Transitional//EN" "http://www.w3.org/TR/html4/loose.dtd">
+<html>
+<head>
+<!--
+(C) Copyright 2002-4 Robert Ramey - http://www.rrsd.com . 
+Use, modification and distribution is subject to the Boost Software
+License, Version 1.0. (See accompanying file LICENSE_1_0.txt or copy at
+http://www.boost.org/LICENSE_1_0.txt)
+-->
+  <meta http-equiv="Content-Type" content="text/html; charset=UTF-8">
+
+  <link rel="stylesheet" type="text/css" href="../../../boost.css">
+
+  <link rel="stylesheet" type="text/css" href="style.css">
+
+  <title>Template serialization - shared_ptr</title>
+</head>
+
+
+
+<body link="#0000ff" vlink="#800080">
+
+<table summary="header" border="0" cellpadding="7" cellspacing="0" width="100%">
+
+  <tbody>
+    <tr>
+ 
+    <td valign="top" width="300"> 
+      
+      <h3><a href="../../../index.htm"><img alt="C++ Boost" src="../../../boost.png" border="0" height="86" width="277"></a></h3>
+
+    </td>
+
+    <td valign="top"> 
+      
+      <h1 align="center">Serialization序列化</h1>
+
+      
+      <h2 align="center">模板的序列化 - <code style="white-space: normal;">shared_ptr&lt;class T&gt;</code></h2>
+
+    </td>
+
+  </tr>
+
+  </tbody>
+</table>
+
+<hr>以下所有代码片断都定义于
+<code style="white-space: normal;">boost::serialization</code> 名字空间。
+<p>
+<code style="white-space: normal;">shared_ptr&lt;T&gt;</code> 的定义位于
+<a href="../../../boost/shared_ptr.hpp" target="shared_ptr.hpp">shared_ptr.hpp</a>.
+</p>
+<p>通常一个 <code style="white-space: normal;">shared_ptr&lt;T&gt;</code> 类大概是这样的：
+</p>
+<dl>
+
+    <dt><code style="white-space: normal;">shared_ptr&lt;T&gt;</code> 包含：
+    </dt>
+  <dl>
+
+        <dt><code style="white-space: normal;">T *px;</code>
+        </dt>
+    <dt><code style="white-space: normal;">shared_count pn;</code> 包含一个指针，指向：
+        </dt>
+    <dl>
+
+            <dt><code style="white-space: normal;">sp_counted_base_impl&lt;T, ...&gt;</code> 它派生自多态抽象类
+            </dt>
+      <dl>
+
+                <dt><code style="white-space: normal;">sp_counted_base</code>
+            </dt>
+      </dl>
+
+        
+    </dl>
+
+    
+  </dl>
+
+</dl>
+序列化的过程按上述的顺序进行。
+<p>执行 <code style="white-space: normal;">shared_ptr</code> 序列化的第一步是，序列化 <code style="white-space: normal;">shared_ptr</code> 的相关成员。这很简单：
+</p>
+<pre><code>
+template&lt;class Archive, class T&gt;
+inline void serialize(
+    Archive &amp; ar,
+    shared_ptr&lt;T&gt; &amp; t,
+    const unsigned int file_version,
+    int
+){
+    ar &amp; t.px; // 保存裸指针
+    ar &amp; t.pn; // 保存共享的引用计数
+}
+</code></pre>
+还不错。现在来序列化 <code style="white-space: normal;">shared_count</code>:
+<pre><code>
+template&lt;class Archive&gt;
+inline void save(
+    Archive &amp; ar,
+    const boost::detail::shared_count &amp; t,
+    const unsigned int file_version
+){
+    ar &lt;&lt; t.pi_;
+}
+
+template&lt;class Archive&gt;
+inline void load(
+    Archive &amp; ar,
+    boost::detail::shared_count &amp; t,
+    const unsigned int file_version
+){
+    ar &gt;&gt; t.pi_;
+}
+</code></pre>
+本库的一个关键特点是，无须修改类或模板的声明或定义，就可以指定一个类或模板的序列化。这被称为<span style="font-style: italic;">非介入式</span>序列化。
+<p>shared_count 的 <code style="white-space: normal;">pi_</code>member 是一个指向 <code style="white-space: normal;">sp_counted_base_impl<t ,="" .=""> 实例的指针。由于这个类没有缺省构造函数，所以序列化要求以下重载：
+</t></code></p>
+<pre><code>
+template&lt;class Archive, class P, class D&gt;
+inline void save_construct_data(
+    Archive &amp; ar,
+    const boost::detail::sp_counted_base_impl</code><p ,="" d=""> * t, <br>    const unsigned int file_version<br>){<br>    // 用于构造的变量<br>    ar &lt;&lt; t-&gt;ptr;<br>    ar &lt;&lt; *t;<br>}<br><br>template<class archive="" p="" class="" d="">
+inline void load_construct_data(
+    Archive &amp; ar,
+    boost::detail::sp_counted_base_impl</class></p><p ,="" d=""> * t, <br>    const unsigned int file_version<br>){<br>    P ptr_;<br>    ar &gt;&gt; ptr_;<br>    // placement new<br>    ::new(t)boost::detail::sp_counted_base_impl</p><p ,="" d="">(ptr_,  D());<br>    ar &gt;&gt; *t;<br>}<br></p></pre>
+语句 <code style="white-space: normal;">ar &gt;&gt; ptr_</code> 是关键。这里反序列化了前面已经反序列化过的同一个指针。缺省的对象跟踪可以确保不会创建超过一个的对象实例，多次反序列化只会返回相同的指针。因此，无论有多少个 <code style="white-space: normal;">shared_ptr/shared_count</code>
+实例对应于一个被创建的对象，它们都会指向同一个对象。
+<p>由于 <code style="white-space: normal;">sp_counted_base_impl&lt;P, D&gt;</code> 派生自
+<code style="white-space: normal;">sp_counted_base</code>, 所以需要以下代码：
+
+</p>
+<pre><code>
+template&lt;class Archive, class P, class D&gt;
+inline void serialize(
+    Archive &amp; ar,
+    boost::detail::sp_counted_base_impl&lt;P, D&gt; &amp; t,
+    const unsigned int file_version,
+    int
+){
+    ar &amp; boost::serialization::base_object&lt;
+	boost::detail::sp_counted_base
+    &gt;(*this);
+}
+</code></pre>
+进而要求基类的序列化：
+<pre><code>
+inline void serialize(
+    Archive &amp; ar,
+    boost::detail::sp_counted &amp; t,
+    const unsigned int file_version,
+    int
+){
+}
+</code></pre>
+看来我们已经完成了，现在来运行一下测试程序<a href="../example/demo_shared_ptr.cpp" target="demo_shared_ptr_cpp">
+demo_shared_ptr.cpp
+</a>,
+将产生以下输出：
+<pre><code>
+a = 0x003017A0 use count = 2
+a1 = 0x003017A0 use count = 2
+unique element count = 1
+a = 0x00000000 use count = 0
+a1 = 0x00000000 use count = 0
+unique element count = 0
+a = 0x00303060 use count = 1
+a1 = 0x00303060 use count = 1
+unique element count = 1
+</code></pre>
+这显示我们还没有完成。由于缺省的对象跟踪，<code style="white-space: normal;">sp_counted_base_impl&lt;P, D&gt;</code> 只被创建了一次，不论有多少共享指针指向同一个对象。当然，它必须如此。引用计数从1开始且从未被递增。必须向序列化函数中增加代码来维护正确的引用计数。
+<p>
+对于空基类 - 
+<code style="white-space: normal;">sp_counted_base</code> - 的序列化过程看起来是额外的开销。<a href="../../../boost/serialization/base_object.hpp" target="base_object_hpp">base_object.hpp
+</a>中的测试代码显示，<code style="white-space: normal;">base_object.hpp</code> 提供了两个功能：
+</p>
+<ul>
+
+    <li>执行基类数据的序列化。
+    </li>
+  <li>作为副作用，它 "注册" 了基类/派生类的关系，以便在运行时可以方便地进行基类与派生类之间的指针转换。
+  </li>
+</ul>
+这个例子中，我们只需要后一个功能，所以我们可以将基类序列化替换为：
+<pre><code>
+// 注册每个派生类与多态基类的关系
+void_cast_register&lt;
+    boost::detail::sp_counted_base_impl&lt;P, D&gt;
+    boost::detail::sp_counted_base, 
+&gt;();
+</code></pre>
+并且我们不必为 <code style="white-space: normal;">sp_counted_base</code> 包含一个平凡的序列化。<code style="white-space: normal;"></code>
+<p>最后，如果我们想将这个序列化用于 XML 存档，我们需要指定名字-值对包装。
+</p>
+<p>事实上，这只是一个开端。这个实现中没有解决以下问题：
+</p>
+<ul>
+
+    <li><code style="white-space: normal;"></code>没有考虑 <code style="white-space: normal;">weak_ptr</code>.  我们还没有考虑它。
+    </li>
+  <li>也没有考虑可能与 <code style="white-space: normal;">shared_ptr</code>
+    交互的其它智能指针。要确保这个实现是完整和正确的，就必须考虑这些。
+    </li>
+  <li>没有尽力考虑异常的处理。
+    </li>
+  <li>其它未发现的问题。
+  </li>
+</ul>
+一件已经考虑的事情是 shared_ptr 的输出。声明共享指针序列化的头文件中包含了一些特定的宏，用于输出共享指针：
+<code></code>
+<pre>BOOST_SHARED_POINTER_EXPORT(T)<br>BOOST_SHARED_POINTER_EXPORT_GUID(T, K)<br></pre>
+它们是用于输出通过裸指针进行序列化的类的宏的特殊版本。
+<p>显然，完整、正确以及异常安全地实现智能指针序列化，是一个挑战。我希望这个实现可以提供一个有用的开始。
+</p>
+<hr>
+<p><i>&copy; Copyright <a href="http://www.rrsd.com">Robert Ramey</a> 2002-2004. 
+Distributed under the Boost Software License, Version 1.0. (See
+accompanying file LICENSE_1_0.txt or copy at http://www.boost.org/LICENSE_1_0.txt)
+</i></p>
+
+</body>
+</html>

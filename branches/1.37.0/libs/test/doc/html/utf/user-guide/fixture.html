@@ -1,0 +1,151 @@
+<html>
+<head>
+<meta http-equiv="Content-Type" content="text/html; charset=utf-8">
+<title>Fixtures or let me repeat myself</title>
+<link rel="stylesheet" href="../../../style/style.css" type="text/css">
+<meta name="generator" content="DocBook XSL Stylesheets V1.74.0">
+<link rel="home" href="../../index.html" title="Boost Test Library">
+<link rel="up" href="../user-guide.html" title="Unit Test Framework: User's guide">
+<link rel="prev" href="test-organization/expected-failures.html" title="Expected failures specification">
+<link rel="next" href="fixture/model.html" title="Generic fixture model">
+<script language="JavaScript1.2" src="../../../js/boost-test.js"></script>
+</head>
+<body bgcolor="white" text="black" link="#0000FF" vlink="#840084" alink="#0000FF">
+<table width="100%"><tr>
+<td width="10%"><a href="../../index.html"><img alt="Home" width="229" height="61" border="0" src="../../../../../../libs/test/docbook/img/boost.test.logo.png"></a></td>
+<td valign="middle" align="left"> &gt; <a href="../../utf.html">The Unit Test Framework</a> &gt; <a href="../user-guide.html">User's guide</a><a href="../testing-tools.html">
+      &gt;
+      </a><b>Fixtures</b><a href="test-output.html">
+      &gt;
+      </a>
+</td>
+<td><div class="spirit-nav">
+<a href="test-organization/expected-failures.html"><img src="../../../../../../doc/html/images/prev.png" alt="Prev"></a><a href="fixture/model.html"><img src="../../../../../../doc/html/images/next.png" alt="Next"></a>
+</div></td>
+</tr></table>
+<hr>
+<div class="section" lang="en">
+<div class="titlepage"><div><div><h4 class="title">
+<a name="utf.user-guide.fixture"></a>Fixtures  or let me repeat myself</h4></div></div></div>
+<p class="first-line-indented">
+  In general terms a test fixture or test context is the collection of one or more of the following items, required
+  to perform the test:
+  <br />
+  通常，术语测试夹具或测试上下文是下列一个或多个运行测试需要的术语的集合：
+ </p>
+<div xmlns:rev="http://www.cs.rpi.edu/~gregod/boost/tools/doc/revision" class="itemizedlist"><ul type="disc">
+<li>preconditions 前置条件</li>
+<li>particular states of tested unites 被测试单元的特定状态</li>
+<li>necessary cleanup procedures 必要的清理过程</li>
+</ul></div>
+<p class="first-line-indented">
+  Though these tasks are encountered in many if not all test cases, what makes a test fixture different is
+  repetition. Where a normal test case implementation does all preparatory and cleanup work itself, a test fixture
+  allows this to be implemented in a separate reusable unit.
+  <br />
+  虽然这个任务不是所有测试用例都会碰到，但在很多情况下会碰到，这会使得不同的测试夹具被重复。
+  通常的测试用例实现所有自己的准备和清理工作，测试夹具允许将这些实现为独立的可复用的单元。
+ </p>
+<p class="first-line-indented">
+  With introduction of extreme programming (XP), the testing style, that require test setup/cleanup repetition, is
+  becoming more and more popular. Single XP adopted test modules may contain hundreds of single assertion test cases,
+  many requiring very similar test setup/cleanup. This is the problem that the test fixture is designed to solve.
+  <br />
+  随着敏捷编程 (XP) 的引入，需要测试安装 / 清理重复的测试风格越来越普遍。
+  单个符合 XP 风格的测试模块可能包含上百个单断言的测试用例，许多都需要相似的测试安装 / 清理。
+  这就是测试夹具设计要解决的问题。
+ </p>
+<p class="first-line-indented">
+  In practice a test fixture usually is a combination of setup and teardown functions, associated with test case.
+  The former serves the purposes of test setup; the later is dedicated to the cleanup tasks. Ideally it's
+  preferable that a test module author is able to define variables used in fixtures on the stack and the same time
+  is able to refer to them directly in test case.
+  <br />
+  实际上测试夹具通常是安装和拆卸函数的组合，和测试用例结合。
+  前者提供测试安装的目的；后者用于清理的任务。
+  理论上讲，测试模块作者可以在夹具的栈上定义变量，同时在测试用例中直接使用它们。
+ </p>
+<p class="first-line-indented">
+  It's important to understand that C++ provides a way to implement a straightforward test fixture solution
+  that almost satisfies our requirements without any extra support from the test framework. This may explain why
+  test fixtures support was introduced in the <acronym class="acronym">UTF</acronym> somewhat late in its life cycle. Here is how simple test module
+  with such a fixture may look like:
+  <br />
+  很重要的一点是，C++ 提供了一种方法能够直接实现测试夹具的解决方案，不需要测试框架额外的支持就几乎能够满足我们的需要。
+  这就解释了为什么测试夹具支持在 <acronym class="acronym">UTF</acronym> 这么迟介绍。
+  下面的例子展示了简单的测试模块和夹具结合的情况：
+ </p>
+<pre class="programlisting">struct MyFixture {
+     MyFixture() { i = new int; *i = 0 }
+     ~ MyFixture() { delete i; }
+
+    int* i;
+};
+
+BOOST_AUTO_TEST_CASE( test_case1 )
+{
+    MyFixture f;
+
+    // do something involving f.i
+}
+
+BOOST_AUTO_TEST_CASE( test_case2 )
+{
+    MyFixture f;
+
+    // do something involving f.i
+}
+</pre>
+<p class="first-line-indented">
+  This is a generic solution that can be used to implement any kind of shared setup or cleanup procedure. Still
+  there are several more or less minor practical issues with this pure C++ based fixtures solution:
+  <br />
+  这是通用的解决方案，可以用来实现各种类型的共享安装或清理过程。
+  在这个基于纯 C++ 的夹具解决方案中同样或多或少有一些需要实践注意的问题：
+ </p>
+<div xmlns:rev="http://www.cs.rpi.edu/~gregod/boost/tools/doc/revision" class="itemizedlist"><ul type="disc">
+<li>
+    We need to add a fixture declaration statement into each test case manually.
+    <br />
+    我们需要在每个测试用例中手动添加夹具声明的语句。
+   </li>
+<li>
+    Objects defined in fixture are references with "&lt;fixture-instance-name&gt;." prefix.
+    <br />
+    夹具中定义的对象用 "&lt;夹具实例名称&gt;." 前缀引用。
+   </li>
+<li>
+    There is no place to execute a "global" fixture, which performs "global" setup/cleanup
+    procedures before and after testing.
+    <br />
+    没有地方执行 "全局的" 夹具，即在测试过程前后执行 "全局的" 安装 / 清理。
+   </li>
+</ul></div>
+<p class="first-line-indented">
+  While there is little the <acronym class="acronym">UTF</acronym> can do to address these issues for manually registered test units, it's
+  possible to resolve them for test units that are automatically registered. To do this the <acronym class="acronym">UTF</acronym> defines a
+  <a class="link" href="fixture/model.html" title="Generic fixture model">generic fixture model</a> - fixed interfaces that both setup and
+  teardown fixture functions should comply to. Based on the generic fixture model, the <acronym class="acronym">UTF</acronym> presents solution for
+  the following tasks:
+  <br />
+  虽然 <acronym class="acronym">UTF</acronym> 对于手动注册的测试单元没有什么更好的解决方法，
+  但对于自动注册的测试单元还是能够解决的。
+  想要解决，<acronym class="acronym">UTF</acronym> 定义了<a class="link" href="fixture/model.html" title="Generic fixture model">通用夹具模型</a> - 安装和拆卸的夹具函数都需要遵守的固定接口。
+  基于通用夹具模型，<acronym class="acronym">UTF</acronym> 为下列任务提供了解决方案：
+ </p>
+<div xmlns:rev="http://www.cs.rpi.edu/~gregod/boost/tools/doc/revision" class="itemizedlist"><ul type="disc">
+<li><a class="link" href="fixture/per-test-case.html" title="Per test case fixture">per test case fixture automation 每测试用例自动夹具</a></li>
+<li><a class="link" href="fixture/test-suite-shared.html" title="Test suite level fixture">shared test suite level fixture 测试套件级共享夹具</a></li>
+<li><a class="link" href="fixture/global.html" title="Global fixture">"global" fixture support "全局" 夹具支持</a></li>
+</ul></div>
+</div>
+<table xmlns:rev="http://www.cs.rpi.edu/~gregod/boost/tools/doc/revision" width="100%"><tr>
+<td align="left"></td>
+<td align="right"><div class="copyright-footer">Copyright © 2001-2007 Gennadiy Rozental</div></td>
+</tr></table>
+<hr>
+<div class="spirit-nav">
+<a accesskey="p" href="test-organization/expected-failures.html"><img src="../../../../../../doc/html/images/prev.png" alt="Prev"></a><a accesskey="u" href="../user-guide.html"><img src="../../../../../../doc/html/images/up.png" alt="Up"></a><a accesskey="h" href="../../index.html"><img src="../../../../../../doc/html/images/home.png" alt="Home"></a><a accesskey="n" href="fixture/model.html"><img src="../../../../../../doc/html/images/next.png" alt="Next"></a>
+</div>
+</body>
+</html>

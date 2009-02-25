@@ -1,0 +1,256 @@
+<!DOCTYPE html PUBLIC "-//W3C//DTD XHTML 1.0 Transitional//EN" "http://www.w3.org/TR/xhtml1/DTD/xhtml1-transitional.dtd">
+<html xmlns="http://www.w3.org/1999/xhtml" xml:lang="en" lang="en">
+<head>
+<!-- Copyright Aleksey Gurtovoy 2006. Distributed under the Boost --><!-- Software License, Version 1.0. (See accompanying --><!-- file LICENSE_1_0.txt or copy at http://www.boost.org/LICENSE_1_0.txt) -->
+
+  
+  <meta http-equiv="Content-Type" content="text/html; charset=utf-8" />
+
+
+  
+  <meta name="generator" content="Docutils 0.3.6: http://docutils.sourceforge.net/" />
+
+
+
+  
+  
+  <title>THE BOOST MPL LIBRARY: Implementing Multiplication</title>
+  <link rel="stylesheet" href="../style.css" type="text/css" />
+</head>
+
+
+<body class="docframe">
+
+
+<table class="header">
+
+  <tbody>
+
+    <tr class="header">
+
+      <td class="header-group navigation-bar"><span class="navigation-group"><a href="./implementing-addition-and.html" class="navigation-link">Prev</a>&nbsp;<a href="./implementing-division.html" class="navigation-link">Next</a></span><span class="navigation-group-separator">&nbsp;|&nbsp;</span><span class="navigation-group"><a href="./implementing-addition-and.html" class="navigation-link">Back</a>&nbsp;<a href="./implementing-division.html" class="navigation-link">Along</a></span><span class="navigation-group-separator">&nbsp;|&nbsp;</span><span class="navigation-group"><a href="./dimensional-analysis.html" class="navigation-link">Up</a>&nbsp;<a href="../index.html" class="navigation-link">Home</a></span><span class="navigation-group-separator">&nbsp;|&nbsp;</span><span class="navigation-group"><a href="./tutorial_toc.html" class="navigation-link">Full TOC</a></span></td>
+
+
+      <td class="header-group page-location"><a href="../index.html" class="navigation-link">标题页</a> / <a href="./tutorial-metafunctions.html" class="navigation-link">教程：元函数和高阶元编程</a> / <a href="./dimensional-analysis.html" class="navigation-link">量纲分析</a> / <a href="./implementing.html" class="navigation-link">乘法的实现</a></td>
+
+
+    </tr>
+
+  
+  </tbody>
+</table>
+
+<div class="header-separator"></div>
+
+
+<div class="section" id="implementing">
+<h1><a class="toc-backref" href="./dimensional-analysis.html#id45" name="implementing">乘法的实现</a></h1>
+
+
+<p>乘法要比加法和减法复杂一点。到目前为止，参数和结果的量纲都是相同的，但是在相乘时，结果通常都具有与参数不同的量纲。对于乘法来说：</p>
+
+
+<blockquote>
+(<em>x</em><sup>a</sup>)(<em>x</em><sup>b</sup>) == <em>x</em> <sup>(a + b)</sup></blockquote>
+
+
+<!-- @litre_translator.line_offset -= 7 -->
+<p>意味着结果量纲的各个指数应该是参数量纲的各个对应指数之和。除法也一样，不过不是指数之和而是指数之差。</p>
+
+
+<p>要从两个序列中组合相对应的元素，我们可以使用
+MPL 的 <tt class="literal"><span class="pre">transform</span></tt> 算法。<tt class="literal"><span class="pre">transform</span></tt> 是一个元函数，它同时对两个输入序列进行迭代，将每个序列中的一个元素传递给任意一个二元元函数，并将元函数的返回结果放入输出序列中。</p>
+
+
+<pre class="literal-block">template &lt;class Sequence1, class Sequence2, class BinaryOperation&gt;<br />struct transform;  // 返回一个序列<br /></pre>
+
+
+<p>如果你熟悉
+STL 中的接受两个运行时序列作为输入的 <tt class="literal"><span class="pre">transform</span></tt> 算法，你会发现它与上述函数的署名非常相似：</p>
+
+
+<pre class="literal-block">template &lt;<br />    class InputIterator1, class InputIterator2<br />  , class OutputIterator, class BinaryOperation<br />&gt;<br />void transform(<br />    InputIterator1 start1, InputIterator2 finish1<br />  , InputIterator2 start2<br />  , OutputIterator result, BinaryOperation func);<br /></pre>
+
+
+<!-- @ example.wrap('namespace shield{','}')
+compile() -->
+<p>现在我们只需要传入一个 <tt class="literal"><span class="pre">BinaryOperation</span></tt> 来进行相加或相减，就可以用
+<tt class="literal"><span class="pre">mpl::transform</span></tt> 来实现量纲的乘法和除法了。如果你看过 <a class="reference" href="./reference-manual.html">MPL 参考手册</a>，你会发现 <tt class="literal"><span class="pre">plus</span></tt> 和 <tt class="literal"><span class="pre">minus</span></tt> 元函数恰好就是你想要的：</p>
+
+
+<pre class="literal-block">#include &lt;boost/static_assert.hpp&gt;<br />#include &lt;boost/mpl/plus.hpp&gt;<br />#include &lt;boost/mpl/int.hpp&gt;<br />namespace mpl = boost::mpl;<br /><br />BOOST_STATIC_ASSERT(( <br />    mpl::plus&lt;<br />        mpl::int_&lt;2&gt;<br />      , mpl::int_&lt;3&gt;<br />    &gt;::type::value == 5<br />));<br /></pre>
+
+
+<!-- @ compile(pop = None) -->
+<div class="sidebar">
+<p class="sidebar-title first"><tt class="literal"><span class="pre">BOOST_STATIC_ASSERT</span></tt></p>
+
+
+<p>是一个宏，如果其参数为 false，就引发一个编译错误。它要求双重的括号，因为 C++
+预处理器不能解析模板：它会被逗号所愚弄，将条件表达式当成两个分离的宏参数。和运行期的 <tt class="literal"><span class="pre">assert(...)</span></tt> 不同，
+<tt class="literal"><span class="pre">BOOST_STATIC_ASSERT</span></tt> 还可以用在类的定义体中，允许我们在元函数中放入断言。更进一步的讨论请看第 <a class="reference" href="./resources.html">8</a> 章。</p>
+
+
+</div>
+
+
+<!-- @prefix.append('#include <boost/static_assert.hpp>') -->
+<p>到这时看来我们已经有答案了，但其实还不是。当你试图将 <tt class="literal"><span class="pre">transform</span></tt>
+算法用于实现 <tt class="literal"><span class="pre">operator*</span></tt> 时，会产生一个编译错误：</p>
+
+
+<pre class="literal-block">#include &lt;boost/mpl/transform.hpp&gt;<br /><br />template &lt;class T, class D1, class D2&gt;<br />quantity&lt; <br />    T<br />  , typename mpl::transform&lt;D1,D2,mpl::plus&gt;::type<br />&gt;<br />operator*(quantity&lt;T,D1&gt; x, quantity&lt;T,D2&gt; y) { ... }<br /></pre>
+
+
+<!-- @ example.replace('{ ... }',';')
+compile('all', pop = 1, expect_error = True)
+prefix +=['#include <boost/mpl/transform.hpp>'] -->
+<!-- @litre_translator.line_offset -= 7 -->
+<p>失败的原因是，协议要求元函数的参数必须为类型，而 <tt class="literal"><span class="pre">plus</span></tt> 并非一个类型，而是一个类模板。我们要想办法让 <tt class="literal"><span class="pre">plus</span></tt> 这样的元函数符合元数据的要求。</p>
+
+
+<p>一个简单的方法就是在元函数和元数据之间引入多态性，采用包装器的惯用法，该方法也为我们在类型和整型常量之间引入了多态性。不过这次我们不是用一个嵌套的整型常量，而是使用一个嵌套在
+<strong>元函数类</strong> 中的类模板：</p>
+
+
+<pre class="literal-block">struct plus_f<br />{<br />    template &lt;class T1, class T2&gt;<br />    struct apply<br />    {<br />       typedef typename mpl::plus&lt;T1,T2&gt;::type type;<br />    };<br />};<br /></pre>
+
+
+<div class="admonition-definition admonition">
+<p class="admonition-title first">定义</p>
+
+
+<p><strong>元函数类</strong> 是一个类，它带有一个公有的、名为 <tt class="literal"><span class="pre">apply</span></tt> 的嵌套元函数。</p>
+
+
+</div>
+
+
+<p>因为元函数是一个模板而不是一个类型，所以元函数类将这个模板包装在一个普通的非模板的类中，这样它就是一个类型了。由于元函数操作和返回的是类型，所以元函数类可以被作为参数传递给另一个元函数，或者从元函数返回。</p>
+
+
+<p>最后，我们就有了一个 <tt class="literal"><span class="pre">BinaryOperation</span></tt> 类型，它可以传递给
+<tt class="literal"><span class="pre">transform</span></tt> 而不会引发编译错误。</p>
+
+
+<pre class="literal-block">template &lt;class T, class D1, class D2&gt;<br />quantity&lt; <br />    T<br />  , typename mpl::transform&lt;D1,D2,<strong>plus_f</strong>&gt;::type  // 新的量纲<br />&gt;<br />operator*(quantity&lt;T,D1&gt; x, quantity&lt;T,D2&gt; y)<br />{<br />    typedef typename mpl::transform&lt;D1,D2,<strong>plus_f</strong>&gt;::type dim;<br />    return quantity&lt;T,dim&gt;( x.value() * y.value() );<br />}<br /></pre>
+
+
+<p>现在，如果我们想计算作用在一个5千克的手提电脑上的重力，只须将重力加速度(9.8
+m/sec<sup>2</sup>)与手提电脑的质量相乘就可以了：</p>
+
+
+<pre class="literal-block">quantity&lt;float,mass&gt; m(5.0f);<br />quantity&lt;float,acceleration&gt; a(9.8f);<br />std::cout &lt;&lt; "force = " &lt;&lt; (m * a).value();<br /></pre>
+
+
+<!-- @example.wrap('#include <iostream>\nvoid ff() {', '}')
+
+compile('all', pop = 1) -->
+<p>我们的 <tt class="literal"><span class="pre">operator*</span></tt> 会将运行期的数值进行相乘，同时我们的元编程代码会使用 <tt class="literal"><span class="pre">transform</span></tt> 来将基础量纲的指数序列相加，所以结果类型将包含一个新的指数列表，如下：</p>
+
+
+<pre class="literal-block">mpl::vector_c&lt;int,1,1,-2,0,0,0,0&gt;<br /></pre>
+
+
+<!-- @example.wrap('''
+    #include <boost/mpl/vector_c.hpp>
+    typedef''', 'xxxx;')
+compile() -->
+<!-- @litre_translator.line_offset -= 7 -->
+<p>但是，如果我们试图这样写：</p>
+
+
+<pre class="literal-block">quantity&lt;float,force&gt; f = m * a;<br /></pre>
+
+
+<!-- @ ma_function_args = '(quantity<float,mass> m, quantity<float,acceleration> a)'
+
+example.wrap('void bogus%s {' % ma_function_args, '}')
+compile('all', pop = 1, expect_error = True) -->
+<!-- @litre_translator.line_offset -= 7 -->
+<p>我们将会发生一个小小的问题。虽然
+<tt class="literal"><span class="pre">m</span> <span class="pre">*</span> <span class="pre">a</span></tt> 的结果确实代表了力的量纲，质量、长度、时间的各个指数分别为 1, 1, 和 -2，但是从
+<tt class="literal"><span class="pre">transform</span></tt> 返回的类型却不是特化自 <tt class="literal"><span class="pre">vector_c</span></tt>.&nbsp;<tt class="literal"><span class="pre">transform</span></tt> 会对输入的元素进行处理并构建一个带有适当元素的新序列：一个与
+<tt class="literal"><span class="pre">mpl::vector_c&lt;int,1,1,-2,0,0,0,0&gt;</span></tt> 有许多相同特性的类型，但还是不同的C++类型。如果你想看看这个类型的全名，你可以尝试编译一下这个例子，并看一下错误信息，不过这些细节并不重要。关键是，<tt class="literal"><span class="pre">force</span></tt> 是一个不同的类型，所以以上赋值操作会失败。</p>
+
+
+<p>为了解决这个问题，我们可以增加一个从乘法操作所得的结果类型到 <tt class="literal"><span class="pre">quantity&lt;float,force&gt;</span></tt> 的隐式转型。因为我们不能预知在计算中得到的量纲的精确类型，所以这个类型转换必须是模板的，如下：</p>
+
+
+<pre class="literal-block">template &lt;class T, class Dimensions&gt;<br />struct quantity<br />{<br />    // 转换构造函数<br />    template &lt;class OtherDimensions&gt;<br />    quantity(quantity&lt;T,OtherDimensions&gt; const&amp; rhs)<br />      : m_value(rhs.value())<br />    {<br />    }<br />    ...<br /></pre>
+
+
+<!-- @ example.append("""
+      explicit quantity(T x)
+         : m_value(x)
+      {}
+
+      T value() const { return m_value; }
+   private:
+      T m_value;
+  };""")
+
+stack[quantity_declaration] = example
+ignore()  -->
+<p>不幸的是，通用的转型破坏了我们的意图，它允许以下操作：</p>
+
+
+<pre class="literal-block">// 得到的量纲应该是力，而不是质量！<br />quantity&lt;float,mass&gt; bogus = m * a;<br /></pre>
+
+
+<!-- @ example.wrap('void bogus2%s {' % ma_function_args, '}')
+bogus_example = example
+compile('all', pop = 1) -->
+<p>我们可以用另一个MPL算法
+<tt class="literal"><span class="pre">equal</span></tt> 来纠正这个错误，该算法会检查两个序列是否具有相同元素：</p>
+
+
+<pre class="literal-block">template &lt;class OtherDimensions&gt;<br />quantity(quantity&lt;T,OtherDimensions&gt; const&amp; rhs)<br />  : m_value(rhs.value())<br />{<br />    BOOST_STATIC_ASSERT((<br />       mpl::equal&lt;Dimensions,OtherDimensions&gt;::type::value<br />    ));<br />}<br /></pre>
+
+
+<!-- @ example.wrap('''
+   #include <boost/mpl/equal.hpp>
+
+   template <class T, class Dimensions>
+   struct quantity
+   {
+       explicit quantity(T x)
+          : m_value(x)
+       {}
+
+       T value() const { return m_value; }
+   ''','''
+    private:
+       T m_value;
+   };''')
+
+stack[quantity_declaration] = example
+stack[-1] = bogus_example
+compile('all', pop = 1, expect_error = True) -->
+<p>现在，如果两个物理值的量纲不能匹配，该断言将引发一个编译错误。</p>
+
+
+</div>
+
+
+
+<div class="footer-separator"></div>
+
+
+<table class="footer">
+
+  <tbody>
+
+    <tr class="footer">
+
+      <td class="header-group navigation-bar"><span class="navigation-group"><a href="./implementing-addition-and.html" class="navigation-link">Prev</a>&nbsp;<a href="./implementing-division.html" class="navigation-link">Next</a></span><span class="navigation-group-separator">&nbsp;|&nbsp;</span><span class="navigation-group"><a href="./implementing-addition-and.html" class="navigation-link">Back</a>&nbsp;<a href="./implementing-division.html" class="navigation-link">Along</a></span><span class="navigation-group-separator">&nbsp;|&nbsp;</span><span class="navigation-group"><a href="./dimensional-analysis.html" class="navigation-link">Up</a>&nbsp;<a href="../index.html" class="navigation-link">Home</a></span><span class="navigation-group-separator">&nbsp;|&nbsp;</span><span class="navigation-group"><a href="./tutorial_toc.html" class="navigation-link">Full TOC</a></span></td>
+
+
+    </tr>
+
+  
+  </tbody>
+</table>
+
+</body>
+</html>

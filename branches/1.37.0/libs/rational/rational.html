@@ -1,0 +1,377 @@
+<!DOCTYPE html PUBLIC "-//W3C//DTD HTML 4.01 Transitional//EN">
+<html><head>
+<meta http-equiv="Content-Type" content="text/html; charset=UTF-8"><title>Rational Number Library</title>
+
+</head>
+
+<body>
+<h1><img src="../../boost.png" alt="boost.png (6897 bytes)" align="middle" height="86" width="277">
+Rational Numbers</h1>
+<h2><a name="Contents">目录</a></h2>
+<ol>
+<li><a href="#Class%20rational%20synopsis">类
+rational&nbsp;的摘要</a></li>
+<li><a href="#Rationale">原理</a></li>
+<li><a href="#Background">背景</a></li>
+<li><a href="#Integer%20Type%20Requirements">对整数类型的
+要求</a></li>
+<li><a href="#Interface">接口</a>
+<ul>
+<li><a href="#Utility%20functions">工具函数</a></li>
+<li><a href="#Constructors">构造函数</a></li>
+<li><a href="#Arithmetic%20operations">算术操作</a></li>
+<li><a href="#Input%20and%20Output">输入与输出</a></li>
+<li><a href="#In-place%20assignment">就地赋值</a></li>
+<li><a href="#Conversions">转换</a></li>
+<li><a href="#Numerator%20and%20Denominator">分子
+与分母</a></li>
+</ul>
+</li>
+<li><a href="#Performance">性能</a></li>
+<li><a href="#Exceptions">异常</a></li>
+<li><a href="#Internal%20representation">内部表示</a></li>
+<li><a href="#Design%20notes">设计说明</a>
+<ul>
+<li><a href="#Minimal%20Implementation">最小实现</a></li>
+<li><a href="#Limited-range%20integer%20types">有
+限范围的整数类型</a></li>
+<li><a href="#Conversion%20from%20floating%20point">转
+换自浮点数</a></li>
+<li><a href="#Absolute%20Value">绝对值</a></li>
+</ul>
+</li>
+<li><a href="#References">参考</a></li>
+<li><a href="#History%20and%20Acknowledgements">历史和
+鸣谢</a></li>
+</ol>
+<h2><a name="Class rational synopsis">类&nbsp;rational
+的摘要</a></h2>
+<pre>#include &lt;boost/rational.hpp&gt;<br><br>namespace boost {<br><br>template &lt;typename I&gt; I gcd(I n, I m);<br>template &lt;typename I&gt; I lcm(I n, I m);<br><br>class bad_rational;<br><br>template&lt;typename I&gt; class rational {<br> typedef <em>implementation-defined</em> bool_type;<br><br>public:<br> typedef I int_type;<br><br> // 构造函数<br> rational(); // 零<br> rational(I n); // 等于 n/1<br> rational(I n, I d); // 普通情形 (n/d)<br><br> // 普通的复制构造函数和赋值构造函数<br><br> // 赋值自 I<br> rational&amp; operator=(I n);<br><br> // 就地赋值<br> rational&amp; assign(I n, I d);<br><br> // 表示法<br> I numerator() const;<br> I denominator() const;<br><br> // 除了以下操作符，还有其它 "明显的" 派生操作符 - 请见 <a href="../utility/operators.htm">operators.hpp</a><br><br> // 算术操作符<br> rational&amp; operator+= (const rational&amp; r);<br> rational&amp; operator-= (const rational&amp; r);<br> rational&amp; operator*= (const rational&amp; r);<br> rational&amp; operator/= (const rational&amp; r);<br><br> // 与整数的算术运算<br> rational&amp; operator+= (I i);<br> rational&amp; operator-= (I i);<br> rational&amp; operator*= (I i);<br> rational&amp; operator/= (I i);<br><br> // 递增与递减<br> const rational&amp; operator++();<br> const rational&amp; operator--();<br><br> // 取非操作符<br> bool operator!() const;<br><br> // 布尔类型转换<br> operator bool_type() const;<br><br> // 比较操作符<br> bool operator&lt; (const rational&amp; r) const;<br> bool operator== (const rational&amp; r) const;<br><br> // 与整数进行比较<br> bool operator&lt; (I i) const;<br> bool operator&gt; (I i) const;<br> bool operator== (I i) const;<br>};<br><br>// 单参操作符<br>template &lt;typename I&gt; rational&lt;I&gt; operator+ (const rational&lt;I&gt;&amp; r);<br>template &lt;typename I&gt; rational&lt;I&gt; operator- (const rational&lt;I&gt;&amp; r);<br><br>// 整数(或可转换为整数的)类型与 rational 间的反序 - 和 / 操作符<br>template &lt;typename I, typename II&gt; inline rational&lt;I&gt; operator- (II i, const rational&lt;I&gt;&amp; r);<br>template &lt;typename I, typename II&gt; inline rational&lt;I&gt; operator/ (II i, const rational&lt;I&gt;&amp; r);<br><br>// 绝对值<br>template &lt;typename I&gt; rational&lt;I&gt; abs (const rational&lt;I&gt;&amp; r);<br><br>// 输入与输出<br>template &lt;typename I&gt; std::istream&amp; operator&gt;&gt; (std::istream&amp; is, rational&lt;I&gt;&amp; r);<br>template &lt;typename I&gt; std::ostream&amp; operator&lt;&lt; (std::ostream&amp; os, const rational&lt;I&gt;&amp; r);<br><br>// 类型转换<br>template &lt;typename T, typename I&gt; T rational_cast (const rational&lt;I&gt;&amp; r);<br></pre>
+<h2><a name="Rationale">原理</a></h2>
+数字具有多种不同的形式。最基本的形式是自然数(非负的"纯粹的"数字)、整数和实数。这些类型大致相当于C++的内建类型 <b>unsigned
+int</b>, <b>int</b>, 和
+<b>float</b> (以及它们的不同大小的变体)。
+<p>C++ 标准库扩展了数字类型的范围，提供了 <b>complex</b> 复数类型。
+</p>
+<p>本库则提供另一种数字类型，<b>rational</b> 有理数。
+</p>
+<p><b>rational</b> 类实际上是以模板来实现的，在某种意义上类似于标准的 <b>complex</b>
+类。
+</p>
+<h2><a name="Background">背景</a></h2>
+有理数的数学概念就是通常所说的分数 -
+即一个可以表示为两个整数之比的数。这个概念与实数是截然不同的，后者具有多得多的可能值(例如，2的平方根就不能表示为一个分数)。
+<p>计算机不能完全精确地表示数学上的概念 -
+总是要进行一些折衷。机器的整数具有值范围的限制(通常为32位)，而机器的近似实数则具有精度上的限制。折衷具有不同的动机 -
+机器整数可以进行精确的计算，但具有范围的限制，而机器实数则允许更大的取值范围，但要以牺牲精度为代价。
+</p>
+<p>有理数类提供了另一种折衷。有理数的计算是精确的，但它们的有效值范围也是有限制的。精确地说，有理数不过是分子与分母(它们会被规范
+化，不具有公因子)的比，其范围由底层的整数类型所限定。如果这些值超出了它们的边界，就会发生溢出，结果将会是未定义的。
+</p>
+<p>有理数类是一个模板，允许程序员控制其溢出行为。如果存在一个无限精度的整数类型，那么基于它的有理数将不会溢出，并且将提供所有情形
+下的精确计算。
+</p>
+<h2><a name="Integer Type Requirements">对整数类型的要求</a></h2>
+<p>有理数类型带有单个模板类型参数 I. 它是有理数类型的
+<em>底层整数类型</em>。C++实现所提供的任何内建整数类型均可用作
+I 的值。也可以使用用户自定义的类型，但是用户必须清楚，rational
+类的性能特征是高度依赖于其底层整数类型的性能特征的(通常会是复杂的情形 - 更多的说明请见 <a href="#Performance">性
+能</a>
+一节)。注：如果 boost 库以后提供了一个无限精度的整数类型，则该类型也可以用作 rational 类的底层整数类型。
+</p>
+<p>一个用户自定义类型要用作有理数类型的底层整数类型，就必须符合以下概念。
+</p>
+<ul>
+<li>可赋值的 </li>
+<li>可缺省构造的 </li>
+<li>可比较相等性的 </li>
+<li>可比较小于关系的 </li>
+</ul>
+<p>此外，I 必须是一个 <em>类似于整数</em> 的类型，即对于类型 I 的任意两个值 n 和
+m，以下表达式必须有效，并具有
+"预期" 的语义。
+</p>
+<ul>
+<li><code>n + m</code> </li>
+<li><code>n - m</code> </li>
+<li><code>n * m</code> </li>
+<li><code>n / m</code> (必须截断；必须为非负，如果 <var>n</var>
+和 <var>m</var> 均为正) </li>
+<li><code>n % m</code> (必须为非负，如果 <var>n</var>
+和 <var>m</var> 均为正) </li>
+<li>以上各个表达式的赋值版本 </li>
+<li><code>+n</code>, <code>-n</code> </li>
+<li><code>!n</code> (必须为 <code>true</code>
+当且仅当 <var>n</var> 为零) </li>
+</ul>
+<p>I 必须具有 <em>零值</em> 和 <em>单元值</em>。并可以
+分别用 <tt>I(0)</tt> 和 <tt>I(1) 生成。</tt><em>注：</em>这
+并不意味着 I 必须可以从整数隐式转换 - 有显式转换构造函数就可以了。
+</p>
+<p>I 可以是一个无符号类型。这种情况下，所生成的 rational
+类型也将是无符号的。减法的溢出行为将不会导致负的结果，其行为是不可预知的。
+</p>
+<ul>
+<li>rational_cast&lt;T&gt;(rational&lt;I&gt;)
+的实现依赖于从类型 I 到类型 T 的 static_cast 能力，且对于类型 T 的任意两个值，表达式 x/y 都有效。 </li>
+<li>输入和输出操作符依赖于类型 T 的相应输入和输出操作符。</li>
+</ul>
+<p><code>std::numeric_limits&lt;I&gt;</code>
+的特化必须存在(并且在需要使用 <code>boost::rational&lt;I&gt;</code>
+之前可见)。它的 <code>is_specialized</code> 静态数据成员的值必须为 <var>true</var>
+且它的 its <code>is_signed</code> 静态数据成员的值必须是正确的。<br>
+</p>
+<h2><a name="Interface">接口</a></h2>
+<h3><a name="Utility functions">工具函数</a></h3>
+<p>以下两个工具函数可能被提供，它们可以用于 <code>boost::rational&lt;&gt;</code>
+类模板 <a href="#Integer%20Type%20Requirements">可使用的任意类型</a>。<br>
+</p>
+<table summary="Common-factor utility functions">
+<tbody>
+<tr>
+<td width="5%"></td>
+<td><tt>gcd(n, m)</tt></td>
+<td width="5%"></td>
+<td>n 和 m 的最大公约数</td>
+</tr>
+<tr>
+<td width="5%"></td>
+<td><tt>lcm(n, m)</tt></td>
+<td width="5%"></td>
+<td>n 和 m 的最小公倍数</td>
+</tr>
+</tbody>
+</table>
+<p>这些函数现在将前转调用在 <a href="../math/">Boost.Math 库</a>
+中的对应函数。它们是否出现由 <code>BOOST_CONTROL_RATIONAL_HAS_GCD</code>
+预处理器常数在编译编译期进行控制。
+</p>
+<h3><a name="Constructors">构造函数</a></h3>
+<p>有理数可以构造自零个、一个、或两个整数；缺省构造函数表示零，从单个整数转换则该整数代表分子而分母为1，从两个整数构造则两个整数
+依次代表分子
+和分母。整型参数的类型应该是 rational 的整数类型，或者可以隐式转换为该类型。(当然，对于两参数构造函数，各个转换是独立求值的)
+。各个组件将被保存为规范化的形式。
+</p>
+<p>这意味着以下语句是有效的：
+</p>
+<pre> I n, d;<br> rational&lt;I&gt; zero;<br> rational&lt;I&gt; r1(n);<br> rational&lt;I&gt; r2(n, d);<br></pre>
+<p>单参数的构造函数并没有被声明为 explicit, 因此可以从底层整数类型隐式转换为
+rational 类型。
+</p>
+<h3><a name="Arithmetic operations">算术操作</a></h3>
+定义了所有针对 <b>rational</b>
+类的标准算术操作。包括有：<br>
+<pre> + +=<br> - -=<br> * *=<br> / /=<br> ++ -- (前缀与后缀形式)<br> == !=<br> &lt; &gt;<br> &lt;= &gt;=<br></pre>
+<h3><a name="Input and Output">输入与输出</a></h3>
+本库提供了输入与输出操作符 <tt>&lt;&lt;</tt> 和 <tt>&gt;&gt;</tt>.
+有理数的外部表示方式为两个以斜杠(<tt>/</tt>)分隔的整数。输入时，形式必须精确为一个整数，后跟一个没有空白符间
+隔的斜杠，再后跟第二个整数(也是没有空白符间隔)。整数的外部表示方式则由底层整数类型定义。
+<h3><a name="In-place assignment">就地赋值</a></h3>
+对于任意 <tt>rational&lt;I&gt; r</tt>, <tt>r.assign(n,
+m)</tt> 提供了 <tt>r = rational&lt;I&gt;(n, m);</tt>
+的一个快速等价实现，不需要构造一个临时变量。对于基于机器的整数类型的有理数类型，这可能是不必要的；但对于基于无限精度整数的
+有理数类型，它就可以提高效率。
+<h3><a name="Conversions">转换</a></h3>
+<p>该类具有一个到未确定布尔类型(类似于成员指针)的转换操作符。如果一个有理数表示为零，则该操作符将它转换为 <code>false</code>，
+反之则转换为 <code>true</code>. 这个转换允许
+rational 被用作操作符 <code>?:</code> 的第一个参数；或者是用作操作符 <code>&amp;&amp;</code>
+或 <code>||</code> 的参数，而不会违反短路求值；或者是用作 <code>do</code>,
+<code>if</code>, <code>while</code>, 或 <code>for</code>
+语句的条件；或者是用作 <code>if</code>, <code>while</code>,
+或
+<code>for</code>
+语句的条件声明。该类型被自然地使用，有关它的任何名字都保持私有，以防止任何不恰当的、当作非布尔类型的使用，如数字或指针类型，又或者是用作 <code>switch</code>
+的条件。
+</p>
+<p>rational 类型<span style="font-style: italic;">没有其它</span>的
+隐式转换。不过有一个显式的类型转换函数，<tt>rational_cast&lt;T&gt;(r)</tt>.
+它可以这样用：
+</p>
+<pre> rational r(22,7);<br> double nearly_pi = boost::rational_cast&lt;double&gt;(r);<br></pre>
+<p>如果源 <tt>rational</tt> 的分子或分母不能安全地转型为相应的浮点类型，或者分子与分母的商不能正确求得(以
+相应的浮点类型为目标)，则 <tt>rational_cast&lt;T&gt;</tt>
+函数的行为是未定义的。
+</p>
+<p>实质上，所有被要求的转换都有其存在的价值，且所有操作都是行为"敏感的"。如果没有这样的约束，那么用户自定义的独立的转换操作更为
+合适。
+</p>
+<p><em>实现说明：</em>
+</p>
+<p>rational_cast 函数的真正实现是
+</p>
+<pre> template &lt;typename Float, typename Int&gt;<br> Float rational_cast(const rational&lt;Int&gt;&amp; src)<br> {<br> return static_cast&lt;Float&gt;(src.numerator()) / src.denominator();<br> }<br></pre>
+但是，不应依赖于这一实现来编写程序，尤其是该实现现在已被废除。(它要求在类型 <var>Float</var> 和 <var>Int</var>
+之间的混合模式除法，与 <a href="#Integer%20Type%20Requirements">整数类型的
+要求</a> 相反)
+<h3><a name="Numerator and Denominator">分子与分母</a></h3>
+最后，提供了通过两个成员函数 <tt>numerator()</tt> 和 <tt>denominator()</tt>
+访问有理数的内部表示的方法。
+<p>这些函数允许用户编码实现任意所需的额外功能。尤其是在某些情形下，上述 rational_cast 操作可能是不恰当的 -
+特别是在 rational类型是基于无限精度的整数类型时。这种情况下，一个特别编写的、用户自定义的到浮点类型的转换将更为恰当。
+</p>
+<h2><a name="Performance">性能</a></h2>
+rational 类设计中的一个假设是，底层的整数类型应该行为"类似"于内建的整数类型。前面 <a href="rational.html#Integer%20Type%20Requirements">整数类型的要求</a>
+一节中已经描述了这一假设的行为方面的要求。不过，除了行为上的假设外，还有对性能上的假设。
+<p>我们并没有试图对 rational
+类提供操作性能的具体保证。虽然这样的保证有可能提供(类似于许多标准库的类所提供的性能保证)，不过这样的保证对于 rational
+类的用户而言并没有重大意义。所以，本节将提供关于 rational 类的性能特征的一个广泛的讨论。
+</p>
+<p>以下列出在 <a href="../../boost/rational.hpp">&lt;boost/rational.hpp&gt;</a>
+中定义的基础操作以及对它们的性能特性的非正式描述。请注意，这些描述是基于当前的实现的，有可能会被修改。
+</p>
+<ul>
+<li>构造一个 rational 基本上相当于两次底层整数类型的构造，再加一次规范化。 </li>
+<li>递增和递减操作基本上相当于底层整数类型的加法和减法。 </li>
+<li>相等性和不等性比较基本上相当于底层整数类型的同类操作。 </li>
+<li>I/O 操作并不简单，其性能基本上受控于自身的 I/O 时间。 </li>
+<li>gcd 操作相当于重复的取模操作。其它的主要操作有构造、赋值，以及与 IntType
+的零值进行比较。后几项操作与取模操作相比是微不足道的。 </li>
+<li>lcm 操作基本于与 gcd 相同，加上几个乘法和除法。 </li>
+<li>加法和减法操作比较复杂。它们大致上要两次 gcd 操作，以及底层整数类型的三次除法，三次乘法和一次加法。 </li>
+<li>乘法和除法操作要求两次 gcd 操作，以及两次乘法和四次除法。</li>
+<li>与整数的比较操作做一次整数除法和模操作，最多再加一次整数加法和递减，以及最多三次整数的比较。</li>
+<li>与分数的比较操作在最差情况下要求两次双倍大小的 gcd 操作，以及两次加法和递减，三次比较。(双倍大小的 GCD
+操作是由于它们在辗转相除时所得的商数要被保留和比较，而直接的 GCD 函数只保留和比较余数)。 </li>
+<li>最后一个基础操作是 rational 规范化。该操作在构造一个 rational
+时(包括就地赋值)执行。所有其它操作都小心地将 rational 维持在规范化的状态。规范化操作的开销相当于一次 gcd 和两次除法。 </li>
+</ul>
+<p>注意，这里假设了 IntType 上的操作具有"正常的"性能特性 -
+具体讲，即最昂贵的操作是乘法、除法和取模，而加法和减法则代价明显要低一些。还假设了构造(包括从整数 0 和 1
+进行构造，以及复制构造)和赋值也相对低代价，尽管我们也在减少不必要的构造和复制上做了一些努力。我们还假设了比较(尤其是与零比较)是很低代价的。
+</p>
+<p>不符合以上假设的整数类型不太适合作为 rational 类的底层整数类型。这样将会导致性能急剧降低。
+</p>
+<h2><a name="Exceptions">异常</a></h2>
+有理数不能以零作为分母。(本库不支持表示无限大或 NaN)。如果一个 rational 导致生成了零分母，则会抛出异常 <tt>boost::bad_rational</tt>
+(<tt>std::domain_error</tt> 的子类)。这只会发生在用户试图显式地以零分母构造一个
+rational，或者用零值去除一个 rational 时。
+<p>此外，如果对底层整数类型的操作会产生异常，异常将会被传递到对 rational
+类的操作以外。不要做任意特定的假设 - 唯一安全的方法是假设任何可能由整数类型抛出的异常都会由任意的 rational
+操作抛出。具体讲，rational 的构造函数可能在规范化中以抛出来自于底层整数类型的异常作为结果。该规则的唯一例外是，rational
+的析构函数只会在底层整数类型的析构函数抛出异常时(通常不会发生)抛出异常。
+</p>
+<h2><a name="Internal representation">内部表示</a></h2>
+<em>注：</em>这些信息仅供参考。不应该依赖于这些实现细节来编写程序。
+<p>在内部，有理数被保存为一对 (分子, 分母)
+的整数(其类型由
+rational 类型的模板参数所指定)。有理数总是以完全规范化的形式(即
+gcd(numerator,denominator) = 1, 且分母为正)来保存。
+</p>
+<h2><a name="Design notes">设计说明</a></h2>
+<h3><a name="Minimal Implementation">最小实现</a></h3>
+rational 类是遵循最小性原则来设计的。只提供了数字类型的最低要求的操作，以及以 numerator() 和 denominator()
+成员函数访问底层数据的方法。基于这些构件，就可以实现所需要的任意其它功能。
+<p>这个最小性原则的例外是提供了输入/输出操作符，以及 rational_cast.
+前者通常不会引起争论。但是，在很多情形下，rational_cast 并不是将 rational
+转换为浮点值的最佳方法(告别是有用户自定义类型的时候)。这时候，可以实现一个用户自定义的转换函数。这个操作不需要命名为
+rational_cast, 所以 rational_cast
+函数没有提供进行特化/重载的必要措施。
+</p>
+<h3><a name="Limited-range integer types">有限范围的整数类型</a></h3>
+rational 类被设计为可以与无限精度的整数类型一起使用。对于这样的整数类型，rational
+就总是精确的，不会出现精度损失、上溢出和下溢出等问题。
+<p>不幸的是，C++ 标准并没有提供这样的类(到目前为止，boost 也没有)。因此，多数情况下 rational
+类会与有限精度的整数类型合用，如内建的 <tt>int</tt> 类型。
+</p>
+<p>当与有限精度的整数类型合用时，rational 类会遇到和浮点数类型同样的很多精度问题。虽然这些精度问题好象不会影响到对
+rational 类的一般的使用，但是用户还是应该知道有这些问题。
+</p>
+<p>以下通过一个简单的示例来看一下这个与有限精度整数相关的问题，假设 C++ <tt>int</tt>
+类型是一个32位的有符号表示。这种情形下，最小的正的
+rational&lt;int&gt; 是 <tt>1/0x7FFFFFFF</tt>.
+换句话说，rational&lt;int&gt; 表示法在零值附近的"粒度"大约是 4.66e-10.
+在该表示法的范围的另一端，最大的正的 rational&lt;int&gt; 是 <tt>0x7FFFFFFF/1</tt>,
+而次大的 rational&lt;int&gt; 是 <tt>0x7FFFFFFE/1</tt>.
+因此，在该表示的范围的另一端，粒度为 1. 这种与大小相关的粒度也正是浮点表示法所具有的。不过，在使用 rational
+类时好象"感觉上"没那么自然罢了。
+</p>
+<p>用户在使用基于有限精度整数类型的 rational 时，应该知道以上问题，并依此来编码。
+</p>
+<h3><a name="Conversion from floating point">转换自浮点数</a></h3>
+本库不提供从浮点数到有理数的转换。曾经有不少这类转换的要求被提出，但是通过在 boost list 上的广泛讨论，得到的结论是这个问题没有
+"最佳的解决方案"。本库的用户没有理由不可以根据它们的特定要求来编写它们自己的转换函数，最终的结果是，没有一个算法可以被作为 "标准"。
+<p>从浮点数进行转换的关键问题是，如何处理浮点数操作中的精度损失。为了提供一个具体的例子，考虑以下代码：
+</p>
+<pre> // 这两个值实际上可以是来自于用户输入，或来自于某些测量仪表<br> double x = 1.0;<br> double y = 3.0;<br><br> double z = x/y;<br><br> rational&lt;I&gt; r = rational_from_double(z);<br></pre>
+<p>根本问题是，rational r 应该具有什么样的精度？一个天真答案是 r 应该等于 1/3. 但是，它忽略了很多问题。
+</p>
+<p>首先，z 并不精确等于 1/3. 因为浮点数表示法的限制，在任何常见的 double 类型的表示中，1/3
+不可能在被精确地表示。那么
+r 可能是 z 的实际值的一个(精确)表示吗？用户会对 r 的值是 33333333333333331/100000000000000000
+感到高兴吗？
+</p>
+<p>在进一步讨论以上问题前，我们需要考虑原始值 x 和 y
+的精度。如果它们来自于某个模拟测量设备，那么它们就不可能是无限精确的。在这种情况下，象上面这样的 rational
+表示就提供了比其它表示更好的精度。
+</p>
+<p>以上这些意味着我们应该寻找某种 "最接近的简单分数"
+的形式。这样的算法确实存在。不过，并不是所有应用程序都想这样做。在其它情况下，转换为 rational
+的重点在于提供一个精确的表示，以防止在一系列计算中的精度损失。这时就要求一个完整的精度表示，而不管这个分数看起来是多么 "不自然" 了。
+</p>
+<p>由于这些相互矛盾的要求，很显然不存在单个的解决方案可以满足所有用户。而且，相关的算法都比较复杂和特殊，最好的实现都应该对应用程
+序的需求有好的理解。所有这些因素使得这样一个函数不适合在一个通用库中提供。
+</p>
+<h3><a name="Absolute Value">绝对值</a></h3>
+起初，看起来用 abs(IntType) 来实现
+abs(rational&lt;IntType&gt;) 是很合理的。不过，这样做会带来几个问题。
+<p>第一个问题是，当 IntType 是一个位于用户的名字空间中的用户自定义类型时，为了查找 abs(IntType)
+的适当实现，需要用到
+Koenig 查找。目前还不是所有编译器都能支持 Koenig 查找。对于这样的编译器，笨拙的处理方法是，需要 rational
+类的用户的配合才可以正常工作。
+</p>
+<p>第二个问题更为严重，对于非标准的内建类型类型(如
+<em>long long</em> 或 <em>__int64</em>
+这样的64位类型)，不能保证编译器厂家提供了操作这些类型的内建 abs() 函数。这是一个实现质量的问题，不过在实际情况下，厂家对 <em>long
+long</em> 这样的类型的支持还很别扭。
+</p>
+<p>这些问题的一个结果是，不应该依据 abs(IntType) 来实现
+abs(rational&lt;IntType&gt;). 我们使用了一个简单的内联函数来实现 abs():
+</p>
+<pre> template &lt;typename IntType&gt;<br> inline rational&lt;IntType&gt; abs(const rational&lt;IntType&gt;&amp; r)<br> {<br> if (r.numerator() &gt;= IntType(0))<br> return r;<br><br> return rational&lt;IntType&gt;(-r.numerator(), r.denominator());<br> }<br></pre>
+<p>相同的参数意味着，在需要 IntType 的绝对值的地方，计算将被内联执行。
+</p>
+<h2><a name="References"></a>参考</h2>
+<ul>
+<li>有理数类的头文件：<a href="../../boost/rational.hpp">rational.hpp</a>
+</li>
+<li>一些例子代码：<a href="rational_example.cpp">rational_example.cpp</a>
+</li>
+<li>回归测试：<a href="rational_test.cpp">rational_test.cpp</a>
+</li>
+</ul>
+<h2><a name="History and Acknowledgements">历史与鸣谢</a></h2>
+In December, 1999, I implemented the initial version of the rational
+number class, and submitted it to the <a href="http://www.boost.org/">boost.org</a> mailing
+list. Some discussion of the implementation took place on the mailing
+list. In particular, Andrew D. Jewell pointed out the importance of
+ensuring that the risk of overflow was minimised, and provided
+overflow-free implementations of most of the basic operations. The name
+rational_cast was suggested by Kevlin Henney. Ed Brey provided
+invaluable comments - not least in pointing out some fairly stupid
+typing errors in the original code!
+<p>David Abrahams contributed helpful feedback on the
+documentation. </p>
+<p>A long discussion of the merits of providing a conversion from
+floating point to rational took place on the boost list in November
+2000. Key contributors included Reggie Seagraves, Lutz Kettner and
+Daniel Frey (although most of the boost list seemed to get involved at
+one point or another!). Even though the end result was a decision <em>not</em>
+to implement anything, the discussion was very valuable in
+understanding the issues. </p>
+<p>Stephen Silver contributed useful experience on using the
+rational class with a user-defined integer type. </p>
+<p>Nickolay Mladenov provided the current implementation of
+operator+= and operator-=. </p>
+<p>Discussion of the issues surrounding Koenig lookup and
+std::swap took place on the boost list in January 2001. </p>
+<p>Daryle Walker provided a Boolean conversion operator, so that
+a rational can be used in the same Boolean contexts as the built-in
+numeric types, in December 2005. </p>
+<p>Revised November 5, 2006</p>
+<p>© Copyright Paul Moore 1999-2001; © Daryle Walker 2005.
+Permission to copy, use, modify, sell and distribute this document is
+granted provided this copyright notice appears in all copies. This
+document is provided "as is" without express or implied warranty, and
+with no claim as to its suitability for any purpose.<br>
+</p>
+</body></html>

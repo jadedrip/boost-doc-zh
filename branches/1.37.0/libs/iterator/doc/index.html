@@ -1,0 +1,408 @@
+<!DOCTYPE html PUBLIC "-//W3C//DTD XHTML 1.0 Transitional//EN" "http://www.w3.org/TR/xhtml1/DTD/xhtml1-transitional.dtd">
+<html xmlns="http://www.w3.org/1999/xhtml" xml:lang="en" lang="en"><head>
+
+
+  
+  <meta http-equiv="Content-Type" content="text/html; charset=utf-8" />
+
+
+  
+  <meta name="generator" content="Docutils 0.5: http://docutils.sourceforge.net/" />
+
+
+
+  
+  
+  
+  <title>The Boost.Iterator Library Boost</title><link rel="stylesheet" href="../../../rst.css" type="text/css" /></head>
+<body>
+
+
+<div class="document" id="the-boost-iterator-library-logo">
+<h1 class="title">Boost.Iterator 库 <a class="reference external" href="../../../index.htm"><img alt="Boost" src="../../../boost.png" /></a></h1>
+
+
+
+<!-- Distributed under the Boost -->
+<!-- Software License, Version 1.0. (See accompanying -->
+<!-- file LICENSE_1_0.txt or copy at http://www.boost.org/LICENSE_1_0.txt) -->
+<hr class="docutils" />
+<table class="docutils field-list" frame="void" rules="none">
+
+
+  <col class="field-name" />
+  <col class="field-body" />
+  <tbody valign="top">
+
+
+    <tr class="field">
+
+      <th class="field-name">Authors:</th>
+
+      <td class="field-body">David Abrahams, Jeremy Siek, Thomas Witt</td>
+
+
+    </tr>
+
+
+    <tr class="field">
+
+      <th class="field-name">Contact:</th>
+
+      <td class="field-body"><a class="reference external" href="mailto:dave@boost-consulting.com">dave@boost-consulting.com</a>, <a class="reference external" href="mailto:jsiek@osl.iu.edu">jsiek@osl.iu.edu</a>, <a class="reference external" href="mailto:witt@styleadvisor.com">witt@styleadvisor.com</a></td>
+
+
+    </tr>
+
+
+    <tr class="field">
+
+      <th class="field-name">organizations:</th>
+
+      <td class="field-body"><a class="reference external" href="http://www.boost-consulting.com">Boost Consulting</a>, Indiana University <a class="reference external" href="http://www.osl.iu.edu">Open Systems
+Lab</a>, <a class="reference external" href="http://www.styleadvisor.com">Zephyr Associates, Inc.</a></td>
+
+
+    </tr>
+
+
+    <tr class="field">
+
+      <th class="field-name">date:</th>
+
+      <td class="field-body">$Date: 2008-03-22 17:45:55 -0400 (Sat, 22 Mar 2008) $</td>
+
+
+    </tr>
+
+
+    <tr class="field">
+
+      <th class="field-name">copyright:</th>
+
+      <td class="field-body">Copyright David Abrahams, Jeremy Siek, Thomas Witt 2003.</td>
+
+
+    </tr>
+
+
+  
+  </tbody>
+</table>
+
+
+<table class="docutils field-list" frame="void" rules="none">
+
+
+  <col class="field-name" />
+  <col class="field-body" />
+  <tbody valign="top">
+
+
+    <tr class="field">
+
+      <th class="field-name">概要:</th>
+
+      <td class="field-body">Boost Iterator 库包含两部分。第一个部分是一个 <a class="reference external" href="http://www.boost.org/more/generic_programming.html#concept">概念</a>
+系统，扩展了 C++
+标准的迭代器需求。第二个部分是一个组件框架，基于这些扩展概念构建了一些迭代器，还包括几个有用的迭代器适配器。这些扩展的迭代器概念是精心设计的，旧
+式的迭代器也可以适合于新的概念，新式的迭代器兼容于旧式的算法，不过如果你想充分利用新式迭代器的功能，可能需要对算法进行一些修改。本库中的几个组件
+已经被接纳进入 C++ 标准技术报告。Boost Iterator 库的组件将替代旧的 Boost Iterator Adaptor 库。</td>
+
+
+    </tr>
+
+
+  
+  </tbody>
+</table>
+
+
+<div class="contents topic" id="table-of-contents">
+<p class="topic-title first"><strong>目录</strong></p>
+
+
+<ul class="simple">
+
+
+  <li><a class="reference internal" href="#new-style-iterators" id="id22">新式迭代器</a></li>
+
+
+  <li><a class="reference internal" href="#iterator-facade-and-adaptor" id="id23">迭代器外观与适配器</a></li>
+
+
+  <li><a class="reference internal" href="#specialized-adaptors" id="id24">特定的适配器</a></li>
+
+
+  <li><a class="reference internal" href="#iterator-utilities" id="id25">迭代器工具</a>
+    
+    <ul>
+
+
+      <li><a class="reference internal" href="#traits" id="id26">Traits</a></li>
+
+
+      <li><a class="reference internal" href="#testing-and-concept-checking" id="id27">测试和概念检查</a></li>
+
+
+    
+    </ul>
+
+
+  </li>
+
+
+  <li><a class="reference internal" href="#upgrading-from-the-old-boost-iterator-adaptor-library" id="id28">从旧的 Boost Iterator Adaptor 库升级</a></li>
+
+
+  <li><a class="reference internal" href="#history" id="id29">历史</a></li>
+
+
+</ul>
+
+
+</div>
+
+
+<hr class="docutils" />
+<div class="section" id="new-style-iterators">
+<h1><a class="toc-backref" href="#id22">新式迭代器</a></h1>
+
+
+<p>C++98 中定义的迭代器类别非常有限，这是因为它们将两个直交的概念：遍历和元素访问，绑定在了一起。例如，因为随机访问迭代器要求在提领时返回一个引用(而不是一个代理)，这使得不可能用 C++98 中的迭代器类别来获得
+<tt class="docutils literal"><span class="pre">vector&lt;bool&gt;::iterator</span></tt> 的能力。这就是声名狼籍的 "<tt class="docutils literal"><span class="pre">vector&lt;bool&gt;</span></tt> 不是一个容器，其迭代器也不是随机访问迭代器"，有关于此，Herb Sutter
+为标准委员会写了两篇文件(<a class="reference external" href="http://www.gotw.ca/publications/N1185.pdf">n1185</a> 和 <a class="reference external" href="http://www.gotw.ca/publications/N1211.pdf">n1211</a>)，以及一个 <a class="reference external" href="http://www.gotw.ca/gotw/050.htm">Guru of the Week</a>.  新式迭代器很好地修补了 <tt class="docutils literal"><span class="pre">vector&lt;bool&gt;</span></tt>, 虽然：还有大量其它在用的迭代器不能用已有的概念充分地表示出来。有关新的迭代器概念的详细，请看</p>
+
+
+<blockquote>
+  <a class="reference external" href="new-iter-concepts.html">关于新式迭代器的标准建议书</a> (<a class="reference external" href="new-iter-concepts.pdf">PDF</a>)</blockquote>
+
+
+</div>
+
+
+<div class="section" id="iterator-facade-and-adaptor">
+<h1><a class="toc-backref" href="#id23">迭代器外观和适配器</a></h1>
+
+
+<p>编写符合标准的迭代器是需要一些技巧的，但这种需要常常被提出。为了更易于实现新的迭代器，Boost.Iterator 库提供了 <tt class="docutils literal"><span class="pre">iterator_facade</span></tt> 类模板，它实现了许多有用的缺省值和编译期检查，被设计为帮助迭代器的作者保证他的迭代器是正确的。</p>
+
+
+<p>还有一种情况常常会遇到，即定义的新迭代器类似于某个底层的迭代器或某种类-迭代器的类型，不过要对底层类型某些方面的行为进行一些修改。为了这个目的，本库提供了 <tt class="docutils literal"><span class="pre">iterator_adaptor</span></tt> 类模板，它被设计为尽可能地利用底层类型的行为。</p>
+
+
+<p>这两个类的相关文档请见以下 web 页：</p>
+
+
+<ul class="simple">
+
+
+  <li><a class="reference external" href="iterator_facade.html"><tt class="docutils literal"><span class="pre">iterator_facade</span></tt></a> (<a class="reference external" href="iterator_facade.pdf">PDF</a>)</li>
+
+
+  <li><a class="reference external" href="iterator_adaptor.html"><tt class="docutils literal"><span class="pre">iterator_adaptor</span></tt></a> (<a class="reference external" href="iterator_adaptor.pdf">PDF</a>)</li>
+
+
+</ul>
+
+
+<p><tt class="docutils literal"><span class="pre">iterator_facade</span></tt> 和 <tt class="docutils literal"><span class="pre">iterator_adaptor</span></tt> 以及许多下面提及的 <a class="reference internal" href="#specialized-adaptors">特定适配器</a> 均已被提议进入标准，并被接纳进入第一版的 C++ 技术报告；更多详情请见</p>
+
+
+<blockquote>
+  <a class="reference external" href="facade-and-adaptor.html">关于迭代器的外观和适配器的标准建议书</a> (<a class="reference external" href="facade-and-adaptor.pdf">PDF</a>)</blockquote>
+
+
+<p><br />
+
+</p>
+
+
+</div>
+
+
+<div class="section" id="specialized-adaptors">
+<h1><a class="toc-backref" href="#id24">特定的迭代器</a></h1>
+
+
+<p>iterator 库基于 Boost <a class="reference internal" href="index.html#iterator-facade-and-adaptor">iterator 外观和适配器</a> 提供了一组非常有用的，符合标准的迭代器模板：.</p>
+
+
+<ul class="simple">
+
+
+  <li><a class="reference external" href="counting_iterator.html"><tt class="docutils literal"><span class="pre">counting_iterator</span></tt></a> (<a class="reference external" href="counting_iterator.pdf">PDF</a>): 一个相邻值序列上的迭代器。实现了 "lazy sequence"。</li>
+
+
+  <li><a class="reference external" href="filter_iterator.html"><tt class="docutils literal"><span class="pre">filter_iterator</span></tt></a> (<a class="reference external" href="filter_iterator.pdf">PDF</a>): 某个序列中满足给定条件的元素组成的子序列上的迭代器。</li>
+
+
+  <li><a class="reference external" href="function_output_iterator.html"><tt class="docutils literal"><span class="pre">function_output_iterator</span></tt></a> (<a class="reference external" href="function_output_iterator.pdf">PDF</a>): 包装一个单参函数对象的输出迭代器；每次一个元素被写入提领迭代器时，该元素被作为参数传入函数对象。</li>
+
+
+  <li><a class="reference external" href="indirect_iterator.html"><tt class="docutils literal"><span class="pre">indirect_iterator</span></tt></a> (<a class="reference external" href="indirect_iterator.pdf">PDF</a>): 由指向某个序列中元素的对象所组成的序列上的迭代器。</li>
+
+
+  <li><a class="reference external" href="permutation_iterator.html"><tt class="docutils literal"><span class="pre">permutation_iterator</span></tt></a> (<a class="reference external" href="permutation_iterator.pdf">PDF</a>): 某个随机访问序列的元素之上的迭代器，依据某个整数索引序列进行重排。</li>
+
+
+  <li><a class="reference external" href="reverse_iterator.html"><tt class="docutils literal"><span class="pre">reverse_iterator</span></tt></a> (<a class="reference external" href="reverse_iterator.pdf">PDF</a>): 以相反顺序遍历某个双向序列的迭代器。修正了 C++98 中的 <tt class="docutils literal"><span class="pre">std::reverse_iterator</span></tt> 的许多缺点。</li>
+
+
+  <li><a class="reference external" href="../../utility/shared_container_iterator.html"><tt class="docutils literal"><span class="pre">shared_container_iterator</span></tt></a>: 某个容器的迭代器，该容器的元素的生命周期由保存在迭代器中的一个 <a class="reference external" href="../../smart_ptr/shared_ptr.htm"><tt class="docutils literal"><span class="pre">shared_ptr</span></tt></a> 管理。</li>
+
+
+  <li><a class="reference external" href="transform_iterator.html"><tt class="docutils literal"><span class="pre">transform_iterator</span></tt></a> (<a class="reference external" href="transform_iterator.pdf">PDF</a>): 对底层序列的元素进行某种功能转换后，所得结果的迭代器。该组件可以替代旧的
+    <tt class="docutils literal"><span class="pre">projection_iterator_adaptor</span></tt>.</li>
+
+
+  <li><a class="reference external" href="zip_iterator.html"><tt class="docutils literal"><span class="pre">zip_iterator</span></tt></a> (<a class="reference external" href="zip_iterator.pdf">PDF</a>): 由不同种类的底层迭代器在相应位置所组成的 tuples 的迭代器。</li>
+
+
+</ul>
+
+
+</div>
+
+
+<div class="section" id="iterator-utilities">
+<h1><a class="toc-backref" href="#id25">迭代器工具</a></h1>
+
+
+<div class="section" id="traits">
+<h2><a class="toc-backref" href="#id26">Traits</a></h2>
+
+
+<ul class="simple">
+
+
+  <li><a class="reference external" href="pointee.html"><tt class="docutils literal"><span class="pre">pointee.hpp</span></tt></a> (<a class="reference external" href="pointee.pdf">PDF</a>): 以泛化代码提供了推断指针、智能指针和迭代器所指物的类型的能力。用于 <tt class="docutils literal"><span class="pre">indirect_iterator</span></tt>.</li>
+
+
+  <li><a class="reference external" href="iterator_traits.html"><tt class="docutils literal"><span class="pre">iterator_traits.hpp</span></tt></a> (<a class="reference external" href="iterator_traits.pdf">PDF</a>): 提供了 <a class="reference external" href="../../mpl/doc/index.html">MPL</a>-兼容的元函数，用于提取迭代器的 traits.  同时也修正了 <tt class="docutils literal"><span class="pre">std::iterator_traits</span></tt> 实现中的不足。</li>
+
+
+</ul>
+
+
+<!-- * |interoperable|_ (PDF__): Provides an MPL_\ -compatible metafunction for
+testing iterator interoperability -->
+<!-- comment! __ interoperable.pdf -->
+</div>
+
+
+<div class="section" id="testing-and-concept-checking">
+<h2><a class="toc-backref" href="#id27">测试和概念检查</a></h2>
+
+
+<ul class="simple">
+
+
+  <li><a class="reference external" href="iterator_concepts.html"><tt class="docutils literal"><span class="pre">iterator_concepts.hpp</span></tt></a> (<a class="reference external" href="iterator_concepts.pdf">PDF</a>): 用于新的迭代器概念的概念检查类。</li>
+
+
+  <li><a class="reference external" href="iterator_archetypes.html"><tt class="docutils literal"><span class="pre">iterator_archetypes.hpp</span></tt></a> (<a class="reference external" href="iterator_archetypes.pdf">PDF</a>): 用于新的迭代器概念的概念原型类。</li>
+
+
+</ul>
+
+
+</div>
+
+
+</div>
+
+
+<div class="section" id="upgrading-from-the-old-boost-iterator-adaptor-library">
+<h1><a class="toc-backref" href="#id28">从旧的 Boost Iterator Adaptor 库升级</a></h1>
+
+
+<p id="upgrading">如果你已经使用了旧的 Boost Iterator Adaptor 库来实现迭代器，也许你编写了一个 <tt class="docutils literal"><span class="pre">Policies</span></tt> 类来提供你的迭代器的核心操作。在这个新的迭代器设计中，你要将相同的核心操作移到迭代器类本身里面。如果你写了一组迭代器，那么也许你写了一个 <a class="reference external" href="http://www.boost.org/more/generic_programming.html#type_generator">type generator</a> 来构建所需的
+<tt class="docutils literal"><span class="pre">iterator_adaptor</span></tt> 特化物；在新的库中，你不需要类型生成器(虽然可能为了兼容旧的代码而保留它)，由于 Curiously Recurring Template Pattern (CRTP) <a class="citation-reference" href="#cop95" id="id21">[Cop95]</a> 的使用，你现在可以定义自己的迭代器类并通过从 <tt class="docutils literal"><span class="pre">iterator_facade</span></tt> 或
+<tt class="docutils literal"><span class="pre">iterator_adaptor</span></tt> 派生来获得所需的功能。结果是，你可以更好地控制你的迭代器如何工作：你可以增加额外的构造函数，或者覆写由库提供的迭代器功能。</p>
+
+
+<p>如果你在查找旧的 <tt class="docutils literal"><span class="pre">projection_iterator</span></tt> 组件，那么它的功能已经被合并入 <tt class="docutils literal"><span class="pre">transform_iterator</span></tt>: 只要函数对象的 <tt class="docutils literal"><span class="pre">result_type</span></tt> (或是 <tt class="docutils literal"><span class="pre">Reference</span></tt>
+模板参数，如果它被显式指定)是一个真的引用类型，那么 <tt class="docutils literal"><span class="pre">transform_iterator</span></tt> 将和具有和
+<tt class="docutils literal"><span class="pre">projection_iterator</span></tt> 一样的行为。</p>
+
+
+</div>
+
+
+<div class="section" id="history">
+<h1><a class="toc-backref" href="#id29">历史</a></h1>
+
+
+<p>In 2000 Dave Abrahams was writing an iterator for a container of
+pointers, which would access the pointed-to elements when
+dereferenced.  Naturally, being a library writer, he decided to
+generalize the idea and the Boost Iterator Adaptor library was born.
+Dave was inspired by some writings of Andrei Alexandrescu and chose a
+policy based design (though he probably didn't capture Andrei's idea
+very well - there was only one policy class for all the iterator's
+orthogonal properties).  Soon Jeremy Siek realized he would need the
+library and they worked together to produce a "Boostified" version,
+which was reviewed and accepted into the library.  They wrote a paper
+and made several important revisions of the code.</p>
+
+
+<p>Eventually, several shortcomings of the older library began to make
+the need for a rewrite apparent.  Dave and Jeremy started working
+at the Santa Cruz C++ committee meeting in 2002, and had quickly
+generated a working prototype.  At the urging of Mat Marcus, they
+decided to use the GenVoca/CRTP pattern approach, and moved the
+policies into the iterator class itself.  Thomas Witt expressed
+interest and became the voice of strict compile-time checking for
+the project, adding uses of the SFINAE technique to eliminate false
+converting constructors and operators from the overload set.  He
+also recognized the need for a separate <tt class="docutils literal"><span class="pre">iterator_facade</span></tt>, and
+factored it out of <tt class="docutils literal"><span class="pre">iterator_adaptor</span></tt>.  Finally, after a
+near-complete rewrite of the prototype, they came up with the
+library you see today.</p>
+
+
+<table class="docutils citation" id="cop95" frame="void" rules="none">
+
+
+  <colgroup><col class="label" /><col /></colgroup>
+  <tbody valign="top">
+
+
+    <tr>
+
+      <td class="label"><a class="fn-backref" href="#id21">[Cop95]</a></td>
+
+      <td>[Coplien, 1995] Coplien, J., Curiously Recurring Template
+Patterns, C++ Report, February 1995, pp. 24-27.</td>
+
+    </tr>
+
+
+  
+  </tbody>
+</table>
+
+
+<!-- LocalWords:  Abrahams Siek Witt const bool Sutter's WG int UL LI href Lvalue
+LocalWords:  ReadableIterator WritableIterator SwappableIterator cv pre iter
+LocalWords:  ConstantLvalueIterator MutableLvalueIterator CopyConstructible TR
+LocalWords:  ForwardTraversalIterator BidirectionalTraversalIterator lvalue
+LocalWords:  RandomAccessTraversalIterator dereferenceable Incrementable tmp
+LocalWords:  incrementable xxx min prev inplace png oldeqnew AccessTag struct
+LocalWords:  TraversalTag typename lvalues DWA Hmm JGS -->
+</div>
+
+
+</div>
+
+
+<div class="footer">
+<hr class="footer" />
+<a class="reference external" href="index.rst">View document source</a>.
+Generated by <a class="reference external" href="http://docutils.sourceforge.net/">Docutils</a> from <a class="reference external" href="http://docutils.sourceforge.net/rst.html">reStructuredText</a> source.
+
+</div>
+
+
+</body></html>

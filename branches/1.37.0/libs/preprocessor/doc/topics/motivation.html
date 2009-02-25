@@ -1,0 +1,122 @@
+<!DOCTYPE HTML PUBLIC "-//W3C//DTD HTML 4.01 Transitional//EN">
+<html>
+<head>
+  <meta content="text/html; charset=UTF-8" http-equiv="content-type">
+
+	
+	
+  <title>motivation.html</title>
+  <link rel="stylesheet" type="text/css" href="../styles.css">
+</head>
+
+<body>
+
+<h4>动机</h4>
+
+<div>C++的函数和模板参数列表是特定的语法结构，不可能使用C++结构来直接操纵或生成它们。这导致了无谓的代码重复。
+</div>
+
+<div>想像一下 Boost 中的 <code>is_function&lt;&gt;</code> 元函数的实现。该实现使用了一个重载的 <code>is_function_tester()</code> 函数来测试某个类型是否可以转换为函数指针。由于参数列表的特殊性，不可能直接匹配一个带有任意参数列表的函数。所以，<code>is_function_tester()</code> 必须为所支持的各个不同的参数数量进行重载。例如：
+</div>
+
+<div class="code">
+<pre>template&lt;class R&gt;<br>yes_type is_function_tester(R (*)());<br><br>template&lt;class R, class A0&gt;<br>yes_type is_function_tester(R (*)(A0));<br><br>template&lt;class R, class A0, class A1&gt;<br>yes_type is_function_tester(R (*)(A0, A1));<br><br>template&lt;class R, class A0, class A1, class A2&gt;<br>yes_type is_function_tester(R (*)(A0, A1, A2));<br><br>// ...<br></pre>
+</div>
+
+<div>在实现泛型组件或元编程工具时，这种重复显然会经常遇到，但是这种需要显然也是应该用简单得多的方法来提供。
+</div>
+
+<h4>典型的解决方法</h4>
+
+<div>这种重复显然是手工完成的。手工编写的重复代码是非常没有效率的，但有时候对于未经训练的眼睛来说更具有可读性。
+</div>
+
+<div>另一个解决方法是编写另外一个程序来生成重复的代码，或者使用其它的语言，如某个智能的编辑器。不幸的是，使用外部的编码存在 许多缺点：
+	
+<ul>
+
+		<li>编写一个生成器需要花费时间(使用标准的生成器会有些帮助)。</li>
+
+		<li>不可以再直接修改这些C++代码。</li>
+
+		<li>调用生成器有可能很难。</li>
+
+		<li>在特定情形下，自动执行生成器可能很难(对于活跃的库，自动执行是需要的)。</li>
+
+		<li>移植和分发这个生成器可能很困难或需要花费宝贵的时间。</li>
+
+	
+</ul>
+
+</div>
+
+<h4>使用预处理器，如何？</h4>
+
+<div>由于C++带有一个预处理器，你可能会认为它可以直接支持这种需要。在这种情形下使用预处理器是非常值得的，因为：
+	
+<ul>
+
+		<li>预处理器是高度可移植的。</li>
+
+		<li>预处理器是在编译过程中自动执行的。</li>
+
+		<li>预处理器的元代码可以直接嵌入到C++源代码中。</li>
+
+		<li>编译器通常允许查看或输出预处理后的代码，它们可以用于调试或者对生成的代码进行拷贝和粘贴。</li>
+
+	
+</ul>
+
+</div>
+
+<div>但是不幸的是，这个预处理器是非常低级的预处理器，尤其是不支持重复或递归宏。所以需要库的支持！
+</div>
+
+<div>
+	<i>有关预处理器的能力和限制的更详细信息，请参考C++标准<a href="../bibliography.html#std">[Std]</a>.</i>
+</div>
+
+<h4>重温上一个例子</h4>
+
+<div>使用 preprocessor 库的工具，<code>is_function_tester()</code> 可以实现如下：
+</div>
+
+<div class="code">
+<pre>#include &lt;boost/preprocessor/arithmetic/inc.hpp&gt;<br>#include &lt;boost/preprocessor/punctuation/comma_if.hpp&gt;<br>#include &lt;boost/preprocessor/repetition.hpp&gt;<br><br>#ifndef MAX_IS_FUNCTION_TESTER_PARAMS<br>#define MAX_IS_FUNCTION_TESTER_PARAMS 15<br>#endif<br><br>#define IS_FUNCTION_TESTER(Z, N, _) \<br>   template&lt;class R BOOST_PP_COMMA_IF(N) BOOST_PP_ENUM_PARAMS(N, class A)&gt; \<br>   yes_type is_function_tester(R (*)(BOOST_PP_ENUM_PARAMS(N, A))); \<br>   /**/<br><br>BOOST_PP_REPEAT(BOOST_PP_INC(MAX_IS_FUNCTION_TESTER_PARAMS), IS_FUNCTION_TESTER, _)<br><br>#undef IS_FUNCTION_TESTER<br></pre>
+</div>
+
+<div>要更改所支持的函数参数数量的最大值，现在你只需要修改 <code>MAX_IS_FUNCTION_TESTER_PARAMS</code> 的定义并重编译就可以了。
+</div>
+
+<hr size="1">
+<div style="margin-left: 0px;">
+	<i>&copy; Copyright <a href="http://www.housemarque.com" target="_top">Housemarque Oy</a> 2002</i>
+</div>
+
+<div style="margin-left: 0px;">Permission to copy, use, modify, sell
+and distribute this document is granted provided this copyright notice
+appears in all copies.&nbsp;
+This document is provided "as is" without express or implied warranty
+and with no claim as to its suitability for any purpose.
+</div>
+
+	
+<hr size="1">
+	
+<div style="margin-left: 0px;">
+		<i>&copy; Copyright <a href="http://www.housemarque.com" target="_top">Housemarque Oy</a> 2002</i>
+		<br>
+<i>&copy; Copyright Paul Mensonides 2002</i>
+	</div>
+
+	
+<div style="margin-left: 0px;">
+		
+<p><small>Distributed under the Boost Software License, Version 1.0. (See
+		accompanying file <a href="../../../../LICENSE_1_0.txt">LICENSE_1_0.txt</a> or
+		copy at <a href="http://www.boost.org/LICENSE_1_0.txt">www.boost.org/LICENSE_1_0.txt</a>)</small></p>
+
+	</div>
+
+</body>
+</html>

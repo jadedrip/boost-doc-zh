@@ -1,0 +1,706 @@
+<!DOCTYPE HTML PUBLIC "-//W3C//DTD HTML 3.2//EN">
+<html>
+<head>
+
+  
+  <meta content="text/html; charset=UTF-8" http-equiv="content-type">
+
+
+  
+  <title>I/O Stream-State Saver Library</title>
+</head>
+
+
+<body alink="red" bgcolor="white" link="blue" text="black" vlink="purple">
+
+
+<h1><img src="../../../boost.png" alt="boost.png (6897 bytes)" align="middle" height="86" width="277">Header &lt;<cite><a href="../../../boost/io/ios_state.hpp">boost/io/ios_state.hpp</a></cite>
+&gt;</h1>
+
+
+
+<p>头文件 <cite><a href="../../../boost/io/ios_state.hpp">boost/io/ios_state.hpp</a></cite>
+用于保存在 C++ IOStreams 系统中的对象的流状态。</p>
+
+
+
+<h2><a name="contents">Contents目录</a></h2>
+
+
+
+<ol>
+
+
+	<li><a href="#contents">Contents目录</a></li>
+
+
+	<li><a href="#rationale">Rationale原理</a></li>
+
+
+	<li><a href="#header">Header Synopsis头文件摘要</a></li>
+
+
+	<li><a href="#base_savers">Savers for Basic Standard Attributes基本标准属性的保存器</a></li>
+
+
+	<li><a href="#adv_savers">Savers for Advanced Standard Attributes弱强标准属性的保存器</a></li>
+
+
+	<li><a href="#user_savers">Savers for User-Defined Attributes用户自定义属性的保存器</a></li>
+
+
+	<li><a href="#combo_savers">Savers for Combined Attributes组合属性的保存器</a></li>
+
+
+	<li><a href="#example">Example例子</a></li>
+
+
+	<li><a href="#refer">References参考</a></li>
+
+
+	<li><a href="#credits">Credits荣誉</a>
+		
+    
+    <ul>
+
+
+			<li><a href="#contributors">Contributors贡献者</a></li>
+
+
+			<li><a href="#history">History历史</a></li>
+
+
+		
+    
+    </ul>
+
+  </li>
+
+
+</ol>
+
+
+
+<h2><a name="rationale">Rationale原理</a></h2>
+
+
+
+<p>有时某个值需要限定于一定的代码范围内变化。Saver 保存器类保存了某个对象(或对象的外表)的当前状态，并在析构时恢复该对象的状态，恢复所有对该对象所做的改变。</p>
+
+
+
+<p>保存器类的策略有助于使用 I/O 流对象。操纵子对象会在输入或输出时改变流的某些状态。被操纵子改变了的状态在I/O事务之后会保持新的值。如果操纵子是用在一个不期望流状态的修改影响到外部的函数中时，这就会成为一个问题。</p>
+
+
+
+<blockquote>
+  
+  <pre>#include &lt;ostream&gt;<br>#include &lt;ios&gt;<br><br>void  hex_my_byte( std::ostream &amp;os, char byte )<br>{<br>    os &lt;&lt; std::hex &lt;&lt; static_cast&lt;unsigned&gt;(byte);<br>}<br></pre>
+
+</blockquote>
+
+
+
+<p>在调用了 <code>hex_my_byte 之后，</code><var>os</var> 流会保持其新的十六进制打印模式。通过通过手工调用流状态的检查成员函数和修改成员函数来保存和恢复流的打印模式。如果主程序的功能非常复杂和/或需要异常安全性，那么这种手工的方法就太笨拙了。保存器类可以实现更好的"资源获得即初始化"的策略。</p>
+
+
+
+<p>更好的代码请见以下 <a href="#example">example例子</a>, 使用了保存器类。</p>
+
+
+
+<h2><a name="header">Header Synopsis头文件摘要</a></h2>
+
+
+
+<blockquote>
+  
+  <pre>#include &lt;iosfwd&gt;  <i>// for std::char_traits (declaration)</i>
+
+namespace boost
+{
+namespace io
+{
+
+class ios_flags_saver;
+class ios_precision_saver;
+class ios_width_saver;
+class ios_base_all_saver;
+
+template &lt; typename Ch, class Tr = ::std::char_traits&lt;Ch&gt; &gt;
+    class basic_ios_iostate_saver;
+template &lt; typename Ch, class Tr = ::std::char_traits&lt;Ch&gt; &gt;
+    class basic_ios_exception_saver;
+template &lt; typename Ch, class Tr = ::std::char_traits&lt;Ch&gt; &gt;
+    class basic_ios_tie_saver;
+template &lt; typename Ch, class Tr = ::std::char_traits&lt;Ch&gt; &gt;
+    class basic_ios_rdbuf_saver;
+template &lt; typename Ch, class Tr = ::std::char_traits&lt;Ch&gt; &gt;
+    class basic_ios_fill_saver;
+template &lt; typename Ch, class Tr = ::std::char_traits&lt;Ch&gt; &gt;
+    class basic_ios_locale_saver;
+template &lt; typename Ch, class Tr = ::std::char_traits&lt;Ch&gt; &gt;
+    class basic_ios_all_saver;
+
+typedef basic_ios_iostate_saver&lt;char&gt;        ios_iostate_saver;
+typedef basic_ios_iostate_saver&lt;wchar_t&gt;    wios_iostate_saver;
+typedef basic_ios_exception_saver&lt;char&gt;      ios_exception_saver;
+typedef basic_ios_exception_saver&lt;wchar_t&gt;  wios_exception_saver;
+typedef basic_ios_tie_saver&lt;char&gt;            ios_tie_saver;
+typedef basic_ios_tie_saver&lt;wchar_t&gt;        wios_tie_saver;
+typedef basic_ios_rdbuf_saver&lt;char&gt;          ios_rdbuf_saver;
+typedef basic_ios_rdbuf_saver&lt;wchar_t&gt;      wios_rdbuf_saver;
+typedef basic_ios_fill_saver&lt;char&gt;           ios_fill_saver;
+typedef basic_ios_fill_saver&lt;wchar_t&gt;       wios_fill_saver;
+typedef basic_ios_locale_saver&lt;char&gt;         ios_locale_saver;
+typedef basic_ios_locale_saver&lt;wchar_t&gt;     wios_locale_saver;
+typedef basic_ios_all_saver&lt;char&gt;            ios_all_saver;
+typedef basic_ios_all_saver&lt;wchar_t&gt;        wios_all_saver;
+
+class ios_iword_saver;
+class ios_pword_saver;
+class ios_all_word_saver;
+
+}
+}
+  </pre>
+
+</blockquote>
+
+
+
+<h2><a name="base_savers">Savers for Basic Standard Attributes基本标准属性的保存器</a></h2>
+
+
+
+<p>基本的保存器有以下格式：</p>
+
+
+
+<blockquote>
+  
+  <pre>class <var>saver_class</var>
+{
+    typedef std::ios_base           state_type;
+    typedef <i>implementation_defined</i>  aspect_type;<br><br>    explicit  saver_class( state_type &amp;s );<br>              saver_class( state_type &amp;s, <var>aspect_type</var> const &amp;new_value );<br>             ~saver_class();<br><br>    void  restore();<br>};<br></pre>
+
+</blockquote>
+
+
+
+<p><var>state_type</var> 是 IOStreams 的基类
+<code>std::ios_base</code>.  用户通常会将一个真正的输入、输出或组合的流对象作为 state-type 参数，而不是用基类对象。第一个构造函数接受一个流对象，保存流的一个引用，以及特定的流属性的当前值。第二个构造函数与第一个类似，但使用第二个参数来将流的属性改变为给定的 <var>aspect_type</var> 值。析构函数将流的属性恢复为保存的值。属性恢复可以(且常常)使用 restore 成员函数提前执行。</p>
+
+
+
+<table align="center" border="1">
+
+
+	<caption>基本 IOStreams 状态保存器类</caption>
+	<tbody>
+
+    <tr>
+
+
+		<th>类</th>
+
+
+		<th>保存的属性</th>
+
+
+		<th>属性类型</th>
+
+
+		<th>读方法</th>
+
+
+		<th>写方法</th>
+
+
+	</tr>
+
+
+	<tr>
+
+
+		<td><code>boost::io::ios_flags_saver</code></td>
+
+
+		<td>格式控制标志</td>
+
+
+		<td><code>std::ios_base::fmtflags</code></td>
+
+
+		<td><code>flags</code></td>
+
+
+		<td><code>flags</code></td>
+
+
+	</tr>
+
+
+	<tr>
+
+
+		<td><code>boost::io::ios_precision_saver</code></td>
+
+
+		<td>小数点后的打印位数</td>
+
+
+		<td><code>std::streamsize</code></td>
+
+
+		<td><code>precision</code></td>
+
+
+		<td><code>precision</code></td>
+
+
+	</tr>
+
+
+	<tr>
+
+
+		<td><code>boost::io::ios_width_saver</code></td>
+
+
+		<td>打印对象的最小字段宽度</td>
+
+
+		<td><code>std::streamsize</code></td>
+
+
+		<td><code>width</code></td>
+
+
+		<td><code>width</code></td>
+
+
+	</tr>
+
+
+  
+  </tbody>
+</table>
+
+
+
+<h2><a name="adv_savers">Savers for Advanced Standard Attributes增强标准属性的保存器</a></h2>
+
+
+
+<p>保存器类模板有以下格式：</p>
+
+
+
+<blockquote>
+  
+  <pre>template &lt; typename Ch, class Tr &gt;<br>class <var>saver_class</var>
+{
+    typedef std::basic_ios&lt;Ch, Tr&gt;  state_type;
+    typedef <i>implementation_defined</i>  aspect_type;<br><br>    explicit  saver_class( state_type &amp;s );<br>              saver_class( state_type &amp;s, <var>aspect_type</var> const &amp;new_value );<br>             ~saver_class();<br><br>    void  restore();<br>};<br></pre>
+
+</blockquote>
+
+
+
+<p><var>state_type</var> 是 IOStreams 的基类模板 <code>std::basic_ios&lt;Ch, Tr&gt; 的一个版本</code>，其中
+<code>Ch</code> 是字符类型，<code>Tr</code> 是字符特性类。用户通常会将一个真正的输入、输出或组合的流对象作为 state-type 参数，而不是用基类对象。第一个构造函数接受一个流对象，保存流的一个引用，以及特定的流属性的当前值。第二个构造函数与第一个类似，但使用第二个参数来将流的属性改变为给定的 <var>aspect_type</var> 值。析构函数将流的属性恢复为保存的值。属性恢复可以(且常常)使用 restore 成员函数提前执行。</p>
+
+
+
+<table align="center" border="1">
+
+
+	<caption>增加 IOStreams 状态保存类模板</caption>
+	<tbody>
+
+    <tr>
+
+
+		<th>类模板</th>
+
+
+		<th>保存的属性</th>
+
+
+		<th>属性类型</th>
+
+
+		<th>读方法</th>
+
+
+		<th>写方法</th>
+
+
+	</tr>
+
+
+	<tr>
+
+
+		<td><code>boost::io::basic_ios_iostate_saver&lt;Ch, Tr&gt;</code></td>
+
+
+		<td>流的失败状态<a href="#Note1">[1]</a>, <a href="#Note2">[2]</a></td>
+
+
+		<td><code>std::ios_base::iostate</code></td>
+
+
+		<td><code>rdstate</code></td>
+
+
+		<td><code>clear</code></td>
+
+
+	</tr>
+
+
+	<tr>
+
+
+		<td><code>boost::io::basic_ios_exception_saver&lt;Ch, Tr&gt;</code></td>
+
+
+		<td>哪一个失败状态引发了异常 <a href="#Note1">[1]</a></td>
+
+
+		<td><code>std::ios_base::iostate</code></td>
+
+
+		<td><code>exceptions</code></td>
+
+
+		<td><code>exceptions</code></td>
+
+
+	</tr>
+
+
+	<tr>
+
+
+		<td><code>boost::io::basic_ios_tie_saver&lt;Ch, Tr&gt;</code></td>
+
+
+		<td>流所同步的输出流同步</td>
+
+
+		<td><code>std::basic_ostream&lt;Ch, Tr&gt; *</code></td>
+
+
+		<td><code>tie</code></td>
+
+
+		<td><code>tie</code></td>
+
+
+	</tr>
+
+
+	<tr>
+
+
+		<td><code>boost::io::basic_ios_rdbuf_saver&lt;Ch, Tr&gt;</code></td>
+
+
+		<td>流所关联的流缓冲 <a href="#Note2">[2]</a></td>
+
+
+		<td><code>std::basic_streambuf&lt;Ch, Tr&gt; *</code></td>
+
+
+		<td><code>rdbuf</code></td>
+
+
+		<td><code>rdbuf</code></td>
+
+
+	</tr>
+
+
+	<tr>
+
+
+		<td><code>boost::io::basic_ios_fill_saver&lt;Ch, Tr&gt;</code></td>
+
+
+		<td>用于填充过宽字段的字符</td>
+
+
+		<td><code>Ch</code></td>
+
+
+		<td><code>fill</code></td>
+
+
+		<td><code>fill</code></td>
+
+
+	</tr>
+
+
+	<tr>
+
+
+		<td><code>boost::io::basic_ios_locale_saver&lt;Ch, Tr&gt;</code></td>
+
+
+		<td>流所关联的Locale 信息 <a href="#Note3">[3]</a></td>
+
+
+		<td><code>std::locale</code></td>
+
+
+		<td><code>getloc</code> (from <code>std::ios_base</code>)</td>
+
+
+		<td><code>imbue</code> (from <code>std::basic_ios&lt;Ch, Tr&gt;</code>)</td>
+
+
+	</tr>
+
+
+  
+  </tbody>
+</table>
+
+
+
+<h3>注意</h3>
+
+
+
+<ol>
+
+
+	<li><a name="Note1"></a>当失败状态标志与/或失败状态异常监视标志被改变时，如果这两组标志间出现了匹配，将抛出一个异常。这意味着这些类模板的构造函数或析构函数有可能抛出异常。</li>
+
+
+	<li><a name="Note2"></a>当关联的流缓冲被改变时，如果给定的流缓冲地址为非-NULL，则流的失败状态集将被重置为
+"good"，如果地址为NULL，则设置 "bad" 失败状态。这意味着一个 "good" 的已保存失败状态有可能被恢复为
+"bad"，如果该流被剥夺了相关联的流缓冲。更糟的是，给定一个 NULL 的流缓冲地址，如果监测到 "bad"
+失败状态，将会抛出一个异常。这意味着这些类模板的构造函数或析构函数有可能抛出异常。</li>
+
+
+	<li><a name="Note3">locale 的保存器使用
+		<code>std::basic_ios&lt;Ch, Tr&gt;</code> 类来取出它们的信息，虽然它可能使用了</a> <code>std::ios_base 中的功能。问题是，在 ios_base 中所需的成员函数的版本并不是多态地关联到</code> <code>basic_ios 中。保存器类中要使用的流将使用继承层次中最接近的成员函数，即</code>
+		<code>basic_ios</code> 中的函数。</li>
+
+
+</ol>
+
+
+
+<h2><a name="user_savers">Savers of User-Defined Attributes用户自定义属性的保存器</a></h2>
+
+
+
+<p>用户自定义格式化信息的保存器类有以下格式：</p>
+
+
+
+<blockquote>
+  
+  <pre>#include &lt;iosfwd&gt;  <i>// for std::ios_base (declaration)</i>
+
+class <var>saver_class</var>
+{
+    typedef std::ios_base           state_type;
+    typedef int                     index_type;
+    typedef <i>implementation_defined</i>  aspect_type;<br><br>    explicit  saver_class( state_type &amp;s, index_type i );<br>              saver_class( state_type &amp;s, index_type i, <var>aspect_type</var> const &amp;new_value );<br>             ~saver_class();<br><br>    void  restore();<br>};<br></pre>
+
+</blockquote>
+
+
+
+<p>索引 <var>i</var> 用于区分特定的用户自定义格式化属性。该索引只能在运行期确定(就象静态成员函数 <code>std::ios_base::xalloc</code>)。</p>
+
+
+
+<p><var>state_type</var> 是 IOStreams 的基类
+<code>std::ios_base</code>.  用户通常会将一个真正的输入、输出或组合的流对象作为 state-type 参数，而不是用基类对象。第一个构造函数接受一个流对象，保存流的一个引用，以及特定的流属性的当前值。第二个构造函数与第一个类似，但使用第二个参数来将流的属性改变为给定的 <var>aspect_type</var> 值。析构函数将流的属性恢复为保存的值。属性恢复可以(且常常)使用 restore 成员函数提前执行。</p>
+
+
+
+<table align="center" border="1">
+
+
+	<caption>IOStream 用户自定义状态保存器类</caption>
+	<tbody>
+
+    <tr>
+
+
+		<th>类</th>
+
+
+		<th>保存的属性</th>
+
+
+		<th>属性类型</th>
+
+
+		<th>引用方法</th>
+
+
+	</tr>
+
+
+	<tr>
+
+
+		<td><code>boost::io::ios_iword_saver</code></td>
+
+
+		<td>数字的用户自定义格式标志</td>
+
+
+		<td><code>long</code></td>
+
+
+		<td><code>iword</code></td>
+
+
+	</tr>
+
+
+	<tr>
+
+
+		<td><code>boost::io::ios_pword_saver</code></td>
+
+
+		<td>指针的用户自定义格式标志</td>
+
+
+		<td><code>void *</code></td>
+
+
+		<td><code>pword</code></td>
+
+
+	</tr>
+
+
+  
+  </tbody>
+</table>
+
+
+
+<h2><a name="combo_savers">Savers for Combined Attributes组合属性的保存器</a></h2>
+
+
+
+<p>有三个类(模板)用作组合属性的保存器。<code>boost:io::ios_base_all_saver</code> 保存器类组合了所有基本属性保存器类的功能。它有一个构造函数，接受要保存状态的流。<code>boost::io::basic_ios_all_saver</code> 组合了所有增强属性保存器类模板以及组合基本属性保存器类的功能。它有一个构造函数，接受要保存状态的流。<code>boost::io::ios_all_word_saver</code> 保存器类组合了保存自定义格式化信息的保存器类。它的构造函数接受要保存属性的流以及用户自定义属性的索引。每一个类的析构函数都恢复保存的状态。属性恢复可以(且常常)使用 restore 成员函数提前执行。</p>
+
+
+
+<h2><a name="example">Example例子</a></h2>
+
+
+
+<p>在 <a href="#rationale">rationale原理</a>
+一节中使用的代码可以从两个地方进行改进。打印函数可以在改变格式状态的代码的周围使用一个保存器。或者在调用的函数中用一个保存器包围这个调用。或者两
+者都做，尤其是在用户不知道打印函数是否使用了状态保存器时。如果用户想要前后的一系列改变，而不想将每次改变都包在一个单独的代码块中，则可以在每次尝
+试间调用 <code>restore</code> 成员函数。</p>
+
+
+
+<blockquote>
+  
+  <pre>#include &lt;boost/io/ios_state.hpp&gt;<br>#include &lt;ios&gt;<br>#include &lt;iostream&gt;<br>#include &lt;ostream&gt;<br><br>void  new_hex_my_byte( std::ostream &amp;os, char byte )<br>{<br>    boost::io::ios_flags_saver  ifs( os );<br><br>    os &lt;&lt; std::hex &lt;&lt; static_cast&lt;unsigned&gt;(byte);<br>}<br><br>int  main()<br>{<br>    using std::cout;<br>    using std::cerr;<br><br>    //...<br><br>    {<br>        boost::io::ios_all_saver  ias( cout );<br><br>        new_hex_my_byte( cout, 'A' );<br>    }<br><br>    //...<br><br>    {<br>        boost::io::ios_all_saver  ias( cerr );<br><br>        new_hex_my_byte( cerr, 'b' );<br>        ias.restore();<br>        new_hex_my_byte( cerr, 'C' );<br>    }<br><br>    //...<br>}<br></pre>
+
+</blockquote>
+
+
+
+<h2><a name="refer">References参考</a></h2>
+
+
+
+<ul>
+
+
+	<li>I/O 状态保存器库的头文件: <cite><a href="../../../boost/io/ios_state.hpp">boost/io/ios_state.hpp</a></cite></li>
+
+
+	<li>一些测试/例子代码: <cite><a href="../test/ios_state_test.cpp">ios_state_test.cpp</a></cite></li>
+
+
+</ul>
+
+
+
+<h2><a name="credits">Credits</a></h2>
+
+
+
+<h3><a name="contributors">Contributors</a></h3>
+
+
+
+<dl>
+
+
+	<dt><a href="../../../people/daryle_walker.html">Daryle Walker</a>
+	</dt>
+
+  <dd>Started the library.  Contributed the initial versions of the
+		format flags, precision, width, and user-defined format flags
+		saver classes.  Contributed the initial versions of the success
+		state, success state exception flags, output stream tie, stream
+		buffer, character fill, and locale saver class templates. 
+		Contributed the combined attribute classes and class template. 
+		Contributed the test file <cite><a href="../test/ios_state_test.cpp">ios_state_test.cpp</a></cite>.
+  </dd>
+
+</dl>
+
+
+
+<h3><a name="history">History</a></h3>
+
+
+
+<dl>
+
+
+	<dt>28 Feb 2005, Daryle Walker
+	</dt>
+
+  <dd>Added the <code>restore</code> member functions, based on suggestions
+	    by Gennadiy Rozental and Rob Stewart
+
+	</dd>
+
+  <dt>13 Mar 2002, Daryle Walker
+	</dt>
+
+  <dd>Initial version
+  </dd>
+
+</dl>
+
+
+
+<hr>
+
+<p>Revised: 28 February 2005</p>
+
+
+
+<p>Copyright 2002, 2005 Daryle Walker.  Use, modification, and distribution
+are subject to the Boost Software License, Version 1.0.  (See accompanying
+file <a href="../../../LICENSE_1_0.txt">LICENSE_1_0.txt</a> or a copy at
+&lt;<a href="http://www.boost.org/LICENSE_1_0.txt">http://www.boost.org/LICENSE_1_0.txt</a>&gt;.)</p>
+
+
+</body>
+</html>

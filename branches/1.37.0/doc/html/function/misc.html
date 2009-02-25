@@ -1,0 +1,108 @@
+<!DOCTYPE HTML PUBLIC "-//W3C//DTD HTML 4.01 Transitional//EN">
+<html><head>
+<meta http-equiv="Content-Type" content="text/html; charset=UTF-8">
+
+<title>Miscellaneous Notes（杂项注记）</title><link rel="stylesheet" href="../boostbook.css" type="text/css">
+<meta name="generator" content="DocBook XSL Stylesheets V1.68.1">
+<link rel="start" href="../index.html" title="The Boost C++ Libraries BoostBook Documentation Subset">
+<link rel="up" href="../function.html" title="Chapter 6. Boost.Function">
+<link rel="prev" href="faq.html" title="Frequently Asked Questions">
+<link rel="next" href="testsuite.html" title="Testsuite"></head>
+<body alink="#0000ff" bgcolor="white" link="#0000ff" text="black" vlink="#840084">
+<table cellpadding="2" width="100%">
+<tbody><tr><td valign="top"><img alt="Boost C++ Libraries" src="../../../boost.png" height="86" width="277"></td>
+<td align="center"><a href="../../../index.htm">Home</a></td>
+<td align="center"><a href="../../../libs/libraries.htm">Libraries</a></td>
+<td align="center"><a href="../../../people/people.htm">People</a></td>
+<td align="center"><a href="../../../more/faq.htm">FAQ</a></td>
+<td align="center"><a href="../../../more/index.htm">More</a></td>
+</tr></tbody></table>
+<hr>
+<div class="spirit-nav">
+<a accesskey="p" href="faq.html"><img src="../images/prev.png" alt="Prev"></a><a accesskey="u" href="../function.html"><img src="../images/up.png" alt="Up"></a><a accesskey="h" href="../index.html"><img src="../images/home.png" alt="Home"></a><a accesskey="n" href="testsuite.html"><img src="../images/next.png" alt="Next"></a>
+</div>
+<div class="section" lang="en">
+<div class="titlepage"><div><div><h2 class="title" style="clear: both;">
+<a name="function.misc"></a>Miscellaneous Notes（杂项注记）</h2></div></div></div>
+<div class="toc"><dl>
+<dt><span class="section"><a href="misc.html#id1215652">Boost.Function vs. Function Pointers（Boost.Function vs. 函数指针）</a></span></dt>
+<dt><span class="section"><a href="misc.html#id1215718">Performance（性能）</a></span></dt>
+<dt><span class="section"><a href="misc.html#id1215776">Combatting virtual function "bloat"（阻止虚拟函数“膨胀”）</a></span></dt>
+<dt><span class="section"><a href="misc.html#id1215801">Acknowledgements（感谢）</a></span></dt>
+</dl></div>
+<div class="section" lang="en">
+<div class="titlepage"><div><div><h3 class="title">
+<a name="id1215652"></a>Boost.Function vs. Function Pointers（Boost.Function vs. 函数指针）</h3></div></div></div>
+<p>Boost.Function 有几个超越函数指针的好处，即：</p>
+<div class="itemizedlist"><ul compact="compact" type="disc">
+<li><p>Boost.Function 允许任意的兼容函数对象作为目标（而不需要严格的函数识别标识）。</p></li>
+<li><p>Boost.Function 可以和 argument-binding（参数绑定）及其它 function object construction libraries（函数对象构造库）一起使用。</p></li>
+<li><p>当一个 empty function object（空函数对象）被调用时，Boost.Function 有可预期行为。</p></li>
+</ul></div>
+<p>当然，函数指针也有几个超越 Boost.Function 的好处：</p>
+<div class="itemizedlist"><ul compact="compact" type="disc">
+<li><p>函数指针更小（只有一个指针而不是三个指针的大小）</p></li>
+<li><p>函数指针更快（Boost.Function 可能需要两次通过函数指针的调用）</p></li>
+<li><p>函数指针可以向后兼容 C 库。</p></li>
+<li><p>更可读的错误信息。</p></li>
+</ul></div>
+<p>
+</p>
+</div>
+<div class="section" lang="en">
+<div class="titlepage"><div><div><h3 class="title">
+<a name="id1215718"></a>Performance（性能）</h3></div></div></div>
+<div class="toc"><dl>
+<dt><span class="section"><a href="misc.html#id1215724">Function object wrapper size（函数对象包装类的大小）</a></span></dt>
+<dt><span class="section"><a href="misc.html#id1215738">Copying efficiency（拷贝效率）</a></span></dt>
+<dt><span class="section"><a href="misc.html#id1215760">Invocation efficiency（调用效率）</a></span></dt>
+</dl></div>
+<div class="section" lang="en">
+<div class="titlepage"><div><div><h4 class="title">
+<a name="id1215724"></a>Function object wrapper size（函数对象包装类的大小）</h4></div></div></div>
+<p>function object
+wrappers（函数对象包装类）相当于一个成员函数指针加上两个数据指针所组成的结构的大小。实际的大小依据不同的底层平台而有所不同；在32位
+Mac OS X 的 GCC 上，大小为16字节，而在 Windows 的 Visual
+C++&nbsp;上，则为32字节。另外，function object target（函数对象目标）可能分配在堆上，如果它不能被放入 <code class="computeroutput">boost::function</code> 对象的小对象缓冲区中。</p>
+</div>
+<div class="section" lang="en">
+<div class="titlepage"><div><div><h4 class="title">
+<a name="id1215738"></a>Copying efficiency（拷贝效率）</h4></div></div></div>
+<p>拷贝 function object wrappers（函数对象包装类）可能需要为 function object
+target（函数对象目标）的拷贝分配内存。缺省的分配器可以替换成一个更快的定制的分配器或者由于这个克隆的成本高得令人望而却步，而可能选择一个允
+许 function object wrappers（函数对象包装类）仅仅以引用方式（使用 <code class="computeroutput">ref</code>）存储 function object target（函数对象目标）的方式。小的函数对象可以被保存在 <code class="computeroutput">boost::function</code> 对象本身中，以提高复制的效率。</p>
+</div>
+<div class="section" lang="en">
+<div class="titlepage"><div><div><h4 class="title">
+<a name="id1215760"></a>Invocation efficiency（调用效率）</h4></div></div></div>
+<p>使用一个彻底内联的编译器，对一个函数对象的调用需要一次通过函数指针的调用。如果这个调用是一个自由的函数指针，就必须有一次附加的调用以生成这个函数指针（除非编译器具有非常强大的）进程间的分析能力。</p>
+</div>
+</div>
+<div class="section" lang="en">
+<div class="titlepage"><div><div><h3 class="title">
+<a name="id1215776"></a>Combatting virtual function "bloat"（阻止虚拟函数“膨胀”）</h3></div></div></div>
+<p>在很多编译器上虚拟函数的使用趋向于代码膨胀。当一个类包含一个虚拟函数值，它必须发行一个额外的函数将对象的类型分类。根据我们的经验，当使用了很多 <code class="computeroutput">boost::function</code> 对象时，这些辅助函数对于可执行代码大小的增加是值得注意的。</p>
+<p>在 Boost.Function 中，一个可选且有效的方法是使用自由函数代替虚拟函数。Boost.Function
+对象实际上持有两个指针做一次合法的目标调用：一个指向它所包含的函数对象的 void 指针和一个指向可以调用这个函数对象的“调用者”的 void
+指针，它给出函数指针。这个调用者函数执行 Boost.Function
+提供的参数和返回值转换。第三个指针指向一个被称为“管理者”的函数，它处理函数对象的克隆和析构。这个方案是类型安全的，因为只有实际处理函数对象的函
+数（调用者和管理者），被给定的函数对象类型实例化，所以它们可以安全地将输入的 void 指针（函数对象指针）转型为适当的类型。</p>
+</div>
+<div class="section" lang="en">
+<div class="titlepage"><div><div><h3 class="title">
+<a name="id1215801"></a>Acknowledgements（感谢）</h3></div></div></div>
+<p>很多人投身于此库的构建。William Kempf，Jesse Jones 和 Karl Nelson
+在隔绝此库的接口和范围中给予极大的帮助。John Maddock 主持了正式 review，很多 review
+参与者给出了关于接口，实现和文档的极好的意见。Peter Dimov 引导我们走向 function
+declarator-based（基于函数声明符）的语法。</p>
+</div>
+</div>
+<table width="100%"><tbody><tr>
+<td align="left"><p><small>Last revised: July 14, 2008 at 14:32:29 -0400</small></p></td>
+<td align="right"><small>Copyright  2001-2004 Douglas Gregor</small></td>
+</tr></tbody></table>
+<hr>
+<div class="spirit-nav">
+<a accesskey="p" href="faq.html"><img src="../images/prev.png" alt="Prev"></a><a accesskey="u" href="../function.html"><img src="../images/up.png" alt="Up"></a><a accesskey="h" href="../index.html"><img src="../images/home.png" alt="Home"></a><a accesskey="n" href="testsuite.html"><img src="../images/next.png" alt="Next"></a>
+</div>
+</body></html>

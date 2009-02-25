@@ -1,0 +1,131 @@
+<!DOCTYPE HTML PUBLIC "-//W3C//DTD HTML 4.01 Transitional//EN" "http://www.w3.org/TR/html4/loose.dtd">
+<html>
+<head>
+<!--
+(C) Copyright 2002-4 Robert Ramey - http://www.rrsd.com . 
+Use, modification and distribution is subject to the Boost Software
+License, Version 1.0. (See accompanying file LICENSE_1_0.txt or copy at
+http://www.boost.org/LICENSE_1_0.txt)
+-->
+  <meta http-equiv="Content-Type" content="text/html; charset=UTF-8">
+
+  <link rel="stylesheet" type="text/css" href="../../../boost.css">
+
+  <link rel="stylesheet" type="text/css" href="style.css">
+
+  <title>Serialization - Reference</title>
+</head>
+
+
+
+<body link="#0000ff" vlink="#800080">
+
+<table summary="header" border="0" cellpadding="7" cellspacing="0" width="100%">
+
+  <tbody>
+    <tr>
+ 
+    <td valign="top" width="300"> 
+      
+      <h3><a href="../../../index.htm"><img alt="C++ Boost" src="../../../boost.png" border="0" height="86" width="277"></a></h3>
+
+    </td>
+
+    <td valign="top"> 
+      
+      <h1 align="center">Serialization序列化</h1>
+
+      
+      <h2 align="center">异常安全性</h2>
+
+    </td>
+
+  </tr>
+
+  </tbody>
+</table>
+
+<hr>导入一个存档的过程中可能会创建多个新的对象。这个过程有可能在某些点抛出异常。为了防止内存泄漏以及无效指针，必须考虑这些情形。不幸的是，这
+个问题没有简单通用的解决方案。解决问题的方式必须取决于被序列化的数据结构的设计。下面，我们将由易到难讨论不同的情形。在讨论中，我们假定类的成员函
+数在考虑序列化之前都是异常安全的。即析构函数可以在任何时候被调用而不会引起无效指针或产生内存泄漏。
+
+<ol>
+
+    <li>
+    <h4>类中不包含指针</h4>
+这没有问题。
+    
+    <p>
+    </p>
+  </li>
+  <li>
+    <h4>类中只包含具<span style="font-style: italic;">自有</span>指针</h4>
+
+    从现在开始，我们要区分两种不同的指针，一种是用于管理堆存储的(<i>自有</i>指针)，另一种是用于引向相关对象的(<i>引用</i>指针)。包含<span style="font-style: italic;">自有</span>指针的程序必须包含删除这些对象的代码，并把存储归还给堆。而包含<span style="font-style: italic;">引用</span>指针的程序则必须被设计为确保在指针所指对象被销毁以及存储被归还给堆之后，不会再提领该<span style="font-style: italic;">引用</span>指针。如果一个指针只被保存在一个地方，那么它肯定是<span style="font-style: italic;">自有</span>指针。
+    
+    <p>导入函数会捕获在创建新对象和保存其指针之间所发生的任何异常。如果在读入存档期间发生异常，已创建的对象会被销毁，已反序列化的指针会被
+置为 NULL.
+这保证了不会有内存泄漏。由于该指针没有其它副本，这也保证了不会有指针变成无效。对象的析构函数应该可以以正常的方式删除任何其它存在的对象而不会有问
+题。<a href="../test/test_delete_pointer.cpp" target="test_delete_pointer.cpp">test_delete_pointer.cpp</a>
+    示范了这种情形。
+    </p>
+    <p>
+    </p>
+  </li>
+  <li>
+    <h4>类中包含一个或多个<span style="font-style: italic;">引用</span>指针</h4>
+这一情形可以再细分为两种情况：
+    
+    <p>
+    </p>
+    <ol>
+
+        <li>
+        <h4><i>自有</i>指针总是在<span style="font-style: italic;">引用</span>指针之前被序列化</h4>
+对象跟踪可以保证导入<span style="font-style: italic;">引用</span>指针不会创建新的对象。如果发生了异常，<span style="font-style: italic;">引用</span>指针无须被删除，因此不会有内存泄漏。该类的析构函数不应试图删除这些指针，所以也没有悬挂引用的问题。<i>自有</i>指针的处理如前文所述。
+        
+        <p>
+        </p>
+      </li>
+      <li>
+        <h4>类中包含有可能会被 load 创建的<span style="font-style: italic;">引用</span>指针</h4>
+如果一个<span style="font-style: italic;">引用</span>指针在其相应的<span style="font-style: italic;">自有</span>指针之前被导入，则会在堆上分配一个对象。这种情况下，无法知道哪个指针是由拥有者创建的，哪个指针是由导入函数创建的。为了解决这个问题：
+        
+        <ul>
+
+        <li>用 <code style="white-space: normal;">try/catch</code> 块捕获异常。
+        </li>
+          <li>在 catch 部分，调用存档的函数 
+        <code style="white-space: normal;">delete_created_pointers()</code> 来删除所有由类导入所创建的指针。无须其它动作，由此方式创建的对象将结束，就象<span style="font-style: italic;">自有</span>指针无须考虑内存泄漏而不用销毁一样。
+        </li>
+          <li>对象的析构函数不应试图删除<span style="font-style: italic;">引用</span>指针，所以没有悬挂引用的问题。
+    </li>
+        </ul>
+
+    <a href="../example/demo_exception.cpp" target="demo_exception.cpp">demo_exception.cpp</a> 示范了这种情形。
+        
+        <p>
+    </p>
+      </li>
+    </ol>
+
+    
+    <p>
+    </p>
+  </li>
+  <li>
+    <h4>其它情形</h4>
+以上未提及的情形是，不能适用于<span style="font-style: italic;">引用</span>和<span style="font-style: italic;">自有</span>分类的指针。这种情况可能发生在由一个类创建指针而由另一个类使用和删除它。这需要以类似于前文的方法进行特别的分析。由于情况变得更为复杂，所以也更为困难和容易出错。最终，必须由指针本身建立堆管理来解决 - 这就是 <code style="white-space: normal;">boost::shared_ptr</code>. 
+    本库包含了 <code style="white-space: normal;">boost::shared_ptr</code> 的序列化。如前文所提以的，需要对
+    <code style="white-space: normal;">boost::shared_ptr</code> 的某个实现进行一点修改，以允许被序列化系统访问。
+  </li>
+</ol>
+
+<hr>
+<p><i>&copy; Copyright <a href="http://www.rrsd.com">Robert Ramey</a> 2002-2004. 
+Distributed under the Boost Software License, Version 1.0. (See
+accompanying file LICENSE_1_0.txt or copy at http://www.boost.org/LICENSE_1_0.txt)
+</i></p>
+
+</body>
+</html>
