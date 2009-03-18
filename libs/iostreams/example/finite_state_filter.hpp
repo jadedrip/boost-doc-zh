@@ -1,5 +1,4 @@
-// (C) Copyright 2008 CodeRage, LLC (turkanis at coderage dot com)
-// (C) Copyright 2005-2007 Jonathan Turkanis
+// (C) Copyright Jonathan Turkanis 2005.
 // Distributed under the Boost Software License, Version 1.0. (See accompanying
 // file LICENSE_1_0.txt or copy at http://www.boost.org/LICENSE_1_0.txt.)
 
@@ -343,12 +342,11 @@ public:
     void close(Device& dev, BOOST_IOS::openmode which)
     {
         if (which == BOOST_IOS::out) {
-            if (flags_ & f_write)
-                while (!this->empty())
-                    iostreams::put_if(dev, this->pop());
-            this->reset();
-            flags_ = 0;
+            while (!this->empty())
+                iostreams::put_if(dev, this->pop());
         }
+        this->reset();
+        flags_ = 0;
     }
 private:
     enum flags {

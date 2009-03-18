@@ -11,7 +11,6 @@
 
 #include <iomanip>
 #include <iostream>
-#include <cstddef> // NULL
 #include <fstream>
 #include <string>
 
@@ -42,8 +41,8 @@ private:
     }
 public:
     static int count;
-    A(){++count;}    // default constructor
-    virtual ~A(){--count;}   // default destructor
+    A::A(){++count;}    // default constructor
+    virtual A::~A(){--count;}   // default destructor
 };
 
 BOOST_SERIALIZATION_SHARED_PTR(A)
@@ -61,8 +60,8 @@ private:
     }
 public:
     static int count;
-    B() : A() {};
-    virtual ~B() {};
+    B::B() : A() {};
+    virtual B::~B() {};
 };
 
 BOOST_SERIALIZATION_SHARED_PTR(B)
@@ -82,7 +81,7 @@ void display(boost::shared_ptr<A> &spa, boost::shared_ptr<A> &spa1)
     std::cout << "unique element count = " << A::count << std::endl;
 }
 
-int main(int /* argc */, char /* *argv[] */)
+int main(int argc, char *argv[])
 {
     std::string filename(boost::archive::tmpdir());
     filename += "/testfile";

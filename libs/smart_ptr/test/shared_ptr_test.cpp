@@ -62,7 +62,6 @@ void default_constructor()
         BOOST_TEST(pi? false: true);
         BOOST_TEST(!pi);
         BOOST_TEST(pi.get() == 0);
-        BOOST_TEST(pi.use_count() == 0);
     }
 
     {
@@ -70,7 +69,6 @@ void default_constructor()
         BOOST_TEST(pv? false: true);
         BOOST_TEST(!pv);
         BOOST_TEST(pv.get() == 0);
-        BOOST_TEST(pv.use_count() == 0);
     }
 
     {
@@ -78,7 +76,6 @@ void default_constructor()
         BOOST_TEST(px? false: true);
         BOOST_TEST(!px);
         BOOST_TEST(px.get() == 0);
-        BOOST_TEST(px.use_count() == 0);
     }
 }
 
@@ -1568,7 +1565,6 @@ void plain_reset()
         BOOST_TEST(pi? false: true);
         BOOST_TEST(!pi);
         BOOST_TEST(pi.get() == 0);
-        BOOST_TEST(pi.use_count() == 0);
     }
 
     {
@@ -1577,7 +1573,6 @@ void plain_reset()
         BOOST_TEST(pi? false: true);
         BOOST_TEST(!pi);
         BOOST_TEST(pi.get() == 0);
-        BOOST_TEST(pi.use_count() == 0);
     }
 
     {
@@ -1586,7 +1581,6 @@ void plain_reset()
         BOOST_TEST(pi? false: true);
         BOOST_TEST(!pi);
         BOOST_TEST(pi.get() == 0);
-        BOOST_TEST(pi.use_count() == 0);
     }
 
     {
@@ -1595,7 +1589,6 @@ void plain_reset()
         BOOST_TEST(px? false: true);
         BOOST_TEST(!px);
         BOOST_TEST(px.get() == 0);
-        BOOST_TEST(px.use_count() == 0);
     }
 
     {
@@ -1604,7 +1597,6 @@ void plain_reset()
         BOOST_TEST(px? false: true);
         BOOST_TEST(!px);
         BOOST_TEST(px.get() == 0);
-        BOOST_TEST(px.use_count() == 0);
     }
 
     {
@@ -1613,7 +1605,6 @@ void plain_reset()
         BOOST_TEST(px? false: true);
         BOOST_TEST(!px);
         BOOST_TEST(px.get() == 0);
-        BOOST_TEST(px.use_count() == 0);
     }
 
     {
@@ -1624,7 +1615,6 @@ void plain_reset()
         BOOST_TEST(px? false: true);
         BOOST_TEST(!px);
         BOOST_TEST(px.get() == 0);
-        BOOST_TEST(px.use_count() == 0);
         BOOST_TEST(X::instances == 0);
     }
 
@@ -1634,7 +1624,6 @@ void plain_reset()
         BOOST_TEST(pv? false: true);
         BOOST_TEST(!pv);
         BOOST_TEST(pv.get() == 0);
-        BOOST_TEST(pv.use_count() == 0);
     }
 
     {
@@ -1645,7 +1634,6 @@ void plain_reset()
         BOOST_TEST(pv? false: true);
         BOOST_TEST(!pv);
         BOOST_TEST(pv.get() == 0);
-        BOOST_TEST(pv.use_count() == 0);
         BOOST_TEST(X::instances == 0);
     }
 }

@@ -1,5 +1,4 @@
-// (C) Copyright 2008 CodeRage, LLC (turkanis at coderage dot com)
-// (C) Copyright 2005-2007 Jonathan Turkanis
+// (C) Copyright Jonathan Turkanis 2005.
 // Distributed under the Boost Software License, Version 1.0. (See accompanying
 // file LICENSE_1_0.txt or copy at http://www.boost.org/LICENSE_1_0.txt.)
 
@@ -9,7 +8,6 @@
 #define BOOST_IOSTREAMS_CONTAINTER_DEVICE_HPP_INCLUDED
 
 #include <algorithm>         // copy, min.
-#include <cassert>
 #include <boost/config.hpp>  // BOOST_NO_STDC_NAMESPACE.
 #include <boost/iostreams/categories.hpp>
 #include <boost/iostreams/detail/ios.hpp>  // failure.
@@ -31,9 +29,8 @@ public:
     std::streamsize read(char_type* s, std::streamsize n)
     {
         using namespace std;
-        std::streamsize amt = 
-            static_cast<std::streamsize>(container_.size() - pos_);
-        std::streamsize result = (min)(n, amt);
+        streamsize amt = static_cast<streamsize>(container_.size() - pos_);
+        streamsize result = (min)(n, amt);
         if (result != 0) {
             std::copy( container_.begin() + pos_,
                        container_.begin() + pos_ + result,
@@ -46,7 +43,6 @@ public:
     }
     Container& container() { return container_; }
 private:
-    container_source operator=(const container_source&);
     typedef typename Container::size_type   size_type;
     Container&  container_;
     size_type   pos_;
@@ -68,7 +64,6 @@ public:
     }
     Container& container() { return container_; }
 private:
-    container_sink operator=(const container_sink&);
     Container& container_;
 };
 
@@ -88,9 +83,8 @@ public:
     std::streamsize read(char_type* s, std::streamsize n)
     {
         using namespace std;
-        std::streamsize amt = 
-            static_cast<std::streamsize>(container_.size() - pos_);
-        std::streamsize result = (min)(n, amt);
+        streamsize amt = static_cast<streamsize>(container_.size() - pos_);
+        streamsize result = (min)(n, amt);
         if (result != 0) {
             std::copy( container_.begin() + pos_,
                        container_.begin() + pos_ + result,
@@ -104,11 +98,11 @@ public:
     std::streamsize write(const char_type* s, std::streamsize n)
     {
         using namespace std;
-        std::streamsize result = 0;
+        streamsize result = 0;
         if (pos_ != container_.size()) {
-            std::streamsize amt =
-                static_cast<std::streamsize>(container_.size() - pos_);
-            result = (min)(n, amt);
+            streamsize amt =
+                static_cast<streamsize>(container_.size() - pos_);
+            streamsize result = (min)(n, amt);
             std::copy(s, s + result, container_.begin() + pos_);
             pos_ += result;
         }
@@ -130,8 +124,6 @@ public:
             next = pos_ + off;
         } else if (way == BOOST_IOS::end) {
             next = container_.size() + off - 1;
-        } else {
-            throw BOOST_IOSTREAMS_FAILURE("bad seek direction");
         }
 
         // Check for errors
@@ -144,7 +136,6 @@ public:
 
     Container& container() { return container_; }
 private:
-    container_device operator=(const container_device&);
     typedef typename Container::size_type   size_type;
     Container&  container_;
     size_type   pos_;

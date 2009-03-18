@@ -1,16 +1,17 @@
+﻿<?xml version="1.0" encoding="utf-8" ?>
 <!DOCTYPE html PUBLIC "-//W3C//DTD XHTML 1.0 Transitional//EN" "http://www.w3.org/TR/xhtml1/DTD/xhtml1-transitional.dtd">
-<html xmlns="http://www.w3.org/1999/xhtml" xml:lang="en" lang="en"><head>
+<html xmlns="http://www.w3.org/1999/xhtml" xml:lang="en" lang="en">
+<head>
 <meta name="translator" content="xuwaters@qq.com" />
 <meta http-equiv="Content-Type" content="text/html; charset=utf-8" />
 <meta name="generator" content="Docutils 0.5: http://docutils.sourceforge.net/" />
-
-<title>Boost Parameter 库 Python 绑定文档</title><meta name="authors" content="Daniel Wallin" />
+<title>Boost Parameter 库 Python 绑定文档</title>
+<meta name="authors" content="Daniel Wallin" />
 <meta name="organization" content="Boost Consulting" />
 <meta name="date" content="2006-09-21" />
 <meta name="copyright" content="Copyright David Abrahams, Daniel Wallin 2005. Distributed under the Boost Software License, Version 1.0. (See accompanying file LICENSE_1_0.txt or copy at http://www.boost.org/LICENSE_1_0.txt)" />
-<link rel="stylesheet" href="rst.css" type="text/css" /></head>
-
-
+<link rel="stylesheet" href="rst.css" type="text/css" />
+</head>
 <body>
 <div class="document" id="the-boost-parameter-library-python-binding-documentation">
 <h1 class="title">Boost Parameter 库 Python 绑定文档</h1>
@@ -21,11 +22,11 @@
 <tr><th class="docinfo-name">作者:</th>
 <td>Daniel Wallin</td></tr>
 <tr><th class="docinfo-name">联系方式:</th>
-<td><a class="first last reference" href="mailto:dalwan01@student.umu.se">dalwan01@student.umu.se</a></td></tr>
+<td><a class="first last reference" href="mailto:dalwan01&#64;student.umu.se">dalwan01&#64;student.umu.se</a></td></tr>
 <tr><th class="docinfo-name">组织:</th>
 <td><a class="first last reference" href="http://www.boost-consulting.com">Boost Consulting</a></td></tr>
 <tr><th class="docinfo-name">日期:</th>
-<td>2008-03-22</td></tr>
+<td>2006-09-21</td></tr>
 <tr><th class="docinfo-name">版权:</th>
 <td>Copyright David Abrahams, Daniel Wallin
 2005. Distributed under the Boost Software License,
@@ -129,7 +130,28 @@ like this:</p>
 在绑定中过程，我们感兴趣的类和成员函数看起来是这样的：
 </p>
 
-<pre class="literal-block">#include &lt;boost/parameter/keyword.hpp&gt;<br />#include &lt;boost/parameter/preprocessor.hpp&gt;<br />#include &lt;boost/parameter/python.hpp&gt;<br />#include &lt;boost/python.hpp&gt;<br /><br />// First the keywords 首先是关键字<br />BOOST_PARAMETER_KEYWORD(tag, title)<br />BOOST_PARAMETER_KEYWORD(tag, width)<br />BOOST_PARAMETER_KEYWORD(tag, height)<br /><br />class window<br />{<br />public:<br />    BOOST_PARAMETER_MEMBER_FUNCTION(<br />      (void), open, tag,<br />      (required (title, (std::string)))<br />      (optional (width, (unsigned), 400)<br />                (height, (unsigned), 400))<br />    )<br />    {<br />        <em>… function implementation 函数实现 …</em>
+<pre class="literal-block">
+#include &lt;boost/parameter/keyword.hpp&gt;
+#include &lt;boost/parameter/preprocessor.hpp&gt;
+#include &lt;boost/parameter/python.hpp&gt;
+#include &lt;boost/python.hpp&gt;
+
+// First the keywords 首先是关键字
+BOOST_PARAMETER_KEYWORD(tag, title)
+BOOST_PARAMETER_KEYWORD(tag, width)
+BOOST_PARAMETER_KEYWORD(tag, height)
+
+class window
+{
+public:
+    BOOST_PARAMETER_MEMBER_FUNCTION(
+      (void), open, tag,
+      (required (title, (std::string)))
+      (optional (width, (unsigned), 400)
+                (height, (unsigned), 400))
+    )
+    {
+        <em>… function implementation 函数实现 …</em>
     }
 };
 </pre>
@@ -158,7 +180,19 @@ a class with forwarding overloads.</p>
 要使用 <tt class="docutils literal"><span class="pre">boost::parameter::python::function</span></tt>，我们首先需要定义一个带有 转交重载函数(forwarding overload) 的类。
 </p>
 
-<pre class="literal-block">struct open_fwd<br />{<br />    template &lt;class A0, class A1, class A2&gt;<br />    void operator()(<br />        boost::type&lt;void&gt;, window&amp; self<br />      , A0 const&amp; a0, A1 const&amp; a1, A2 const&amp; a2<br />    )<br />    {<br />        self.open(a0, a1, a2);<br />    }<br />};<br /></pre>
+<pre class="literal-block">
+struct open_fwd
+{
+    template &lt;class A0, class A1, class A2&gt;
+    void operator()(
+        boost::type&lt;void&gt;, window&amp; self
+      , A0 const&amp; a0, A1 const&amp; a1, A2 const&amp; a2
+    )
+    {
+        self.open(a0, a1, a2);
+    }
+};
+</pre>
 
 <p>The first parameter, <tt class="docutils literal"><span class="pre">boost::type&lt;void&gt;</span></tt>, tells the forwarding overload
 what the return type should be. In this case we know that it's always void
@@ -193,7 +227,27 @@ circumstances when several overload are needed; see
 </div>
 <p>Next we'll define the module and export the class:</p>
 <p>接下来，我们就可以定义模块并导出类了：</p>
-<pre class="literal-block">BOOST_PYTHON_MODULE(my_module)<br />{<br />    using namespace boost::python;<br />    namespace py = boost::parameter::python;<br />    namespace mpl = boost::mpl;<br /><br />    class_&lt;window&gt;("window")<br />        .def(<br />            "open", py::function&lt;<br />                open_fwd<br />              , mpl::vector&lt;<br />                    void<br />                  , tag::title(std::string)<br />                  , tag::width*(unsigned)<br />                  , tag::height*(unsigned)<br />                &gt;<br />            &gt;()<br />        );<br />}<br /></pre>
+<pre class="literal-block">
+BOOST_PYTHON_MODULE(my_module)
+{
+    using namespace boost::python;
+    namespace py = boost::parameter::python;
+    namespace mpl = boost::mpl;
+
+    class_&lt;window&gt;(&quot;window&quot;)
+        .def(
+            &quot;open&quot;, py::function&lt;
+                open_fwd
+              , mpl::vector&lt;
+                    void
+                  , tag::title(std::string)
+                  , tag::width*(unsigned)
+                  , tag::height*(unsigned)
+                &gt;
+            &gt;()
+        );
+}
+</pre>
 <!-- @jam_prefix.append('import python ;') -->
 <!-- @jam_prefix.append('stage . : my_module /boost/python//boost_python ;') -->
 <!-- @my_module = build(
@@ -232,7 +286,10 @@ then the parameter types:
 .. @ignore() -->
 <p>That's it! This class can now be used in Python with the expected syntax:</p>
 <p>好啦！现在这个类就可以在 Python 中用我们期望的语法使用了：</p>
-<pre class="literal-block">&gt;&gt;&gt; w = my_module.window()<br />&gt;&gt;&gt; w.open(title = "foo", height = 20)<br /></pre>
+<pre class="literal-block">
+&gt;&gt;&gt; w = my_module.window()
+&gt;&gt;&gt; w.open(title = &quot;foo&quot;, height = 20)
+</pre>
 <!-- @example.prepend('import my_module') -->
 <!-- @run_python(module_path = my_module) -->
 <!-- Sorry to say this at such a late date, but this syntax really -->
@@ -304,8 +361,13 @@ defined as the closed range:</p>
 一个 <span class="concept">ParameterSpec</span> 的 <a class="reference" href="../../../mpl/doc/refmanual/sequences.html">MPL Sequence</a> 的 <strong>元数区间(arity range)</strong> 是由下面的全闭区间定义的：
 </p>
 
-<pre class="literal-block">[ mpl::size&lt;S&gt; - number of <em>special</em> keyword tags in <tt class="docutils literal"><span class="pre">S</span></tt>, mpl::size&lt;S&gt; ]<br /></pre>
-<pre class="literal-block">[ mpl::size&lt;S&gt; - <tt class="docutils literal"><span class="pre">S</span></tt> 中<em>特殊</em>关键字标签(keyword tag)的个数 , mpl::size&lt;S&gt; ]<br />（译注：也就是 [ 非特殊关键字标签的个数 , 关键字标签的个数 ] ）<br /></pre>
+<pre class="literal-block">
+[ mpl::size&lt;S&gt; - number of <em>special</em> keyword tags in <tt class="docutils literal"><span class="pre">S</span></tt>, mpl::size&lt;S&gt; ]
+</pre>
+<pre class="literal-block">
+[ mpl::size&lt;S&gt; - <tt class="docutils literal"><span class="pre">S</span></tt> 中<em>特殊</em>关键字标签(keyword tag)的个数 , mpl::size&lt;S&gt; ]
+（译注：也就是 [ 非特殊关键字标签的个数 , 关键字标签的个数 ] ）
+</pre>
 
 <p>For example, the <strong>arity range</strong> of <tt class="docutils literal"><span class="pre">mpl::vector2&lt;x(int),y(int)&gt;</span></tt> is <tt class="docutils literal"><span class="pre">[2,2]</span></tt>,
 the <strong>arity range</strong> of <tt class="docutils literal"><span class="pre">mpl::vector2&lt;x(int),y*(int)&gt;</span></tt> is <tt class="docutils literal"><span class="pre">[2,2]</span></tt> and the
@@ -329,7 +391,13 @@ docs. The example uses a different technique, but could also have been written l
 在 Boost.Parameter 的文档里面有一个这样的 <a class="reference" href="index.html#dispatching-based-on-the-presence-of-a-default">例子</a>。
 </p>
 
-<pre class="literal-block">namespace core<br />{<br />  template &lt;class ArgumentPack&gt;<br />  void dfs_dispatch(ArgumentPack const&amp; args, mpl::false_)<br />  {<br />      <em>…compute and use default color map 计算并使用默认的 color map …</em>
+<pre class="literal-block">
+namespace core
+{
+  template &lt;class ArgumentPack&gt;
+  void dfs_dispatch(ArgumentPack const&amp; args, mpl::false_)
+  {
+      <em>…compute and use default color map 计算并使用默认的 color map …</em>
   }
 
   template &lt;class ArgumentPack, class ColorMap&gt;
@@ -397,7 +465,17 @@ equal to 2<sup>N</sup>, where <tt class="docutils literal"><span class="pre">N</
 <h1><a class="toc-backref" href="#id12" id="class-template-init" name="class-template-init">class template <tt class="docutils literal"><span class="pre">init</span></tt> 类模板 <tt class="docutils literal"><span class="pre">init</span></tt> </a></h1>
 <p>Defines a named parameter enabled constructor.</p>
 <p>定义一个有名的 Parameter式 的构造函数。</p>
-<pre class="literal-block">template &lt;class ParameterSpecs&gt;<br />struct init : python::def_visitor&lt;init&lt;ParameterSpecs&gt; &gt;<br />{<br />    template &lt;class Class&gt;<br />    void def(Class&amp; class_);<br /><br />    template &lt;class CallPolicies&gt;<br />    <em>def_visitor</em> operator[](CallPolicies const&amp; policies) const;<br />};<br /></pre>
+<pre class="literal-block">
+template &lt;class ParameterSpecs&gt;
+struct init : python::def_visitor&lt;init&lt;ParameterSpecs&gt; &gt;
+{
+    template &lt;class Class&gt;
+    void def(Class&amp; class_);
+
+    template &lt;class CallPolicies&gt;
+    <em>def_visitor</em> operator[](CallPolicies const&amp; policies) const;
+};
+</pre>
 <!-- @ignore() -->
 <div class="section">
 <h2><a id="init-requirements" name="init-requirements"><tt class="docutils literal"><span class="pre">init</span></tt> requirements 
@@ -419,8 +497,12 @@ expressions:
 这里 <tt class="docutils literal"><span class="pre">[U,V]</span></tt> 是 <tt class="docutils literal"><span class="pre">ParameterSpecs</span></tt> 的
 <strong>元数区间(arity range)</strong>，<tt class="docutils literal"><span class="pre">Class</span></tt> 必须支持下面的这些表达式：
 </p>
-<table class="docutils table" border="1">
-<colgroup><col width="30%" /><col width="17%" /><col width="53%" /></colgroup>
+<table border="1" class="docutils table">
+<colgroup>
+<col width="30%" />
+<col width="17%" />
+<col width="53%" />
+</colgroup>
 <thead valign="bottom">
 <tr><th class="head"><p class="first last">Expression 表达式</p>
 </th>
@@ -455,7 +537,22 @@ uses CallPolicies when creating the binding.</p>
 </div>
 <div class="section">
 <h2><a id="id3" name="id3">Example 例子</a></h2>
-<pre class="literal-block">#include &lt;boost/parameter/keyword.hpp&gt;<br />#include &lt;boost/parameter/preprocessor.hpp&gt;<br />#include &lt;boost/parameter/python.hpp&gt;<br />#include &lt;boost/python.hpp&gt;<br />#include &lt;boost/mpl/vector.hpp&gt;<br /><br />BOOST_PARAMETER_KEYWORD(tag, x)<br />BOOST_PARAMETER_KEYWORD(tag, y)<br /><br />struct base<br />{<br />    template &lt;class ArgumentPack&gt;<br />    base(ArgumentPack const&amp; args)<br />    {<br />        <em>… use args 使用这些参数 …</em>
+<pre class="literal-block">
+#include &lt;boost/parameter/keyword.hpp&gt;
+#include &lt;boost/parameter/preprocessor.hpp&gt;
+#include &lt;boost/parameter/python.hpp&gt;
+#include &lt;boost/python.hpp&gt;
+#include &lt;boost/mpl/vector.hpp&gt;
+
+BOOST_PARAMETER_KEYWORD(tag, x)
+BOOST_PARAMETER_KEYWORD(tag, y)
+
+struct base
+{
+    template &lt;class ArgumentPack&gt;
+    base(ArgumentPack const&amp; args)
+    {
+        <em>… use args 使用这些参数 …</em>
     }
 };
 
@@ -468,7 +565,20 @@ public:
     )
 };
 
-BOOST_PYTHON_MODULE(<em>module name</em>)<br />{<br />    using namespace boost::python;<br />    namespace py = boost::parameter::python;<br />    namespace mpl = boost::mpl;<br /><br />    class_&lt;X&gt;("X", no_init)<br />        .def(<br />            py::init&lt;<br />                mpl::vector&lt;tag::x(int), tag::y*(int)&gt;<br />            &gt;()<br />        );<br />}<br /></pre>
+BOOST_PYTHON_MODULE(<em>module name</em>)
+{
+    using namespace boost::python;
+    namespace py = boost::parameter::python;
+    namespace mpl = boost::mpl;
+
+    class_&lt;X&gt;(&quot;X&quot;, no_init)
+        .def(
+            py::init&lt;
+                mpl::vector&lt;tag::x(int), tag::y*(int)&gt;
+            &gt;()
+        );
+}
+</pre>
 <!-- @example.replace_emphasis('''
 assert(args[x] == 0);
 assert(args[y | 1] == 1);
@@ -491,7 +601,17 @@ assert(args[y | 1] == 1);
 <p>
 定义了一个 <tt class="docutils literal"><span class="pre">__call__</span></tt> 操作符，映射到 C++ 里面的 <tt class="docutils literal"><span class="pre">operator()</span></tt> 操作符。
 </p>
-<pre class="literal-block">template &lt;class ParameterSpecs&gt;<br />struct call : python::def_visitor&lt;call&lt;ParameterSpecs&gt; &gt;<br />{<br />    template &lt;class Class&gt;<br />    void def(Class&amp; class_);<br /><br />    template &lt;class CallPolicies&gt;<br />    <em>def_visitor</em> operator[](CallPolicies const&amp; policies) const;<br />};<br /></pre>
+<pre class="literal-block">
+template &lt;class ParameterSpecs&gt;
+struct call : python::def_visitor&lt;call&lt;ParameterSpecs&gt; &gt;
+{
+    template &lt;class Class&gt;
+    void def(Class&amp; class_);
+
+    template &lt;class CallPolicies&gt;
+    <em>def_visitor</em> operator[](CallPolicies const&amp; policies) const;
+};
+</pre>
 <!-- @ignore() -->
 <div class="section">
 <h2><a id="call-requirements" name="call-requirements"><tt class="docutils literal"><span class="pre">call</span></tt> requirements 
@@ -508,10 +628,14 @@ is the result type of <tt class="docutils literal"><span class="pre">c(…)</spa
 <li><p class="first"><tt class="docutils literal"><span class="pre">Class</span></tt> must support these expressions, where <tt class="docutils literal"><span class="pre">c</span></tt> is an
 instance of <tt class="docutils literal"><span class="pre">Class</span></tt>:
 
-<tt class="docutils literal"><span class="pre">Class</span></tt> 必须支持一下这些表达式，其中 <span class="pre">c</span> 是 <tt class="docutils literal"><span class="pre">Class</span></tt> 的一个实例：
+<tt class="docutils literal"><span class="pre">Class</span></tt> 必须支持一下这些表达式，其中 <span class="pre">c</span></tt> 是 <tt class="docutils literal"><span class="pre">Class</span></tt> 的一个实例：
 </p>
-<table class="docutils table" border="1">
-<colgroup><col width="24%" /><col width="26%" /><col width="50%" /></colgroup>
+<table border="1" class="docutils table">
+<colgroup>
+<col width="24%" />
+<col width="26%" />
+<col width="50%" />
+</colgroup>
 <thead valign="bottom">
 <tr><th class="head"><p class="first last">Expression 表达式</p>
 </th>
@@ -553,7 +677,30 @@ uses CallPolicies when creating the binding.</p>
 </div>
 <div class="section">
 <h2><a id="id5" name="id5">Example 例子</a></h2>
-<pre class="literal-block">#include &lt;boost/parameter/keyword.hpp&gt;<br />#include &lt;boost/parameter/preprocessor.hpp&gt;<br />#include &lt;boost/parameter/python.hpp&gt;<br />#include &lt;boost/python.hpp&gt;<br />#include &lt;boost/mpl/vector.hpp&gt;<br /><br />BOOST_PARAMETER_KEYWORD(tag, x)<br />BOOST_PARAMETER_KEYWORD(tag, y)<br /><br />namespace parameter = boost::parameter;<br /><br />typedef parameter::parameters&lt;<br />    parameter::required&lt;tag::x&gt;<br />  , parameter::optional&lt;tag::y&gt;<br />&gt; call_parameters;<br /><br />class X<br />{<br />public:<br />    template &lt;class ArgumentPack&gt;<br />    int call_impl(ArgumentPack const&amp; args)<br />    {<br />        <em>… use args 使用这些参数 …</em>
+<pre class="literal-block">
+#include &lt;boost/parameter/keyword.hpp&gt;
+#include &lt;boost/parameter/preprocessor.hpp&gt;
+#include &lt;boost/parameter/python.hpp&gt;
+#include &lt;boost/python.hpp&gt;
+#include &lt;boost/mpl/vector.hpp&gt;
+
+BOOST_PARAMETER_KEYWORD(tag, x)
+BOOST_PARAMETER_KEYWORD(tag, y)
+
+namespace parameter = boost::parameter;
+
+typedef parameter::parameters&lt;
+    parameter::required&lt;tag::x&gt;
+  , parameter::optional&lt;tag::y&gt;
+&gt; call_parameters;
+
+class X
+{
+public:
+    template &lt;class ArgumentPack&gt;
+    int call_impl(ArgumentPack const&amp; args)
+    {
+        <em>… use args 使用这些参数 …</em>
     }
 
     template &lt;class A0&gt;
@@ -569,7 +716,20 @@ uses CallPolicies when creating the binding.</p>
     }
 };
 
-BOOST_PYTHON_MODULE(<em>module name</em>)<br />{<br />    using namespace boost::python;<br />    namespace py = parameter::python;<br />    namespace mpl = boost::mpl;<br /><br />    class_&lt;X&gt;("X")<br />        .def(<br />            py::call&lt;<br />                mpl::vector&lt;int, tag::x(int), tag::y*(int)&gt;<br />            &gt;()<br />        );<br />}<br /></pre>
+BOOST_PYTHON_MODULE(<em>module name</em>)
+{
+    using namespace boost::python;
+    namespace py = parameter::python;
+    namespace mpl = boost::mpl;
+
+    class_&lt;X&gt;(&quot;X&quot;)
+        .def(
+            py::call&lt;
+                mpl::vector&lt;int, tag::x(int), tag::y*(int)&gt;
+            &gt;()
+        );
+}
+</pre>
 <!-- @example.replace_emphasis('''
 assert(args[x] == 0);
 assert(args[y | 1] == 1);
@@ -589,7 +749,14 @@ return 0;
 </a></h1>
 <p>Defines a named parameter enabled member function.</p>
 <p>定义一个有名的 parameter式的 成员函数。</p>
-<pre class="literal-block">template &lt;class Fwd, class ParameterSpecs&gt;<br />struct function : python::def_visitor&lt;function&lt;Fwd, ParameterSpecs&gt; &gt;<br />{<br />    template &lt;class Class, class Options&gt;<br />    void def(Class&amp; class_, char const* name, Options const&amp; options);<br />};<br /></pre>
+<pre class="literal-block">
+template &lt;class Fwd, class ParameterSpecs&gt;
+struct function : python::def_visitor&lt;function&lt;Fwd, ParameterSpecs&gt; &gt;
+{
+    template &lt;class Class, class Options&gt;
+    void def(Class&amp; class_, char const* name, Options const&amp; options);
+};
+</pre>
 <!-- @ignore() -->
 <div class="section">
 <h2><a id="function-requirements" name="function-requirements"><tt class="docutils literal"><span class="pre">function</span></tt> requirements
@@ -610,8 +777,12 @@ function.</p>
 <li><p class="first">An instance of <tt class="docutils literal"><span class="pre">Fwd</span></tt> must support this expression:
 一个 <tt class="docutils literal"><span class="pre">Fwd</span></tt> 实例必须支持以下的表达式：
 </p>
-<table class="docutils table" border="1">
-<colgroup><col width="39%" /><col width="18%" /><col width="43%" /></colgroup>
+<table border="1" class="docutils table">
+<colgroup>
+<col width="39%" />
+<col width="18%" />
+<col width="43%" />
+</colgroup>
 <thead valign="bottom">
 <tr><th class="head"><p class="first last">Expression 表达式</p>
 </th>
@@ -658,7 +829,25 @@ an <strong>arity range</strong> of [2,2], so we only need one forwarding overloa
 <span class="concept">ParameterSpec</span> 的 <tt class="docutils literal"><span class="pre">mpl::vector2&lt;tag::x(int),</span> <span class="pre">tag::y*(int)&gt;</span></tt> 序列的 <strong>元数区间(arity range)</strong> 是 <span class="pre">[2,2]</span>，因此我们只需要一个 转交重载函数(forwarding overload)。
 </p>
 
-<pre class="literal-block">#include &lt;boost/parameter/keyword.hpp&gt;<br />#include &lt;boost/parameter/preprocessor.hpp&gt;<br />#include &lt;boost/parameter/python.hpp&gt;<br />#include &lt;boost/python.hpp&gt;<br />#include &lt;boost/mpl/vector.hpp&gt;<br /><br />BOOST_PARAMETER_KEYWORD(tag, x)<br />BOOST_PARAMETER_KEYWORD(tag, y)<br /><br />class X<br />{<br />public:<br />    BOOST_PARAMETER_MEMBER_FUNCTION((void), f, tag,<br />        (required (x, *))<br />        (optional (y, *, 1))<br />    )<br />    {<br />        <em>…</em>
+<pre class="literal-block">
+#include &lt;boost/parameter/keyword.hpp&gt;
+#include &lt;boost/parameter/preprocessor.hpp&gt;
+#include &lt;boost/parameter/python.hpp&gt;
+#include &lt;boost/python.hpp&gt;
+#include &lt;boost/mpl/vector.hpp&gt;
+
+BOOST_PARAMETER_KEYWORD(tag, x)
+BOOST_PARAMETER_KEYWORD(tag, y)
+
+class X
+{
+public:
+    BOOST_PARAMETER_MEMBER_FUNCTION((void), f, tag,
+        (required (x, *))
+        (optional (y, *, 1))
+    )
+    {
+        <em>…</em>
     }
 };
 
@@ -671,7 +860,21 @@ struct f_fwd
     }
 };
 
-BOOST_PYTHON_MODULE(<em>module name</em>)<br />{<br />    using namespace boost::python;<br />    namespace py = boost::parameter::python;<br />    namespace mpl = boost::mpl;<br /><br />    class_&lt;X&gt;("X")<br />        .def("f",<br />            py::function&lt;<br />                f_fwd<br />              , mpl::vector&lt;void, tag::x(int), tag::y*(int)&gt;<br />            &gt;()<br />        );<br />}<br /></pre>
+BOOST_PYTHON_MODULE(<em>module name</em>)
+{
+    using namespace boost::python;
+    namespace py = boost::parameter::python;
+    namespace mpl = boost::mpl;
+
+    class_&lt;X&gt;(&quot;X&quot;)
+        .def(&quot;f&quot;,
+            py::function&lt;
+                f_fwd
+              , mpl::vector&lt;void, tag::x(int), tag::y*(int)&gt;
+            &gt;()
+        );
+}
+</pre>
 <!-- @example.replace_emphasis('''
 assert(x == 0);
 assert(y == 1);
@@ -691,7 +894,10 @@ assert(y == 1);
 </a></h1>
 <p>Defines a named parameter enabled free function in the current Python scope.</p>
 <p>在当前的 Python 空间(scope)中定义一个有名的 Parameter式 的自由函数。</p>
-<pre class="literal-block">template &lt;class Fwd, class ParameterSpecs&gt;<br />void def(char const* name);<br /></pre>
+<pre class="literal-block">
+template &lt;class Fwd, class ParameterSpecs&gt;
+void def(char const* name);
+</pre>
 <!-- @ignore() -->
 <div class="section">
 <h2><a id="def-requirements" name="def-requirements"><tt class="docutils literal"><span class="pre">def</span></tt> requirements
@@ -702,7 +908,7 @@ assert(y == 1);
 except the first models <span class="concept">ParameterSpec</span>. The first element
 is the result type of <tt class="docutils literal"><span class="pre">f(…)</span></tt>, where <tt class="docutils literal"><span class="pre">f</span></tt> is the function.</p>
 <p class="first">
-<span class="pre">ParameterSpecs</span> 是其除了第一个元素外的每一个元素都是 <span class="concept">ParameterSpec</span> 模型的一
+<span class="pre">ParameterSpecs</span></tt> 是其除了第一个元素外的每一个元素都是 <span class="concept">ParameterSpec</span> 模型的一
 个 <a class="reference" href="../../../mpl/doc/refmanual/sequences.html">MPL sequence</a>。第一个元素
 是 <tt class="docutils literal"><span class="pre">f(…)</span></tt> 的结果类型，这里 <tt class="docutils literal"><span class="pre">f</span></tt> 是
 一个函数。
@@ -711,8 +917,12 @@ is the result type of <tt class="docutils literal"><span class="pre">f(…)</spa
 <li>
 <p class="first">An instance of <tt class="docutils literal"><span class="pre">Fwd</span></tt> must support this expression:</p>
 <p class="first">一个 <tt class="docutils literal"><span class="pre">Fwd</span></tt> 的实例必须支持这个表达式：</p>
-<table class="docutils table" border="1">
-<colgroup><col width="39%" /><col width="21%" /><col width="40%" /></colgroup>
+<table border="1" class="docutils table">
+<colgroup>
+<col width="39%" />
+<col width="21%" />
+<col width="40%" />
+</colgroup>
 <thead valign="bottom">
 <tr><th class="head"><p class="first last">Expression 表达式</p>
 </th>
@@ -754,7 +964,13 @@ an <strong>arity range</strong> of [2,2], so we only need one forwarding overloa
 <span class="concept">ParameterSpec</span> 的 <tt class="docutils literal"><span class="pre">mpl::vector2&lt;tag::x(int),</span> <span class="pre">tag::y*(int)&gt;</span></tt> 序列的 <strong>元数区间(arity range)</strong> 是 <span class="pre">[2,2]</span>，因此我们只需要一个 转交重载函数(forwarding overload)。
 </p>
 
-<pre class="literal-block">BOOST_PARAMETER_FUNCTION((void), f, tag,<br />    (required (x, *))<br />    (optional (y, *, 1))<br />)<br />{<br />    <em>…</em>
+<pre class="literal-block">
+BOOST_PARAMETER_FUNCTION((void), f, tag,
+    (required (x, *))
+    (optional (y, *, 1))
+)
+{
+    <em>…</em>
 }
 
 struct f_fwd
@@ -773,7 +989,7 @@ BOOST_PYTHON_MODULE(…)
       , mpl::vector&lt;
             void, tag::x(int), tag::y*(int)
         &gt;
-    &gt;("f");
+    &gt;(&quot;f&quot;);
 }
 </pre>
 <!-- @ignore() -->
@@ -789,9 +1005,11 @@ specialization</em>.</p>
 </div>
 </div>
 <div class="footer">
-<hr class="footer" />Generated on: 2008-06-26 21:51 UTC.
+<hr class="footer" />
+Generated on: 2007-01-03 17:02 UTC.
 Generated by <a class="reference" href="http://docutils.sourceforge.net/">Docutils</a> from <a class="reference" href="http://docutils.sourceforge.net/rst.html">reStructuredText</a> source.
 
 本文档是由来自于 <a class="reference" href="http://docutils.sourceforge.net/rst.html">reStructuredText</a> 的 <a class="reference" href="http://docutils.sourceforge.net/">Docutils</a> 从源代码生成的。
 </div>
-</body></html>
+</body>
+</html>

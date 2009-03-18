@@ -1,11 +1,12 @@
 <!DOCTYPE HTML PUBLIC "-//W3C//DTD HTML 4.01 Transitional//EN" "http://www.w3.org/TR/html4/loose.dtd">
-<html><head><!--
+<html>
+<head>
+<!--
 (C) Copyright 2002-4 Robert Ramey - http://www.rrsd.com . 
 Use, modification and distribution is subject to the Boost Software
 License, Version 1.0. (See accompanying file LICENSE_1_0.txt or copy at
 http://www.boost.org/LICENSE_1_0.txt)
 -->
-
 
 
 
@@ -36,7 +37,9 @@ http://www.boost.org/LICENSE_1_0.txt)
   
   
   
-  <title>Serialization - More on Archives</title></head>
+  <title>Serialization - More on Archives</title>
+</head>
+
 
 <body link="#0000ff" vlink="#800080">
 
@@ -147,7 +150,7 @@ http://www.boost.org/LICENSE_1_0.txt)
 <a href="archives.html"><strong>Archive</strong></a> 概念指定了一个类要被用于序列化 
 <a href="serialization.html"><strong>Serializable</strong></a> 类型而必须实现的功能。本库为了适应不同目的，实现了一组存档类型。本节介绍这些存档是如何实现的，以及你如何去实现自己的存档类。我们的讨论主要针对用于导入的存档，对于用于保存数据的存档，情况是类似的。
 <p>我们的存档被归纳为一棵类树，以尽量减少代码的重复。请看所附的 
-<a target="class_diagram" href="class_diagram.html">类图</a>。任何实现以下要求的类都可用作一个输入存档。</p><h4>最低要求</h4><p>存档类派生自以下模板：
+<a target="class_diagram" href="class_diagram.html">类图</a>。为了减少代码的重复，本库中的输入存档类派生自以下模板：
 </p>
 
 
@@ -155,7 +158,15 @@ http://www.boost.org/LICENSE_1_0.txt)
 <pre><code>
 template&lt;class Archive&gt;
 detail::common_iarchive;
-</code></pre>该模板的实例负责处理与序列化相关的所有 "簿记" 工作。为了能够被使用，<span style="font-weight: bold;">必须</span>另行定义以下函数：
+</code></pre>
+
+
+
+
+<h4>最低要求</h4>
+
+
+该模板的实例负责处理与序列化相关的所有 "簿记" 工作。为了能够被使用，<span style="font-weight: bold;">必须</span>另行定义以下函数：
 <dl>
 
 
@@ -602,7 +613,7 @@ void load_override(T &amp; t, int);
 
 
   <li>本库中的存档都是以一个
-    <code style="white-space: normal;">stream</code> 或 <code style="white-space: normal;">streambuf</code> 作为模板参数的类模板，而不是简单的类。这一点再加上上述各点，在非标准编译器上将产生更多的问题。
+    <code style="white-space: normal;">stream</code> 作为模板参数的类模板，而不是简单的类。这一点再加上上述各点，在非标准编译器上将产生更多的问题。
   </li>
 
 
@@ -634,7 +645,23 @@ void load_override(T &amp; t, int);
 
 
 
-</ul>为了让这种情况也可以工作，应该在存档类定义后包含以下宏： <pre><code><br>#define BOOST_SERIALIZATION_REGISTER_ARCHIVE(Archive)<br></code></pre>不这样做并不会使程序无法编译、链接和执行 - 除了一种情况。如果通过基类指针序列化一个派生类实例，程序将抛出一个 <a href="exceptions.html#unregistered_class"><code style="white-space: normal;">unregistered_class</code></a> 异常。<h4><a name="testing">测试</a></h4>
+</ul>
+
+这里的问题是，BOOT_CLASS_EXPORT 只能为本库中包含的存档类型生成代码 - 而不是以后加入的类型。要为新创建的存档类生成代码，要使用以下声明：
+<pre><code>
+#define BOOST_ARCHIVE_CUSTOM_OARCHIVE_TYPES trivial_oarchive
+#define BOOST_ARCHIVE_CUSTOM_IARCHIVE_TYPES trivial_iarchive
+</code></pre>
+
+以上声明必须在为任何可序列化类调用 <code style="white-space: normal;">BOOST_CLASS_EXPORT</code>&nbsp;之前。不这么做，程序依然可以正常地编译、链接和运行 - 除了一种情形。如果通过基类指针对一个派生类实例进行序列化，程序将抛出一个
+<a href="exceptions.html#unregistered_class"><code style="white-space: normal;">unregistered_class</code></a> 异常。
+<p>以上声明只允许出现一次，不过多个新的存档类型可以用一个以逗号分隔的列表来指定。
+
+</p>
+
+
+
+<h4><a name="testing">测试</a></h4>
 
 
 
@@ -668,7 +695,7 @@ void load_override(T &amp; t, int);
 
 
 
-<a name="testing">要用 gcc 编译器测试一个新的存档，如可移植二进制存档，建立一个头文件 <code style="white-space: normal;">portable_binary_archive.hpp</code>
+<a name="testing">要测试一个新的存档，如可移植二进制存档，建立一个头文件 <code style="white-space: normal;">portable_binary_archive.hpp</code>
 并执行 <code style="white-space: normal;">bjam</code>，指定
 </a>
 <pre><code><a name="testing"> <br>-sBOOST_ARCHIVE_LIST=portable_binary_archive.hpp<br></a></code></pre>
@@ -676,9 +703,11 @@ void load_override(T &amp; t, int);
 
 
 
-<a name="testing">整个过程被封装在 shell 脚本或命令脚本&nbsp;<code style="white-space: normal;">library</code><code style="white-space: normal;">_test</code> 中，命令行为
+<a name="testing">整个过程被封装在 shell 脚本 
+<code style="white-space: normal;">run_archive_test</code> 中，命令行为
 </a>
-<pre><code><br><a name="testing">library_test </a></code><a>--toolset=gcc -sBOOST_ARCHIVE_LIST=portable_binary_archive.hpp</a><code><br></code></pre>
+<pre><code>
+<a name="testing">run_archive_test &lt;test header file&gt; &lt;toolset&gt; [&lt;boost root&gt;] [&lt;target directory&gt;]<br></a></code></pre>
 
 
 
@@ -783,7 +812,9 @@ void load_override(T &amp; t, int);
 
 正如在
 <a target="class_diagram" href="class_diagram.html">类图</a>
-和头文件中看到的那样，该实现只不过是一个多态接口与标准的模板驱动实现的组合。该组合由模板<a href="../../../boost/archive/detail/polymorphic_iarchive_route.hpp" target="polymorphic_iarchive_route_hpp"><code style="white-space: normal;">polymorphic_iarchive_route.hpp</code></a> 和 <a href="../../../boost/archive/detail/polymorphic_oarchive_route.hpp" target="polymorphic_oarchive_route_hpp"><code style="white-space: normal;">polymorphic_oarchive_route.hpp</code></a> 来完成。由于它们都不包含与特定存档实现相关的代码，所以它们可以用于从任意的基于函数模板的存档实现创建一个多态的存档实现。
+和头文件中看到的那样，该实现只不过是一个多态接口与标准的模板驱动实现的组合。该组合由模板
+<a target="polymorphic_iarchive_impl_hpp" href="../../../boost/archive/detail/polymorphic_iarchive_impl.hpp"><code style="white-space: normal;">polymorphic_iarchive_impl.hpp</code></a> 和
+<a target="polymorphic_oarchive_impl_hpp" href="../../../boost/archive/detail/polymorphic_oarchive_impl.hpp"><code style="white-space: normal;">polymorphic_oarchive_impl.hpp</code></a> 来完成。由于它们都不包含与特定存档实现相关的代码，所以它们可以用于从任意的基于函数模板的存档实现创建一个多态的存档实现。
 <p>为方便使用，在一些小的头文件中包含了对应于相应模板实现的多态实现的 
 <code style="white-space: normal;">typedef</code>.  例如，头文件
 <a target="polymorphic_text_iarchive_hpp" href="../../../boost/archive/polymorphic_text_iarchive.hpp"><code style="white-space: normal;">polymorphic_text_iarchive.hpp</code></a> 和
@@ -806,7 +837,7 @@ void load_override(T &amp; t, int);
 
 
 <hr>
-<p><i>© Copyright <a href="http://www.rrsd.com">Robert Ramey</a> 2002-2004. 
+<p><i>&copy; Copyright <a href="http://www.rrsd.com">Robert Ramey</a> 2002-2004. 
 Distributed under the Boost Software License, Version 1.0. (See
 accompanying file LICENSE_1_0.txt or copy at http://www.boost.org/LICENSE_1_0.txt)
 </i></p>
@@ -814,4 +845,5 @@ accompanying file LICENSE_1_0.txt or copy at http://www.boost.org/LICENSE_1_0.tx
 
 
 
-</body></html>
+</body>
+</html>

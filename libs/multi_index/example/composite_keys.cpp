@@ -1,6 +1,6 @@
 /* Boost.MultiIndex example of composite keys.
  *
- * Copyright 2003-2008 Joaquin M Lopez Munoz.
+ * Copyright 2003-2005 Joaquín M López Muñoz.
  * Distributed under the Boost Software License, Version 1.0.
  * (See accompanying file LICENSE_1_0.txt or copy at
  * http://www.boost.org/LICENSE_1_0.txt)
@@ -18,7 +18,6 @@
 #include <boost/multi_index/composite_key.hpp>
 #include <boost/multi_index/member.hpp>
 #include <boost/multi_index/ordered_index.hpp>
-#include <boost/next_prior.hpp>
 #include <boost/tokenizer.hpp>
 #include <functional>
 #include <iostream>
@@ -288,7 +287,7 @@ int main()
       continue;
     }
 
-    it->second->execute(boost::next(tok.begin()),tok.end());
+    it->second->execute(++tok.begin(),tok.end());
   }
   
   return 0;
