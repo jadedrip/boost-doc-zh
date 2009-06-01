@@ -1,0 +1,152 @@
+﻿<!DOCTYPE html PUBLIC "-//W3C//DTD HTML 4.01 Transitional//EN"
+"http://www.w3.org/TR/html4/loose.dtd">
+
+<html>
+<head>
+  <meta http-equiv="Content-Language" content="en-us">
+  <meta http-equiv="Content-Type" content="text/html; charset=UTF-8">
+  <link rel="stylesheet" type="text/css" href="../../../../boost.css">
+
+  <title>Comparisons</title>
+</head>
+
+<body>
+  <h1>比较</h1>
+
+  <p>就像前面说的那样, 比较运算符的定义存在一个小的问题. 依赖于返回值和预期的顺序，有许多方式来定义它们，这就是为什么这些运算符的含义没有一次性固定</p>
+
+  <p>运算符定义的方式会受到策略的影响, 就像是已经存在的针对于舍入和检查的情况.
+  然而, 比较是这个类的外部的性质而不是一个内部的性质。独立于区间的类型，它们可能会被局部修改。</p>
+
+  <p> 每次都会定义运算符<code>&lt;</code>, <code>&lt;=</code>, <code>&gt;</code>,
+  <code>&gt;=</code>, <code>==</code>, <code>!=</code>;
+  就像算术操作符那样，它们可以带有一个基类型的参数，然而由于技术的限制，这个基类型的参数只能是第二个参数，所以，这些运算符不是语义上完整的，返回值不是永远为<code>bool</code>类型, 因为一些有趣的结果可以通过一个三态<code>bool</code>类型来获得，下面是运算符签名的一般形式。</p>
+  <pre>
+template&lt;class T, class Policies1, class Policies2&gt;
+return_type operator== (const interval&lt;T, Policies1&gt;&amp;, const interval&lt;T, Policies2&gt;&amp;);
+
+template&lt;class T, class Policies&gt;
+return_type operator== (const interval&lt;T, Policies&gt;&amp;, const T&amp;);
+</pre>
+
+  <h3>默认比较</h3>
+
+  <p>如果没有指定任何规则，比较运算符的意义是基类型的比较运算符意义的扩展，更精确一点，如果其中一个参数是非法的或是一个空区间，将会抛出一个异常，如果参数是合法的，下面的规则用于决定
+  [<i>a</i>,<i>b</i>] <code>op</code> [<i>c</i>,<i>d</i>]的结果(考虑
+  <i>c</i> <code>==</code> <i>d</i> 如果第二个参数是<code>T</code>类型):</p>
+
+  <ul>
+    <li>如果&forall; <i>x</i> &isin; [<i>a</i>,<i>b</i>] &forall; <i>y</i>
+    &isin; [<i>c</i>,<i>d</i>] <code>(</code><i>x</i> <code>op</code>
+    y<code>)</code>, 那么结果为 <code>true</code></li>
+
+    <li>如果&forall; <i>x</i> &isin; [<i>a</i>,<i>b</i>] &forall; <i>y</i>
+    &isin; [<i>c</i>,<i>d</i>] <code>!(</code><i>x</i> <code>op</code>
+    y<code>)</code>, 那么结果为 <code>false</code></li>
+
+    <li>否则抛出一个异常.</li>
+  </ul>
+
+  <p>这些比较运算允许使用区间类型来替换基类型而不改变程序的含义，实际上，如果没有抛出异常，结果与先前是一样的，如果有异常抛出，先前的比较是不确定的，并且需要改写
+  .</p>
+
+  <h3>其它的比较</h3>
+
+  <p>其它的比较通过使用名字空间来选择，这些名字空间位于<code>boost::numeric::interval_lib::compare</code>并且被   
+  :</p>
+  <pre>
+using namespace boost::numeric::interval_lib::compare::the_comparison_to_select;调用
+</pre>
+  <p>在这一行代码之后，运算符的默认含义将会被这个名字空间中的运算符的默认含义所取代，请注意：由于C++的名字查找规则，一个接一个地使用两个名字空间是不可能的，而且它们必须在不同的代码层次中，否则的话，编译器将会指出存在二义性的运算符，总结如下：</p>
+  <pre>
+// 例 1: BAD
+using namespace compare1;
+...
+using namespace compare2;
+...
+
+// 例 2: GOOD
+{ using namespace compare1;
+  ...                       }
+{ using namespace compare2;
+  ...                       }
+
+// 例 3: BAD
+using namespace compare1;
+...
+{ using namespace compare2;
+  ...                       }
+</pre>
+
+  <p>下面是一些已提供的比较的列表,它们都位于<code>&lt;boost/numeric/interval/compare/...&gt;</code>之下相应的头文件中. 作为默认的比较运算，如果传递了非法的参数，这些运算符将会抛出异常。</p>
+
+  <ul>
+    <li><code>certain</code>: 这种比较等价于默认的比较方式，将异常情况映射为<code>false</code>. 因此，仅当每一对元素的比较都为真时这些运算符才会返回<code>true</code>.</li>
+
+    <li><code>possible</code>: 异常情况被映射为 <code>true</code>. 一旦有一对元素的比较通过，运算符将会立即返回<code>true</code>。</li>
+
+    <li><code>lexicographic</code>: 词典序(lexicographic order)(首先比较下界，如果还不足以知道结果，就会比较上界). 这种顺序在区间运算中是没有意义的，然而，因为它是数对的自然全序，在某些情况下它可能还是很有用的。</li>
+
+    <li><code>set</code>: 集合包含偏序(the set inclusion partial order). 这一次，一个空区间不再被看作是非法的(但是一个非法的数字仍然是非法的). <code>&lt;=</code> 和 <code>&lt;</code>是子集(subset)
+    和真子集(proper subset)关系; <code>&gt;=</code> 和 <code>&gt;</code>
+    是超集(superset)和真超集(proper superset)关系.</li>
+
+    <li><code>tribool</code>: 这种比较依赖于<code>Boost tristate
+    boolean</code>库并且改变默认的运算符，使得一个明确的未定义值返回一个三态bool值来取代抛出一个异常。</li>
+  </ul>
+
+  <h3>异常</h3>
+  <pre>
+namespace boost {
+namespace numeric {
+namespace interval_lib {
+
+class comparison_error: std::runtime_error; // "boost::interval: uncertain comparison"
+
+} // namespace interval_lib
+} // namespace numeric
+} // namespace boost
+</pre>
+
+  <h2>明确的比较函数</h2>
+
+  <p>在某些情况下，你可能想要直接的比较边界值并且避免默认的运算符中出现的未定义的情况，针对这一目的提供了一些函数，它们期望参数是合法的，当只进行了一次比较之后就返回结果，它们的名字被<code>cer</code>修饰(意义为 "certain", 如果默认比较为<code>true</code>，结果就为<code>true</code>)或<code>pos</code>(意义为 "possible",如果默认的比较为<code>false</code>，结果就为<code>false</code>)
+  接下来是 <code>lt</code>, <code>le</code>, <code>gt</code>,
+  <code>ge</code>, <code>eq</code> or <code>ne</code>，它们位于<code>&lt;boost/numeric/interval/compare/explicit.hpp&gt;</code>中. 每一个函数都带有两个参数并返回一个<code>bool</code>值; 这些函数期望参数是合法的，否则的话可能有未定义的行为，例如，比较的定义是</p>
+  <pre>
+namespace boost {
+namespace numeric {
+namespace interval_lib {
+
+template&lt;class T, class Policies1, class Policies2&gt;
+bool cerlt(const interval&lt;T, Policies1&gt;&amp; x, const interval&lt;T, Policies2&gt;&amp; y);
+
+template&lt;class T, class Policies&gt;
+bool cerlt(const interval&lt;T, Policies&gt;&amp; x, const T&amp; y);
+
+template&lt;class T, class Policies&gt;
+bool cerlt(const T&amp; x, const interval&lt;T, Policies&gt;&amp; y);
+
+} // namespace interval_lib
+} // namespace numeric
+} // namespace boost
+</pre>
+  <hr>
+
+  <p><a href="http://validator.w3.org/check?uri=referer"><img border="0" src=
+  "http://www.w3.org/Icons/valid-html401" alt="Valid HTML 4.01 Transitional"
+  height="31" width="88"></a></p>
+
+  <p>Revised 
+  <!--webbot bot="Timestamp" s-type="EDITED" s-format="%Y-%m-%d" startspan -->2006-12-24<!--webbot bot="Timestamp" endspan i-checksum="12172" --></p>
+
+  <p><i>Copyright &copy; 2002 Guillaume Melquiond, Sylvain Pion, Herv&eacute;
+  Br&ouml;nnimann, Polytechnic University<br>
+  Copyright &copy; 2003 Guillaume Melquiond</i></p>
+
+  <p><i>Distributed under the Boost Software License, Version 1.0. (See
+  accompanying file <a href="../../../../LICENSE_1_0.txt">LICENSE_1_0.txt</a>
+  or copy at <a href=
+  "http://www.boost.org/LICENSE_1_0.txt">http://www.boost.org/LICENSE_1_0.txt</a>)</i></p>
+</body>
+</html>

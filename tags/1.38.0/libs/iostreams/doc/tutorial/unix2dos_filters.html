@@ -1,0 +1,229 @@
+<!DOCTYPE HTML PUBLIC "-//W3C//DTD HTML 4.01 Transitional//EN">
+<html>
+<head>
+
+  
+  <meta content="text/html; charset=UTF-8" http-equiv="content-type">
+
+
+    
+    
+  
+  
+  <title>Tutorial</title>
+  <link rel="stylesheet" href="../../../../boost.css">
+
+
+    
+  
+  <link rel="stylesheet" href="../theme/iostreams.css">
+</head>
+
+
+<body>
+
+
+
+<!-- Begin Banner -->
+
+    
+<h1 class="title">指南</h1>
+
+
+    
+<hr class="banner">
+
+<!-- End Banner -->
+
+<!-- Begin Nav -->
+
+<div class="nav">
+    <a href="dictionary_filters.html"><img src="../../../../doc/html/images/prev.png" border="0" height="19" width="19"></a>
+    <a href="tutorial.html"><img src="../../../../doc/html/images/up.png" border="0" height="19" width="19"></a>
+    <a href="multichar_filters.html"><img src="../../../../doc/html/images/next.png" border="0" height="19" width="19"></a>
+</div>
+
+
+
+<!-- End Nav -->
+
+<a name="unix2dos"></a>
+<h2>2.2.7. UNIX-to-DOS 过滤器</h2>
+
+
+
+<p>假设你要写一个过滤器，用于将 <code>UNIX</code> 换行符转换为 <code>DOS</code> 换行符。基本思想很简单：每次处理一个字符，当遇到字符
+<code>'\n'</code> 时用两个字符 <code>'\r'</code>, <code>'\n'</code> 来替换。以下章节中，我将该算法分别实现为 <code>stdio_filter</code>, 输入过滤器和输出过滤器。源代码在头文件 <a href="../../example/unix2dos_filter.hpp">&lt;<code>libs/iostreams/example/unix2dos_filter.hpp</code>&gt;</a></p>
+
+
+
+<a name="unix2dos_stdio_filter"></a>
+<h4><code>unix2dos_stdio_filter</code></h4>
+
+
+
+<p>你可以将 <code>UNIX</code>-to-<code>DOS</code> 过滤器实现为 <code>stdio_filter</code>，从 <code>stdio_filter</code> 派生并重写私有虚拟函数 do_filter 如下：</p>
+
+
+
+<pre class="broken_ie"><span class="preprocessor">#include</span> <span class="literal">&lt;cstdio&gt;</span>    <span class="comment">// EOF</span>
+<span class="preprocessor">#include</span> <span class="literal">&lt;iostream&gt;</span>  <span class="comment">// cin, cout</span>
+<span class="preprocessor">#include</span> <a class="header" href="../../../../boost/iostreams/filter/stdio.hpp"><span class="literal">&lt;boost/iostreams/filter/stdio.hpp&gt;</span></a>
+
+<span class="keyword">namespace</span> boost { <span class="keyword">namespace</span> iostreams { <span class="keyword">namespace</span> example {<br><br><span class="keyword">class</span> unix2dos_stdio_filter : <span class="keyword">public</span> stdio_filter {<br><span class="keyword">private</span>:<br>    <span class="keyword">void</span> do_filter()<br>    {<br>        <span class="keyword">int</span> c;<br>        <span class="keyword">while</span> ((c = std::cin.get()) != <span class="numeric_literal">EOF</span>) {<br>            <span class="keyword">if</span> (c == <span class="literal">'\n'</span>)<br>                std::cout.put(<span class="literal">'\r'</span>);<br>            std::cout.put(c);<br>        }<br>    }<br>};<br><br>} } } <span class="comment">// End namespace boost::iostreams:example</span></pre>
+
+
+
+<p>函数 <code>do_filter</code> 包含了前面所述算法的一个简单的实现：从标准输入读入字符并原样写出到标准输出，除非遇到 <code>'\n'</code>，这时写出 <code>'\r'</code>, <code>'\n'</code>.
+
+<a name="unix2dos_input_filter"></a>
+</p>
+
+<h4><code>unix2dos_input_filter</code></h4>
+
+
+
+<p>现在，我们来将 <code>UNIX</code>-to-<code>DOS</code> 过滤器实现为 <a href="../concepts/input_filter.html">InputFilter输入过滤器</a>。
+
+</p>
+
+<pre class="broken_ie"><span class="preprocessor">#include</span> <a class="header" href="../../../../boost/iostreams/categories.hpp"><span class="literal">&lt;boost/iostreams/categories.hpp&gt;</span></a> <span class="comment">// input_filter_tag</span>
+<span class="preprocessor">#include</span> <a class="header" href="../../../../boost/iostreams/operations.hpp"><span class="literal">&lt;boost/iostreams/operations.hpp&gt;</span></a> <span class="comment">// get</span>
+
+<span class="keyword">namespace</span> boost { <span class="keyword">namespace</span> iostreams { <span class="keyword">namespace</span> example {<br><br><span class="keyword">class</span> unix2dos_input_filter {<br><span class="keyword">public</span>:<br>    <span class="keyword">typedef</span> <span class="keyword">char</span>              char_type;<br>    <span class="keyword">typedef</span> input_filter_tag  category;<br><br>    unix2dos_input_filter() : has_linefeed_(<span class="keyword">false</span>) { }<br><br>    <span class="keyword">template</span>&lt;<span class="keyword">typename</span> Source&gt;<br>    <span class="keyword">int</span> get(Source&amp; src)<br>    {<br>        <span class="comment">// 处理未完成的工作</span>
+        <span class="keyword">if</span> (has_linefeed_) {<br>            has_linefeed_ = <span class="keyword">false</span>;<br>            <span class="keyword">return</span> <span class="literal">'\n'</span>;<br>        }<br><br>        <span class="comment">// 转发除 '\n' 以外的所有字符</span>
+        <span class="keyword">int</span> c;<br>        if ((c = iostreams::get(src)) == <span class="literal">'\n'</span>) {<br>            has_linefeed_ = true;<br>            <span class="keyword">return</span> <span class="literal">'\r'</span>;<br>        }<br><br>        <span class="keyword">return</span> c;<br>    }<br><br>    <span class="keyword">template</span>&lt;<span class="keyword">typename</span> Source&gt;<br>    <span class="keyword">void</span> close(Source&amp;);<br><span class="keyword">private</span>:<br>    <span class="keyword">bool</span> has_linefeed_;<br>};<br><br>} } } <span class="comment">// End namespace boost::iostreams:example</span></pre>
+
+
+
+<p><code>get</code> 的实现描述如下。多数情况下，只需要从 <code>src</code> 读入字符并返回它。特殊值 <code>EOF</code> 和 <code>WOULD_BLOCK</code> 以相同方式处理：只需简单地照原样转发。例外的情况是，当 <code>iostreams::get</code> 返回 <code>'\n'</code> 时，要返回 <code>'\r'</code> 作为替换并且做个记号，以便在下一次调用 <code>get</code> 时返回 <code>'\n'</code>.</p>
+
+
+
+<p>如常，成员函数 <code>close</code> 重置过滤器的状态：</p>
+
+
+
+<pre class="broken_ie">    <span class="keyword">template</span>&lt;<span class="keyword">typename</span> Source&gt;<br>    <span class="keyword">void</span> close(Source&amp;) { skip_ = <span class="keyword">false</span>; }</pre>
+
+
+
+<a name="unix2dos_output_filter"></a>
+<h4><code>unix2dos_output_filter</code></h4>
+
+
+
+<p>你可以将 <code>UNIX</code>-to-<code>DOS</code> 过滤器实现为 <a href="../concepts/output_filter.html">OutputFilter输出过滤器</a> 如下：</p>
+
+
+
+<pre class="broken_ie"><span class="preprocessor">#include</span> <a class="header" href="../../../../boost/iostreams/concepts.hpp"><span class="literal">&lt;boost/iostreams/concepts.hpp&gt;</span></a>   <span class="comment">// output_filter</span>
+<span class="preprocessor">#include</span> <a class="header" href="../../../../boost/iostreams/operations.hpp"><span class="literal">&lt;boost/iostreams/operations.hpp&gt;</span></a> <span class="comment">// put</span>
+
+<span class="keyword">namespace</span> boost { <span class="keyword">namespace</span> iostreams { <span class="keyword">namespace</span> example {<br><br><span class="keyword">class</span> unix2dos_output_filter : <span class="keyword">public</span> output_filter {<br><span class="keyword">public</span>:<br>    unix2dos_output_filter() : has_linefeed_(<span class="keyword">false</span>) { }<br><br>    <span class="keyword">template</span>&lt;<span class="keyword">typename</span> Sink&gt;<br>    <span class="keyword">bool</span> put(Sink&amp; dest, <span class="keyword">int</span> c);<br><br>    <span class="keyword">template</span>&lt;<span class="keyword">typename</span> Sink&gt;<br>    <span class="keyword">void</span> close(Sink&amp;) { has_linefeed_ = <span class="keyword">false</span>; }<br><span class="keyword">private</span>:<br>    <span class="keyword">template</span>&lt;<span class="keyword">typename</span> Sink&gt;<br>    <span class="keyword">bool</span> put_char(Sink&amp; dest, <span class="keyword">int</span> c);<br><br>    <span class="keyword">bool</span> has_linefeed_;<br>};<br><br>} } } <span class="comment">// End namespace boost::iostreams:example</span></pre>
+
+
+
+<p>这里我从辅助类 <a href="../classes/filter.html#synopsis"><code>output_filter</code></a> 派生，基类提供了等同于 <code>char</code> 的成员类型 <code>char_type</code><code></code> 以及可转换为 <a href="../guide/traits.html#category_tags"><code>output_filter_tag</code></a> 和 <a href="../guide/traits.html#category_tags"><code>closable_tag</code></a> 的分类标志。
+</p>
+
+
+
+<p>先来看看辅助函数 <code>put_char</code>:</p>
+
+
+
+<pre class="broken_ie">    <span class="keyword">template</span>&lt;<span class="keyword">typename</span> Sink&gt;<br>    <span class="keyword">bool</span> put_char(Sink&amp; dest, <span class="keyword">int</span> c) <br>    {<br>        <span class="keyword">bool</span> result;<br>        <span class="keyword">if</span> ((result = iostreams::put(dest, c)) == <span class="keyword">true</span>) {<br>            has_linefeed_ =<br>                c == <span class="literal">'\r'</span> ?<br>                    <span class="keyword">true</span> : <br>                    c == <span class="literal">'\n'</span> ? <br>                        <span class="keyword">false</span> :<br>                        has_linefeed_;<br>        }<br>        <span class="keyword">return</span> result;<br>    }</pre>
+
+
+
+<p>该函数尝试将单个字符写出到接收器 dest, 成功时返回 <code>true</code>. 如果成功，则更新标志 <code>has_linefeed_</code>, 它用于表示试图写出一个 <code>DOS</code> 换行符序列。  
+</p>
+
+
+
+<p>使用 <code>put_char</code> 你可以实现 <code>put</code> 如下：</p>
+
+
+
+<pre class="broken_ie">    <span class="keyword">bool</span> put(Sink&amp; dest, <span class="keyword">int</span> c) <br>    {<br>        <span class="keyword">if</span> (c == <span class="literal">'\n'</span>) <br>            <span class="keyword">return</span> has_linefeed_ ?<br>                put_char(dest, <span class="literal">'\n'</span>) :<br>                put_char(dest, <span class="literal">'\r'</span>) ?<br>                    this-&gt;put(dest, <span class="literal">'\n'</span>) :<br>                    <span class="keyword">false</span>;<br>        <span class="keyword">return</span> iostreams::put(dest, c);<br>    }</pre>
+
+
+
+<p>该实现工作如下：</p>
+
+
+
+<ol>
+
+
+  <li>如果位于 <code>DOS</code> 换行符序列的开头 &mdash; 即如果 <code>c</code> 是 <code>'\n'</code> 且 <code>has_line_feed_</code> 为 <code>false</code> &mdash; 则尝试写出 <code>'\r'</code> 和 <code>'\n'</code> 到 <code>dest</code>.
+  </li>
+
+
+  <li>如果位于 <code>DOS</code> 换行符序列的中间 &mdash; 即如果 <code>c</code> 是 <code>'\n'</code> 且 <code>has_line_feed_</code> 为 <code>true</code> &mdash; 则尝试写出 <code>'\n'</code> 来完成。
+  </li>
+
+
+  <li>否则，尝试写出 <code>c</code> 到 <code>dest</code>.
+  </li>
+
+
+</ol>
+
+
+
+<p>这里有两处微妙的地方。首先，为什么 <code>c == 'n'</code> 和 <code>has_line_feed_ == true</code> 意味着当前正位于 <code>DOS</code> 换行符序列的中间？因为当你试图写出 <code>'\r'</code>, <code>'\n'</code> 而只成功写出第一个字符时，你设置了 <code>has_line_feed_</code> 并返回 <code>false</code>. 这导致过滤器用户<span style="font-style: italic;">重发</span>字符换行符 <code>'\n'</code>. 第二个是，在写出换行符序列的第二个字符时，要递归调用&nbsp; <code>put</code> 而不是调用 <code>put_char</code>.
+</p>
+
+
+
+<p>比较一下 <code>unix2dos_input_filter</code> 和 <code>unix2dos_output_filter</code> 的实现，你可以看到在这种情况下，将算法实现为输入过滤器要比实现为输出过滤器更为容易。如果你避免上述复杂性，你可以使用类模板 <a href="../functions/invert.html#invert"><code>inverse</code></a> 来从 <code>unix2dos_input_filter</code> 构造相应的输出过滤器：
+</p>
+
+
+
+<pre class="broken_ie"><span class="literal">#include</span> <a class="header" href="../../../../boost/iostreams/concepts.hpp"><span class="literal">&lt;boost/iostreams/invert.hpp&gt;</span></a>   <span class="comment">// inverse</span>   <br><br><span class="keyword">namespace</span> io = boost::iostreams;<br><span class="keyword">namespace</span> ex = boost::iostreams::example;<br><br><span class="keyword">typedef</span> io::inverse&lt;ex::unix2dos_input_filter&gt; unix2dos_output_filter;</pre>
+
+
+
+<p>其实这些工作都是多余的，因为换行符转换可以很容易地使用内建的过滤器 <a href="../classes/newline_filter.html#newline_filter"><code>newline_filter</code></a> 来处理。</p>
+
+
+
+<!-- Begin Nav -->
+
+<div class="nav">
+    <a href="dictionary_filters.html"><img src="../../../../doc/html/images/prev.png" border="0" height="19" width="19"></a>
+    <a href="tutorial.html"><img src="../../../../doc/html/images/up.png" border="0" height="19" width="19"></a>
+    <a href="multichar_filters.html"><img src="../../../../doc/html/images/next.png" border="0" height="19" width="19"></a>
+</div>
+
+
+
+<!-- End Nav -->
+
+<!-- Begin Footer -->
+
+<hr>
+
+<p class="copyright">Revised
+<!--webbot bot="Timestamp" S-Type="EDITED" S-Format="%d %B, %Y" startspan -->
+20 May, 2004
+<!--webbot bot="Timestamp" endspan i-checksum="38504" -->
+</p>
+
+
+
+<p class="copyright">&copy; Copyright <a href="http://www.kangaroologic.com" target="_top">Jonathan Turkanis</a>, 2004</p>
+
+
+<p class="copyright"> 
+    Use, modification, and distribution are subject to the Boost Software License, Version 2.0. (See accompanying file <a href="../../../../LICENSE_1_0.txt">LICENSE_1_0.txt</a> or copy at <a href="http://www.boost.org/LICENSE_1_0.txt">http://www.boost.org/LICENSE_1_0.txt</a>)
+</p>
+
+
+<!-- End Footer -->
+
+</body>
+</html>

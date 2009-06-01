@@ -1,0 +1,93 @@
+<!DOCTYPE HTML PUBLIC "-//W3C//DTD HTML 4.01 Transitional//EN">
+<html><head>
+
+<title>The Input Policy</title><meta http-equiv="Content-Type" content="text/html; charset=UTF-8">
+<link href="theme/style.css" rel="stylesheet" type="text/css"></head>
+<body>
+<table background="theme/bkd2.gif" border="0" cellspacing="2" width="100%">
+  <tbody><tr> 
+    <td width="21"> <h1></h1></td>
+    <td width="885"> <font face="Verdana, Arial, Helvetica, sans-serif"><b><font size="6">The 
+      Input Policy 输入策略</font></b></font></td>
+    <td width="96"><a href="http://www.boost.org"><img src="theme/wave.gif" align="right" border="0" height="68" width="93"></a></td>
+  </tr>
+</tbody></table>
+<br>
+<table border="0">
+  <tbody><tr> 
+    <td width="10"></td>
+    <td width="30"><a href="../index.html"><img src="theme/u_arr.gif" border="0"></a></td>
+    <td width="30"><a href="class_reference_context.html"><img src="theme/l_arr.gif" border="0" height="19" width="20"></a></td>
+    <td width="30"><a href="class_reference_ctxpolicy.html"><img src="theme/r_arr.gif" border="0"></a></td>
+  </tr>
+</tbody></table>
+
+<blockquote> 
+  <p><a href="class_reference_inptpolcy.html#introduction">Introduction 简介 </a><br>
+    <a href="class_reference_inptpolcy.html#header_synopsis">Header 'wave/cpp_iteration_context.hpp' 
+    synopsis 头文件'wave/cpp_iteration_context.hpp'概要</a><br>
+    <a href="class_reference_inptpolcy.html#template_parameters">Template parameters 模板参数</a><br>
+    <a href="class_reference_inptpolcy.html#member_functions">Member functions 成员函数</a></p>
+</blockquote>
+<h2><b><a name="introduction"></a>Introduction 简介</b></h2>
+<p>The input policy type may be specified as a template parameter to the <tt>wave::context</tt> 
+  object and is used for customizing the way, how an included file is to be represented 
+  by a pair of iterators pointing to the beginning and the end of the resulting 
+  input sequence. If this template parameter is not given while instantiating 
+  the context object, it defaults to the <tt>iteration_context_policies::load_file_to_string</tt> 
+  type.<br>输入策略的类型可以指定为 <tt>wave::context</tt> 
+  对象的一个模板参数，并用于定制一个包含文件如何用一对指向输入序列的开始与结尾的迭代器来表示。如果在对上下文对象进行初始化时该模板参数未给出，则缺省为 <tt>iteration_context_policies::load_file_to_string</tt> 类型。 </p>
+<h2><b><a name="header_synopsis"></a>Header <a href="http://svn.boost.org/trac/boost/browser/trunk/boost/wave/util/iteration_context.hpp">wave/iteration_context.hpp</a> 
+  synopsis 头文件概要</b></h2>
+<p>The following code listing does not show the required interface only, but for 
+  brevity reasons the whole implementation of an input policy, which loads the 
+  given file into a string variable and exposes the begin() and end() iterators 
+  of this string to the <tt>Wave</tt> library.<br>以下代码并不只是展示所需要的接口，而是一个输入策略的完整实现，该策略将指定文件导入至一个字符串变量，并将该字符串的 begin() 和 end() 迭代器暴露给 <tt>Wave</tt> 库。</p>
+<pre><span class="keyword">namespace</span> boost {<br><span class="keyword">namespace</span> wave {<br><span class="keyword">namespace</span> iteration_context_policies {<br><br>    <span class="keyword">struct</span> load_file_to_string {<br>    <br>        <span class="keyword">template</span> &lt;<span class="keyword">typename</span> IterContext&gt;<br>        <span class="keyword">class</span> inner {<br>        <br>        <span class="keyword">public</span>:<br>            <span class="comment">// expose the begin and end iterators for the</span>
+            <span class="comment">// included file</span>
+            <span class="keyword">template</span> &lt;typename Position&gt;<br>            <span class="keyword">static</span> <br>            <span class="keyword">void</span> <a href="class_reference_inptpolcy.html#init_iterators">init_iterators</a>(IterContext&amp;iter_ctx, <br>                Position const &amp;act_pos)<br>            {<br>                <span class="keyword">typedef typename</span> IterContext::iterator_type iterator_type;<br>                <br>                <span class="keyword">std::ifstream</span> instream(iter_ctx.filename.c_str());<br>                if (!instream.is_open()) {<br>                    CPP_THROW(preprocess_exception, bad_include_file, <br>                        iter_ctx.filename, act_pos);<br>                }<br>                <br>                iter_ctx.instring = <span class="keyword">std::string</span>(<br>                    <span class="keyword">std::istreambuf_iterator</span><char>(instream.rdbuf()),<br>                    <span class="keyword">std::istreambuf_iterator</span><char>());<br><br>                iter_ctx.first = iterator_type(iter_ctx.instring.begin(), <br>                    iter_ctx.instring.end(), <br>                    PositionT(iter_ctx.filename));<br>                iter_ctx.last = iterator_type();<br>            }<br><br>        <span class="keyword">private</span>:<br>            <span class="keyword">std::string</span> instring;<br>        };<br>    };<br><br>}   <span class="comment">// namespace iteration_context_policies</span>
+}   <span class="comment">// namespace wave </span>
+}   <span class="comment">// namespace boost </span>  </char></char></pre>
+<p>As you can see, an <tt>input_policy</tt> for the <tt>wave::context</tt> object 
+  should implement one function only, the init_iterators function. The policy 
+  shown is implemented with the help of an embedded class to avoid the need for 
+  template template parameters, which aren't implemented by all systems today. 
+  This embedded class should have the name <tt>inner</tt>.<br>如你所见，一个用于&nbsp;<tt>wave::context</tt> 对象的 <tt>input_policy</tt> 只实现一个函数 init_iterators。以上所示策略的实现利用了一个内嵌类，来避免使用模板模板参数，因为迄今为止还不是所有的系统都实现了模板模板参数。这个内嵌类的名字为 <tt>inner</tt>.</p>
+<h3><a name="template_parameters"></a>Template Parameters 模板参数</h3>
+<p>The <tt>inner</tt> class is instantiated with one template parameter, the iteration 
+  context type, from which the policy is a part of. The iterator type <tt>iterator_type</tt> 
+  which is used to access the underlying input stream has to be derived through 
+  a typedef as shown. The iterator pair to initialize (which is accessible as 
+  <tt>iter_ctx.first</tt> and <tt>iter_ctx.last</tt>) has to initialized from 
+  an abritrary iterator type, representing the actual input stream.<br><tt>inner</tt> 类以一个模板参数初始化，该参数为以本策略作为其一部分的迭代上下文类型。用于访问底层输入流的迭代器类型 <tt>iterator_type</tt> 
+  必须通过一个以上所示的 typedef 来生成。初始化的迭代器对(它们可以通过 
+  <tt>iter_ctx.first</tt> 和 <tt>iter_ctx.last</tt> 来访问)必须从一个任意的迭代器类型来初始化，用来表示实际的输入流。</p>
+<h3><a name="member_functions"></a>Member Functions 成员函数</h3>
+<p><a name="init_iterators"></a><b>init_iterators</b></p>
+<pre>    <span class="keyword">template</span> &lt;<span class="keyword">typename</span> Position&gt;<br>    <span class="keyword">static void</span> init_iterators(<br>        IterContext iter_ctx, <br>        Position const &amp;act_pos);</pre>
+
+    <p>directive was found in the input token stream. The main rationale for this 
+    function is to initialize the pair of iterators <tt>iter_ctx.first</tt> and 
+    <tt>iter_ctx.last</tt>, which are to be used to access the input stream corresponding 
+  to the include file to be inserted from inside the preprocessing engine.<br>指令在输入单词流中找到。该函数的主要原理是，初始化一对迭代器 <tt>iter_ctx.first</tt> 和 
+    <tt>iter_ctx.last</tt>，它们被用于访问与被插入到预处理引擎中的头文件相对应的输入流。</p>
+
+<table border="0">
+  <tbody><tr> 
+    <td width="10"></td>
+    <td width="30"><a href="../index.html"><img src="theme/u_arr.gif" border="0"></a></td>
+    <td width="30"><a href="class_reference_context.html"><img src="theme/l_arr.gif" border="0" height="19" width="20"></a></td>
+    <td width="30"><a href="class_reference_ctxpolicy.html"><img src="theme/r_arr.gif" border="0"></a></td>
+  </tr>
+</tbody></table>
+<hr size="1">
+<p class="copyright">Copyright © 2003-2008 Hartmut Kaiser<br>
+  <br>
+  <font size="2">Distributed
+under the Boost Software License, Version 1.0. (See accompanying file
+LICENSE_1_0.txt or copy at http://www.boost.org/LICENSE_1_0.txt) </font> </p>
+<span class="updated"></span>
+<p class="copyright"><span class="updated">Last updated: 
+  <!-- #BeginDate format:fcAm1m -->Sunday, October 12, 2008  20:14<!-- #EndDate -->
+  </span></p>
+</body></html>

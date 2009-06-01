@@ -1,0 +1,277 @@
+<html>
+<head>
+<meta http-equiv="Content-Type" content="text/html; charset=utf-8">
+<title>Introduction and Overview</title>
+<link rel="stylesheet" href="../../../../../doc/html/boostbook.css" type="text/css">
+<meta name="generator" content="DocBook XSL Stylesheets Vsnapshot_2006-12-17_0120">
+<link rel="start" href="../index.html" title="Boost.Regex">
+<link rel="up" href="../index.html" title="Boost.Regex">
+<link rel="prev" href="install.html" title="Building and Installing the Library">
+<link rel="next" href="unicode.html" title="Unicode and Boost.Regex">
+</head>
+<body bgcolor="white" text="black" link="#0000FF" vlink="#840084" alink="#0000FF">
+<table cellpadding="2" width="100%"><tr>
+<td valign="top"><img alt="Boost C++ Libraries" width="277" height="86" src="../../../../../boost.png"></td>
+<td align="center"><a href="../../../../../index.html">Home</a></td>
+<td align="center"><a href="../../../../../libs/libraries.htm">Libraries</a></td>
+<td align="center"><a href="http://www.boost.org/users/people.html">People</a></td>
+<td align="center"><a href="http://www.boost.org/users/faq.html">FAQ</a></td>
+<td align="center"><a href="../../../../../more/index.htm">More</a></td>
+</tr></table>
+<hr>
+<div class="spirit-nav">
+<a accesskey="p" href="install.html"><img src="../../../../../doc/html/images/prev.png" alt="Prev"></a><a accesskey="u" href="../index.html"><img src="../../../../../doc/html/images/up.png" alt="Up"></a><a accesskey="h" href="../index.html"><img src="../../../../../doc/html/images/home.png" alt="Home"></a><a accesskey="n" href="unicode.html"><img src="../../../../../doc/html/images/next.png" alt="Next"></a>
+</div>
+<div class="section" lang="en">
+<div class="titlepage"><div><div><h2 class="title" style="clear: both">
+<a name="boost_regex.introduction_and_overview"></a><a href="introduction_and_overview.html" title="Introduction and Overview">Introduction and
+    Overview</a>
+</h2></div></div></div>
+<p>
+      Regular expressions are a form of pattern-matching that are often used in text
+      processing; many users will be familiar with the Unix utilities grep, sed and
+      awk, and the programming language Perl, each of which make extensive use of
+      regular expressions. Traditionally C++ users have been limited to the POSIX
+      C API's for manipulating regular expressions, and while Boost.Regex does provide
+      these API's, they do not represent the best way to use the library. For example
+      Boost.Regex can cope with wide character strings, or search and replace operations
+      (in a manner analogous to either sed or Perl), something that traditional C
+      libraries can not do.
+      <br />
+      正则表达式是一个在文本处理中经常用到的模式匹配的形式；
+      很多用户可能对Unix的工具grep、sed、awk和Perl编程语言有所熟悉，它们每一个都有正则表达式的扩展使用。
+      过去C++用户被局限于POSIX C API来操作正则表达式，Boost.Regex同样提供这些API，但这些API并不是使用本库最好的方式。
+      例如Boost.Regex能够同宽字符字符串，或者搜索和替换操作(与sed或Perl类似的方式)有效结构，
+      这些用传统的C库并不能做到。
+    </p>
+<p>
+      The class <a href="ref/basic_regex.html" title="basic_regex"><code class="computeroutput"><span class="identifier">basic_regex</span></code></a>
+      is the key class in this library; it represents a "machine readable"
+      regular expression, and is very closely modeled on <code class="computeroutput"><span class="identifier">std</span><span class="special">::</span><span class="identifier">basic_string</span></code>,
+      think of it as a string plus the actual state-machine required by the regular
+      expression algorithms. Like <code class="computeroutput"><span class="identifier">std</span><span class="special">::</span><span class="identifier">basic_string</span></code>
+      there are two typedefs that are almost always the means by which this class
+      is referenced:
+      <br />
+    <a href="ref/basic_regex.html" title="basic_regex"><code class="computeroutput"><span class="identifier">basic_regex</span></code></a>类是库的关键字；它表示一个"机器可读的"正则表达式，并且非常紧密地建模于<code class="computeroutput"><span class="identifier">std</span><span class="special">::</span><span class="identifier">basic_string</span></code>，
+    可以认为是一个字符串加上正则表达式算法需要的实际状态机。
+    类似于Like <code class="computeroutput"><span class="identifier">std</span><span class="special">::</span><span class="identifier">basic_string</span></code>有两个typedef经常被使用：
+    </p>
+<pre class="programlisting"><span class="keyword">namespace</span> <span class="identifier">boost</span><span class="special">{</span>
+
+<span class="keyword">template</span> <span class="special">&lt;</span><span class="keyword">class</span> <span class="identifier">charT</span><span class="special">,</span> 
+         <span class="keyword">class</span> <span class="identifier">traits</span> <span class="special">=</span> <span class="identifier">regex_traits</span><span class="special">&lt;</span><span class="identifier">charT</span><span class="special">&gt;</span> <span class="special">&gt;</span>
+<span class="keyword">class</span> <span class="identifier">basic_regex</span><span class="special">;</span>
+
+<span class="keyword">typedef</span> <span class="identifier">basic_regex</span><span class="special">&lt;</span><span class="keyword">char</span><span class="special">&gt;</span> <span class="identifier">regex</span><span class="special">;</span>
+<span class="keyword">typedef</span> <span class="identifier">basic_regex</span><span class="special">&lt;</span><span class="keyword">wchar_t</span><span class="special">&gt;</span> <span class="identifier">wregex</span><span class="special">;</span>
+
+<span class="special">}</span>
+</pre>
+<p>
+      To see how this library can be used, imagine that we are writing a credit card
+      processing application. Credit card numbers generally come as a string of 16-digits,
+      separated into groups of 4-digits, and separated by either a space or a hyphen.
+      Before storing a credit card number in a database (not necessarily something
+      your customers will appreciate!), we may want to verify that the number is
+      in the correct format. To match any digit we could use the regular expression
+      [0-9], however ranges of characters like this are actually locale dependent.
+      Instead we should use the POSIX standard form [[:digit:]], or the Boost.Regex
+      and Perl shorthand for this \d (note that many older libraries tended to be
+      hard-coded to the C-locale, consequently this was not an issue for them). That
+      leaves us with the following regular expression to validate credit card number
+      formats:
+      <br />
+      为了展示本库如何被使用，假设我们正在开发一个信用卡处理程序。
+      信用卡号通常是16位数字的字符串，4个数字一组，用空格或连字符分隔。
+      在将卡号存入数据库之前(不是必须的，但你的客户会很高兴)，我们可能需要验证数字是正确的格式。
+      匹配任意数字，我们可以使用正则表达式[0-9]，但这样的字符范围实际上是locale相关的。
+      相反我们应该使用POSIX标准模式[[:digit:]]，或者Boost.Regex和Perl的速记\d(注意很多旧版的库是硬编码到C-locale的，所以这并不是它们的问题)。
+      下面就是我们用来验证信用卡号码格式的正则表达式：
+    </p>
+<pre class="programlisting">(\d{4}<span class="strikethrough"></span>){3}\d{4}</pre>
+<p>
+      Here the parenthesis act to group (and mark for future reference) sub-expressions,
+      and the {4} means "repeat exactly 4 times". This is an example of
+      the extended regular expression syntax used by Perl, awk and egrep. Boost.Regex
+      also supports the older "basic" syntax used by sed and grep, but
+      this is generally less useful, unless you already have some basic regular expressions
+      that you need to reuse.
+      <br />
+      括号用来成组(为后面的引用作标记)子表达式，{4}意味着"精确重复4次"。
+      这是Perl、awk和egrep使用的扩展正则表达式语法。
+      Boost.Regex同样支持sed和grep使用的旧的"基础的"语法，但这通常是用处不大的，除非你已经有一些基础正则表达式要重用。
+    </p>
+<p>
+      Now let's take that expression and place it in some C++ code to validate the
+      format of a credit card number:
+      <br />
+      现在我们把这个表达式放到C++代码中来验证信用卡号码的格式：
+    </p>
+<pre class="programlisting"><span class="keyword">bool</span> <span class="identifier">validate_card_format</span><span class="special">(</span><span class="keyword">const</span> <span class="identifier">std</span><span class="special">::</span><span class="identifier">string</span><span class="special">&amp;</span> <span class="identifier">s</span><span class="special">)</span>
+<span class="special">{</span>
+   <span class="keyword">static</span> <span class="keyword">const</span> <span class="identifier">boost</span><span class="special">::</span><span class="identifier">regex</span> <span class="identifier">e</span><span class="special">(</span><span class="string">"(\\d{4}[- ]){3}\\d{4}"</span><span class="special">);</span>
+   <span class="keyword">return</span> <span class="identifier">regex_match</span><span class="special">(</span><span class="identifier">s</span><span class="special">,</span> <span class="identifier">e</span><span class="special">);</span>
+<span class="special">}</span>
+</pre>
+<p>
+      Note how we had to add some extra escapes to the expression: remember that
+      the escape is seen once by the C++ compiler, before it gets to be seen by the
+      regular expression engine, consequently escapes in regular expressions have
+      to be doubled up when embedding them in C/C++ code. Also note that all the
+      examples assume that your compiler supports argument-dependent-lookup lookup,
+      if yours doesn't (for example VC6), then you will have to add some <code class="computeroutput"><span class="identifier">boost</span><span class="special">::</span></code> prefixes
+      to some of the function calls in the examples.
+      <br />
+      注意我们需要在表达式中添加一些额外的转义字符：记住，在被正则表达式引擎看到之前，这些转义符已经被C++编译器看到了，所以在C/C++代码中我们必须写两个转义符。
+      同样注意所有的例子都假设你的编译器支持参数相关查找(argument-dependent-lookup)，
+      如果没有(例如VC6)，你需要给例子中的函数调用添加<code class="computeroutput"><span class="identifier">boost</span><span class="special">::</span></code>前缀。
+    </p>
+<p>
+      Those of you who are familiar with credit card processing, will have realized
+      that while the format used above is suitable for human readable card numbers,
+      it does not represent the format required by online credit card systems; these
+      require the number as a string of 16 (or possibly 15) digits, without any intervening
+      spaces. What we need is a means to convert easily between the two formats,
+      and this is where search and replace comes in. Those who are familiar with
+      the utilities sed and Perl will already be ahead here; we need two strings
+      - one a regular expression - the other a "format string" that provides
+      a description of the text to replace the match with. In Boost.Regex this search
+      and replace operation is performed with the algorithm <a href="ref/regex_replace.html" title="regex_replace"><code class="computeroutput"><span class="identifier">regex_replace</span></code></a>, for our credit card
+      example we can write two algorithms like this to provide the format conversions:
+      <br />
+      已经在信用卡处理程序熟悉的人们，可能会意识到上面用到的格式是适合人读的，但并不适用于在线信息号系统用的格式；
+      那需要一个16(或15)个数字的字符串，中间没有任何空格。
+      我们需要做的是在两种格式之间轻松转换，这就是搜索和替换做的事情。
+      熟悉sed和Perl的人可能已经做到了；
+      我们需要两个字符串 - 一个正则表达式 - 另一个"格式字符串"提供要替换的字符串。
+      在Boost.Regex中搜索和替换是通过算法<a href="ref/regex_replace.html" title="regex_replace"><code class="computeroutput"><span class="identifier">regex_replace</span></code></a>实现的，
+      对于我们的信用卡例子来说，我们提供两个格式转换的算法如下：
+    </p>
+<pre class="programlisting"><span class="comment">// match any format with the regular expression:
+</span><span class="keyword">const</span> <span class="identifier">boost</span><span class="special">::</span><span class="identifier">regex</span> <span class="identifier">e</span><span class="special">(</span><span class="string">"\\A(\\d{3,4})[- ]?(\\d{4})[- ]?(\\d{4})[- ]?(\\d{4})\\z"</span><span class="special">);</span>
+<span class="keyword">const</span> <span class="identifier">std</span><span class="special">::</span><span class="identifier">string</span> <span class="identifier">machine_format</span><span class="special">(</span><span class="string">"\\1\\2\\3\\4"</span><span class="special">);</span>
+<span class="keyword">const</span> <span class="identifier">std</span><span class="special">::</span><span class="identifier">string</span> <span class="identifier">human_format</span><span class="special">(</span><span class="string">"\\1-\\2-\\3-\\4"</span><span class="special">);</span>
+
+<span class="identifier">std</span><span class="special">::</span><span class="identifier">string</span> <span class="identifier">machine_readable_card_number</span><span class="special">(</span><span class="keyword">const</span> <span class="identifier">std</span><span class="special">::</span><span class="identifier">string</span> <span class="identifier">s</span><span class="special">)</span>
+<span class="special">{</span>
+   <span class="keyword">return</span> <span class="identifier">regex_replace</span><span class="special">(</span><span class="identifier">s</span><span class="special">,</span> <span class="identifier">e</span><span class="special">,</span> <span class="identifier">machine_format</span><span class="special">,</span> <span class="identifier">boost</span><span class="special">::</span><span class="identifier">match_default</span> <span class="special">|</span> <span class="identifier">boost</span><span class="special">::</span><span class="identifier">format_sed</span><span class="special">);</span>
+<span class="special">}</span>
+
+<span class="identifier">std</span><span class="special">::</span><span class="identifier">string</span> <span class="identifier">human_readable_card_number</span><span class="special">(</span><span class="keyword">const</span> <span class="identifier">std</span><span class="special">::</span><span class="identifier">string</span> <span class="identifier">s</span><span class="special">)</span>
+<span class="special">{</span>
+   <span class="keyword">return</span> <span class="identifier">regex_replace</span><span class="special">(</span><span class="identifier">s</span><span class="special">,</span> <span class="identifier">e</span><span class="special">,</span> <span class="identifier">human_format</span><span class="special">,</span> <span class="identifier">boost</span><span class="special">::</span><span class="identifier">match_default</span> <span class="special">|</span> <span class="identifier">boost</span><span class="special">::</span><span class="identifier">format_sed</span><span class="special">);</span>
+<span class="special">}</span>
+</pre>
+<p>
+      Here we've used marked sub-expressions in the regular expression to split out
+      the four parts of the card number as separate fields, the format string then
+      uses the sed-like syntax to replace the matched text with the reformatted version.
+      <br />
+      这里我们通过正则表达式中被标记的子表达式来将卡号分成四部分，然后格式字符串使用类sed语法将匹配的文本替换为新的。
+    </p>
+<p>
+      In the examples above, we haven't directly manipulated the results of a regular
+      expression match, however in general the result of a match contains a number
+      of sub-expression matches in addition to the overall match. When the library
+      needs to report a regular expression match it does so using an instance of
+      the class <a href="ref/match_results.html" title="match_results"><code class="computeroutput"><span class="identifier">match_results</span></code></a>,
+      as before there are typedefs of this class for the most common cases:
+      <br />
+      在上面的例子中，我们没有直接操纵正则表达式匹配的结果，但一般来讲，匹配结果除了包含整个匹配，还包含匹配的子表达式的数量。
+      本库用类<a href="ref/match_results.html" title="match_results"><code class="computeroutput"><span class="identifier">match_results</span></code></a>的实例来报告正则表达式的匹配，就像之前一样，我们也定义最常用情况的typedef：
+    </p>
+<pre class="programlisting"><span class="keyword">namespace</span> <span class="identifier">boost</span><span class="special">{</span>
+
+<span class="keyword">typedef</span> <span class="identifier">match_results</span><span class="special">&lt;</span><span class="keyword">const</span> <span class="keyword">char</span><span class="special">*&gt;</span>                  <span class="identifier">cmatch</span><span class="special">;</span>
+<span class="keyword">typedef</span> <span class="identifier">match_results</span><span class="special">&lt;</span><span class="keyword">const</span> <span class="keyword">wchar_t</span><span class="special">*&gt;</span>               <span class="identifier">wcmatch</span><span class="special">;</span>
+<span class="keyword">typedef</span> <span class="identifier">match_results</span><span class="special">&lt;</span><span class="identifier">std</span><span class="special">::</span><span class="identifier">string</span><span class="special">::</span><span class="identifier">const_iterator</span><span class="special">&gt;</span>  <span class="identifier">smatch</span><span class="special">;</span>
+<span class="keyword">typedef</span> <span class="identifier">match_results</span><span class="special">&lt;</span><span class="identifier">std</span><span class="special">::</span><span class="identifier">wstring</span><span class="special">::</span><span class="identifier">const_iterator</span><span class="special">&gt;</span> <span class="identifier">wsmatch</span><span class="special">;</span> 
+
+<span class="special">}</span>
+</pre>
+<p>
+      The algorithms <a href="ref/regex_search.html" title="regex_search"><code class="computeroutput"><span class="identifier">regex_search</span></code></a>
+      and <a href="ref/regex_match.html" title="regex_match"><code class="computeroutput"><span class="identifier">regex_match</span></code></a>
+      make use of <a href="ref/match_results.html" title="match_results"><code class="computeroutput"><span class="identifier">match_results</span></code></a>
+      to report what matched; the difference between these algorithms is that <a href="ref/regex_match.html" title="regex_match"><code class="computeroutput"><span class="identifier">regex_match</span></code></a>
+      will only find matches that consume <span class="emphasis"><em>all</em></span> of the input text,
+      where as <a href="ref/regex_search.html" title="regex_search"><code class="computeroutput"><span class="identifier">regex_search</span></code></a>
+      will search for a match anywhere within the text being matched.
+      <br />
+      算法<a href="ref/regex_search.html" title="regex_search"><code class="computeroutput"><span class="identifier">regex_search</span></code></a>和<a href="ref/regex_match.html" title="regex_match"><code class="computeroutput"><span class="identifier">regex_match</span></code></a>使用<a href="ref/match_results.html" title="match_results"><code class="computeroutput"><span class="identifier">match_results</span></code></a>来报告匹配了什么；
+      这两个算法的差别在于<a href="ref/regex_match.html" title="regex_match"><code class="computeroutput"><span class="identifier">regex_match</span></code></a>只匹配消费了<span class="emphasis"><em>所有</em></span>输出文本的情况，
+      而<a href="ref/regex_search.html" title="regex_search"><code class="computeroutput"><span class="identifier">regex_search</span></code></a>搜索文本任何被匹配的地方。
+    </p>
+<p>
+      Note that these algorithms are not restricted to searching regular C-strings,
+      any bidirectional iterator type can be searched, allowing for the possibility
+      of seamlessly searching almost any kind of data.
+      <br />
+      注意这些算法并不只局限于正常的C-字符串，任意双向迭代器类型都可以被搜索，提供了对任意类型数据进行无缝搜索的可能性。
+    </p>
+<p>
+      For search and replace operations, in addition to the algorithm <a href="ref/regex_replace.html" title="regex_replace"><code class="computeroutput"><span class="identifier">regex_replace</span></code></a> that we have already
+      seen, the <a href="ref/match_results.html" title="match_results"><code class="computeroutput"><span class="identifier">match_results</span></code></a>
+      class has a <code class="computeroutput"><span class="identifier">format</span></code> member that
+      takes the result of a match and a format string, and produces a new string
+      by merging the two.
+      <br />
+      对于搜索和替换操作，对于我们已经看到的<a href="ref/regex_replace.html" title="regex_replace"><code class="computeroutput"><span class="identifier">regex_replace</span></code></a>算法，类<a href="ref/match_results.html" title="match_results"><code class="computeroutput"><span class="identifier">match_results</span></code></a>有一个成员<code class="computeroutput"><span class="identifier">format</span></code>，包含了一个匹配结果和格式字符串，并通过合并这两者生成一个新的字符串。
+    </p>
+<p>
+      For iterating through all occurences of an expression within a text, there
+      are two iterator types: <a href="ref/regex_iterator.html" title="regex_iterator"><code class="computeroutput"><span class="identifier">regex_iterator</span></code></a> will enumerate over
+      the <a href="ref/match_results.html" title="match_results"><code class="computeroutput"><span class="identifier">match_results</span></code></a>
+      objects found, while <a href="ref/regex_token_iterator.html" title="regex_token_iterator"><code class="computeroutput"><span class="identifier">regex_token_iterator</span></code></a> will enumerate
+      a series of strings (similar to perl style split operations).
+      <br />
+      如果要迭代一个文本内对于一个表达式的所有出现(occurrence)，有两种迭代器类型：
+      <a href="ref/regex_iterator.html" title="regex_iterator"><code class="computeroutput"><span class="identifier">regex_iterator</span></code></a>会枚举所有找到的 <a href="ref/match_results.html" title="match_results"><code class="computeroutput"><span class="identifier">match_results</span></code></a>对象，
+      <a href="ref/regex_token_iterator.html" title="regex_token_iterator"><code class="computeroutput"><span class="identifier">regex_token_iterator</span></code></a>会枚举一系列字符串(类似于perl风格的split操作)。
+    </p>
+<p>
+      For those that dislike templates, there is a high level wrapper class <a href="ref/deprecated_interfaces/old_regex.html" title="High Level Class RegEx (Deprecated)"><code class="computeroutput"><span class="identifier">RegEx</span></code></a>
+      that is an encapsulation of the lower level template code - it provides a simplified
+      interface for those that don't need the full power of the library, and supports
+      only narrow characters, and the "extended" regular expression syntax.
+      This class is now deprecated as it does not form part of the regular expressions
+      C++ standard library proposal.
+      <br />
+      对于不喜欢模板的，有一个高层次的外覆类<a href="ref/deprecated_interfaces/old_regex.html" title="High Level Class RegEx (Deprecated)"><code class="computeroutput"><span class="identifier">RegEx</span></code></a>封装了低层次的模板代码
+      - 它为不需要本库全部功能的人提供了一个简化的接口，并只支持窄字符和"扩展的"正则表达式语法。
+      这个类现在已经不被赞成使用了，并且它也不是C++标准库正则表达式提议的一部分。
+    </p>
+<p>
+      The POSIX API functions: <a href="ref/posix.html#boost_regex.ref.posix.regcomp"><code class="computeroutput"><span class="identifier">regcomp</span></code></a>, <a href="ref/posix.html#boost_regex.ref.posix.regexec"><code class="computeroutput"><span class="identifier">regexec</span></code></a>, <a href="ref/posix.html#boost_regex.ref.posix.regfree"><code class="computeroutput"><span class="identifier">regfree</span></code></a> and [regerr], are available
+      in both narrow character and Unicode versions, and are provided for those who
+      need compatibility with these API's.
+      <br />
+      POSIX API函数：<a href="ref/posix.html#boost_regex.ref.posix.regcomp"><code class="computeroutput"><span class="identifier">regcomp</span></code></a>, <a href="ref/posix.html#boost_regex.ref.posix.regexec"><code class="computeroutput"><span class="identifier">regexec</span></code></a>, <a href="ref/posix.html#boost_regex.ref.posix.regfree"><code class="computeroutput"><span class="identifier">regfree</span></code></a>和[regerr]同时支持窄字符和Unicode，并且与这些API兼容。
+    </p>
+<p>
+      Finally, note that the library now has <a href="background_information/locale.html" title="Localization">run-time
+      localization support</a>, and recognizes the full POSIX regular expression
+      syntax - including advanced features like multi-character collating elements
+      and equivalence classes - as well as providing compatibility with other regular
+      expression libraries including GNU and BSD4 regex packages, PCRE and Perl 5.
+      <br />
+      注意，本库现在有<a href="background_information/locale.html" title="Localization">运行时本地化支持(run-time localization support)</a>，并且识别全部POSIX正则表达式语法
+      - 包括像多字符的对照元素(collating element)和等价类(equivalence classes)这样的高级特性
+      - 并提供与其它正则表达式库如GNU、BSD4 regex packages、PCRE、Perl 5的兼容性。
+    </p>
+</div>
+<table xmlns:rev="http://www.cs.rpi.edu/~gregod/boost/tools/doc/revision" width="100%"><tr>
+<td align="left"></td>
+<td align="right"><div class="copyright-footer">Copyright © 1998 -2007 John Maddock<p>
+        Distributed under the Boost Software License, Version 1.0. (See accompanying
+        file LICENSE_1_0.txt or copy at <a href="http://www.boost.org/LICENSE_1_0.txt" target="_top">http://www.boost.org/LICENSE_1_0.txt</a>)
+      </p>
+</div></td>
+</tr></table>
+<hr>
+<div class="spirit-nav">
+<a accesskey="p" href="install.html"><img src="../../../../../doc/html/images/prev.png" alt="Prev"></a><a accesskey="u" href="../index.html"><img src="../../../../../doc/html/images/up.png" alt="Up"></a><a accesskey="h" href="../index.html"><img src="../../../../../doc/html/images/home.png" alt="Home"></a><a accesskey="n" href="unicode.html"><img src="../../../../../doc/html/images/next.png" alt="Next"></a>
+</div>
+</body>
+</html>

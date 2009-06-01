@@ -1,0 +1,88 @@
+<!DOCTYPE HTML PUBLIC "-//W3C//DTD HTML 4.01 Transitional//EN">
+<html><head>
+<meta http-equiv="Content-Language" content="en-us">
+<meta name="GENERATOR" content="Microsoft FrontPage 5.0">
+<meta name="ProgId" content="FrontPage.Editor.Document">
+<meta http-equiv="Content-Type" content="text/html; charset=UTF-8">
+
+<title>Filesystem FAQ</title><link rel="stylesheet" type="text/css" href="../../../doc/html/minimal.css"></head>
+<body>
+
+<table style="border-collapse: collapse;" border="0" bordercolor="#111111" cellpadding="5" cellspacing="0" width="710">
+  <tbody><tr>
+    <td width="277">
+<a href="../../../index.htm">
+<img src="../../../boost.png" alt="boost.png (6897 bytes)" align="middle" border="0" height="86" width="277"></a></td>
+    <td align="center" width="410">
+    <font size="7">Filesystem 库</font>
+    </td>
+  </tr>
+</tbody></table>
+
+<table style="border-collapse: collapse;" bgcolor="#d7eeff" border="0" bordercolor="#111111" cellpadding="5" cellspacing="0" width="100%">
+  <tbody><tr>
+    <td><a href="../../../index.htm">Boost Home</a>&nbsp;&nbsp;&nbsp;
+    <a href="index.htm">Library Home</a>&nbsp; &nbsp;
+    <a href="index.htm#tutorial">Tutorial</a>&nbsp; &nbsp; <a href="reference.html">
+    Reference</a>&nbsp;&nbsp; <a href="faq.htm">FAQ</a></td>
+  </tr>
+</tbody></table>
+
+<h1>
+常见问题</h1>
+<p><b>为什么基于 POSIX 的通用路径字符串格式?</b></p>
+<p><a href="design.htm#POSIX-01">[POSIX-01]</a> 是一个ISO标准。它是大多数常见的路径字符串格式的基础，它不仅仅是 POSIX 系统的，而且还是原生的 Windows 格式和 URI 的 
+URL 部分的格式。它到处存在，十分常见。在许多系统上，它非常易于实现，因为它既是原生操作系统的格式(Unix 和 Windows)，也适用于提供了 POSIX 库的操作系统(z/OS, OS/390, and many more)。</p>
+<p><b>为什么不使用完整的基于 URI (通用资源标识符)的路径?</b></p>
+<p><a href="design.htm#URI">URI</a> 承诺的比 Filesystem 库实际可提供的要多得多，因为 URI 比多数操作系统所考虑的文件或目录要延伸得更多。因此，出于 Filesystem 库的主要需求 "可移植的脚本式文件系统操作"，完整的 URI 显得过于规范了。</p>
+<p><b>为什么 <i>path</i> 不是 <i>directory_path</i> 和
+<i>file_path</i> 的基类?</b></p>
+<p>为什么要担心?&nbsp; 这三个类的行为本质上是一样的。有几个早期版本曾经要求用户标识出每个路径是文件还是目录，这似乎增加了错误并降低了代码的可读性。这样做并没有明显的好处。</p>
+<p><b>为什么完整的路径被称为 <i>complete</i> 而不是 <i>
+<a name="absolute">absolute</a></i>?</b></p>
+<p>为了避免那些使用单根文件系统的程序员的假设(你是否知道，在有些系统上，<i>"/foo"</i> 不是绝对的?)。使用一个不常见的名字来表示这一概念和相关函数，可以让程序员去阅读规格说明而不仅是假设已经知道这些概念的意义。</p>
+<p><b>为什么不支持特定类型的文件系统概念，如 posix_file_system 或 windows_file_system.</b></p>
+<p>可移植性是本库的一个最重要的需求。而通过使用特定操作系统的特定特性以获得好处并不是一个需求。当运行在一个
+OpenVMS 机器上时，似乎不太可能需要操作一个 Mac OS路径的能力。</p>
+<p>此外，"文件系统"这样的概念是很含糊的。例如，当一个 NTFS 或 FAT 文件挂载在一个运行类 POSIX 操作系统的机器上的某个目录时，会发生什么？有些 POSIX API 可能会返回非常不象 POSIX 的结果。</p>
+<p><b>为什么不提供一个 '句柄' 类型，并以之进行文件和目录操作?</b></p>
+<p>在这样的系统上是否有可行的方式满足"可移植脚本式文件系统操作"的需求，并不清楚。文件系统中有一些操作常常以非字符串的句柄类型来执行。但 Mac OS 已经明确提到一种情形，这样来处理路径并不自然。 </p>
+<p>"句柄"风格(用不透明的数据类型来标识一个文件)可能是最强大的目录迭代器值类型。(请见 Jesse Jones' Jan 28, 
+2002, Boost postings)。但是，由于类 path 的发展，看起来它已经可以作为目录迭代器值类型了。</p>
+<p><b>为什么 operations.hpp 的非成员函数如些低层?</b></p>
+<p>为了提供一组可以由此创建高级功能的工具集。</p>
+<p>在底层功能之上增加其它便利函数，或替换它们的尝试都失败了，因为对于最多考虑的便利函数，没有一套得到广泛接受的简单语义。试图通过运行期选项或
+编译期策略提供不同的语义，涉及到值的交付，过于复杂或是有异议。OTOH,
+对于几个应用程序所需要的特殊功能，用户可以很容易地从底层工具函数构造得到。请见 <a href="design.htm#Abandoned_Designs">失败的尝试</a>。</p>
+<p><b>Isn't it inconsistent then to provide a few convenience functions?</b></p>
+<p>是的，但是本库，POSIX, 以及 Windows 的经验都表明，某些便利函数的用处，而且有可能提供简单的、被广泛接受的语义。例如，remove_all.</p>
+<p><b>为什么</b><b> operations.hpp</b><b> 的谓词函数有 basic_directory_iterator&lt;&gt;&nbsp;重载? 难道用两种方法来做同一件事不是坏的设计吗?</b></p>
+<p>是的，用两种方法来做同一件事通常都是坏的设计。但是函数的迭代器版本通常更为高效。在一个有15,000个文件的目录中进行遍历并调用
+status()，使用 path
+的重载版本需要6秒钟，而使用迭代器的重载版本则只要1秒钟，这是在刚刚启动的机器上测试的结果。如果在已访问过的目录上测试，则时间分别为.90秒和.
+30秒。这些性能上的提高足以让我们背离完美的设计。没有一个重载可以满足所有需要。</p>
+<p><b>为什么库函数对于错误如此挑剔?</b></p>
+<p>安全性。缺省情况下安全总比抱歉好。尤其重要的是，在许多计算机系统中，文件和目录是 <a href="#global">全局共享的</a> 资源，因此可能会遇到不期望的错误。</p>
+<p><b>为什么以异常而不是返回码或错误通知变量来报告错误?</b></p>
+<p>安全性。返回码或错误通知变量经常会被程序员所忽略。异常很难被忽略，提供了想要的缺省行为(如果不捕获则退出程序)，如果想要的话，也允许错误恢复。在经验表明需要的地方，也提供了无抛出的函数版本。</p>
+<p><b>为什么通过命名函数而不是属性映射来访问属性?</b></p>
+<p>对于常用的属性(存在性，目录或文件，是否为空)，这样比其它方式具有简单的语法且保证存在。因为访问更多其它属性是与系统相关的，属性映射看起来
+最适用于访问和修改，但是更好的设计是在一个单独的库中提供这些功能。(历史说明:
+即使象"只读"这样简单的属性也是与系统相关的，都不能被作为一个"保证存在"的操作。)</p>
+<p><b><a name="wide-character_names">为什么不支持宽字符名字</a>? 为什么没有 std::wstring 或某个模板类型?</b></p>
+<p>它们是被支持的，从版本1.33开始。请见
+<a href="i18n.html">国际化</a>。</p>
+<p><b>为什么不提供自动的名字可移植性错误检查?</b></p>
+<p>曾经评估过多个(至少六个)名字有效性错误检查的设计，其中至少有四个已完全实现。它们被拒绝的细节原因各有不同，所有较强大的名字有效性检查的设
+计都影响了本库其它方面的简单性。即使是本库原先版本所提供的简单的名字检查，也成为了用户投诉的固定来源。虽然名字检查有所帮助，但是它的重要性还不足
+以成为增加如此多复杂性的理由。</p>
+<p><b>为什么有时用成员函数来操作路径，有时又用非成员函数?</b></p>
+<p>设计原则是，纯字面的操作以 <i>class 
+basic_path</i> 的成员函数方式提供，而由操作系统执行的操作则以普通函数的方式提供。</p>
+<hr>
+<p>Revised
+<!--webbot bot="Timestamp" S-Type="EDITED" S-Format="%d %B, %Y" startspan -->18 March, 2008<!--webbot bot="Timestamp" endspan i-checksum="29005" --></p>
+<p>© Copyright Beman Dawes, 2002</p>
+<p> Use, modification, and distribution are subject to the Boost Software 
+License, Version 1.0. See <a href="http://www.boost.org/LICENSE_1_0.txt">
+www.boost.org/LICENSE_1_0.txt</a></p></body></html>

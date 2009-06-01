@@ -1,0 +1,206 @@
+﻿<!DOCTYPE html PUBLIC "-//W3C//DTD XHTML 1.0 Transitional//EN"
+    "http://www.w3.org/TR/xhtml1/DTD/xhtml1-transitional.dtd">
+<html xmlns="http://www.w3.org/1999/xhtml">
+<head>
+<meta name="generator" content=
+"HTML Tidy for Linux/x86 (vers 1st March 2004), see www.w3.org" />
+<meta name="GENERATOR" content="Quanta Plus" />
+<meta http-equiv="Content-Type" content=
+"text/html; charset=UTF-8" />
+<link href="ublas.css" type="text/css" />
+<title>uBLAS operations overview</title>
+</head>
+<body>
+<h1><img src="../../../../boost.png" align="middle" />
+矩阵和向量运算概览</h1>
+
+<dl>
+<dt>内容：</dt>
+<dd><a href="#blas">基本线性代数</a></dd>
+<dd><a href="#advanced">高级函数</a></dd>
+<dd><a href="#sub">子矩阵和子向量</a></dd>
+<dd><a href="#speed">速度改进</a></dd>
+</dl>
+
+<h3>定义:</h3>
+
+<table style="" summary="notation">
+<tr><td><code>A, B, C</code></td>
+<td> 是矩阵</td></tr>
+<tr><td><code>u, v, w</code></td> 
+<td>是向量</td></tr>
+<tr><td><code>i, j, k</code></td> 
+<td>是整数</td></tr>
+<tr><td><code>t, t1, t2</code></td> 
+<td>是标量</td></tr>
+<tr><td><code>r, r1, r2</code></td> 
+<td>是<a href="range.htm">范围(ranges)</a>， 例如， <code>range(0, 3)</code></td></tr>
+<tr><td><code>s, s1, s2</code></td> 
+<td>是 <a href="range.htm#slice">切分(slices)</a>， 例如， <code>slice(0, 1, 3)</code></td></tr>
+</table>
+
+<h2><a name="blas">基本线性代数</a></h2>
+
+<h3>标准运算：加法，减法，与一个标量的乘法</h3>
+
+<pre><code>
+C = A + B; C = A - B; C = -A;
+w = u + v; w = u - v; w = -u;
+C = t * A; C = A * t; C = A / t;
+w = t * u; w = u * t; w = u / t;
+</code></pre>
+
+<h3>运算赋值(computed assignements)</h3>
+
+<pre><code>
+C += A; C -= A; 
+w += u; w -= u; 
+C *= t; C /= t; 
+w *= t; w /= t;
+</code></pre>
+
+<h3>内积，外积以及其它乘积</h3>
+
+<pre><code>
+t = inner_prod(u, v);
+C = outer_prod(u, v);
+w = prod(A, u); w = prod(u, A); w = prec_prod(A, u); w = prec_prod(u, A);
+C = prod(A, B); C = prec_prod(A, B);
+w = element_prod(u, v); w = element_div(u, v);
+C = element_prod(A, B); C = element_div(A, B);
+</code></pre>
+
+<h3>转化</h3>
+
+<pre><code>
+w = conj(u); w = real(u); w = imag(u);
+C = trans(A); C = conj(A); C = herm(A); C = real(A); C = imag(A);
+</code></pre>
+
+<h2><a name="advanced">高级函数</a></h2>
+
+<h3>范数(norms)</h3>
+
+<pre><code>
+t = norm_inf(v); i = index_norm_inf(v);
+t = norm_1(v);   t = norm_2(v); 
+t = norm_inf(A); i = index_norm_inf(A);
+t = norm_1(A);   t = norm_frobenius(A); 
+</code></pre>
+
+<h3>乘积(products)</h3>
+
+<pre><code>
+axpy_prod(A, u, w, true);  // w = A * u
+axpy_prod(A, u, w, false); // w += A * u
+axpy_prod(u, A, w, true);  // w = trans(A) * u
+axpy_prod(u, A, w, false); // w += trans(A) * u
+axpy_prod(A, B, C, true);  // C = A * B
+axpy_prod(A, B, C, false); // C += A * B
+</code></pre>
+<p><em>注意:</em>函数<code>axpy_prod</code> 的最后一个参数 (<code>bool init</code>)是可选的。当前这个参数的值缺省为<code>true</code>，但在以后可能会发生改变。将<code>init</code> 设置为<code>true</code> 等价于在 <code>axpy_prod</code>之前调用<code>w.clear()</code>。到目前为止，这些函数针对于压缩矩阵进行了特化，相对于函数 <code>prod</code> 产生了巨大的速度提升。</p>
+<pre><code>
+w = block_prod&lt;matrix_type, 64&gt; (A, u); // w = A * u
+w = block_prod&lt;matrix_type, 64&gt; (u, A); // w = trans(A) * u
+C = block_prod&lt;matrix_type, 64&gt; (A, B); // w = A * B
+</code></pre>
+<p><em>注意:</em> 块的大小(blocksize)可以是任意的整数。然而，总体的速度极大地依赖于块大小(blocksize)，CPU和编译器的组合。函数<code>block_prod</code> 针对于巨大的密集矩阵而定义。</p>
+<h3>rank-k 更新</h3>
+<pre><code>
+opb_prod(A, B, C, true);  // C = A * B
+opb_prod(A, B, C, false); // C += A * B
+</code></pre>
+<p><em>注意:</em>函数<code>axpy_prod</code> 的最后一个参数 (<code>bool init</code>)是可选的。当前这个参数的值缺省为<code>true</code>，但在以后可能会发生改变。如果A的列数比行数小，那么这个函数可能给出一定的速度提升，因为这个函数通过内积的和(sum of inner product)来计算 。</p>
+
+<h2><a name="sub">子矩阵和子向量</a></h2>
+<p>通常<b>策略</b> 使用函数<code>project</code>来访问子矩阵和子向量：</p>
+<pre><code>
+w = project(u, r);         // 由索引范围 r 所指定的 u 的子向量
+w = project(u, s);         // 由索引切分 s 所指定的 u 的子向量
+C = project(A, r1, r2);    // 由两个索引范围r1和r2所指定的子矩阵
+C = project(A, s1, s2);    // 由两个索引切分s1和s2所指定的子矩阵
+w = row(A, i); w = column(A, j);    // 将一个矩阵的行或列作为一个向量
+</code></pre>
+<p>通常<b>策略</b> 使用函数<code>project</code>来赋值给一个子矩阵和子向量：</p>
+<pre><code>
+project(u, r) = w;         // 赋值给由索引范围r所指定的u的子向量
+project(u, s) = w;         // 赋值给由索引切分s所指定的u的子向量
+project(A, r1, r2) = C;    // 赋值给由两个索引范围r1和r2所指定的u的子矩阵
+project(A, s1, s2) = C;    // 赋值给由两个索引范围s1和s2所指定的u的子矩阵
+row(A, i) = w; column(A, j) = w;    // 将一个矩阵的行或列作为一个向量
+</code></pre>
+<p><em>注意:</em> 范围<code>r = range(start, stop)</code>
+包含所有的索引<code>i</code> 且 <code>start &lt;= i &lt;
+stop</code>。一个切分(slice)是更一般的概念。切分(slice)<code>s = slice(start, stride, size)包含索引</code><code>start, start+stride, ..., start+(size-1)*stride</code>。 
+stride 可以是0或负数！如果对于一个范围<code>start >= stop</code> 或对于一个切分(slice)<code> size == 0</code> ，那么就不包含任何元素。</p>
+<p>向量和矩阵的子范围和子切分可以使用函数<code>subrange</code> 和 <code>sublice</code> 来直接生成：</p>
+<pre><code>
+w = subrange(u, 0, 2);         // u的子向量的两个元素
+w = subslice(u, 0, 1, 2);      // u的子向量的两个元素
+C = subrange(A, 0,2, 0,3);     // A的子矩阵的2x3个元素
+C = subslice(A, 0,1,2, 0,1,3); // A的子矩阵的2x3个元素
+subrange(u, 0, 2) = w;         // 赋值给A的子向量的 2 个元素
+subslice(u, 0, 1, 2) = w;      // 赋值给A的子向量的 2 个元素
+subrange(A, 0,2, 0,3) = C;     // 赋值给A的子矩阵的2x3个元素
+subrange(A, 0,1,2, 0,1,3) = C; // 赋值给A的子矩阵的2x3个元素
+</code></pre>
+<p>有很多方式来将一个矩阵的元素作为一个向量来访问：</p>
+<pre><code>matrix_vector_range&lt;matrix_type&gt; (A, r1, r2);
+matrix_vector_slice&lt;matrix_type&gt; (A, s1, s2);
+</code></pre>
+<p><em>注意:</em> 矩阵策略带有一个矩阵元素的一个序列，并允许你将其作为一个向量来访问。尤其是<code>matrix_vector_slice</code> 可以使用一个很通用的方式来完成这一点。<code>matrix_vector_range</code> 的作用稍小一些，因为元素必须沿着对角线分布。</p>
+<p><em>例子:</em> 为了访问一个矩阵的子列(sub column)的最开始的两个元素，我们访问一个步进(stride)为1的行和一个步进(stride)为0的列：<br />
+<code>matrix_vector_slice&lt;matrix_type&gt; (A, slice(0,1,2),
+slice(0,0,2));
+</code></p>
+
+<h2><a name="speed">速度改进</a></h2>
+<h3><a name='noalias'>矩阵/向量赋值</a></h3>
+<p>如果你确定左边的表达式和右边的表达式没有使用相同的内存空间，那么赋值就没有<em>aliasing</em>。在这种情况下可以指定一个更高效的赋值方式 ：</p>
+<pre><code>noalias(C) = prod(A, B);
+</code></pre>
+<p>这种方法避免在通常的赋值中所需要生成的一个临时矩阵。
+'noalias' 赋值要求左边和右边是大小相似的(size conformant)。</p>
+
+<h3>元素访问</h3>
+<p>矩阵元素访问函数<code>A(i1,i2)</code> 或等价的向量元素访问函数 (<code>v(i) 或 v[i]</code>) ，在应用于一个稀疏矩阵或一个稀疏向量时通常生成'稀疏元素代理(sparse element proxies)'。<em>proxies</em> 访问元素而不需要担心令人讨厌的(nasty) C++ 问题：引用是 invalidated。</p>
+<p>当应用于一个常量对象的时候，这些'稀疏元素代理(sparse element proxies)' 可以更高效地实现。不幸的是在C++里面没有办法区分在一个赋值的左边还是右边访问一个元素。绝大多数情况下，赋值的右边的元素访问不会改变元素，因此使用常量代理(<code>const</code> proxies)可能更好一些。 我们可以在访问矩阵和向量的元素之前使矩阵和向量为常量来做到这一点，例如：</p>
+<pre><code>value = const_cast&lt;const VEC&gt;(v)[i];   // VEC 是 V 的类型
+</code></pre>
+<p>出于相同的理由，如果需要访问多于一个元素，应当使用<code>const_iterator</code>来代替<code>iterator</code> 。可以通过定义配置宏<code>BOOST_UBLAS_NO_ELEMENT_PROXIES</code>来完全关闭更具挑战性的(daring) '稀疏元素代理(sparse element proxies)'。</p>
+
+
+<h3>控制嵌套乘积的复杂度</h3>
+
+<p>进行下面的运算的复杂度 (加法和乘法运算的数量)？</p>
+<pre>
+ R = prod(A, prod(B,C)); 
+</pre>
+<p>首先复杂度依赖于矩阵大小。因为函数 prod 是可传递的(transitive) (不是可交换的)，括号顺序(bracket order)影响复杂度。</p>
+<p>uBLAS 计算表达式而没有矩阵和向量临时变量并注意括号结构(bracketing structure)。然而，对于嵌套的乘积避免临时变量会不可避免地增加复杂度。反之，通过明确地使用使用变量，嵌套乘积的复杂度可以降低。</p>
+<p>针对于这个目的，uBLAS 提供了 3 种可靠的方式 ： </p>
+<pre>
+ temp_type T = prod(B,C); R = prod(A,T);   // 如果T是预先分配的，那么这就是可选的方法
+</pre>
+<pre>
+ prod(A, temp_type(prod(B,C));
+</pre>
+<pre>
+ prod(A, prod&lt;temp_type&gt;(B,C));
+</pre>
+<p> 'temp_type' 很重要。给定相同类型的 A,B,C 。比如
+matrix&lt;float&gt;，选择是很简单的。然而，如果 value_type 是混合的(mixed) (int 与 float 或 double)
+或者矩阵类型是混合的(mixed) (稀疏且是稀疏的)，最好的解决方案就不是那么明显。完全依赖于你自己!依赖于 A 的数值属性以及 prod(B,C)的结果。</p>
+
+<hr />
+<p>Copyright (&copy;) 2000-2007 Joerg Walter, Mathias Koch, Gunter
+Winkler, Michael Stevens<br />
+   Use, modification and distribution are subject to the
+   Boost Software License, Version 1.0.
+   (See accompanying file LICENSE_1_0.txt
+   or copy at <a href="http://www.boost.org/LICENSE_1_0.txt">
+      http://www.boost.org/LICENSE_1_0.txt
+   </a>).
+</p>
+</body>
+</html>

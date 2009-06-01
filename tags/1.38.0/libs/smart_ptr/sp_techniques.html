@@ -1,0 +1,643 @@
+﻿<!DOCTYPE HTML PUBLIC "-//W3C//DTD HTML 4.01 Transitional//EN">
+<html>
+	<head>
+		<title>智能指针编程技术</title>
+		<meta http-equiv="Content-Type" content="text/html; charset=UTF-8">
+	</head>
+	<body text="#000000" bgColor="#ffffff">
+		<h1><A href="../../index.htm"><IMG height="86" alt="boost.png (6897 bytes)" src="../../boost.png" width="277" align="middle"
+					border="0"></A>智能指针编程技术</h1>
+		<p><A href="#incomplete">将不完整类用于实现隐藏</A><br>
+			<A href="#pimpl">"Pimpl" 惯用法</A><br>
+			<A href="#abstract">将抽象类用于实现隐藏</A><br>
+			<A href="#preventing_delete">预防 <code>delete px.get()</code></A><br>
+			<A href="#array">U使用一个 <code>shared_ptr</code> 持有一个指向数组的指针</A><br>
+			<A href="#encapsulation">封装分配细节，包装工厂函数</A><br>
+			<A href="#static">使用一个 <code>shared_ptr</code> 持有一个指向静态分配对象的指针</A><br>
+			<A href="#com">使用一个 <code>shared_ptr</code> 持有一个指向 COM 对象的指针</A><br>
+			<A href="#intrusive">使用一个 <code>shared_ptr</code> 持有一个指向带有嵌入式引用计数的对象的指针</A><br>
+			<A href="#another_sp">使用一个 <code>shared_ptr</code> 持有另一个共享所有权的智能指针</A><br>
+			<A href="#from_raw">从一个 raw pointer（裸指针）获得一个 <code>shared_ptr</code></A><br>
+			<A href="#in_constructor">在构造函数中获得一个指向 <code>this</code> 的 <code>shared_ptr</code> (<code>weak_ptr</code>)</A><br>
+			<A href="#from_this">获得一个指向 <code>this</code> 的 <code>shared_ptr</code></A><br>
+			<A href="#handle">将 <code>shared_ptr</code> 用作智能计数句柄</A><br>
+			<A href="#on_block_exit">用 <code>shared_ptr</code> 在模块退出时执行代码</A><br>
+			<A href="#pvoid">用 <code>shared_ptr&lt;void&gt;</code> 持有一个任意对象</A><br>
+			<A href="#extra_data">用不同种类的 <code>shared_ptr</code> 实例关联任意数据</A><br>
+			<A href="#as_lock">将 <code>shared_ptr</code> 用作可拷贝构造的互斥锁</A><br>
+			<A href="#wrapper">用 <code>shared_ptr</code> 包装成员函数调用</A><br>
+			<A href="#delayed">延时释放</A><br>
+			<A href="#weak_without_shared">不通过 <code>shared_ptr</code> 管理指向对象的弱指针</A><br>
+		</p>
+		<h2><A name="incomplete">将不完整类用于实现隐藏</A></h2>
+		<p>一项久经考验的从实现中分离接口的技术（也可以用于 C）是用一个指向不完整类的指针作为一个不透明的句柄：</p>
+		<pre>class FILE;
+
+FILE * fopen(char const * name, char const * mode);
+void fread(FILE * f, void * data, size_t size);
+void fclose(FILE * f);
+</pre>
+		<p>使用 <code>shared_ptr</code> 表示上述接口是可能的，除去手动调用 <code>fclose</code> 的需要：</p>
+		<pre>class FILE;
+
+shared_ptr&lt;FILE&gt; fopen(char const * name, char const * mode);
+void fread(shared_ptr&lt;FILE&gt; f, void * data, size_t size);
+</pre>
+		<p>这项技术依赖于 <code>shared_ptr</code> 执行定制化删除器的能力，除去了对 <code>fclose</code> 的显式调用，而且在实际上，当 <code>X</code> 是不完整的时，<code>shared_ptr&lt;X&gt;</code> 也能拷贝和销毁。</p>
+		<h2><A name="pimpl">"Pimpl" 惯用法</A></h2>
+		<p>不完整类模式的一个 C++ 特有的变种是 "Pimpl" 惯用法。不完整类不会暴露给用户，它隐藏在一个美丽的外表之下。<code>shared_ptr</code> 能被用于实现 "Pimpl"：</p>
+		<pre>// file.hpp:
+
+class file
+{
+private:
+
+    class impl;
+    shared_ptr&lt;impl&gt; pimpl_;
+
+public:
+
+    file(char const * name, char const * mode);
+
+    // compiler generated members are fine and useful
+
+    void read(void * data, size_t size);
+};
+</pre>
+		<pre>// file.cpp:
+
+#include "file.hpp"
+
+class file::impl
+{
+private:
+
+    impl(impl const &amp;);
+    impl &amp; operator=(impl const &amp;);
+
+    // private data
+
+public:
+
+    impl(char const * name, char const * mode) { ... }
+    ~impl() { ... }
+    void read(void * data, size_t size) { ... }
+};
+
+file::file(char const * name, char const * mode): pimpl_(new impl(name, mode))
+{
+}
+
+void file::read(void * data, size_t size)
+{
+    pimpl_-&gt;read(data, size);
+}
+</pre>
+		<p>需要记在这里的关键是编译器生成的拷贝构造函数，赋值操作符和析构函数都是有意义的。因此，<code>file</code> 是 <code>CopyConstructible</code> 的和 <code>Assignable</code> 的，允许用在标准容器中。</p>
+		<h2><A name="abstract">将抽象类用于实现隐藏</A></h2>
+		<p>另一个广泛应用的分离接口和实现的 C++ 惯用法是使用抽象基类和工厂函数。抽象基类有时被称为“接口”，而这个模式也以“基于接口编程”而广为人知。此外，<code>shared_ptr</code> 能被用于工厂函数的返回类型：</p>
+		<pre>// X.hpp:
+
+class X
+{
+public:
+
+    virtual void f() = 0;
+    virtual void g() = 0;
+
+protected:
+
+    ~X() {}
+};
+
+shared_ptr&lt;X&gt; createX();
+</pre>
+		<pre>-- X.cpp:
+
+class X_impl: public X
+{
+private:
+
+    X_impl(X_impl const &amp;);
+    X_impl &amp; operator=(X_impl const &amp;);
+
+public:
+
+    virtual void f()
+    {
+      // ...
+    }
+
+    virtual void g()
+    {
+      // ...
+    }
+};
+
+shared_ptr&lt;X&gt; createX()
+{
+    shared_ptr&lt;X&gt; px(new X_impl);
+    return px;
+}
+</pre>
+		<p> 的一个关键特性是它的分配，构造，释放和析构的详细资料都是在构造的那一点，在工厂函数内部取得的。注意上例中那个保护的非虚拟的析构函数。客户代码不能，也不需要删除指向 <code>X</code> 的指针，从 <code>createX</code> 返回的 <code>shared_ptr&lt;X&gt;</code>  实例会正确地调用 <code>~X_impl</code>。</p>
+		<h2><A name="preventing_delete">预防 <code>delete px.get()</code></A></h2>
+		<p>我们常常想要预防客户代码删除由 <code>shared_ptr</code> 管理的指针。前面的技术展示了一种可能的方法，使用一个保护的析构函数。另一种可选方案是使用一个私有的删除器：</p>
+		<pre>class X
+{
+private:
+
+    ~X();
+
+    class deleter;
+    friend class deleter;
+
+    class deleter
+    {
+    public:
+
+        void operator()(X * p) { delete p; }
+    };
+
+public:
+
+    static shared_ptr&lt;X&gt; create()
+    {
+        shared_ptr&lt;X&gt; px(new X, X::deleter());
+        return px;
+    }
+};
+</pre>
+		<h2><A name="array">使用一个 <code>shared_ptr</code> 持有一个指向数组的指针</A></h2>
+		<p>一个 <code>shared_ptr</code> 可以持有一个指向由 <code>new[]</code> 分配的数组的指针：</p>
+		<pre>shared_ptr&lt;X&gt; px(new X[1], <A href="../utility/checked_delete.html" >checked_array_deleter</A>&lt;X&gt;());
+</pre>
+		<p>注意，无论如何，如果有选择的自由，<code><A href="shared_array.htm">shared_array</A></code> 往往更好。它有一个数组专用的接口，而不需要 <code>operator*</code> 和 <code>operator-&gt;</code>，而且不允许指针转换。</p>
+		<h2><A name="encapsulation">封装分配细节，包装工厂函数</A></h2>
+		<p><code>shared_ptr</code> 能够用于创建已有的 C 风格的从它们的工厂函数返回裸指针的库接口的 wrappers（包装），以封装分配细节。例如，考虑这个接口，<code>CreateX</code> 可能从它自己的私有堆上分配 <code>X</code>，<code>~X</code> 可能无法达到，或者 <code>X</code> 可能是不完整的：</p>
+		<pre>X * CreateX();
+void DestroyX(X *);
+</pre>
+		<p>可靠地销毁一个由 <code>CreateX</code> 返回的指针的唯一方法就是调用 <code>DestroyX</code>。</p>
+		<P>这是一个基于 <code>shared_ptr</code> 的 wrapper（包装）的可能样子：</P>
+		<pre>shared_ptr&lt;X&gt; createX()
+{
+    shared_ptr&lt;X&gt; px(CreateX(), DestroyX);
+    return px;
+}
+</pre>
+		<p>调用 <code>createX</code> 的客户代码依然不需要知道对象是怎样被分配的，但是现在析构是自动的。</p>
+		<h2><A name="static">使用一个 <code>shared_ptr</code> 持有一个指向静态分配对象的指针</A></h2>
+		<p>有时我们想要创建一个指向已存在对象的 <code>shared_ptr</code>，所以当没有更多引用的时候，<code>shared_ptr</code> 也不能试图删除对象。例如，工厂函数：</p>
+		<pre>shared_ptr&lt;X&gt; createX();
+</pre>
+		<p>在某种情况下可能需要返回一个指向静态分配的 <code>X</code> 实例的指针。</p>
+		<P>解决方案是使用一个什么事情都不做的定制化删除器：</P>
+		<pre>struct null_deleter
+{
+    void operator()(void const *) const
+    {
+    }
+};
+
+static X x;
+
+shared_ptr&lt;X&gt; createX()
+{
+    shared_ptr&lt;X&gt; px(&amp;x, null_deleter());
+    return px;
+}
+</pre>
+		<p>同样的技术可以用于某些已知对象的寿命比指针更长的场合。</p>
+		<h2><A name="com">使用一个 <code>shared_ptr</code> 持有一个指向 COM 对象的指针</A></h2>
+		<p>背景：COM 对象有一个嵌入式的引用计数和两个操作它的成员函数。<code>AddRef()</code> 增加计数。<code>Release()</code> 减少计数并当计数将为 0 时销毁它。</p>
+		<P>用一个 <code>shared_ptr</code> 持有一个指向 COM 对象的指针是有可能的：</P>
+		<pre>shared_ptr&lt;IWhatever&gt; make_shared_from_COM(IWhatever * p)
+{
+    p-&gt;AddRef();
+    shared_ptr&lt;IWhatever&gt; pw(p, <A href="../bind/mem_fn.html" >mem_fn</A>(&amp;IWhatever::Release));
+    return pw;
+}
+</pre>
+		<p>注意，无论如何，从 <code>pw</code> 创建 <code>shared_ptr</code> 的拷贝不会在 COM 对象的嵌入计数中“登记”，它们将共享在 <code>make_shared_from_COM</code> 中创建的单独的引用。当最后的 <code>shared_ptr</code> 被销毁，从 <code>pw</code> 创建的 weak pointers（弱指针）将失效，无论 COM 对象本身是否还存在。</p>
+		<P>根据 <code>mem_fn</code> 文档的<A href="../bind/mem_fn.html#Q3">说明</A>，你需要首先 <A href="../bind/mem_fn.html#stdcall">#define BOOST_MEM_FN_ENABLE_STDCALL</A>。</P>
+		<h2><A name="intrusive">使用一个 <code>shared_ptr</code> 持有一个指向带有嵌入式引用计数的对象的指针</A></h2>
+		<p>这是上面技术的泛化。示例中假设对象实现了 <code><A href="intrusive_ptr.html">intrusive_ptr</A></code> 需要的两个函数，<code>intrusive_ptr_add_ref</code> 和 <code>intrusive_ptr_release</code>：</p>
+		<pre>template&lt;class T&gt; struct intrusive_deleter
+{
+    void operator()(T * p)
+    {
+        if(p) intrusive_ptr_release(p);
+    }
+};
+
+shared_ptr&lt;X&gt; make_shared_from_intrusive(X * p)
+{
+    if(p) intrusive_ptr_add_ref(p);
+    shared_ptr&lt;X&gt; px(p, intrusive_deleter&lt;X&gt;());
+    return px;
+}
+</pre>
+		<h2><A name="another_sp">使用一个 <code>shared_ptr</code> 持有另一个共享所有权的智能指针</A></h2>
+		<p><code>shared_ptr</code> 的设计目标之一是可以在库接口中使用，可能遇到的一种情况是持有一个 <code>shared_ptr</code> 参数的库，但是这个对象由不同的引用计数或者 linked smart pointer 所管理。</p>
+		<P>充分利用 <code>shared_ptr</code> 的定制删除器特性将这个已存在的智能指针包装在一个 <code>shared_ptr</code>  的美丽外表后面是有可能的：</P>
+		<pre>template&lt;class P&gt; struct smart_pointer_deleter
+{
+private:
+
+    P p_;
+
+public:
+
+    smart_pointer_deleter(P const &amp; p): p_(p)
+    {
+    }
+
+    void operator()(void const *)
+    {
+        p_.reset();
+    }
+    
+    P const &amp; get() const
+    {
+        return p_;
+    }
+};
+
+shared_ptr&lt;X&gt; make_shared_from_another(another_ptr&lt;X&gt; qx)
+{
+    shared_ptr&lt;X&gt; px(qx.get(), smart_pointer_deleter&lt; another_ptr&lt;X&gt; &gt;(qx));
+    return px;
+}
+</pre>
+		<p>一个微妙的地方是不允许删除器抛出异常，上面示例中的写法就是假设 <code>p_.reset()</code> 不会抛出异常。如果不是这样，<code>p_.reset()</code> 应该被包装在一个 <code>try {} catch(...) {}</code> 块中，忽略所有异常。如果万一（通常不太可能）一个异常被抛出并被忽略，当 deleter 的生存期结束的时候，<code>p_</code> 会被释放。所有的引用，包括弱指针被销毁或者重置时都同样如此。</p>
+		<P>另一种变化也是有可能的，给定上面的 <code>shared_ptr</code> 实例，使用 <code><A href="shared_ptr.htm#get_deleter">get_deleter</A></code>，覆盖最初的智能指针：</P>
+		<pre>void extract_another_from_shared(shared_ptr&lt;X&gt; px)
+{
+    typedef smart_pointer_deleter&lt; another_ptr&lt;X&gt; &gt; deleter;
+
+    if(deleter const * pd = get_deleter&lt;deleter&gt;(px))
+    {
+        another_ptr&lt;X&gt; qx = pd-&gt;get();
+    }
+    else
+    {
+        // not one of ours
+    }
+}
+</pre>
+		<h2><A name="from_raw">从一个 raw pointer（裸指针）获得一个 <code>shared_ptr</code></A></h2>
+		<p>有时需要从一个指向一个对象（这个对象已经被其它 <code>shared_ptr</code> 实例所管理）的裸指针获得一个 <code>shared_ptr</code>。例如：</p>
+		<pre>void f(X * p)
+{
+    shared_ptr&lt;X&gt; px(<i>???</i>);
+}
+</pre>
+		<p>在 <code>f</code> 中，我们想创建一个指向 <code>*p</code> 的 <code>shared_ptr</code>。</p>
+		<P>通常情况下，这个问题无法解决。一种途径是改变 <code>f</code>，以取得一个 <code>shared_ptr</code>，如果可以：</P>
+		<pre>void f(shared_ptr&lt;X&gt; px);
+</pre>
+		<p>同样的改变也可以用于非虚拟成员函数，用来转换隐含的 <code>this</code>：</p>
+		<pre>void X::f(int m);
+</pre>
+		<p>变成一个自由函数，并且以一个 <code>shared_ptr</code> 作为第一个参数：</p>
+		<pre>void f(shared_ptr&lt;X&gt; this_, int m);
+</pre>
+		<p>如果 <code>f</code> 不能被改变，但是 <code>X</code> 使用了侵入式的计数，可以使用上面描述过的 <code><A href="#intrusive">make_shared_from_intrusive</A></code>。或者，如果已知 <code>f</code> 中创建的 <code>shared_ptr</code> 绝对不会生存在对象之外，可以使用<A href="#static">一个 null deleter</A>。</p>
+		<h2><A name="in_constructor">在构造函数中获得一个指向 <code>this</code> 的 <code>shared_ptr</code> (<code>weak_ptr</code>)</A></h2>
+		<p>有些设计要求对象在构造过程中将它们自己登记到一个中心授权机构中。当这个注册例程取得一个 shared_ptr，就导致了问题，一个构造函数怎样才能获得一个指向 this 的 shared_ptr：</p>
+		<pre>class X
+{
+public:
+
+    X()
+    {
+        shared_ptr&lt;X&gt; this_(<i>???</i>);
+    }
+};
+</pre>
+		<p>通常情况下，这个问题无法解决。<code>X</code> 的实例可以被构造成一个自动变量或者静态变量，它被创建在堆上：</p>
+		<pre>shared_ptr&lt;X&gt; px(new X);</pre>
+		<P>但是在构造的时候，<code>px</code> 还不存在，也就不可能创建另一个 <code>shared_ptr</code> 实例和它共享所有权。</P>
+		<P>根据上下文，如果这个内部的 <code>shared_ptr</code> <code>this_</code> 不需要掌握对象的生杀大权，可以使用一个在<A href="#static">这里</A>和<A href="#weak_without_shared">这里</A>说明的 <code>null_deleter</code>。如果假设 <code>X</code> 始终存在于堆上，而且被一个 <code>shared_ptr</code> 管理，就使用一个静态工厂函数：</P>
+		<pre>class X
+{
+private:
+
+    X() { ... }
+
+public:
+
+    static shared_ptr&lt;X&gt; create()
+    {
+        shared_ptr&lt;X&gt; px(new X);
+        // use px as 'this_'
+        return px;
+    }
+};
+</pre>
+		<h2><A name="from_this">获得一个指向 <code>this</code> 的 <code>shared_ptr</code></h2>
+		<p>有时需要在一个虚拟成员函数中从 <code>this</code> 获得一个 <code>shared_ptr</code>，并假设 <code>this</code> 已经被一个 <code>shared_ptr</code> 管理。<A href="#from_raw">前面技术中描述的</A>变化不能使用。</p>
+		<P>A typical example:</P>
+		<pre>class X
+{
+public:
+
+    virtual void f() = 0;
+
+protected:
+
+    ~X() {}
+};
+
+class Y
+{
+public:
+
+    virtual shared_ptr&lt;X&gt; getX() = 0;
+
+protected:
+
+    ~Y() {}
+};
+
+// --
+
+class impl: public X, public Y
+{
+public:
+
+    impl() { ... }
+
+    virtual void f() { ... }
+
+    virtual shared_ptr&lt;X&gt; getX()
+    {
+        shared_ptr&lt;X&gt; px(<i>???</i>);
+        return px;
+    }
+};
+</pre>
+		<p>解决方案是持有一个指向 <code>this</code> 的弱指针作为 <code>impl</code> 的一个成员：</p>
+		<pre>class impl: public X, public Y
+{
+private:
+
+    weak_ptr&lt;impl&gt; weak_this;
+
+    impl(impl const &amp;);
+    impl &amp; operator=(impl const &amp;);
+
+    impl() { ... }
+
+public:
+
+    static shared_ptr&lt;impl&gt; create()
+    {
+        shared_ptr&lt;impl&gt; pi(new impl);
+        pi-&gt;weak_this = pi;
+        return pi;
+    }
+
+    virtual void f() { ... }
+
+    virtual shared_ptr&lt;X&gt; getX()
+    {
+        shared_ptr&lt;X&gt; px(weak_this);
+        return px;
+    }
+};
+</pre>
+		<p>库中现在有一个辅助类模板 <code><A href="enable_shared_from_this.html">enable_shared_from_this</A></code> 能被用于封装这个解决方案：</p>
+		<pre>class impl: public X, public Y, public enable_shared_from_this&lt;impl&gt;
+{
+public:
+
+    impl(impl const &amp;);
+    impl &amp; operator=(impl const &amp;);
+
+public:
+
+    virtual void f() { ... }
+
+    virtual shared_ptr&lt;X&gt; getX()
+    {
+        return shared_from_this();
+    }
+}
+</pre>
+		<p>注意，不需要你去手动初始化这个 <code><A href="enable_shared_from_this.html">enable_shared_from_this</A></code> 中的 <code>weak_ptr</code> 成员。创建一个指向 <code>impl</code> 的 <code>shared_ptr</code> 来维护它。</p>
+		<h2><A name="handle">将 <code>shared_ptr</code> 用作智能计数句柄</A></h2>
+		<p>有些库接口使用不透明的句柄，上面记述的<A href="#incomplete">不完整类技术</A>的一种变化。示例如下：</p>
+		<pre>typedef void * HANDLE;
+HANDLE CreateProcess();
+void CloseHandle(HANDLE);
+</pre>
+		<p>替掉裸指针，将 <code>shared_ptr</code> 用作句柄并取得引用计数和自动资源管理的有可能的：</p>
+		<pre>typedef shared_ptr&lt;void&gt; handle;
+
+handle createProcess()
+{
+    shared_ptr&lt;void&gt; pv(CreateProcess(), CloseHandle);
+    return pv;
+}
+</pre>
+		<h2><A name="on_block_exit">用 <code>shared_ptr</code> 在模块退出时执行代码</A></h2>
+		<p>在控制离开一个范围的时候，<code>shared_ptr&lt;void&gt;</code> 能自动执行清理代码。</p>
+		<UL>
+			<LI>
+				<code>p</code> 是一个指针时，执行 <code>f(p)</code>：</LI></UL>
+		<pre>    shared_ptr&lt;void&gt; guard(p, f);
+</pre>
+		<UL>
+			<LI>
+				执行任意代码：<code>f(x, y)</code>：</LI></UL>
+		<pre>    shared_ptr&lt;void&gt; guard(static_cast&lt;void*&gt;(0), <A href="../bind/bind.html" >bind</A>(f, x, y));
+</pre>
+		<P>要想了解更多，可参见 Andrei Alexandrescu 和 Petru Marginean 的文章 "Simplify Your Exception-Safe Code"，可以在 <A href="http://www.cuj.com/experts/1812/alexandr.htm?topic=experts">
+				http://www.cuj.com/experts/1812/alexandr.htm?topic=experts</A> 找到。</P>
+		<h2><A name="pvoid">用 <code>shared_ptr&lt;void&gt;</code> 持有一个任意对象</A></h2>
+		<p><code>shared_ptr&lt;void&gt;</code> 的行为可以像一个类似 <code>void*</code> 的泛型对象指针。当一个 <code>shared_ptr&lt;void&gt;</code> 实例被这样构造：</p>
+		<pre>    shared_ptr&lt;void&gt; pv(new X);
+</pre>
+		<p>销毁时，通过执行 <code>~X</code>，正确地削除 <code>X</code>。</p>
+		<p>这一特性和 <code>void*</code> 一样，能被用于很多需要从一个对象指针中临时剥除类型信息的场合。一个 <code>shared_ptr&lt;void&gt;</code> 可以通过 <code><A href="shared_ptr.htm#static_pointer_cast">static_pointer_cast</A></code> 找回它的正确类型。</p>
+		<h2><A name="extra_data">用不同种类的 <code>shared_ptr</code> 实例关联任意数据</A></h2>
+		<p><code>shared_ptr</code> 和 <code>weak_ptr</code> 支持 <code>operator&lt;</code> 比较的要求是为了能将它用于类似 <code>std::map</code> 这样的关联式容器。这能用于非侵入式关联任意的由 <code>shared_ptr</code> 管理的对象数据：</p>
+		<pre>typedef int Data;
+
+std::map&lt; shared_ptr&lt;void&gt;, Data &gt; userData;
+// or std::map&lt; weak_ptr&lt;void&gt;, Data &gt; userData; to not affect the lifetime
+
+shared_ptr&lt;X&gt; px(new X);
+shared_ptr&lt;int&gt; pi(new int(3));
+
+userData[px] = 42;
+userData[pi] = 91;
+</pre>
+		<h2><A name="as_lock">将 <code>shared_ptr</code> 用作可拷贝构造的互斥锁</A></h2>
+		<p>有时，需要从一个函数返回一个互斥锁，而一个不可拷贝的所不用通过传值方式返回。将 <code>shared_ptr</code> 用作一个互斥锁是有可能的：</p>
+		<pre>class mutex
+{
+public:
+
+    void lock();
+    void unlock();
+};
+
+shared_ptr&lt;mutex&gt; lock(mutex &amp; m)
+{
+    m.lock();
+    return shared_ptr&lt;mutex&gt;(&amp;m, mem_fn(&amp;mutex::unlock));
+}
+</pre>
+		<p>再好一些，可以将担当锁的 <code>shared_ptr</code> 实例封装在一个专用的 <code>shared_lock</code> 类中：</p>
+		<pre>class shared_lock
+{
+private:
+
+    shared_ptr&lt;void&gt; pv;
+
+public:
+
+    template&lt;class Mutex&gt; explicit shared_lock(Mutex &amp; m): pv((m.lock(), &amp;m), mem_fn(&amp;Mutex::unlock)) {}
+};
+</pre>
+		<p><code>shared_lock</code> 可以像这样使用：</p>
+		<pre>    shared_lock lock(m);
+</pre>
+		<p>注意，<code>shared_lock</code> 没有针对 mutex 类型模板化，这是由于 <code>shared_ptr&lt;void&gt;</code> 的隐藏类型信息的能力。</p>
+		<h2><A name="wrapper">用 <code>shared_ptr</code> 包装成员函数调用</A></h2>
+		<p><code>shared_ptr</code> 实现所有权语义的需求来自于 <code>Wrap</code>/<code>CallProxy</code>，关于这一方案记述在 Bjarne Stroustrup 的文章 "Wrapping C++ Member Function Calls" 中（可以从这里找到 <A href="http://www.research.att.com/~bs/wrapper.pdf">http://www.research.att.com/~bs/wrapper.pdf</A>）。下面给出一个实现：</p>
+		<pre>template&lt;class T&gt; class pointer
+{
+private:
+
+    T * p_;
+
+public:
+
+    explicit pointer(T * p): p_(p)
+    {
+    }
+
+    shared_ptr&lt;T&gt; operator-&gt;() const
+    {
+        p_-&gt;prefix();
+        return shared_ptr&lt;T&gt;(p_, <A href="../bind/mem_fn.html" >mem_fn</A>(&amp;T::suffix));
+    }
+};
+
+class X
+{
+private:
+
+    void prefix();
+    void suffix();
+    friend class pointer&lt;X&gt;;
+    
+public:
+
+    void f();
+    void g();
+};
+
+int main()
+{
+    X x;
+
+    pointer&lt;X&gt; px(&amp;x);
+
+    px-&gt;f();
+    px-&gt;g();
+}
+</pre>
+		<h2><A name="delayed">延时释放</A></h2>
+		<p>在某些情况下，在性能敏感区域，一个单独的 <code>px.reset()</code> 可能会引发昂贵的释放代价：</p>
+		<pre>class X; // ~X is expensive
+
+class Y
+{
+    shared_ptr&lt;X&gt; px;
+
+public:
+
+    void f()
+    {
+        px.reset();
+    }
+};
+</pre>
+		<p>解决方案是推迟可能的释放，将 <code>px</code> 移到一个专门用于释放的 free list 中，在性能和反应时间不是一个问题的时候再定时清空：</p>
+		<pre>vector&lt; shared_ptr&lt;void&gt; &gt; free_list;
+
+class Y
+{
+    shared_ptr&lt;X&gt; px;
+
+public:
+
+    void f()
+    {
+        free_list.push_back(px);
+        px.reset();
+    }
+};
+
+// periodically invoke free_list.clear() when convenient
+</pre>
+		<p>另一种变化是通过一个延时删除器将 free list 逻辑转移到构造过程中：</p>
+		<pre>struct delayed_deleter
+{
+    template&lt;class T&gt; void operator()(T * p)
+    {
+        try
+        {
+            shared_ptr&lt;void&gt; pv(p);
+            free_list.push_back(pv);
+        }
+        catch(...)
+        {
+        }
+    }
+};
+</pre>
+		<h2><A name="weak_without_shared">不通过 <code>shared_ptr</code> 管理指向对象的弱指针</A></h2>
+		<p>让对象持有一个指向自己的 <code>shared_ptr</code>，使用一个 <code>null_deleter</code>：</p>
+		<pre>class X
+{
+private:
+
+    shared_ptr&lt;X&gt; this_;
+    int i_;
+
+public:
+
+    explicit X(int i): this_(this, null_deleter()), i_(i)
+    {
+    }
+
+    // repeat in all constructors (including the copy constructor!)
+
+    X(X const &amp; rhs): this_(this, null_deleter()), i_(rhs.i_)
+    {
+    }
+
+    // do not forget to not assign this_ in the copy assignment
+
+    X &amp; operator=(X const &amp; rhs)
+    {
+	    i_ = rhs.i_;
+    }
+
+    weak_ptr&lt;X&gt; get_weak_ptr() const { return this_; }
+};
+</pre>
+		<p>当对象的生存期结束时，<code>X::this_</code> 被销毁，所有的弱指针也自动失效。</p>
+		<hr>
+		<p>$Date: 2006/11/09 20:22:24 $</p>
+		<p><small>Copyright  2003 Peter Dimov. Distributed under the Boost Software License, Version 
+				1.0. See accompanying file <A href="../../LICENSE_1_0.txt">LICENSE_1_0.txt</A> or 
+				copy at <A href="http://www.boost.org/LICENSE_1_0.txt">http://www.boost.org/LICENSE_1_0.txt</A>.</small></p>
+	</body>
+</html>

@@ -1,0 +1,1156 @@
+<!DOCTYPE html PUBLIC "-//W3C//DTD XHTML 1.0 Transitional//EN" "http://www.w3.org/TR/xhtml1/DTD/xhtml1-transitional.dtd">
+<html xmlns="http://www.w3.org/1999/xhtml" xml:lang="en" lang="en">
+<head>
+
+
+
+
+  
+  
+  
+  <meta http-equiv="Content-Type" content="text/html; charset=utf-8" />
+
+
+
+
+  
+  
+  
+  <meta name="generator" content="Docutils 0.5: http://docutils.sourceforge.net/" />
+
+
+
+
+
+  
+  
+  
+  
+  
+  
+  <title>Iterator Adaptor</title>
+  <meta name="author" content="David Abrahams, Jeremy Siek, Thomas Witt" />
+
+
+
+
+  
+  
+  
+  <meta name="organization" content="Boost Consulting, Indiana University Open Systems Lab, University of Hanover Institute for Transport Railway Operation and Construction" />
+
+
+
+
+  
+  
+  
+  <meta name="date" content="2006-09-11" />
+
+
+
+
+  
+  
+  
+  <meta name="copyright" content="Copyright David Abrahams, Jeremy Siek, and Thomas Witt 2003." />
+
+
+
+
+  
+  
+  
+  <link rel="stylesheet" href="../../../rst.css" type="text/css" />
+</head>
+
+
+<body>
+
+
+
+
+<div class="document" id="iterator-adaptor">
+<h1 class="title">迭代器适配器</h1>
+
+
+
+
+<table class="docinfo" frame="void" rules="none">
+
+
+
+
+  <col class="docinfo-name" />
+  <col class="docinfo-content" />
+  <tbody valign="top">
+
+
+
+
+    <tr>
+
+
+
+      <th class="docinfo-name">Author:</th>
+
+
+
+
+      <td>David Abrahams, Jeremy Siek, Thomas Witt</td>
+
+
+
+    </tr>
+
+
+
+
+    <tr>
+
+
+
+      <th class="docinfo-name">Contact:</th>
+
+
+
+
+      <td><a class="first reference external" href="mailto:dave@boost-consulting.com">dave@boost-consulting.com</a>, <a class="reference external" href="mailto:jsiek@osl.iu.edu">jsiek@osl.iu.edu</a>, <a class="last reference external" href="mailto:witt@ive.uni-hannover.de">witt@ive.uni-hannover.de</a></td>
+
+
+
+    </tr>
+
+
+
+
+    <tr>
+
+
+
+      <th class="docinfo-name">Organization:</th>
+
+
+
+
+      <td><a class="first reference external" href="http://www.boost-consulting.com">Boost Consulting</a>, Indiana University <a class="reference external" href="http://www.osl.iu.edu">Open Systems
+Lab</a>, University of Hanover <a class="last reference external" href="http://www.ive.uni-hannover.de">Institute for Transport
+Railway Operation and Construction</a></td>
+
+
+
+    </tr>
+
+
+
+
+    <tr>
+
+
+
+      <th class="docinfo-name">Date:</th>
+
+
+
+
+      <td>2006-09-11</td>
+
+
+
+    </tr>
+
+
+
+
+    <tr>
+
+
+
+      <th class="docinfo-name">Copyright:</th>
+
+
+
+
+      <td>Copyright David Abrahams, Jeremy Siek, and Thomas Witt 2003.</td>
+
+
+
+    </tr>
+
+
+
+
+  
+  
+  
+  </tbody>
+</table>
+
+
+
+
+<!-- Distributed under the Boost -->
+<!-- Software License, Version 1.0. (See accompanying -->
+<!-- file LICENSE_1_0.txt or copy at http://www.boost.org/LICENSE_1_0.txt) -->
+<table class="docutils field-list" frame="void" rules="none">
+
+
+
+
+  <col class="field-name" />
+  <col class="field-body" />
+  <tbody valign="top">
+
+
+
+
+    <tr class="field">
+
+
+
+      <th class="field-name">概要：</th>
+
+
+
+      <td class="field-body"></td>
+
+
+
+
+    </tr>
+
+
+
+
+  
+  
+  
+  </tbody>
+</table>
+
+
+
+
+<!-- Distributed under the Boost -->
+<!-- Software License, Version 1.0. (See accompanying -->
+<!-- file LICENSE_1_0.txt or copy at http://www.boost.org/LICENSE_1_0.txt) -->
+<!-- Version 1.1 of this ReStructuredText document corresponds to
+n1530_, the paper accepted by the LWG. -->
+<!-- Copyright David Abrahams, Jeremy Siek, and Thomas Witt 2003. -->
+<p><tt class="docutils literal"><span class="pre">iterator_adaptor</span></tt> 类模板的每个<tt class="docutils literal"><span class="pre"></span></tt>特化类都派生自 <tt class="docutils literal"><span class="pre">iterator_facade</span></tt> 的某个特化类。<tt class="docutils literal"><span class="pre">iterator_facade</span></tt> 所需要的各个核心接口函数依据
+<tt class="docutils literal"><span class="pre">iterator_adaptor</span></tt> 的 <tt class="docutils literal"><span class="pre">Base</span></tt> 模板参数而实现。派生自 <tt class="docutils literal"><span class="pre">iterator_adaptor</span></tt> 的类通常要重定义某些核心接口函数来调整 <tt class="docutils literal"><span class="pre">Base</span></tt> 类型的行为。这个派生类是否符合某个标准迭代器概念，取决于 <tt class="docutils literal"><span class="pre">Base</span></tt> 类型所支持的操作以及 <tt class="docutils literal"><span class="pre">iterator_facade</span></tt> 的哪些核心接口函数被
+<tt class="docutils literal"><span class="pre">Derived</span></tt> 类重新定义。</p>
+
+
+
+
+<div class="contents topic" id="table-of-contents">
+<p class="topic-title first">目录</p>
+
+
+
+
+<ul class="simple">
+
+
+
+
+  <li><a class="reference internal" href="#overview" id="id6">简介</a></li>
+
+
+
+
+  <li><a class="reference internal" href="#reference" id="id7">参考</a>
+    
+    
+    
+    <ul>
+
+
+
+
+      <li><a class="reference internal" href="#iterator-adaptor-requirements" id="id8"><tt class="docutils literal"><span class="pre">iterator_adaptor</span></tt> 的要求</a></li>
+
+
+
+
+      <li><a class="reference internal" href="#iterator-adaptor-base-class-parameters" id="id9"><tt class="docutils literal"><span class="pre">iterator_adaptor</span></tt> 的基类参数</a></li>
+
+
+
+
+      <li><a class="reference internal" href="#iterator-adaptor-public-operations" id="id10"><tt class="docutils literal"><span class="pre">iterator_adaptor</span></tt> 的公有操作</a></li>
+
+
+
+
+      <li><a class="reference internal" href="#iterator-adaptor-protected-member-functions" id="id11"><tt class="docutils literal"><span class="pre">iterator_adaptor</span></tt> 的保护成员函数</a></li>
+
+
+
+
+      <li><a class="reference internal" href="#iterator-adaptor-private-member-functions" id="id12"><tt class="docutils literal"><span class="pre">iterator_adaptor</span></tt> 的私有成员函数</a></li>
+
+
+
+
+    
+    
+    
+    </ul>
+
+
+
+
+  </li>
+
+
+
+
+  <li><a class="reference internal" href="#tutorial-example" id="id13">指南和例子</a></li>
+
+
+
+
+</ul>
+
+
+
+
+</div>
+
+
+
+
+<div class="section" id="overview">
+<h1><a class="toc-backref" href="#id6">简介</a></h1>
+
+
+
+
+<!-- Distributed under the Boost -->
+<!-- Software License, Version 1.0. (See accompanying -->
+<!-- file LICENSE_1_0.txt or copy at http://www.boost.org/LICENSE_1_0.txt) -->
+<!-- Version 1.2 of this ReStructuredText document corresponds to
+n1530_, the paper accepted by the LWG for TR1. -->
+<!-- Copyright David Abrahams, Jeremy Siek, and Thomas Witt 2003. -->
+<p><tt class="docutils literal"><span class="pre">iterator_adaptor</span></tt> 类模板通过改编某个 <tt class="docutils literal"><span class="pre">Base</span></tt><a class="footnote-reference" href="#base" id="id1"><sup>1</sup></a>
+类型来创建一个新的迭代器。<tt class="docutils literal"><span class="pre">iterator_adaptor</span></tt>
+的实例派生自一个对应的 <tt class="docutils literal"><span class="pre">iterator_facade</span></tt>
+的实例，并依据 <tt class="docutils literal"><span class="pre">Base</span></tt> 类型实现核心行为。基本上，<tt class="docutils literal"><span class="pre">iterator_adaptor</span></tt> 只是将所有操作前转至 <tt class="docutils literal"><span class="pre">Base</span></tt> 类型的一个实例，该实例被作为一个成员保存。</p>
+
+
+
+
+<table class="docutils footnote" id="base" frame="void" rules="none">
+
+
+
+
+  <colgroup><col class="label" /><col /></colgroup>
+  <tbody valign="top">
+
+
+
+
+    <tr>
+
+
+
+      <td class="label">[1]</td>
+
+
+
+      <td><em>(<a class="fn-backref" href="#id1">1</a>, <a class="fn-backref" href="#id3">2</a>)</em> 这里的术语 "Base" 并不是指基类，也没有使用派生。我们跟随了标准库的带领，标准库为 <tt class="docutils literal"><span class="pre">reverse_iterator</span></tt> 适配器提供了 base() 函数来访问底层的迭代器对象。</td>
+
+
+
+    </tr>
+
+
+
+
+  
+  
+  
+  </tbody>
+</table>
+
+
+
+
+<p><tt class="docutils literal"><span class="pre">iterator_adaptor</span></tt> 的用户创建了一个派生自某个 <tt class="docutils literal"><span class="pre">iterator_adaptor</span></tt> 实例的类，然后有选择地重新定义在
+<tt class="docutils literal"><span class="pre">iterator_facade</span></tt> 的核心要求表格中所列的某些核心成员函数。<tt class="docutils literal"><span class="pre">Base</span></tt> 类型不必完全符合迭代器的所有要求；它只须支持那些被
+<tt class="docutils literal"><span class="pre">iterator_adaptor</span></tt> 的核心接口函数使用而又没有在用户的派生类中重新定义的操作就可以了。</p>
+
+
+
+
+<p><tt class="docutils literal"><span class="pre">iterator_adaptor</span></tt> 有几个模板参数的缺省值是 <tt class="docutils literal"><span class="pre">use_default</span></tt>. 这允许用户使用缺省参数，即使他想在后面的参数列表中指定参数。还有，对应的关联类型缺省值有些复杂，需要用元编程来计算它们，而
+<tt class="docutils literal"><span class="pre">use_default</span></tt> 可以帮助简化实现。最后，<tt class="docutils literal"><span class="pre">use_default</span></tt> 类型的标识符没有留作非未指明的，这是因为规定该标识符可以有助于突出 <tt class="docutils literal"><span class="pre">Reference</span></tt>
+模板参数并不总是与迭代器的
+<tt class="docutils literal"><span class="pre">reference</span></tt> 类型一致这一事实，并防止用户由于这个假设而出错。</p>
+
+
+
+
+</div>
+
+
+
+
+<div class="section" id="reference">
+<h1><a class="toc-backref" href="#id7">参考</a></h1>
+
+
+
+
+<!-- Distributed under the Boost -->
+<!-- Software License, Version 1.0. (See accompanying -->
+<!-- file LICENSE_1_0.txt or copy at http://www.boost.org/LICENSE_1_0.txt) -->
+<!-- Version 1.4 of this ReStructuredText document corresponds to
+n1530_, the paper accepted by the LWG for TR1. -->
+<!-- Copyright David Abrahams, Jeremy Siek, and Thomas Witt 2003. -->
+<pre class="literal-block">template &lt;<br />    class Derived<br />  , class Base<br />  , class Value               = use_default<br />  , class CategoryOrTraversal = use_default<br />  , class Reference           = use_default<br />  , class Difference = use_default<br />&gt;<br />class iterator_adaptor<br />  : public iterator_facade&lt;Derived, <em>V'</em>, <em>C'</em>, <em>R'</em>, <em>D'</em>&gt; // 请见 <a class="reference internal" href="#base-parameters">详细说明</a>
+{
+    friend class iterator_core_access;
+ public:
+    iterator_adaptor();
+    explicit iterator_adaptor(Base const&amp; iter);
+    typedef Base base_type;
+    Base const&amp; base() const;
+ protected:
+    typedef iterator_adaptor iterator_adaptor_;
+    Base const&amp; base_reference() const;
+    Base&amp; base_reference();
+ private: // iterator_facade 的核心迭代器接口
+    typename iterator_adaptor::reference dereference() const;
+
+    template &lt;
+    class OtherDerived, class OtherIterator, class V, class C, class R, class D
+    &gt;
+    bool equal(iterator_adaptor&lt;OtherDerived, OtherIterator, V, C, R, D&gt; const&amp; x) const;
+
+    void advance(typename iterator_adaptor::difference_type n);
+    void increment();
+    void decrement();
+
+    template &lt;
+        class OtherDerived, class OtherIterator, class V, class C, class R, class D
+    &gt;
+    typename iterator_adaptor::difference_type distance_to(
+        iterator_adaptor&lt;OtherDerived, OtherIterator, V, C, R, D&gt; const&amp; y) const;
+
+ private:
+    Base m_iterator; // exposition only
+};
+</pre>
+
+
+
+
+<div class="section" id="iterator-adaptor-requirements">
+<span id="requirements"></span>
+<h2><a class="toc-backref" href="#id8"><tt class="docutils literal"><span class="pre">iterator_adaptor</span></tt> 的要求</a></h2>
+
+
+
+
+<p><tt class="docutils literal"><span class="pre">static_cast&lt;Derived*&gt;(iterator_adaptor*)</span></tt> 必须是合法的。<tt class="docutils literal"><span class="pre">Base</span></tt> 参数必须是可赋值和可复制构造的。</p>
+
+
+
+
+</div>
+
+
+
+
+<div class="section" id="iterator-adaptor-base-class-parameters">
+<span id="base-parameters"></span>
+<h2><a class="toc-backref" href="#id9"><tt class="docutils literal"><span class="pre">iterator_adaptor</span></tt> 的基类参数</a></h2>
+
+
+
+
+<p>上面的 <tt class="docutils literal"><span class="pre">iterator_adaptor</span></tt> 摘要中的基类 <tt class="docutils literal"><span class="pre">iterator_facade</span></tt>
+的 <em>V'</em>, <em>C'</em>, <em>R'</em>, 和 <em>D'</em> &nbsp;参数定义如下：</p>
+
+
+
+
+<pre class="literal-block"><em>V'</em> = if (Value 为 use_default)<br />          return iterator_traits&lt;Base&gt;::value_type<br />      else<br />          return Value<br /><br /><em>C'</em> = if (CategoryOrTraversal 为 use_default)<br />          return iterator_traversal&lt;Base&gt;::type<br />      else<br />          return CategoryOrTraversal<br /><br /><em>R'</em> = if (Reference 为 use_default)<br />          if (Value 为 use_default)<br />              return iterator_traits&lt;Base&gt;::reference<br />          else<br />              return Value&amp;<br />      else<br />          return Reference<br /><br /><em>D'</em> = if (Difference 为 use_default)<br />          return iterator_traits&lt;Base&gt;::difference_type<br />      else<br />          return Difference<br /></pre>
+
+
+
+
+<!-- ``iterator_adaptor`` models
+- - - - - - - - - - - - - - - - - - - - - - - - - - -
+
+In order for ``Derived`` to model the iterator concepts corresponding
+to ``iterator_traits<Derived>::iterator_category``, the expressions
+involving ``m_iterator`` in the specifications of those private member
+functions of ``iterator_adaptor`` that may be called by
+``iterator_facade<Derived, V, C, R, D>`` in evaluating any valid
+expression involving ``Derived`` in those concepts' requirements. -->
+<!-- The above is confusing and needs a rewrite. -JGS -->
+<!-- That's why it's removed.  We're embracing inheritance, remember? -->
+</div>
+
+
+
+
+<div class="section" id="iterator-adaptor-public-operations">
+<h2><a class="toc-backref" href="#id10"><tt class="docutils literal"><span class="pre">iterator_adaptor</span></tt> 的公有操作</a></h2>
+
+
+
+
+<p><tt class="docutils literal"><span class="pre">iterator_adaptor();</span></tt></p>
+
+
+
+
+<table class="docutils field-list" frame="void" rules="none">
+
+
+
+
+  <col class="field-name" />
+  <col class="field-body" />
+  <tbody valign="top">
+
+
+
+
+    <tr class="field">
+
+
+
+      <th class="field-name">要求：</th>
+
+
+
+      <td class="field-body"><tt class="docutils literal"><span class="pre">Base</span></tt> 类型必须是可缺省构造的。</td>
+
+
+
+
+    </tr>
+
+
+
+
+    <tr class="field">
+
+
+
+      <th class="field-name">返回：</th>
+
+
+
+      <td class="field-body">一个 <tt class="docutils literal"><span class="pre">iterator_adaptor</span></tt> 实例，其中的
+      <tt class="docutils literal"><span class="pre">m_iterator</span></tt> 为缺省构造。</td>
+
+
+
+
+    </tr>
+
+
+
+
+  
+  
+  
+  </tbody>
+</table>
+
+
+
+
+<p><tt class="docutils literal"><span class="pre">explicit</span> <span class="pre">iterator_adaptor(Base</span> <span class="pre">const&amp;</span> <span class="pre">iter);</span></tt></p>
+
+
+
+
+<table class="docutils field-list" frame="void" rules="none">
+
+
+
+
+  <col class="field-name" />
+  <col class="field-body" />
+  <tbody valign="top">
+
+
+
+
+    <tr class="field">
+
+
+
+      <th class="field-name">返回：</th>
+
+
+
+      <td class="field-body">一个 <tt class="docutils literal"><span class="pre">iterator_adaptor</span></tt> 实例，其中的
+      <tt class="docutils literal"><span class="pre">m_iterator</span></tt> 从 <tt class="docutils literal"><span class="pre">iter</span></tt> 复制构造。</td>
+
+
+
+
+    </tr>
+
+
+
+
+  
+  
+  
+  </tbody>
+</table>
+
+
+
+
+<p><tt class="docutils literal"><span class="pre">Base</span> <span class="pre">const&amp;</span> <span class="pre">base()</span> <span class="pre">const;</span></tt></p>
+
+
+
+
+<table class="docutils field-list" frame="void" rules="none">
+
+
+
+
+  <col class="field-name" />
+  <col class="field-body" />
+  <tbody valign="top">
+
+
+
+
+    <tr class="field">
+
+
+
+      <th class="field-name">返回：</th>
+
+
+
+      <td class="field-body"><tt class="docutils literal"><span class="pre">m_iterator</span></tt></td>
+
+
+
+
+    </tr>
+
+
+
+
+  
+  
+  
+  </tbody>
+</table>
+
+
+
+
+</div>
+
+
+
+
+<div class="section" id="iterator-adaptor-protected-member-functions">
+<h2><a class="toc-backref" href="#id11"><tt class="docutils literal"><span class="pre">iterator_adaptor</span></tt> 的保护成员函数</a></h2>
+
+
+
+
+<p><tt class="docutils literal"><span class="pre">Base</span> <span class="pre">const&amp;</span> <span class="pre">base_reference()</span> <span class="pre">const;</span></tt></p>
+
+
+
+
+<table class="docutils field-list" frame="void" rules="none">
+
+
+
+
+  <col class="field-name" />
+  <col class="field-body" />
+  <tbody valign="top">
+
+
+
+
+    <tr class="field">
+
+
+
+      <th class="field-name">返回：</th>
+
+
+
+      <td class="field-body"><tt class="docutils literal"><span class="pre">m_iterator</span></tt> 的一个常量引用。</td>
+
+
+
+
+    </tr>
+
+
+
+
+  
+  
+  
+  </tbody>
+</table>
+
+
+
+
+<p><tt class="docutils literal"><span class="pre">Base&amp;</span> <span class="pre">base_reference();</span></tt></p>
+
+
+
+
+<table class="docutils field-list" frame="void" rules="none">
+
+
+
+
+  <col class="field-name" />
+  <col class="field-body" />
+  <tbody valign="top">
+
+
+
+
+    <tr class="field">
+
+
+
+      <th class="field-name">返回：</th>
+
+
+
+      <td class="field-body"><tt class="docutils literal"><span class="pre">m_iterator</span></tt> 的一个非常量引用。</td>
+
+
+
+
+    </tr>
+
+
+
+
+  
+  
+  
+  </tbody>
+</table>
+
+
+
+
+</div>
+
+
+
+
+<div class="section" id="iterator-adaptor-private-member-functions">
+<h2><a class="toc-backref" href="#id12"><tt class="docutils literal"><span class="pre">iterator_adaptor</span></tt> 的私有成员函数</a></h2>
+
+
+
+
+<p><tt class="docutils literal"><span class="pre">typename</span> <span class="pre">iterator_adaptor::reference</span> <span class="pre">dereference()</span> <span class="pre">const;</span></tt></p>
+
+
+
+
+<table class="docutils field-list" frame="void" rules="none">
+
+
+
+
+  <col class="field-name" />
+  <col class="field-body" />
+  <tbody valign="top">
+
+
+
+
+    <tr class="field">
+
+
+
+      <th class="field-name">返回：</th>
+
+
+
+      <td class="field-body"><tt class="docutils literal"><span class="pre">*m_iterator</span></tt></td>
+
+
+
+
+    </tr>
+
+
+
+
+  
+  
+  
+  </tbody>
+</table>
+
+
+
+
+<pre class="literal-block">template &lt;<br />class OtherDerived, class OtherIterator, class V, class C, class R, class D<br />&gt;<br />bool equal(iterator_adaptor&lt;OtherDerived, OtherIterator, V, C, R, D&gt; const&amp; x) const;<br /></pre>
+
+
+
+
+<table class="docutils field-list" frame="void" rules="none">
+
+
+
+
+  <col class="field-name" />
+  <col class="field-body" />
+  <tbody valign="top">
+
+
+
+
+    <tr class="field">
+
+
+
+      <th class="field-name">返回：</th>
+
+
+
+      <td class="field-body"><tt class="docutils literal"><span class="pre">m_iterator</span> <span class="pre">==</span> <span class="pre">x.base()</span></tt></td>
+
+
+
+
+    </tr>
+
+
+
+
+  
+  
+  
+  </tbody>
+</table>
+
+
+
+
+<p><tt class="docutils literal"><span class="pre">void</span> <span class="pre">advance(typename</span> <span class="pre">iterator_adaptor::difference_type</span> <span class="pre">n);</span></tt></p>
+
+
+
+
+<table class="docutils field-list" frame="void" rules="none">
+
+
+
+
+  <col class="field-name" />
+  <col class="field-body" />
+  <tbody valign="top">
+
+
+
+
+    <tr class="field">
+
+
+
+      <th class="field-name">作用：</th>
+
+
+
+      <td class="field-body"><tt class="docutils literal"><span class="pre">m_iterator</span> <span class="pre">+=</span> <span class="pre">n;</span></tt></td>
+
+
+
+
+    </tr>
+
+
+
+
+  
+  
+  
+  </tbody>
+</table>
+
+
+
+
+<p><tt class="docutils literal"><span class="pre">void</span> <span class="pre">increment();</span></tt></p>
+
+
+
+
+<table class="docutils field-list" frame="void" rules="none">
+
+
+
+
+  <col class="field-name" />
+  <col class="field-body" />
+  <tbody valign="top">
+
+
+
+
+    <tr class="field">
+
+
+
+      <th class="field-name">作用：</th>
+
+
+
+      <td class="field-body"><tt class="docutils literal"><span class="pre">++m_iterator;</span></tt></td>
+
+
+
+
+    </tr>
+
+
+
+
+  
+  
+  
+  </tbody>
+</table>
+
+
+
+
+<p><tt class="docutils literal"><span class="pre">void</span> <span class="pre">decrement();</span></tt></p>
+
+
+
+
+<table class="docutils field-list" frame="void" rules="none">
+
+
+
+
+  <col class="field-name" />
+  <col class="field-body" />
+  <tbody valign="top">
+
+
+
+
+    <tr class="field">
+
+
+
+      <th class="field-name">作用：</th>
+
+
+
+      <td class="field-body"><tt class="docutils literal"><span class="pre">--m_iterator;</span></tt></td>
+
+
+
+
+    </tr>
+
+
+
+
+  
+  
+  
+  </tbody>
+</table>
+
+
+
+
+<pre class="literal-block">template &lt;<br />    class OtherDerived, class OtherIterator, class V, class C, class R, class D<br />&gt;<br />typename iterator_adaptor::difference_type distance_to(<br />    iterator_adaptor&lt;OtherDerived, OtherIterator, V, C, R, D&gt; const&amp; y) const;<br /></pre>
+
+
+
+
+<table class="docutils field-list" frame="void" rules="none">
+
+
+
+
+  <col class="field-name" />
+  <col class="field-body" />
+  <tbody valign="top">
+
+
+
+
+    <tr class="field">
+
+
+
+      <th class="field-name">返回：</th>
+
+
+
+      <td class="field-body"><tt class="docutils literal"><span class="pre">y.base()</span> <span class="pre">-</span> <span class="pre">m_iterator</span></tt></td>
+
+
+
+
+    </tr>
+
+
+
+
+  
+  
+  
+  </tbody>
+</table>
+
+
+
+
+</div>
+
+
+
+
+</div>
+
+
+
+
+<div class="section" id="tutorial-example">
+<h1><a class="toc-backref" href="#id13">指南和例子</a></h1>
+
+
+
+
+<!-- Copyright David Abrahams 2004. Use, modification and distribution is -->
+<!-- subject to the Boost Software License, Version 1.0. (See accompanying -->
+<!-- file LICENSE_1_0.txt or copy at http://www.boost.org/LICENSE_1_0.txt) -->
+<p>在本节中，我们将进一步对我们在 <a class="reference external" href="iterator_facade.html#tutorial-example"><tt class="docutils literal"><span class="pre">iterator_facade</span></tt> 指南</a> 中所开发的 <tt class="docutils literal"><span class="pre">node_iter</span></tt> 类模板进行精化。如果你还没有读过那篇文章，你应该现在回过头去看看，因为我们将要补充那个例子中所缺少的东西。</p>
+
+
+
+
+<div class="sidebar">
+<p class="first sidebar-title"><tt class="docutils literal"><span class="pre">node_base*</span></tt> 确实是一个迭代器</p>
+
+
+
+
+<p class="last">它并不是一个很有趣的迭代器，由于 <tt class="docutils literal"><span class="pre">node_base</span></tt>
+是一个抽象类：一个 <tt class="docutils literal"><span class="pre">node_base</span></tt> 的指针只是指向某个其它类的实例的基类子对象，谁知道递增一个 <tt class="docutils literal"><span class="pre">node_base*</span></tt> 会把它移到哪个子对象呢？我们对于这个递增位置能做的最多就是将它与另一个 <tt class="docutils literal"><span class="pre">node_base*</span></tt> 作比较。换句话说，就是用原来的迭代器遍历一个单元素数据。</p>
+
+
+
+
+</div>
+
+
+
+
+<p>你可能会不同意，但 <tt class="docutils literal"><span class="pre">node_iterator</span></tt> 底层的 <tt class="docutils literal"><span class="pre">node_base*</span></tt>
+对象本身就是一个迭代器，正象其它所有的指针一样。如果我们从迭代器的观点来近距离观察这个指针，我们可以看到，它与我们所构建的 <tt class="docutils literal"><span class="pre">node_iterator</span></tt> 有很多相同点。首先，它们有很多相同的关联类型(<tt class="docutils literal"><span class="pre">value_type</span></tt>, <tt class="docutils literal"><span class="pre">reference</span></tt>,
+<tt class="docutils literal"><span class="pre">pointer</span></tt>, 和 <tt class="docutils literal"><span class="pre">difference_type</span></tt>)。其次，有些核心功能也一样：<tt class="docutils literal"><span class="pre">node_iterator</span></tt>&nbsp;的 <tt class="docutils literal"><span class="pre">operator*</span></tt> 和 <tt class="docutils literal"><span class="pre">operator==</span></tt> 都是返回其底层指针的相同操作的执行结果(通过 <tt class="docutils literal"><span class="pre">node_iterator</span></tt> 的
+<a class="reference external" href="iterator_facade.html#implementing-the-core-operations"><tt class="docutils literal"><span class="pre">dereference</span></tt> 和 <tt class="docutils literal"><span class="pre">equal</span></tt> 成员函数</a>)。<tt class="docutils literal"><span class="pre">node_base*</span></tt> 和 <tt class="docutils literal"><span class="pre">node_iterator</span></tt> 间唯一真正不同的行为发生在它们被递增的时候： <tt class="docutils literal"><span class="pre">node_iterator</span></tt> 采用
+<tt class="docutils literal"><span class="pre">m_next</span></tt> 指针，而 <tt class="docutils literal"><span class="pre">node_base*</span></tt> 则递增一个地址偏移量。</p>
+
+
+
+
+<p>这带来了一种模式，即在某个类似于迭代器的类型(<tt class="docutils literal"><span class="pre">Base</span></tt><a class="footnote-reference" href="iterator_adaptor.html#base" id="id3"><sup>1</sup></a> 类型)的基础之上构建一个迭代器，只需要对底层类型的行为做出少量的修改，这就是
+<tt class="docutils literal"><span class="pre">iterator_adaptor</span></tt> 所实现的模式。使用 <tt class="docutils literal"><span class="pre">iterator_adaptor</span></tt> 和使用 <tt class="docutils literal"><span class="pre">iterator_facade</span></tt> 非常相似，但由于 iterator_adaptor 尽可能地模仿其 <tt class="docutils literal"><span class="pre">Base</span></tt> 类型的行为，所以我们既不需要提供一个 <tt class="docutils literal"><span class="pre">Value</span></tt> 参数，也不用实现除了 <tt class="docutils literal"><span class="pre">increment</span></tt> 之外的任何核心行为。<tt class="docutils literal"><span class="pre">node_iter</span></tt> 的实现可以简化为：</p>
+
+
+
+
+<pre class="literal-block">template &lt;class Value&gt;<br />class node_iter<br />  : public boost::iterator_adaptor&lt;<br />        node_iter&lt;Value&gt;                // Derived<br />      , Value*                          // Base<br />      , boost::use_default              // Value<br />      , boost::forward_traversal_tag    // CategoryOrTraversal<br />    &gt;<br />{<br /> private:<br />    struct enabler {};  // 避免误用的私有类型<br /><br /> public:<br />    node_iter()<br />      : node_iter::iterator_adaptor_(0) {}<br /><br />    explicit node_iter(Value* p)<br />      : node_iter::iterator_adaptor_(p) {}<br /><br />    template &lt;class OtherValue&gt;<br />    node_iter(<br />        node_iter&lt;OtherValue&gt; const&amp; other<br />      , typename boost::enable_if&lt;<br />            boost::is_convertible&lt;OtherValue*,Value*&gt;<br />          , enabler<br />        &gt;::type = enabler()<br />    )<br />      : node_iter::iterator_adaptor_(other.base()) {}<br /><br /> private:<br />    friend class boost::iterator_core_access;<br />    void increment() { this-&gt;base_reference() = this-&gt;base()-&gt;next(); }<br />};<br /></pre>
+
+
+
+
+<p>请留意这里对 <tt class="docutils literal"><span class="pre">node_iter::iterator_adaptor_</span></tt> 的使用：<tt class="docutils literal"><span class="pre">iterator_adaptor</span></tt> 定义了一个嵌套的 <tt class="docutils literal"><span class="pre">iterator_adaptor_</span></tt> 类型来代表它自己本身，使得我们可以方便地引用这个复杂的基类 <tt class="docutils literal"><span class="pre">node_iter&lt;Value&gt;</span></tt>. [注：该方法已知不能用于 Borland C++ 5.6.4 和
+Metrowerks CodeWarrior&nbsp;9.0 之前的版本]</p>
+
+
+
+
+<p>在&nbsp;<a class="reference external" href="../example/node_iterator3.cpp">这里</a> 你可以看到一个例子程序，测试了这个版本的节点迭代器。</p>
+
+
+
+
+<p>在这个 <tt class="docutils literal"><span class="pre">node_iter</span></tt> 例子中，并不强制一定要将
+<tt class="docutils literal"><span class="pre">boost::use_default</span></tt> 作为 <tt class="docutils literal"><span class="pre">iterator_adaptor</span></tt> 的 <tt class="docutils literal"><span class="pre">Value</span></tt>
+参数；我们可以只是将传入的 <tt class="docutils literal"><span class="pre">node_iter</span></tt> 的 <tt class="docutils literal"><span class="pre">Value</span></tt>
+顺着传给 <tt class="docutils literal"><span class="pre">iterator_adaptor</span></tt>, 而且还更短！多数由 <tt class="docutils literal"><span class="pre">iterator_adaptor</span></tt> 构建的迭代器类模板是以另一个迭代器类型为参数的，而不是以它的
+<tt class="docutils literal"><span class="pre">value_type</span></tt> 为参数。例如，<tt class="docutils literal"><span class="pre">boost::reverse_iterator</span></tt> 接受一个迭代器类型的参数，并以相反的顺序进行遍历，由于原迭代器和反序迭代器具有完全相同的关联类型，所以<tt class="docutils literal"><span class="pre">iterator_adaptor<span style="font-family: sans;"> 将这些缺省类型委托给它的</span></span></tt> <tt class="docutils literal"><span class="pre">Base</span></tt>，以缩短
+<tt class="docutils literal"><span class="pre">boost::reverse_iterator</span></tt> 的实现，不需要这样写四次：</p>
+
+
+
+
+<pre class="literal-block">std::iterator_traits&lt;Iterator&gt;::<em>some-associated-type</em>
+</pre>
+
+
+
+
+
+
+
+<p>我们建议你重温一下
+<a class="reference external" href="reverse_iterator.html"><tt class="docutils literal"><span class="pre">reverse_iterator</span></tt></a> 的文档和实现，以及其它 Boost <a class="reference external" href="index.html#specialized-adaptors">特化迭代器适配器</a>，以对可以用
+<tt class="docutils literal"><span class="pre">iterator_adaptor</span></tt> 做些什么有所了解。特别是，看一下
+<a class="reference external" href="transform_iterator.html"><tt class="docutils literal"><span class="pre">transform_iterator</span></tt></a>, 它可能是最简明的适配器，还有 <a class="reference external" href="counting_iterator.html"><tt class="docutils literal"><span class="pre">counting_iterator</span></tt></a>, 它示范了
+<tt class="docutils literal"><span class="pre">iterator_adaptor</span></tt> 的 <tt class="docutils literal"><span class="pre">Base</span></tt> 类型不一定要是一个迭代器。</p>
+
+
+
+
+</div>
+
+
+
+
+</div>
+
+
+
+
+<div class="footer">
+<hr class="footer" />
+<a class="reference external" href="iterator_adaptor.rst">View document source</a>.
+Generated by <a class="reference external" href="http://docutils.sourceforge.net/">Docutils</a> from <a class="reference external" href="http://docutils.sourceforge.net/rst.html">reStructuredText</a> source.
+
+</div>
+
+
+
+
+</body>
+</html>

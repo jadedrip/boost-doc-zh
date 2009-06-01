@@ -1,0 +1,148 @@
+<!DOCTYPE html PUBLIC "-//W3C//DTD HTML 4.01 Transitional//EN">
+<html><head>
+<meta http-equiv="Content-Language" content="en-us">
+<meta http-equiv="Content-Type" content="text/html; charset=UTF-8"><title>Boost Function Object Adapter Library</title>
+
+</head>
+
+
+<body style="color: rgb(0, 0, 0); background-color: rgb(255, 255, 255);">
+<table summary="" bgcolor="#007f7f" border="1" cellpadding="2">
+<tbody>
+<tr>
+<td bgcolor="#ffffff"><img src="../../boost.png" alt="boost.png (6897 bytes)" height="86" width="277"></td>
+<td><a href="../../index.htm"><font color="#ffffff" face="Arial"><big>Home</big></font></a></td>
+<td><a href="../libraries.htm"><font color="#ffffff" face="Arial"><big>Libraries</big></font></a></td>
+<td><a href="http://www.boost.org/people/people.htm"><font color="#ffffff" face="Arial"><big>People</big></font></a></td>
+<td><a href="http://www.boost.org/more/faq.htm"><font color="#ffffff" face="Arial"><big>FAQ</big></font></a></td>
+<td><a href="../../more/index.htm"><font color="#ffffff" face="Arial"><big>More</big></font></a></td>
+</tr>
+</tbody>
+</table>
+<h1>Member Function Adapters 成员函数适配器</h1>
+<p>The header <a href="../../boost/functional.hpp">functional.hpp</a>
+includes improved versions of the full range of member function
+adapters from the the C++ Standard Library (§20.3.8):</p>
+<p>头文件 <a href="../../boost/functional.hpp">functional.hpp</a>
+包含了C++标准中各个成员函数适配器(§20.3.8)的改良版本：</p>
+<ul>
+<li><tt>mem_fun_t</tt></li>
+<li><tt>mem_fun1_t</tt></li>
+<li><tt>const_mem_fun_t</tt></li>
+<li><tt>const_mem_fun1_t</tt></li>
+<li><tt>mem_fun_ref_t</tt></li>
+<li><tt>mem_fun1_ref_t</tt></li>
+<li><tt>const_mem_fun_ref_t</tt></li>
+<li><tt>const_mem_fun1_ref_t</tt></li>
+</ul>
+<p>as well as the corresponding overloaded helper functions</p>
+<p>以及相应的重载辅助函数：</p>
+<ul>
+<li><tt>mem_fun</tt></li>
+<li><tt>mem_fun_ref</tt></li>
+</ul>
+<p>The following changes have been made to the adapters as
+specified in the Standard:</p>
+<p>与标准中的规格相比，作出了如下修改：</p>
+<ul>
+<li>The <tt>first_argument_type</tt> typedef has
+been corrected for the <tt>const_</tt> family of member
+function adapters (see <a href="#firstarg">below</a>).<br><tt>first_argument_type</tt> typedef 针对成员函数适配器的 <tt>const_</tt> family 进行了修正(见 <a href="mem_fun.html#firstarg">下文</a>)。</li>
+<li>The argument passed to <tt>mem_fun1_t</tt> and
+its variants is passed using the <tt>call_traits::param_type</tt>
+for the member function's argument type.<br>对于成员函数的参数类型，传递给 <tt>mem_fun1_t</tt>
+及其变体的参数，使用了 <tt>call_traits::param_type</tt>.</li>
+</ul>
+<h3 id="firstarg">first_argument_type</h3>
+<p>The standard specifies <tt>const_mem_fun1_t</tt>,
+for example, like this:</p><p>例如，标准规格的 <tt>const_mem_fun1_t</tt>
+如下：</p>
+<blockquote>
+<pre>template &lt;class S, class T, class A&gt; class const_mem_fun1_t<br> : public binary_function&lt;<strong>T*</strong>, A, S&gt; {<br>public:<br> explicit const_mem_fun1_t(S (T::*p)(A) const);<br> S operator()(<strong>const T*</strong> p, A x) const;<br>};<br></pre>
+</blockquote>
+<p>Note that the first argument to <tt>binary_function</tt>
+is <tt>T*</tt> despite the fact that the first argument to
+<tt>operator()</tt> is actually of type <tt><em>const</em>&nbsp;T*</tt>.</p>
+<p>注意，<tt>binary_function</tt>
+的第一个参数是 <tt>T*</tt>，而事实上
+<tt>operator()</tt> 的第一个参数的类型是 <tt><em>const</em>&nbsp;T*</tt>.</p>
+<p>Does this matter? Well, consider what happens when we write</p><p>这有问题吗？是的，如果我们这样写：</p>
+<blockquote>
+<pre>struct Foo { void bar(int) const; };<br>const Foo *cp = new Foo;<br>std::bind1st(std::mem_fun(&amp;Foo::bar), cp);<br></pre>
+</blockquote>
+<p>We have created a <tt>const_mem_fun1_t</tt>
+object which will effectively contain the following</p><p>我们创建了一个 <tt>const_mem_fun1_t</tt>
+对象，它包含了：</p>
+<blockquote>
+<pre>typedef Foo* first_argument_type;<br></pre>
+</blockquote>
+<p>The <tt>bind1st</tt> will then create a <tt>binder1st</tt>
+object that will use this <tt>typedef</tt> as the type of
+a member which will be initialised with <tt>cp</tt>. In
+other words, we will need to initialise a <tt>Foo*</tt>
+member with a <tt>const&nbsp;Foo*</tt> pointer!
+Clearly this is not possible, so to implement this your Standard
+Library vendor will have had to cast away the constness of <tt>cp</tt>,
+probably within the body of <tt>bind1st</tt>.</p>
+<p>接着 <tt>bind1st</tt> 将创建一个 <tt>binder1st</tt>
+对象，该对象使用这个 <tt>typedef</tt> 作为某个成员的类型，该成员将被初始化为 <tt>cp</tt>。换句话说，我们需要以一个 <tt>const&nbsp;Foo*</tt> 指针来初始化一个 <tt>Foo*</tt>
+成员！这显然是不可以的，为了实现它，你的标准库供应商不得不将 <tt>cp</tt> 的常量性 cast 掉，这可能是在 <tt>bind1st</tt> 内部完成的。</p>
+<p>This hack will not suffice with the improved <a href="binders.html">binders</a> in this library, so we
+have had to provide corrected versions of the member function adapters
+as well.</p><p>这一方法对于本库的改良式 <a href="binders.html">绑定器</a> 是不行的，所以我们必须对成员函数适配器也提供修正的版本。</p>
+<h3 id="args">Argument Types 参数类型</h3>
+<p>The standard defines <tt>mem_fun1_t</tt>, for
+example, like this (§20.3.8&nbsp;¶2):</p><p>例如，标准的 <tt>mem_fun1_t</tt> 定义如下(§20.3.8&nbsp;¶2):</p>
+<blockquote>
+<pre>template &lt;class S, class T, class A&gt; class mem_fun1_t<br> : public binary_function&lt;T*, A, S&gt; {<br>public:<br> explicit mem_fun1_t(S (T::*p)(<strong>A</strong>));<br> S operator()(T* p, <strong>A</strong> x) const;<br>};<br></pre>
+</blockquote>
+<p>Note that the second argument to <tt>operator()</tt>
+is exactly the same type as the argument to the member function. If
+this is a value type, the argument will be passed by value and copied
+twice.</p>
+<p>注意，<tt>operator()</tt>
+的第二个参数与成员函数的参数是完全相同的类型。如果它是一个值类型，则该参数将被以值的方式传递，并复制两次。</p>
+<p>However, if we were to try and eliminate this inefficiency by
+instead declaring the argument as <tt>const&nbsp;A&amp;</tt>,
+then if A were a reference type, we would have a reference to a
+reference, which is currently illegal (but see <a href="http://anubis.dkuug.dk/jtc1/sc22/wg21/docs/cwg_active.html#106">C++
+core language issue number 106)</a></p>
+<p>但是，如果我们试图去消除这一低效率的操作，将参数的声明改为 <tt>const&nbsp;A&amp;</tt>, 那么如果 A 是一个引用类型，则我们就有了一个引用的引用，当前这是非法的(不过可以参见一下 <a href="http://anubis.dkuug.dk/jtc1/sc22/wg21/docs/cwg_active.html#106">C++
+核心语言问题 106)</a></p>
+<p>So the way in which we want to declare the second argument for
+<tt>operator()</tt> depends on whether or not the member
+function's argument is a reference. If it is a reference, we want to
+declare it simply as <tt>A</tt>; if it is a value we want
+to declare it as <tt>const&nbsp;A&amp;</tt>.</p>
+<p>所以，我们如果声明
+<tt>operator()</tt> 的第二个参数，要取决于成员函数的参数是否为引用。如果是，那么我们只要将它声明为 <tt>A</tt>; 如果不是，则我们应该将它声明为 <tt>const&nbsp;A&amp;</tt>.</p>
+<p>The Boost <a href="../utility/call_traits.htm">call_traits</a>
+class template contains a <tt>param_type</tt> typedef,
+which uses partial specialisation to make precisely this decision. By
+declaring the <tt>operator()</tt> as</p>
+
+<p>Boost <a href="../utility/call_traits.htm">call_traits</a>
+类模板包含了一个 <tt>param_type</tt> typedef,
+它使用偏特化来作出恰当的决定。通过将 <tt>operator()</tt> 声明为：</p>
+<blockquote>
+<pre>S operator()(T* p, typename call_traits&lt;A&gt;::param_type x) const<br></pre>
+</blockquote>
+<p>we achieve the desired result - we improve efficiency without
+generating references to references.</p><p>我们就可以得到所希望的结果 - 我们改进了效率而且不会产生引用的引用。</p>
+<h3>Limitations 局限</h3>
+<p>The call traits template used to realise some improvements
+relies on partial specialisation, so these improvements are only
+available on compilers that support that feature. With other compilers,
+the argument passed to the member function (in the <tt>mem_fun1_t</tt>
+family) will always be passed by reference, thus generating the
+possibility of references to references.</p><p>call traits 模板的改进依赖于偏特化，所以这些改进只能在支持这一特性的编译器上使用。对于其它编译器，传递给成员函数(<tt>mem_fun1_t</tt>
+族中的)的参数总是以引用方式传递的，所以有可能产生引用的引用。</p>
+<hr>
+<p><a href="http://validator.w3.org/check?uri=referer"><img src="http://www.w3.org/Icons/valid-html401" alt="Valid HTML 4.01 Transitional" border="0" height="31" width="88"></a></p>
+<p>Revised<!--webbot bot="Timestamp" s-type="EDITED" s-format="%d %B, %Y" startspan -->
+02 December, 2006<!--webbot bot="Timestamp" endspan i-checksum="38510" --></p>
+<p><i>Copyright © 2000 Cadenza New Zealand Ltd.</i></p>
+<p><i>Distributed under the Boost Software License, Version
+1.0. (See accompanying file <a href="../../LICENSE_1_0.txt">LICENSE_1_0.txt</a>
+or copy at <a href="http://www.boost.org/LICENSE_1_0.txt">http://www.boost.org/LICENSE_1_0.txt</a>)</i></p>
+</body></html>

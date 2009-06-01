@@ -1,0 +1,63 @@
+﻿<!DOCTYPE html PUBLIC "-//W3C//DTD HTML 4.01 Transitional//EN"
+"http://www.w3.org/TR/html4/loose.dtd">
+
+<html>
+<head>
+  <meta http-equiv="Content-Language" content="en-us">
+  <meta http-equiv="Content-Type" content="text/html; charset=UTF-8">
+  <link rel="stylesheet" type="text/css" href="../../../../boost.css">
+
+  <title>Choosing Your Own Interval Type</title>
+</head>
+
+<body lang="en">
+  <h1>选择你自己的区间类型</h1>
+
+  <p>首先，你需要选择你的基类型. 为了获得一个有用的区间类型, 数字应当满足一些要求.请参见<a href="numbers.htm">这一页</a>来了解这些要求. 当你的基类型足够强壮, 你可以进行下一步，策略的选择。</p>
+
+  <p>就像你已经知道的那样，如果你不是偶然看到这个页面，区间类需要一个策略参数来描述舍入和检查策略，要做的第一件事是确认默认的策略是否适用于你的情况，如果你的基类型不是 <code>float</code>,
+  <code>double</code>, 或 <code>long double</code>, 默认的舍入策略可能是不适用的，.然而, 通过使用你的基类型来特化<code>interval_lib::rounded_math</code> , 默认的舍入策略将是适用的.</p>
+
+  <p>默认的策略定义一个进行精确运算的<code>interval</code>类型 (对于   <code>float</code>, <code>double</code>, <code>long
+  double</code>), 检测非法数字，并在每次产生空区间的时候抛出异常. 这是一个简明的描述，你应当参考相关的章节来获取关于默认策略的更详细的描述，除非你需要一些特殊行为，默认的类型在大多数的情况下都是有用的。</p>
+
+  <p>在完整定义了区间类型之后 (以及它的策略),
+  剩下的唯一要做的就是确认已经定义了常量并且<code>std::numeric_limits</code>是正确的 (如果需要的话). 现在你可以使用新版的区间类型了</p>
+
+  <h2>例子</h2>
+
+  <h3>Solving systems</h3>
+
+  <p>如果你使用区间库为了通过二分法来解决相等和不等系统问题(equation and inequation systems ), 或许<code>boost::interval&lt;double&gt;</code> 就是你所想要的，如果包含在一个受保护的舍入方式代码块中，这种计算是精确的并且它们是非常快速的(参见<a href="rounding.htm#perf">性能</a>
+  章节). 比较是"确定的"; 它可能是使用最广的比较类型，通过使用明确的比较函数，其它的比较方式同样是可以访问的，检查禁止空区间， 它们不是必须，因为如果在计算的过程中产生的一个空区间，那么在计算的最后将会有一个空区间，检查同样也禁止非法数字 (对于浮点数是NaN). 如果你仅仅使用精确的浮点数常量 (这些常量是 NaNs) 那么将会有一个小的性能影响; 你或许将会使用一个更好的知道如何对内联函数进行优化的编译器，那么所有的这此小的测试将会魔法般消失 (如果没有，那么到了你升级编译器的时候了).</p>
+
+  <h3>操作宽的区间</h3>
+
+  <p>你可能想要使用这个库来处理那些不精确的边界或不精确的数字。特别的，你可能想要使用这个库来重写和简化一个已经存在的算法，在那种情况下，你对包含性质并不感兴趣，你只对库中提供的运算函数感兴趣， 因此你不需要使用任何的舍入，可能检查也不是有用的. 使用一个"精确计算"的舍入策略(你可以想出一个特定于这种情况的舍入策略的名字
+  )以及不对任何的非法数字和空区间进行检查的检查策略.这样做之后，你所获得的库函数就会减少到最少了，两个区间的加法就仅仅是两个数字的加法).</p>
+
+  <h3>计算范围</h3>
+
+  <p>你的程序的输入可能是空区间或是非法的数字(例如, 一个数据库可以在一些字段中接受未定义的值)而且你程序的核心也可能进行一些非算术的运算，而不会一直传播空区间. 例如，在这个库中，如果另一个参数是合法的，函数<code>hull</code>可以接受一个空区间但不产生一个空的区间. 如果两个区间并不相交，函数<code>intersect</code>也能够产生空区间. 在这种情况下，每一次产生空区间或是使用非法值时是否抛出一个异常并不是很有趣的，产生和传播空区间将会更好一些，因此你需要将检查策略改变为一些类似于<code>interval_lib::checking_base&lt;T&gt;</code>的类.</p>
+
+  <h3>改变区间类型</h3>
+
+  <p>这个例子并不是处理一个完成的案例，但是伴有一个经常发生的情况，有时，通过将它转化为另一种类型的区间来改变一个区间的策略可能是很有用的，例如， 这种情况会在为了加速运算而使用未保护的区间类型的情况下发生，它其实就是舍入策略的改变， 同样也会在你临时允许产生空区间的情况下发生。它实际上是检查策略的改变，这些改变不应当被禁止，它们能够极大的增强一个程序(lisibility, 收益(interest), 性能(performance)).</p>
+<hr>
+
+  <p><a href="http://validator.w3.org/check?uri=referer"><img border="0" src=
+  "http://www.w3.org/Icons/valid-html401" alt="Valid HTML 4.01 Transitional"
+  height="31" width="88"></a></p>
+
+  <p>Revised 
+  <!--webbot bot="Timestamp" s-type="EDITED" s-format="%Y-%m-%d" startspan -->2006-12-24<!--webbot bot="Timestamp" endspan i-checksum="12172" --></p>
+
+  <p><i>Copyright &copy; 2002 Guillaume Melquiond, Sylvain Pion, Herv&eacute;
+  Br&ouml;nnimann, Polytechnic University</i></p>
+
+  <p><i>Distributed under the Boost Software License, Version 1.0. (See
+  accompanying file <a href="../../../../LICENSE_1_0.txt">LICENSE_1_0.txt</a>
+  or copy at <a href=
+  "http://www.boost.org/LICENSE_1_0.txt">http://www.boost.org/LICENSE_1_0.txt</a>)</i></p>
+</body>
+</html>

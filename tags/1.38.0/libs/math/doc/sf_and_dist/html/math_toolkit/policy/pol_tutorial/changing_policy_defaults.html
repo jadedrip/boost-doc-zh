@@ -1,0 +1,288 @@
+﻿<html>
+<head>
+<meta http-equiv="Content-Type" content="text/html; charset=UTF-8">
+<title>Changing the Policy Defaults</title>
+<link rel="stylesheet" href="../../../../../../../../doc/html/boostbook.css" type="text/css">
+<meta name="generator" content="DocBook XSL Stylesheets Vsnapshot_2006-12-17_0120">
+<link rel="start" href="../../../index.html" title="Math Toolkit">
+<link rel="up" href="../pol_tutorial.html" title="Policy Tutorial">
+<link rel="prev" href="policy_usage.html" title="So How are Policies Used Anyway?">
+<link rel="next" href="ad_hoc_dist_policies.html" title="Setting Policies for Distributions on an Ad Hoc Basis">
+</head>
+<body bgcolor="white" text="black" link="#0000FF" vlink="#840084" alink="#0000FF">
+<table cellpadding="2" width="100%"><tr>
+<td valign="top"><img alt="Boost C++ Libraries" width="277" height="86" src="../../../../../../../../boost.png"></td>
+<td align="center"><a href="../../../../../../../../index.html">Home</a></td>
+<td align="center"><a href="../../../../../../../../libs/libraries.htm">Libraries</a></td>
+<td align="center"><a href="http://www.boost.org/users/people.html">People</a></td>
+<td align="center"><a href="http://www.boost.org/users/faq.html">FAQ</a></td>
+<td align="center"><a href="../../../../../../../../more/index.htm">More</a></td>
+</tr></table>
+<hr>
+<div class="spirit-nav">
+<a accesskey="p" href="policy_usage.html"><img src="../../../../../../../../doc/html/images/prev.png" alt="Prev"></a><a accesskey="u" href="../pol_tutorial.html"><img src="../../../../../../../../doc/html/images/up.png" alt="Up"></a><a accesskey="h" href="../../../index.html"><img src="../../../../../../../../doc/html/images/home.png" alt="Home"></a><a accesskey="n" href="ad_hoc_dist_policies.html"><img src="../../../../../../../../doc/html/images/next.png" alt="Next"></a>
+</div>
+<div class="section" lang="en">
+<div class="titlepage"><div><div>
+  <h4 class="title">
+<a name="math_toolkit.policy.pol_tutorial.changing_policy_defaults"></a><a href="changing_policy_defaults.html" title="Changing the Policy Defaults">
+        改变缺省策略(Changing the Policy Defaults)</a>
+</h4>
+</div></div></div>
+<p>
+          这个库所使用的缺省策略通过使用配置宏(configuration
+        macro)来改变。</p>
+<p>
+          例如，将<code class="computeroutput"><span class="special">-</span><span class="identifier">DBOOST_MATH_DOMAIN_ERROR_POLICY</span><span class="special">=</span><span class="identifier">errno_on_error</span></code>
+          传递给你的编译器将会在出现定义域错误时设置<code class="computeroutput"><span class="special">::</span><span class="identifier">errno</span></code> 并返回 NaN 而不是通常的缺省抛出异常<code class="computeroutput"><span class="identifier">std</span><span class="special">::</span><span class="identifier">domain_error</span></code>
+          。</p>
+<div class="tip"><table border="0" summary="Tip">
+<tr>
+<td rowspan="2" align="center" valign="top" width="25"><img alt="[Tip]" src="../../../../../../../../doc/html/images/tip.png"></td>
+<th align="left">提示</th>
+</tr>
+<tr><td align="left" valign="top">
+<p>
+            对于 Microsoft Visual Studio，你可以在 Project Property Page,
+            C/C++, Preprocessor, Preprocessor 进行如下定义：</p>
+<p>
+            
+</p>
+<pre class="programlisting"><span class="identifier">BOOST_MATH_ASSERT_UNDEFINED_POLICY</span><span class="special">=</span><span class="number">0</span>
+<span class="identifier">BOOST_MATH_OVERFLOW_ERROR_POLICY</span><span class="special">=</span><span class="identifier">errno_on_error</span></pre>
+<p>
+          </p>
+<p>
+          这可能对避免与预编译头文件(pre-compiled headers)可能意味着与下面的的代码等价的复杂性：</p>
+<p>
+            
+</p>
+<pre class="programlisting"><span class="preprocessor">#define</span> <span class="identifier">BOOST_MATH_ASSERT_UNDEFINED_POLICY</span> <span class="keyword">false</span>
+<span class="preprocessor">#define</span> <span class="identifier">BOOST_MATH_OVERFLOW_ERROR_POLICY</span> <span class="identifier">errno_on_error</span></pre>
+<p>
+          </p>
+<p>
+            可能会被忽略。</p>
+<p>
+            编译器命令行显示：</p>
+<p>
+            
+</p>
+<pre class="programlisting"><span class="special">/</span><span class="identifier">D</span> <span class="string">"BOOST_MATH_ASSERT_UNDEFINED_POLICY=0"</span>
+<span class="special">/</span><span class="identifier">D</span> <span class="string">"BOOST_MATH_OVERFLOW_ERROR_POLICY=errno_on_error"</span></pre>
+<p>
+          </p>
+</td></tr>
+</table></div>
+<p>
+  对于这一点有一个非常的重要的警告：</p>
+<div class="important"><table border="0" summary="Important">
+<tr>
+<td rowspan="2" align="center" valign="top" width="25"><img alt="[Important]" src="../../../../../../../../doc/html/images/important.png"></td>
+<th align="left">重要</th>
+</tr>
+<tr><td align="left" valign="top">
+<p>
+            <span class="bold"><strong><span class="emphasis"><em>通过设置配置宏来改变缺省策略必须在这个程序中的每个编译单元中一致地改变。(Default policies changed by setting configuration
+            macros must be changed uniformly in every translation unit in the program).</em></span></strong></span>
+          </p>
+<p>
+          没有遵守这个规则可能导致违反“One Definition Rule(ODR)”并导致不可预测的程序结果。</p>
+</td></tr>
+</table></div>
+<p>
+  这就意味着只有两种使用这些宏的安全方式：</p>
+<div class="itemizedlist"><ul type="disc">
+<li>
+      在<a href="../../../../../../../../boost/math/tools/user.hpp" target="_top">boost/math/tools/user.hpp</a>中修改它们，这使得缺省的设置是基于安装范围(installation-wide)。但不幸的是，如果你使用的是预安装的Boost发行版本(Boost Distribution)，这将会很不方便(例如在Linux上)。</li>
+<li>
+      在你的工程的Makefile或构建环境中定义这些宏，使得在所有的编译单元中它们都是一致的。</li>
+</ul>
+</div>
+<p>
+          你<span class="bold"><strong>不应该</strong></span> 做的是：</p>
+<div class="itemizedlist"><ul type="disc">
+  <li>
+            在源文件中使用<code class="computeroutput"><span class="preprocessor">#define</span></code>
+          ，因为这样做几乎确定会破坏你的程序，除非你绝对肯定程序仅限于一个编译单元(translation unit)。</li>
+</ul></div>
+<p>
+          是的，你将会在我们的例子程序中发现我们将会破坏这个规则：这是因为我们知道这个例子程序只会有一个编译单元(translation unit)：不要说你没有被提醒过！</p>
+<p>
+  </p>
+<p>
+            下面的例子程序显示了当遇到一个非法参数的时候，使用 BOOST_MATH_DOMAIN_ERROR_POLICY
+  。出于这个程序的目的，我们将一个负的自由度(degree of freedom)传递给一个学生t分布(Student's t Distribution)。</p>
+<p>
+  </p>
+<p>
+  因为我们知道这是一个单文件的程序，所以我们可以简单地添加：</p>
+<p>
+          
+</p>
+<pre class="programlisting"><span class="preprocessor">#define</span> <span class="identifier">BOOST_MATH_DOMAIN_ERROR_POLICY</span> <span class="identifier">ignore_error</span>
+</pre>
+<p>
+  </p>
+<p>
+  来改变缺省的策略，使得在遇到定义域错误的时候返回NaN，另一方面我们可以使用：</p>
+<p>
+          
+</p>
+<pre class="programlisting"><span class="preprocessor">#define</span> <span class="identifier">BOOST_MATH_DOMAIN_ERROR_POLICY</span> <span class="identifier">errno_on_error</span>
+</pre>
+<p>
+  </p>
+<p>
+            来确保当遇到定义域错误时设置<code class="computeroutput"><span class="special">::</span><span class="identifier">errno</span></code>
+  并返回NaN。</p>
+<p>
+  </p>
+<p>
+  这只在假定程序只有一个编译单元(translation unit)并且我们在任何的#include之前使用#define的时候这种做法才是安全的。注意：如果我们把#define放在#include后面的时候就不会有任何作用！一个类似于下面的warning</p>
+<p>
+          
+</p>
+<pre class="programlisting">warning C4005: 'BOOST_MATH_OVERFLOW_ERROR_POLICY' : macro redefinition</pre>
+<p>
+  </p>
+<p>
+  是不会产生预期结果的肯定提示。</p>
+<p>
+  </p>
+<p>
+            我们将包含一些需要的头文件：</p>
+<p>
+  </p>
+<p>
+            
+</p>
+<pre class="programlisting"><span class="comment">// Boost
+</span><span class="preprocessor">#include</span> <span class="special">&lt;</span><span class="identifier">boost</span><span class="special">/</span><span class="identifier">math</span><span class="special">/</span><span class="identifier">distributions</span><span class="special">/</span><span class="identifier">students_t</span><span class="special">.</span><span class="identifier">hpp</span><span class="special">&gt;</span>
+   <span class="keyword">using</span> <span class="identifier">boost</span><span class="special">::</span><span class="identifier">math</span><span class="special">::</span><span class="identifier">students_t</span><span class="special">;</span>  <span class="comment">// Probability of students_t(df, t).
+</span>
+<span class="comment">// std
+</span><span class="preprocessor">#include</span> <span class="special">&lt;</span><span class="identifier">iostream</span><span class="special">&gt;</span>
+   <span class="keyword">using</span> <span class="identifier">std</span><span class="special">::</span><span class="identifier">cout</span><span class="special">;</span>
+   <span class="keyword">using</span> <span class="identifier">std</span><span class="special">::</span><span class="identifier">endl</span><span class="special">;</span>
+
+<span class="preprocessor">#include</span> <span class="special">&lt;</span><span class="identifier">stdexcept</span><span class="special">&gt;</span>
+   <span class="keyword">using</span> <span class="identifier">std</span><span class="special">::</span><span class="identifier">exception</span><span class="special">;</span></pre>
+<p>
+  </p>
+<p>
+  </p>
+<p>
+  接下来，我们定义程序的main()比函数来使用非法的自由度参数调用学生t分布(Student's t Distribution)。这个程序被设置为处理异常或返回NaN：</p>
+<p>
+  </p>
+<p>
+            
+</p>
+<pre class="programlisting"><span class="keyword">int</span> <span class="identifier">main</span><span class="special">()</span>
+<span class="special">{</span>
+   <span class="identifier">cout</span> <span class="special">&lt;&lt;</span> <span class="string">"Example error handling using Student's t function. "</span> <span class="special">&lt;&lt;</span> <span class="identifier">endl</span><span class="special">;</span>
+   <span class="identifier">cout</span> <span class="special">&lt;&lt;</span> <span class="string">"BOOST_MATH_DOMAIN_ERROR_POLICY is set to: "</span>
+      <span class="special">&lt;&lt;</span> <span class="identifier">BOOST_STRINGIZE</span><span class="special">(</span><span class="identifier">BOOST_MATH_DOMAIN_ERROR_POLICY</span><span class="special">)</span> <span class="special">&lt;&lt;</span> <span class="identifier">endl</span><span class="special">;</span>
+
+   <span class="keyword">double</span> <span class="identifier">degrees_of_freedom</span> <span class="special">=</span> <span class="special">-</span><span class="number">1</span><span class="special">;</span> <span class="comment">// A bad argument!
+</span>   <span class="keyword">double</span> <span class="identifier">t</span> <span class="special">=</span> <span class="number">10</span><span class="special">;</span>
+
+   <span class="keyword">try</span>
+   <span class="special">{</span>
+      <span class="identifier">errno</span> <span class="special">=</span> <span class="number">0</span><span class="special">;</span>
+      <span class="identifier">students_t</span> <span class="identifier">dist</span><span class="special">(</span><span class="identifier">degrees_of_freedom</span><span class="special">);</span> <span class="comment">// 如果如果的话，这里会抛出异常
+</span>      <span class="keyword">double</span> <span class="identifier">p</span> <span class="special">=</span> <span class="identifier">cdf</span><span class="special">(</span><span class="identifier">dist</span><span class="special">,</span> <span class="identifier">t</span><span class="special">);</span>
+      <span class="comment">// 测试其它的方式报告错误:
+</span>      <span class="keyword">if</span><span class="special">((</span><span class="identifier">boost</span><span class="special">::</span><span class="identifier">math</span><span class="special">::</span><span class="identifier">isnan</span><span class="special">)(</span><span class="identifier">p</span><span class="special">))</span>
+      <span class="special">{</span>
+         <span class="identifier">cout</span> <span class="special">&lt;&lt;</span> <span class="string">"cdf returned a NaN!"</span> <span class="special">&lt;&lt;</span> <span class="identifier">endl</span><span class="special">;</span>
+         <span class="identifier">cout</span> <span class="special">&lt;&lt;</span> <span class="string">"errno is set to: "</span> <span class="special">&lt;&lt;</span> <span class="identifier">errno</span> <span class="special">&lt;&lt;</span> <span class="identifier">endl</span><span class="special">;</span>
+      <span class="special">}</span>
+      <span class="keyword">else</span>
+         <span class="identifier">cout</span> <span class="special">&lt;&lt;</span> <span class="string">"Probability of Student's t is "</span> <span class="special">&lt;&lt;</span> <span class="identifier">p</span> <span class="special">&lt;&lt;</span> <span class="identifier">endl</span><span class="special">;</span>
+   <span class="special">}</span>
+   <span class="keyword">catch</span><span class="special">(</span><span class="keyword">const</span> <span class="identifier">std</span><span class="special">::</span><span class="identifier">exception</span><span class="special">&amp;</span> <span class="identifier">e</span><span class="special">)</span>
+   <span class="special">{</span>
+      <span class="identifier">std</span><span class="special">::</span><span class="identifier">cout</span> <span class="special">&lt;&lt;</span>
+         <span class="string">"\n"</span><span class="string">"Message from thrown exception was:\n   "</span> <span class="special">&lt;&lt;</span> <span class="identifier">e</span><span class="special">.</span><span class="identifier">what</span><span class="special">()</span> <span class="special">&lt;&lt;</span> <span class="identifier">std</span><span class="special">::</span><span class="identifier">endl</span><span class="special">;</span>
+   <span class="special">}</span>
+
+   <span class="keyword">return</span> <span class="number">0</span><span class="special">;</span>
+<span class="special">}</span> <span class="comment">// int main()</span></pre>
+<p>
+  </p>
+<p>
+  </p>
+<p>
+            下面是使用缺省的编译选项时的程序的输出(确实抛出了异常)：</p>
+<p>
+          
+</p>
+<pre class="programlisting">Example error handling using Student's t function.
+BOOST_MATH_DOMAIN_ERROR_POLICY is set to: throw_on_error
+
+Message from thrown exception was:
+   Error in function boost::math::students_t_distribution&lt;double&gt;::students_t_distribution:
+   Degrees of freedom argument is -1, but must be &gt; 0 !
+</pre>
+<p>
+  </p>
+<p>
+            另一方面，让我们使用下面的编译选项来编译：</p>
+<p>
+          
+</p>
+<pre class="programlisting"><span class="preprocessor">#define</span> <span class="identifier">BOOST_MATH_DOMAIN_ERROR_POLICY</span> <span class="identifier">ignore_error</span>
+</pre>
+<p>
+  </p>
+<p>
+            现在程序的输出为：</p>
+<p>
+          
+</p>
+<pre class="programlisting">Example error handling using Student's t function.
+BOOST_MATH_DOMAIN_ERROR_POLICY is set to: ignore_error
+cdf returned a NaN!
+errno is set to: 0
+</pre>
+<p>
+  </p>
+<p>
+            最后让我们使用下面的编译选项来编译：</p>
+<p>
+          
+</p>
+<pre class="programlisting"><span class="preprocessor">#define</span> <span class="identifier">BOOST_MATH_DOMAIN_ERROR_POLICY</span> <span class="identifier">errno_on_error</span>
+</pre>
+<p>
+  </p>
+<p>
+            程序输出为：</p>
+<p>
+          
+</p>
+<pre class="programlisting">Example error handling using Student's t function.
+BOOST_MATH_DOMAIN_ERROR_POLICY is set to: errno_on_error
+cdf returned a NaN!
+errno is set to: 33
+</pre>
+<p>
+  </p>
+</div>
+<table xmlns:rev="http://www.cs.rpi.edu/~gregod/boost/tools/doc/revision" width="100%"><tr>
+<td align="left"></td>
+<td align="right"><div class="copyright-footer">Copyright ?2006 , 2007, 2008 John Maddock, Paul A. Bristow, Hubert
+      Holin, Xiaogang Zhang and Bruno Lalande<p>
+        Distributed under the Boost Software License, Version 1.0. (See accompanying
+        file LICENSE_1_0.txt or copy at <a href="http://www.boost.org/LICENSE_1_0.txt" target="_top">http://www.boost.org/LICENSE_1_0.txt</a>)
+      </p>
+</div></td>
+</tr></table>
+<hr>
+<div class="spirit-nav">
+<a accesskey="p" href="policy_usage.html"><img src="../../../../../../../../doc/html/images/prev.png" alt="Prev"></a><a accesskey="u" href="../pol_tutorial.html"><img src="../../../../../../../../doc/html/images/up.png" alt="Up"></a><a accesskey="h" href="../../../index.html"><img src="../../../../../../../../doc/html/images/home.png" alt="Home"></a><a accesskey="n" href="ad_hoc_dist_policies.html"><img src="../../../../../../../../doc/html/images/next.png" alt="Next"></a>
+</div>
+</body>
+</html>

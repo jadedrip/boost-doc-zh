@@ -1,0 +1,755 @@
+<!DOCTYPE HTML PUBLIC "-//W3C//DTD HTML 4.01 Transitional//EN" "http://www.w3.org/TR/html4/loose.dtd">
+<html><head><!--
+(C) Copyright 2002-4 Robert Ramey - http://www.rrsd.com . 
+Use, modification and distribution is subject to the Boost Software
+License, Version 1.0. (See accompanying file LICENSE_1_0.txt or copy at
+http://www.boost.org/LICENSE_1_0.txt)
+-->
+
+
+
+  
+  
+  <meta http-equiv="Content-Type" content="text/html; charset=UTF-8">
+
+
+
+  
+  
+  <link rel="stylesheet" type="text/css" href="../../../boost.css">
+
+
+
+  
+  
+  <link rel="stylesheet" type="text/css" href="style.css">
+
+
+
+  
+  
+  <title>Serialization - Implementation Notes</title></head>
+
+<body link="#0000ff" vlink="#800080">
+
+
+
+<table summary="header" border="0" cellpadding="7" cellspacing="0" width="100%">
+
+
+
+  <tbody>
+
+
+    <tr>
+
+
+ 
+    <td valign="top" width="300"> 
+      
+      
+      
+      <h3><a href="../../../index.htm"><img alt="C++ Boost" src="../../../boost.png" border="0" height="86" width="277"></a></h3>
+
+
+
+    </td>
+
+
+
+    <td valign="top"> 
+      
+      
+      
+      <h1 align="center">Serialization序列化</h1>
+
+
+
+      
+      
+      
+      <h2 align="center">实现的说明</h2>
+
+
+
+    </td>
+
+
+
+  </tr>
+
+
+
+  
+  
+  </tbody>
+</table>
+
+
+
+<hr>
+<dl class="page-index">
+
+
+
+  <dt><a href="#functiontemplateordering">Partial Function Template Ordering</a>
+  </dt>
+
+
+  <dt><a href="#charencoding">字符编码</a>
+  </dt>
+
+
+  <dt><a href="#tempatesyntax">模板调用语法</a>
+  </dt>
+
+
+  <dt><a href="#partialtemplatespecialization">模板偏特化</a>
+  </dt>
+
+
+  <dt><a href="#othercompilerissues">特定的编译器/库问题</a>
+  </dt>
+
+
+  
+  
+  <dl class="page-index">
+
+
+
+    <dt><a href="#gcc3x">GCC 3.X, 4.X</a>
+    </dt>
+
+
+    <dt><a href="#gcc295">GCC 2.95</a>
+    </dt>
+
+
+    <dt><a href="#intel80">Intel 8.0</a>
+    </dt>
+
+
+    <dt><a href="#vc80">Visual C++ 8.0</a>
+    </dt>
+
+
+    <dt><a href="#vc71">Visual C++ 7.1</a>
+    </dt>
+
+
+    <dt><a href="#vc70">Visual C++ 7.0</a>
+    </dt>
+
+
+    <dt><a href="#vc6">Visual C++ 6.0</a>
+    </dt>
+
+
+    <dt><a href="#borland">Borland 5.64 and 5.51</a>
+    </dt>
+
+
+    <dt><a href="#comeau">Comeau 4.3.3</a>
+    </dt>
+
+
+    <dt><a href="#codewarrior9">Code Warrior 9.x</a>
+    </dt>
+
+
+    <dt><a href="#codewarrior">Code Warrior 8.3</a>
+    </dt>
+
+
+    <dt><a href="#tru64">TRU64</a>
+    </dt>
+
+
+    <dt><a href="#dinkumware">Dinkumware 库</a>
+    </dt>
+
+
+    <dt><a href="#stlport">STLPort 4.5.3</a>
+  </dt>
+
+
+  
+  
+  </dl>
+
+
+
+</dl>
+
+
+
+
+<h3><a name="functiontemplateordering">Partial Function Template Ordering</a></h3>
+
+
+不是所有C++编译器都可以正确地支持 partial function template ordering (PFTO). 有些编译器就不能编译以下代码：
+<pre><code>
+template&lt;class Archive, class T&gt;
+void serialize(
+    Archive &amp; ar, 
+    T &amp; t, 
+    const unsigned int file_version
+){
+    ...
+}
+
+template&lt;class Archive, class T&gt;
+void serialize(
+    Archive &amp; ar, 
+    my_template&lt;T&gt; &amp; t, 
+    const unsigned int file_version
+){
+    ...
+}
+</code></pre>
+
+
+在这种环境下，serialization 库只能对第一个模板使用不同的缺省定义：
+<pre><code>
+template&lt;class Archive, class T&gt;
+void serialize(
+    Archive &amp; ar, 
+    T &amp; t, 
+    const unsigned long int file_version  // 注：改为 long
+){
+    ...
+}
+</code></pre>
+
+
+现在，第二个模板与第一个不匹配了，所以不再需要 PFTO 也没有编译错误了。当 serialization 库调用
+<pre><code>
+serialize(ar, t, 0);
+</code></pre>
+
+
+时，以 integer
+作为第三个参数的模板会首先被匹配。如果存在这样的匹配，就实例化匹配的模板然后调用它。如果不存在这样的匹配，就通过将参数转换为其它类型来尝试其它模
+板。这种情况下，第三个参数会被转换为 long 以匹配第一个模板 -
+即缺省的那个。所以在本例中，第一个模板会被实例化并调用。我们就用函数重载来实现了 PFTO
+的效果。
+
+<p>这要依赖于一个已知不符合标准的编译器的未定义行为。换句话说，不保证对所有编译器有效。如果一个编译器不能正确支持 PFTO 而且以上方法也不能使用，则该编译器就不能支持非介入式序列化。以编写本文为止，尚未遇到这样的编译器。
+</p>
+
+
+<p>另一方面，在正确支持 PFTO 的编译器上使用这一 "技巧" 又会有问题。为此，我们定义了宏 <code style="white-space: normal;">BOOST_PTFO</code>，对于不符合标准的编译它被定义为 <code style="white-space: normal;">long</code>，而对于符合标准的编译器则定义为空。这样，serialization 库对于第一个模板将使用不同的缺省定义：
+</p>
+
+
+<pre><code>
+template&lt;class Archive, class T&gt;
+void serialize(
+    Archive &amp; ar, 
+    T &amp; t, 
+    const unsigned BOOST_PFTO int file_version  // 注：改为 BOOST_PFTO
+){
+    ...
+}
+</code></pre>
+
+
+
+
+<h3><a name="charencoding">字符编码</a></h3>
+
+与宽字符相结合的字符编码问题要比它看起来的样子复杂得多。当前的库定义了3种存档格式(文本，二进制和 XML), 包括宽字符和窄字符，并试图在不同的编译器和库之间移植。通过对以上所有因素的全盘考虑，得到的结果是，根据以下规则设置缺省的编码。
+<ul>
+
+
+
+  <li>所有文本存档(即 <code style="white-space: normal;">text_?archive</code>)将在当前流的 <code style="white-space: normal;">locale</code> 下处理文本输出。通常这不会改变字符串数据。
+  </li>
+
+
+  <li>要处理 Microsoft 编译器产生的二进制输出时，流必须以模式 <code style="white-space: normal;">ios::binary</code> 打开。不这样做就会导致 0x0d 字符(回车符)被从输入流中删除，如果它后跟一个 0x0a 字符(换行符)。这将破坏输入并使得文件不可读。在 UNIX 系统上则不要求 <code style="white-space: normal;">ios::binary</code>，如果用了也会被忽略。
+  </li>
+
+
+  <li>字符型 XML 存档(即 xml_oarchive)将依据当前流的 <code style="white-space: normal;">locale</code> 来处理 XML 输出的字符编码。
+  </li>
+
+
+  <li>宽字符 XML 存档(即 xml_woarchive) 将处理以 UTF-8 编码的文件。
+  </li>
+
+
+</ul>
+
+为了使用这些字符编码，在存档被构造时，系统会改变存档所用的 i/o 流的 <code style="white-space: normal;">locale</code>，稍后该流的
+local 会恢复为原来的初始值。该行为是可以被改变的，方法是在打开存档时指定 <code style="white-space: normal;">boost::archive::no_codecvt</code>.  这样，流的 <code style="white-space: normal;">locale</code> 就不会被 serialization 库改变。
+<p>注意，宽字符文本和 XML 存档中的编码转换会改变保存在存档中的 <code style="white-space: normal;">std::string</code> 数据。假设一个普通(多字节)字符串被写出到一个宽字符流。我们的系统会在写出之前用当前的 <code style="white-space: normal;">locale</code>
+来将它翻译为宽字符的字符串。到读入的时候，它再被翻译回一个(多字节)字符串。如果读入该存档的平台上的 <code style="white-space: normal;">locale</code> 不同于写出时的平台上的 <code style="white-space: normal;">locale</code>, 则真实的字符串数据可能会被序列化过程所改写。为了避免这一点，要么避免使用依赖于多字节字符串的 <code style="white-space: normal;">locale</code>，要么确保在读入存档前已经正确设置了 <code style="white-space: normal;">locale</code>.
+</p>
+
+
+<p>要产生宽字符文本输出(即在 Win32 系统上的 16 位字符)，按以下方法操作。
+</p>
+
+
+<ul>
+
+
+
+  <li>打开一个宽字符流。
+  </li>
+
+
+  <li>将流的 <code style="white-space: normal;">locale</code> 改为使用 
+     <code style="white-space: normal;">boost::archive::codecvt_null&lt;OStream::char_type&gt;</code>
+  </li>
+
+
+  <li>以标志 <code style="white-space: normal;">no_codecvt</code> 创建存档<code style="white-space: normal;"></code>。
+  </li>
+
+
+</ul>
+
+自然，输入的过程与以上过程相对称。
+<h3><a name="partialtemplatespecialization">模板偏特化</a></h3>
+
+不支持模板偏特化的编译器将不能编译以下代码。为通过编译，就要删掉 <code style="white-space: normal;">const</code>.
+<pre><code>
+void f(A const* a, text_oarchive&amp; oa)
+{
+  oa &lt;&lt; a;
+}
+</code></pre>
+
+
+
+<h3><a name="tempatesyntax">模板调用语法</a></h3>
+
+有些编译器不认可以下语法：
+<pre><code>
+ar.template register_type&lt;T&gt;();
+</code></pre>
+
+它用于 "注册" 多态类的派生指针。真正的函数原型是：
+<pre><code>
+template&lt;T&gt;
+void register_type(T * t = NULL);
+</code></pre>
+
+所以，你可以用 <code style="white-space: normal;">ar.register_type(static_cast&lt;T *&gt;(NULL))</code> 替代上述语法。
+
+<h3><a name="othercompilerissues">特定的编译器/库问题</a></h3>
+
+
+
+
+<h4><a name="gcc3x">GCC 3.X, 4.X</a></h4>
+
+
+
+<ul>
+
+
+
+    <li>Cygwin 和 MinGW 的 GCC 版本不支持宽字符 I/O.  
+    所以所有使用了宽字符 I/O 的测试都会失败。如果宽字符 I/O 支持被加入到 STLPort 中，则所有测试就可成功。
+    </li>
+
+
+  <li>该编译器会对在多态类中使用非虚拟析构函数给出很长的警告信息。这个警告已经被仔细考虑过了，并且生成该警告的代码不会再修改。这时，应
+该忽略该警告，因为在本库的用法中，将析构函数改为虚拟的会引发问题。作为另一个选择，可以令基类的析构函数为 "protected"
+以解决这个警告信息。在使用 bjam 构建 serialization
+库和测试时，这些警告信息是被禁止的。在构建你自己的应用时，也可以通过在编译命令行中加入以下选项来禁止该警告信息：
+    
+    <pre><code>
+    -Wno-non-virtual-dtor
+    -Wno-ctor-dtor-privacy
+    </code></pre>
+
+
+
+  </li>
+
+
+</ul>
+
+
+
+<h4><a name="gcc295">GCC 2.95</a></h4>
+
+除了以上问题以外，还有：<br>
+
+
+
+<ul>
+
+
+
+    <li>serialization 库的正常功能依赖于模板流的实现。所以必须使用 STLPort 来构建本库。
+    </li>
+
+
+  <li>多态存档的测试会失败。
+    </li>
+
+
+  <li>XML 序列化仅可与版本 1.6x 的 spirit 合用。为了在该编译器下构造和使用本库，你必须使用版本 1.6x 的 spirit 而不是 boost所带的最新版本。请见 <a href="release.html">Release Notes</a>. 
+  </li>
+
+
+</ul>
+
+
+
+<h4><a name="Intel80">Intel C++ 8.0</a></h4>
+
+
+
+没有已知的问题。所有测试均可在调试和发布模式下编译和运行。
+
+<h4><a name="vc80">Visual C++ 8.0</a></h4>
+
+该编译器对于调用来自于标准库的函数，如果认为有安全风险就会产生警告。而序列化正依赖于一些这样的调用，所以使用 serialization 库的程序会获得警告信息。可以通过在命令行包含以下开关来禁止该信息：
+    
+<pre><code>
+    /wd4996
+    </code></pre>
+
+
+
+
+<h4><a name="vc71">Visual C++ 7.1</a></h4>
+从一个定义于DLL中的存档类进行派生 ... 将无法工作。这是由于 VC++ 以 __decl(dllexport) 和
+__decl(dllimport) 规格来处理模板代码。基本上，这个编译器要求所有的实例化具有相同的规格 - 即使它们有不同的模板参数。例子 <code style="white-space: normal;">
+demo_portable_iarchive.cpp</code> 为了可以工作，将不得不重新改为库的形式，或是类似于预定义存档那样的dll.
+<p>这个编译器缺省情况下是不激活 RTTI 或异常处理的。虽然对于使用 serialization 包这些并不是严格要求的。但是例子程序和测试程序都假设了它们是激活的。所以如果你想构建和运行这些程序，就应确保你的命令行或 IDE 设置激活了这些特性开关。</p><p>编译器可以视 <code style="white-space: normal;">wchar_t</code> 为一个 short 整数或一个内部类型。如果在编译命令行指定了 <code style="white-space: normal;">/Zc:wchar_t</code>，则 <code style="white-space: normal;">wchar_t</code> 被视为内部类型 - 否则被视为16位整数的同义词。本库可以按其中任一种方式来使用 - <strong>但是</strong> - 库<strong>与</strong>应用程序必须以相同的开关设置来编译。注意，<code style="white-space: normal;">BJAM</code> 
+缺省就包含了这个开关。因此，如果想使用由 <code style="white-space: normal;">BJAM</code> 构建的本库，你必须在编译你自己的应用程序时包含这一开关。</p>
+
+
+<h5>使用 Visual C++ IDE</h5>
+本库中包含了一个 VC++ 7.1 的"解决方案" - <code style="white-space: normal;">BoostSerializationLibrary</code>，以及一组项目文件 - 每个示例和测试程序各一个。如果你决定使用这些配置，请考虑以下内容：
+<ul>
+
+
+
+    <li>这些项目都假设测试程序是以 bjam 在缺省位置进行构建的。这需要你的 boost 主目录下有一个
+bin 子目录。在该目录下有一整套根据构建方式所维护的目标文件和库文件。最简单的方法是执行 runtest 脚本来构建，该脚本会使用
+bjam. (见后) 如果库不在上述位置，则必须相应地修改项目文件。 </li>
+
+
+  <li>对于 boost 所支持的各种不同构建组合，都有各自的项目配置。如对应于发版、调试版、静态、静态多线程等等。
+    </li>
+
+
+  <li>如果你想使用或调试库的DLL版本以及相应的测试程序，则要修改项目文件，定义 <code style="white-space: normal;">BOOST_ALL_DYN_LINK=1</code>.
+    请注意，对于运行用的可执行文件，<code style="white-space: normal;">PATH</code>
+    环境变量必须包含 boost 库的DLL版本所属的目录。
+    </li>
+
+
+  <li>如果你在用 boost 库构建自己的项目时遇到困难，请将你自己项目的项目设置与这里的某一个配置比较一下。有时候 VC
+会要求各个项目及项目所用的库要设置一致，以便正确链接。特别是要检查异常的支持、运行期的类型识别(RTTI)，以及对宽字符的内在支持。本库的标准版
+本假设以上工具都是激活的。而用 IDE wizard 生成的项目缺省情况下是不激活这些特性的。 </li>
+
+
+  <li>在
+试图构建一个项目或查看项目属性时，你经常会遇到一个提示为 "unspecified error"
+的消息对话框。它通常出现在你改变了构建配置选择的时候。你可以到 "Build" 菜单项，选择 "Configuration Manager"
+并为这个项目选择一个构建配置，这样就可以 "修正" 这个问题了。 </li>
+
+
+  <li>要测试 boost 库是否正确构建，你可以按我们所用的方法构建并测试它。方法如下：
+    
+    
+    
+    <ol>
+
+
+
+        <li>正确一个 bjam.exe 的拷贝
+        </li>
+
+
+      <li>构建 process_jam_log
+        </li>
+
+
+      <li>构建 compiler_status
+	</li>
+
+
+      <li>执行 runtest.bat
+    </li>
+
+
+    
+    
+    </ol>
+这样就会在你的系统上构建 serialization 库并运行测试程序。如果出现了多个测试失败，那么估计你的项目也不会正常工作。如果多数测试可以通过，那么你可以相信，只要你的项目设置与库中的一致，它们就会正常工作。
+  </li>
+
+
+</ul>
+
+
+
+
+<h4><a name="vc70">Visual C++ 7.0</a></h4>
+
+
+
+<ul>
+
+
+
+    <li>"pimpl" 示例程序链接失败。原因不明。
+    </li>
+
+
+  <li>XML 序列化只能与版本 1.6x 的 spirit 一起用。为了在这个编译器中构建和使用本库，你必须使用版本 1.6x 而不是随 boost 提供的最新版本。请见 <a href="release.html">Release Notes</a>.
+    </li>
+
+
+  <li>这个编译器不支持模板偏特化。而新的 <code>shared_ptr</code> 序列化实现依赖于支持模板偏特化的编译器。由于这个编译器不能提供该特性。为了序列化 <code style="white-space: normal;">shared_ptr&lt;A&gt;</code>,
+    请在头文件中调用宏 <code style="white-space: normal;">BOOST_SERIALIZATION_SHARED_PTR(A)</code>&nbsp;.
+    </li>
+
+
+  <li>不支持模板偏特化还导致了 <code style="white-space: normal;">std::map</code> 序列化的问题。为了序列化该类型的实例，请对 map 的关键字类型调用 BOOST_BROKEN_COMPILER_TYPE_TRAITS_SPECIALIZATION&nbsp;.
+  </li>
+
+
+</ul>
+
+
+
+<h4><a name="vc6">Visual C++ 6.5</a></h4>
+除了上述 Visual C++ 7.0 的问题以外，再加上：
+<ul>
+
+
+
+    <li>外联的模板定义无法辨认，并导致混乱的错误信息。对于 save/load/serialize 成员函数模板，都必须在类定义的内部进行定义。该特性对于 <code style="white-space: normal;">demo_pimpl</code> 是必须的。因此，该程序编译失败。目前该问题尚不能解决。
+    </li>
+
+
+  <li>这个编译器不将 <code style="white-space: normal;">wchar_t</code> 视为一个独立的类型。它将
+    <code style="white-space: normal;">wchar_t</code> 定义为 <code style="white-space: normal;">short int</code> 的别名。一般来说，这没什么问题。但是在特定的环境下，如为保存/导入宽字符数据而重载存档操作符，就会产生令人奇怪的结果。
+    </li>
+
+
+  <li>在特定情况下，程序可能会链接失败，并给出以下信息：LIN1179 - "invalid or corrupt file: duplicate comdat".  根据 <a href="http://groups.google.com/groups?th=8a05c82c4ffee280">
+    http://groups.google.com/groups?th=8a05c82c4ffee280
+    </a> (查找 P78)，LNK1179 错误发生在：
+    
+    
+    
+    <ul>
+
+
+
+        <li>模板类带至少两个参数。
+        </li>
+
+
+      <li>该模板至少使用了两次，第一个参数相同而第二个参数不同。
+        </li>
+
+
+      <li>其静态成员变量的类型至少有一个基类 (另一种情形是使用了没有基类的成员)。
+    </li>
+
+
+    
+    
+    </ul>
+为了让本库可以用于这个编译器，我们进行了最大的努力。即使如此，效果也不是十分成功。对于这个编译器，在以下条件下该错误信息依然会出现：
+    
+    
+    
+    <ul>
+
+
+
+        <li>序列化一个有多个基类的类时。该问题导致两个测试程序失败。我还没有找到解决的方法。
+        </li>
+
+
+      <li>在同一个代码模块中使用多于一个的存档类型。这在实际工作中可以很容易避免。
+    </li>
+
+
+    
+    
+    </ul>
+
+
+
+    </li>
+
+
+  <li>使用本库的代码模块在超过某个大小时，会引发 <i>严重错误 C1204: compiler limit : internal structure overflow</i>.  解决的方法是将模块分成多个小模块。
+  </li>
+
+
+</ul>
+
+
+
+<h4><a name="borland">Borland 5.64 and 5.51</a></h4>
+
+
+
+<ul>
+
+
+
+    <li><code style="white-space: normal;">enum</code> 数据成员不能被序列化。将它们转为整数可以避免这个问题。
+    </li>
+
+
+  <li>如果类的序列化函数不可访问，要么把它们改为公有的，要么包含友元声明，就象在 <a href="serialization.html#member">类的序列化 - 成员函数</a> 一节中所介绍的，这样可以通过编译但运行时会失败。
+    </li>
+
+
+  <li>对于不使用 rtti 的定制扩展类型的测试失败(只是版本 5.64!)。
+    </li>
+
+
+  <li>以发布模式构建测试程序失败。看起来这是 boost 测试系统和这个编译器的问题。
+    </li>
+
+
+  <li>XML 序列化仅可与版本 1.6x 的 spirit 合用。为了在该编译器下构造和使用本库，你必须使用版本 1.6x 的 spirit 而不是 boost所带的最新版本。请见 <a href="release.html">Release Notes</a>. 
+  </li>
+
+
+</ul>
+
+
+
+<h4><a name="comeau">Comeau 4.3.3</a></h4>
+
+
+
+<ul>
+
+
+
+    <li>在 windows 下，这个编译器构建带输出的 DLL 失败。
+    </li>
+
+
+  <li>使用 codecvt facet 时，相关联的库 - libcomo 失败。这样就不能使用所有的宽字符存档。
+    </li>
+
+
+  <li>test_set 失败，产生了极大的内存泄漏。
+  </li>
+
+
+</ul>
+
+
+
+
+<h4><a name="codewarrior9">Code Warrior 9.x</a></h4>
+
+
+
+<ul>
+
+
+
+    <li>有些测试程序和示例程序失败 - 尚待研究。
+  </li>
+
+
+</ul>
+
+
+
+
+<h4><a name="codewarrior">Code Warrior 8.3</a></h4>
+除了以上 Code Warrior 9.x 中的问题之外，还有：
+<ul>
+
+
+
+    <li>这个编译器只有静态库版本支持模板流。
+    </li>
+
+
+  <li>所以不能构建本库的 DLL 版本。
+    </li>
+
+
+  <li>有些示例程序失败 - 尚待研究。
+  </li>
+
+
+</ul>
+
+
+
+
+<h4><a name="tru64">TRU64</a></h4>
+除了 test_variant，所以测试和示例都通过了。Boost Variant 在这个编译器下不可用。
+
+<h4><a name="dinkumware">Dinkumware 库</a></h4>
+有几个编译器，包括 Visual C++ 6.0，得到了旧的 dinkumware 库。这些平台有以下问题： 
+<ul>
+
+
+
+    <li>编译器所带的 dinkumware 库不能改变一个 i/o 流的 locale facet，除非在打开流之前调用 <code style="white-space: normal;">imbue</code> 函数。为了在此环境下用这个库生成 UTF-8
+    文件，你不能依赖于存档实现所提供的 locale "自动" 设置。流的 locale 必须在打开存档之前被显式设置。然后以 <code style="white-space: normal;">no_codecvt</code> 标志打开存档。注意，该问题会出现在所有带这个库的编译器环境中。
+    </li>
+
+
+  <li>其它的问题请见文件
+    <a href="../../../boost/archive/dinkumware.hpp" target="dinkumware_hpp">dinkumware.hpp</a>
+  </li>
+
+
+</ul>
+
+
+
+
+<h4><a name="stlport">STLPort 4.5.3</a></h4>
+
+
+
+<ul>
+
+
+
+    <li>如果使用 C++ 运行时代码的动态链接版本来构建的话，所有测试都会链接失败。其原因应当是 stlport 库中缺少与定制化 codecvt facets 相关的符号。<runtime-link>
+    </runtime-link></li>
+
+
+  <li>test_set 不能正常运行。现象是 hashed set 的迭代器不能正确执行 ++ 操作符。消耗了所有可用内存而导致测试失败。因此，该测试被注释掉。
+  </li>
+
+
+</ul>
+
+
+
+
+<hr>
+<p>Revised 1 November, 2004 
+</p>
+
+
+<p><i>© Copyright <a href="http://www.rrsd.com">Robert Ramey</a> 2002-2004. 
+Distributed under the Boost Software License, Version 1.0. (See
+accompanying file LICENSE_1_0.txt or copy at http://www.boost.org/LICENSE_1_0.txt)
+</i></p>
+
+
+
+</body></html>

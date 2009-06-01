@@ -1,0 +1,224 @@
+<!DOCTYPE HTML PUBLIC "-//W3C//DTD HTML 4.01 Transitional//EN">
+<html><head>
+<meta http-equiv="Content-Language" content="en-us">
+<meta name="GENERATOR" content="Microsoft FrontPage 5.0">
+<meta name="ProgId" content="FrontPage.Editor.Document">
+<meta http-equiv="Content-Type" content="text/html; charset=UTF-8">
+<title>Boost Filesystem Library Design</title></head>
+<body bgcolor="#ffffff">
+
+<h1>
+<img src="../../../boost.png" align="middle" border="0" height="86" width="277">Filesystem 
+库的设计</h1>
+
+<p><a href="#Introduction">简介</a><br>
+<a href="#Requirements">要求</a><br>
+<a href="#Realities">现实</a><br>
+<a href="#Rationale">原理</a><br>
+<a href="#Abandoned_Designs">被放弃的设计</a><br>
+<a href="#References">参考</a></p>
+
+<h2><a name="Introduction">简介</a></h2>
+
+<p>开始的时候，Filesystem 库的主要动机是 Boost 管理工具存在的问题。各种脚本是用 
+Python, Perl, Bash, 和 Windows 命令语言编写的。没有一种脚本语言对于所有 Boost 管理员而言都是熟悉和可接受的。然而，他们都是熟练的 C++ 程序员 - 为什么不能用 C++ 来作为脚本语言？</p>
+
+<p>C++ 中缺乏的脚本程序特性主要是在多种文件系统上操作目录及其内容的能力。Filesystem 库的开发填补了这一空白。</p>
+
+<p>本库的目标不是与传统的脚本语言进行竞争，而是要在已经选定 C++ 的前提下提供一个解决方案。</p>
+
+<h2><a name="Requirements">要求</a></h2>
+<ul>
+  <li>可以在现代C++中编写可移植的脚本式文件系统操作。<br>
+  <br>原理:
+这是一个常见的编程要求。这是尴尬和困难的，无论是目前的C++或是Boost库都不能提供。当C++是工具链中唯一的工具时，这个需求尤其突出。许多语
+言都在多个平台上提供文件系统操作，如 Perl 和 Python,
+以及许多平台特定的脚本语言。所有操作系统都提供了某种形式的文件系统操作API，并且与 POSIX 的绑定也越来越多，即使是在那些通常不属于
+POSIX 的操作系统，如 Mac, z/OS, 或 OS/390.<br>
+&nbsp;</li>
+  <li>在以下描述的 <a href="#Realities">现实</a> 中工作。<br>
+  <br>原理: 这不是一个研究项目。该需求是要工作在当前的平台上，包括某些带有受限文件系统的嵌入式操作系统。由于对可移植性的强调，这个库如果要标准化，就要更为有用。这意味着它可以工作在比 Unix 或 Windows 及其复制品更为广泛的平台之上。<br>
+&nbsp;</li>
+  <li>避免危险的编程习惯。特别是那些易于被忽略的错误报告和对全局变量的使用。如果提供了一个危险的特性，则应该标识出来。<br>
+  <br>原理: 通常这会被"通常的 Boost 要求..."所掩盖，但还是应该明确提出来，因为相应的原生平台和脚本语言接口通常要依赖于这些错误报告和全局变量，如"当前工作目录"。<br>
+&nbsp;</li>
+  <li>将库构造为即使有些功能不能很好地映射到给定的平台或目录树上也可以使用。特定地，最常用的功能应该可以移植到平面(非分层式)的文件系统。<br>
+  <br>原理: 很多功能并不要求分层目录结构，它们可用于平面结构的文件系统。有许多系统，尤其是嵌入式系统，它们的功能很有限，也可以使用本库。</li>
+</ul>
+<ul>
+  <li>与当前C++标准库的输入/输出工具间的松散接口。例如，路径应该很容易地用在 std::basic_fstream 的构造函数中。<br>
+  <br>原理:&nbsp;一个最常用的文件系统功能是，将路径用于输入/输出操作。因此与标准库I/O的接口应尽可能松散。<br>
+&nbsp;</li>
+  <li>适用于以后的标准化。这个要求意味着接口要接近最小化，并尽量顾及可移植性。<br>
+  <br>原理: 在当前的标准中，缺乏文件系统操作是一个严重的漏洞，没有其它已知的候选来填补这一空白。带有精细接口而难以制定规格的库不大可能被接受为标准。<br>
+&nbsp;</li>
+  <li>适用常用的 Boost <a href="http://www.boost.org/more/lib_guide.htm">要求和指导方针</a>。<br>
+&nbsp;</li>
+  <li>建议但不要求实现路径名的可移植性。<br>
+  <br>原理: 对于来自于用户输入的路径，不应该要求可移植的路径语法。<br>
+&nbsp;</li>
+  <li>在可移植性不存在的情况下，避免给出可移植的假想。<br>
+  <br>原理: 将重要行为保留为不指定或"实现定义"会严重损害使用本库的程序员，因为这会使得代码依赖于行为的可移植性，而事实上这是不可移植的。可以接受这类无规范的唯一情况是，当用户和实现者都从其它来源明确知道了什么行为是需要的，但出于某种原因，它不可能精确指出。</li>
+</ul>
+<h2><a name="Realities">现实</a></h2>
+<ul>
+  <li>有些操作系统具有单一的目录树根，而其它的有多个根。<br>
+&nbsp;</li>
+  <li>有些文件系统同时提供文件名的长格式和短格式。<br>
+&nbsp;</li>
+  <li>有些文件系统对文件路径和目录路径使用不同的语法。<br>
+&nbsp;</li>
+  <li>有些文件系统对有效文件名和有效目录名使用不同的规则。<br>
+&nbsp;</li>
+  <li>有些文件系统(例如 ISO-9660, 级别 1)使用非常严格(称为 8.3)的文件名。<br>
+&nbsp;</li>
+  <li>有些操作系统允许不同特性的文件系统"mounted"到目录树上。因此一个 
+  ISO-9660 或 Windows 
+  文件系统可能被作为 POSIX 目录树的子树。<br>
+&nbsp;</li>
+  <li>在某些操作系统上，可以使用宽字符版本的目录和文件操作，而其它的则不可以。<br>
+&nbsp;</li>
+  <li>没有法律规定目录层次必须按照从根目录起由左到右的方式指定。<br>
+&nbsp;</li>
+  <li>有些文件系统具有文件"版本号"或"世代号"的概念。有些则没有。<br>
+&nbsp;</li>
+  <li>不是所有操作系统都是在路径名中使用单一的分隔符。有些会使用成对的符号。一个典型的完整的 OpenVMS 文件名可能象这样：<br>
+  <br>
+  <code>&nbsp;&nbsp; DISK$SCRATCH:[GEORGE.PROJECT1.DAT]BIG_DATA_FILE.NTP;5<br>
+  </code><br>通常的 OpenVMS 格式是：<br>
+  <br>
+&nbsp;&nbsp;&nbsp;&nbsp; 
+  <i>Device:[directories.dot.separated]filename.extension;version_number</i><br>
+&nbsp;</li>
+  <li>对
+于常见的文件系统，判断两个描述符是否代表同一个实体，是非常困难或不可能的。例如，对于一个路径的每个部分，等价性的概念都有可能不一样 -
+有些部分可能是大小写敏感或本地化敏感，而其它部分则不是。大小写敏感是路径名本身的属性而不是平台的。决定序列的顺序就更为糟糕了。<br>
+&nbsp;</li>
+  <li>可能发生竞争条件。目录树、目录、文件和文件属性实际上是由所有线程、进程以及访问该文件系统的计算机所共享的。还可能包括在世界另一端或世界各地的计算机。这意味着文件系统的操作可能以意外的方式失败。例如：<br>
+  <br>
+  <code>&nbsp;&nbsp;&nbsp;&nbsp; assert( exists("foo") == exists("foo") ); 
+  // 可能失败!<br>
+&nbsp;&nbsp;&nbsp;&nbsp; assert( is_directory("foo") == is_directory("foo"); 
+  // 可能失败!<br>
+  </code><br>在第一个例子中，文件可能在 exists() 的两次调用中间被删除。在第二个例子中，文件可能在 is_directory() 的两次调用中间被删除然后被一个同名的目录所替代。<br>
+&nbsp;</li>
+  <li>即使一个应用程序是可移植的，有时候它还必须处理系统特定的路径；用户提供的输入就是一个常见的例子。<br>
+&nbsp;</li>
+  <li><a name="symbolic-link-use-case">符号链接会导致某些路径的规范格式表示不同的文件或目录。例如，给定目录层次</a> <code>/a/b/c</code>, 而 <code>/a</code> 中有一个名为 <code>x</code> 的符号链接，指向 <code>b/c</code>, 
+  那么在 POSIX 路径解析规则下，路径 <code>"/a/x/.."</code> 
+  将被解析为 <code>"/a/b"</code>。如果 <code>"/a/x/.."</code> 首先被规范化为 <code>"/a"</code>, 则将错误解析。(该例子由 Walter Landry 提供)</li>
+</ul>
+
+<h2><a name="Rationale">原理</a></h2>
+
+<p>以上 <a href="#Requirements">要求</a> 和 <a href="#Realities">
+现实</a> 决定了许多 C++ 接口设计。特别地，对编写类似于脚本代码的期望，直接导致了大量的努力，以保证象 <i>exists( "foo" 
+)</i> 这样的简单表达式可以如所期望的那样。</p>
+
+<p>有关详细设计决定背后的原理，请见 <a href="faq.htm">FAQ</a>.</p>
+
+<p>以下是 <i>path</i> 类设计的几个关键点：</p>
+<ul>
+  <li>解藕输入格式、内部概念模型(<i>vector&lt;string&gt;</i> 
+  或其它序列)和输出格式。</li>
+  <li>提供两种输入格式(通用的和操作系统特定的)，打破主要的设计僵局。</li>
+  <li>提供多种输出格式，解决以前难以处理的问题。</li>
+  <li>多个不太明显的函数(尤其是 decomposition 和 composition)，以支持可移植代码。(Peter Dimov, Thomas Witt, Glen 
+  Knowles, 及其它人)</li>
+</ul>
+
+<p>错误检查是特别困难的地方。一个关键是对于文件名和目录名，可移植性不是普遍真理。反之，程序员必须解决"我想要把这个路径移植到什么操作系统上?"的问题。通过为这个问题提供多种答案的支持，Filesystem 库提醒程序员必须第一时间提出这个问题。</p>
+<h2><a name="Abandoned_Designs">被放弃的设计</a></h2>
+<h3>operations.hpp</h3>
+<p>Dietmar Kühl 原本的 dir_it 设计和实现支持宽字符文件和目录名。在 Library Working Group 成员展开讨论后，由于在不提供宽字符原生支持的系统上无法确定可移植的语义，该设计被放弃了。请见
+<a href="faq.htm#wide-character_names">FAQ</a>.</p>
+<p>早期的接口设计中，使用了显式命名函数来提供大量便利操作，不带编译期或运行期的选项。存在着大量的函数名，使用起来非常混乱，而且接口也更大。所得的好处看起来理论大于实际。 </p>
+<p>基于编译期(而不是运行期)的标志和选项(通过策略、枚举或整型模板参数)的设计由于过于复杂而被放弃，它们通常要花费较多的时间和努力。由于需要
+用名字空间甚至别名来限定属性或选项的名字，这使得将它们用作模板参数时非常难看；不真正写一下代码你是无法完全认识到这一点的。</p>
+<p>还有另一组便利函数(如带权限的 <i>remove</i>, prune, recurse, 以及其它选项，加上谓词，还有其它可能的过滤特性)，由于其细节过于复杂和存在争议而被放弃了。</p>
+
+<p>剩下的就是一组低层操作的工具集，用户可以从中创建更复杂的便利操作，还有少量便利函数，用户会发现它们刚好够用。</p>
+
+<h3>path.hpp</h3>
+
+<p>有许多被放弃的路径设计，我没有把它们都记下来。有几类是基于策略的类模板的，提供给构造函数的运行期策略，与操作相关的运行期策略，它们都被考虑并实现过，但最终都由于太过复杂且好处不多而被放弃。</p>
+
+<p>另外一个被考虑的设计是 <a href="i18n.html">
+国际化</a>。 </p>
+
+<h3>错误检查</h3>
+
+<p>有不少错误检查机制的设计被放弃，有一些是在尝试后放弃的。特别尝试了完全自动的错误检查。但是自动错误检查会使得整个库的设计变得过于复杂。</p>
+
+<p>有些设计带有对路径的错误检查。有些则带有对操作函数的错误检查。一个基于策略的错误检查模板设计被部分地实现，然后由于它对于每天的脚本程序编程而言过于复杂而被放弃了。</p>
+
+<p>最终的设计，部分依赖于显式的错误检查函数调用，这更为简单，虽然它的确一定程度上依赖于程序员的自律。但是它允许关心可移植性的程序员可以非常确定他们的程序可以正确地工作在他们所选择的目标系统上。</p>
+
+<h2><a name="References">参考</a></h2>
+
+<table style="border-collapse: collapse;" border="0" bordercolor="#111111" cellpadding="5" cellspacing="0" width="100%">
+  <tbody><tr>
+    <td valign="top" width="13%">[<a name="IBM-01">IBM-01</a>]</td>
+    <td width="87%">IBM Corporation, <i>z/OS V1R3.0 C/C++ Run-Time 
+Library Reference</i>, SA22-7821-02, 2001,
+<a href="http://www-1.ibm.com/servers/eserver/zseries/zos/bkserv/">
+    www-1.ibm.com/servers/eserver/zseries/zos/bkserv/</a></td>
+  </tr>
+  <tr>
+    <td valign="top" width="13%">[<a name="ISO-9660">ISO-9660</a>]</td>
+    <td width="87%">International Standards Organization, 1988</td>
+  </tr>
+  <tr>
+    <td valign="top" width="13%">[<a name="Kuhn">Kuhn</a>]</td>
+    <td width="87%">UTF-8 and Unicode FAQ for Unix/Linux,
+<a href="http://www.cl.cam.ac.uk/%7Emgk25/unicode.html">
+    www.cl.cam.ac.uk/~mgk25/unicode.html</a></td>
+  </tr>
+  <tr>
+    <td valign="top" width="13%">[<a name="MSDN">MSDN</a>] </td>
+    <td width="87%">Microsoft Platform SDK for Windows, Storage Start 
+Page,
+<a href="http://msdn.microsoft.com/library/en-us/fileio/base/storage_start_page.asp">
+    msdn.microsoft.com/library/en-us/fileio/base/storage_start_page.asp</a></td>
+  </tr>
+  <tr>
+    <td valign="top" width="13%">[<a name="POSIX-01">POSIX-01</a>]</td>
+    <td width="87%">IEEE&nbsp;Std&nbsp;1003.1-2001, ISO/IEC 9945:2002, and The Open Group Base Specifications, Issue 6. Also known as The 
+    Single Unix<font face="Times New Roman">® Specification, Version 3. 
+    Available from each of the organizations involved in its creation. For 
+    example, read online or download from
+    <a href="http://www.unix.org/single_unix_specification/">
+    www.unix.org/single_unix_specification/</a>.</font> The ISO JTC1/SC22/WG15 - POSIX 
+homepage is <a href="http://www.open-std.org/jtc1/sc22/WG15/">
+    www.open-std.org/jtc1/sc22/WG15/</a></td>
+  </tr>
+  <tr>
+    <td valign="top" width="13%">[<a name="URI">URI</a>]</td>
+    <td width="87%">RFC-2396, Uniform Resource Identifiers (URI): Generic 
+Syntax, <a href="http://www.ietf.org/rfc/rfc2396.txt">
+    www.ietf.org/rfc/rfc2396.txt</a></td>
+  </tr>
+  <tr>
+    <td valign="top" width="13%">[<a name="UTF-16">UTF-16</a>]</td>
+    <td width="87%">Wikipedia, UTF-16,
+<a href="http://en.wikipedia.org/wiki/UTF-16">
+    en.wikipedia.org/wiki/UTF-16</a></td>
+  </tr>
+  <tr>
+    <td valign="top" width="13%">[<a name="Wulf-Shaw-73">Wulf-Shaw-73</a>]</td>
+    <td width="87%">William Wulf, Mary Shaw, <i>Global 
+Variable Considered Harmful</i>, ACM SIGPLAN Notices, 8, 2, 1973, pp. 23-34</td>
+  </tr>
+</tbody></table>
+
+<hr>
+<p>Revised
+<!--webbot bot="Timestamp" S-Type="EDITED" S-Format="%d %B, %Y" startspan -->02 August, 2005<!--webbot bot="Timestamp" endspan i-checksum="34600" --></p>
+
+<p>© Copyright Beman Dawes, 2002</p>
+<p> Use, modification, and distribution are subject to the Boost Software 
+License, Version 1.0. (See accompanying file <a href="../../../LICENSE_1_0.txt">
+LICENSE_1_0.txt</a> or copy at <a href="http://www.boost.org/LICENSE_1_0.txt">
+www.boost.org/LICENSE_1_0.txt</a>)</p>
+
+</body></html>

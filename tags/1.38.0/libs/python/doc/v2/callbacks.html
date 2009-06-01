@@ -1,0 +1,513 @@
+<!DOCTYPE html PUBLIC "-//W3C//DTD HTML 4.01 Transitional//EN">
+
+<!-- Copyright David Abrahams 2006. Distributed under the Boost -->
+<!-- Software License, Version 1.0. (See accompanying -->
+<!-- file LICENSE_1_0.txt or copy at http://www.boost.org/LICENSE_1_0.txt) -->
+<html>
+  <head>
+    <meta name="generator" content=
+    "HTML Tidy for Windows (vers 1st August 2002), see www.w3.org">
+    <meta http-equiv="Content-Type" content="text/html; charset=UTF-8">
+    <link rel="stylesheet" type="text/css" href="../boost.css">
+
+    <title>Boost.Python - Calling Python Functions and Methods</title>
+  </head>
+
+  <body link="#0000ff" vlink="#800080">
+    <table border="0" cellpadding="7" cellspacing="0" width="100%" summary=
+    "header">
+      <tr>
+        <td valign="top" width="300">
+          <h3><a href="../../../../index.htm"><img height="86" width="277"
+          alt="C++ Boost" src="../../../../boost.png" border="0"></a></h3>
+        </td>
+
+        <td valign="top">
+          <h1 align="center"><a href="../index.html">Boost.Python</a></h1>
+
+          <h2 align="center">Calling Python Functions and Methods</h2>
+        </td>
+      </tr>
+    </table>
+    <hr>
+
+    <h2>Contents</h2>
+
+    <dl class="page-index">
+      <dt><a href="#introduction">Introduction</a></dt>
+
+      <dt><a href="#argument_handling">Argument Handling</a></dt>
+
+      <dt><a href="#result_handling">Result Handling</a></dt>
+
+      <dt><a href="#result_handling">Rationale</a></dt>
+    </dl>
+    
+    <dl class="page-index">
+      <dt><a href="#introduction">介绍</a></dt>
+
+      <dt><a href="#argument_handling">参数处理</a></dt>
+
+      <dt><a href="#result_handling">结果处理</a></dt>
+
+      <dt><a href="#result_handling">原理</a></dt>
+    </dl>
+    
+    <hr>
+
+    <h2><a name="introduction">Introduction</a></h2>
+
+    <h2><a name="introduction">介绍</a></h2>
+
+    The simplest way to call a Python function from C++, given an <code><a
+    href="object.html#object-spec">object</a></code> instance <code>f</code>
+    holding the function, is simply to invoke its function call operator. 
+    
+    <p>
+    在C++中调用Python函数最简单的方法是，
+    如果<code><a
+    href="object.html#object-spec">object</a></code>
+    实例<code>f</code>持有该函数，
+    就如下直接调用它。
+    </p>
+    
+<pre>
+f("tea", 4, 2) // In Python: f('tea', 4, 2)
+</pre>
+    And of course, a method of an <code><a href=
+    "object.html#object-spec">object</a></code> instance <code>x</code> can
+    be invoked by using the function-call operator of the corresponding
+    attribute: 
+    
+    <p>
+    当然，<code><a href=
+    "object.html#object-spec">object</a></code>
+    实例<code>x</code>的方法
+    也可以通过相应属性来调用：
+    </p>
+    
+<pre>
+x.attr("tea")(4, 2); // In Python: x.tea(4, 2)
+</pre>
+
+    <p>If you don't have an <code>object</code> instance, Boost.Python
+    provides two families of function templates, <code><a href=
+    "call.html#call-spec">call</a></code> and <code><a href=
+    "call_method.html#call_method-spec">call_method</a></code>, for invoking
+    Python functions and methods respectively on <code>PyObject*</code>s. The
+    interface for calling a Python function object (or any Python callable
+    object) looks like:</p>
+    
+    <p>
+    如果你没有<code>object</code>实例，
+    Boost.Python提供了两个函数模板族，<code><a href=
+    "call.html#call-spec">call</a></code>和<code><a href=
+    "call_method.html#call_method-spec">call_method</a></code>，
+    分别调用<code>PyObject*</code>的Python函数和方法。
+    调用Python函数对象（或任何Python可调用对象）的接口看起来是这样的：
+    </p>
+    
+<pre>
+call&lt;ResultType&gt;(callable_object, a1, a2... a<i>N</i>);
+</pre>
+    Calling a method of a Python object is similarly easy: 
+    
+    <p>
+    调用Python对象的方法同样简单：
+    </p>
+    
+<pre>
+call_method&lt;ResultType&gt;(self_object, "<i>method-name</i>", a1, a2... a<i>N</i>);
+</pre>
+    This comparitively low-level interface is the one you'll use when
+    implementing C++ virtual functions that can be overridden in Python. 
+    
+    <p>
+    当你实现可在Python中重载的C++虚函数时，
+    你使用的就是这种相对低级的接口。
+    </p>
+    
+
+    <h2><a name="argument_handling">Argument Handling</a></h2>
+
+    <h2><a name="argument_handling">参数处理</a></h2>
+    
+    <p>Arguments are converted to Python according to their type. By default,
+    the arguments <code>a1</code>...<code>a<i>N</i></code> are copied into
+    new Python objects, but this behavior can be overridden by the use of
+    <code><a href="ptr.html#ptr-spec">ptr()</a></code> and <a href=
+    "../../../bind/ref.html">ref()</a>:</p>
+    
+    <p>
+    参数根据类型被转换到Python。
+    默认情况下，参数<code>a1</code>...<code>a<i>N</i></code>
+    被复制到新的Python对象，
+    但这种行为通过使用
+    <code><a href="ptr.html#ptr-spec">ptr()</a></code>和<a href=
+    "../../../bind/ref.html">ref()</a>
+    进行覆盖：
+    </p>
+    
+<pre>
+class X : boost::noncopyable
+{
+   ...
+};
+
+void apply(PyObject* callable, X&amp; x)
+{
+   // Invoke callable, passing a Python object which holds a reference to x
+   boost::python::call&lt;void&gt;(callable, boost::ref(x));
+}
+</pre>
+    In the table below, <code><b>x</b></code> denotes the actual argument
+    object and <code><b>cv</b></code> denotes an optional
+    <i>cv-qualification</i>: "<code>const</code>", "<code>volatile</code>",
+    or "<code>const volatile</code>". 
+
+    
+    <p>
+    在下表中，<code><b>x</b></code>是实际的参数对象，
+    <code><b>cv</b></code>是可选的<i>cv限定符（cv-qualification）</i>：
+    “<code>const</code>”、“<code>volatile</code>”，
+    或“<code>const volatile</code>”。
+    </p>
+    
+    <table border="1" summary="class_ template parameters">
+      <tr>
+        <th>Argument Type</th>
+
+        <th>Behavior</th>
+      </tr>
+
+      <tr>
+        <td><code>T cv&amp;</code><br>
+         <code>T cv</code></td>
+
+        <td>The Python argument is created by the same means used for the
+        return value of a wrapped C++ function returning <code>T</code>. When
+        <code>T</code> is a class type, that normally means <code>*x</code>
+        is copy-constructed into the new Python object.
+        
+        <p>
+        与被封装的返回<code>T</code>的C++函数创建返回值一样，
+        Python参数通过相同的方式创建。
+        
+        当<code>T</code>是类类型时，那通常意味着<code>*x</code>
+        是拷贝构造到了新的Python对象。
+        </p>
+        
+        </td>
+      </tr>
+
+      <tr>
+        <td><code>T*</code></td>
+
+        <td>If <code>x&nbsp;==&nbsp;0</code>, the Python argument will be
+        <code><a href=
+        "http://www.python.org/doc/current/lib/bltin-null-object.html">None</a></code>.
+        Otherwise, the Python argument is created by the same means used for
+        the return value of a wrapped C++ function returning <code>T</code>.
+        When <code>T</code> is a class type, that normally means
+        <code>*x</code> is copy-constructed into the new Python object.
+        
+        <p>
+        
+        如果<code>x&nbsp;==&nbsp;0</code>，
+        Python参数将会是<code><a href=
+        "http://www.python.org/doc/current/lib/bltin-null-object.html">None</a></code>。
+        否则，Python参数创建的方式
+        与被封装的返回<code>T</code>的C++函数创建返回值一样。
+        当<code>T</code>是类类型时，那通常意味着
+        <code>*x</code>是拷贝构造到了新的Python对象。
+        </p>
+        
+        </td>
+      </tr>
+
+      <tr>
+        <td><code><a href=
+        "../../../bind/ref.html">boost::reference_wrapper</a>&lt;T&gt;</code></td>
+
+        <td>The Python argument contains a pointer to, rather than a copy of,
+        <code>x.get()</code>. Note: failure to ensure that no Python code
+        holds a reference to the resulting object beyond the lifetime of
+        <code>*x.get()</code> <b>may result in a crash!</b>
+        
+        <p>
+        Python参数包含指向<code>x.get()</code>的指针，而不是它的复制。
+        注：如果有Python代码在<code>*x.get()</code>的生命期之外
+        持有结果对象的引用，
+        <b>可能导致崩溃！</b>
+        </p>
+        
+        </td>
+      </tr>
+
+      <tr>
+        <td><code><a href=
+        "ptr.html#pointer_wrapper-spec">pointer_wrapper</a>&lt;T&gt;</code></td>
+
+        <td>If <code>x.get()&nbsp;==&nbsp;0</code>, the Python argument will
+        be <code><a href=
+        "http://www.python.org/doc/current/lib/bltin-null-object.html">None</a></code>.
+        Otherwise, the Python argument contains a pointer to, rather than a
+        copy of, <code>*x.get()</code>. Note: failure to ensure that no
+        Python code holds a reference to the resulting object beyond the
+        lifetime of <code>*x.get()</code> <b>may result in a crash!</b>
+        
+        <p>
+        如果<code>x.get()&nbsp;==&nbsp;0</code>，
+        Python参数将是<code><a href=
+        "http://www.python.org/doc/current/lib/bltin-null-object.html">None</a></code>。
+        否则，Python参数包含指向<code>*x.get()</code>的指针，而不是它的复制。
+        注：如果有Python代码在<code>*x.get()</code>的生命期之外
+        持有结果对象的引用，
+        <b>可能导致崩溃！</b>
+        </p>
+        
+        </td>
+      </tr>
+    </table>
+
+    <h2><a name="result_handling">Result Handling</a></h2>
+
+    <h2><a name="result_handling">结果处理</a></h2>
+    
+    In general, <code>call&lt;ResultType&gt;()</code> and
+    <code>call_method&lt;ResultType&gt;()</code> return
+    <code>ResultType</code> by exploiting all lvalue and rvalue
+    <code>from_python</code> converters registered for ResultType and
+    returning a copy of the result. However, when <code>ResultType</code> is
+    a pointer or reference type, Boost.Python searches only for lvalue
+    converters. To prevent dangling pointers and references, an exception
+    will be thrown if the Python result object has only a single reference
+    count. 
+    
+    <p>
+    一般来说，<code>call&lt;ResultType&gt;()</code>和
+    <code>call_method&lt;ResultType&gt;()</code>
+    利用所有为ResultType注册的左值和右值<code>from_python</code>转换器，
+    返回<code>ResultType</code>，
+    而且返回的是结果的拷贝。
+    
+    然而，当<code>ResultType</code>是指针或引用类型时，
+    Boost.Python仅搜索左值转换器。
+    为防止野指针和野引用，
+    如Python结果对象引用计数为1，会抛出异常。
+    </p>
+    
+    <h2><a name="rationale">Rationale</a></h2>
+
+    <h2><a name="rationale">原理</a></h2>
+
+    In general, to get Python arguments corresponding to
+    <code>a1</code>...<code>a<i>N</i></code>, a new Python object must be
+    created for each one; should the C++ object be copied into that Python
+    object, or should the Python object simply hold a reference/pointer to
+    the C++ object? In general, the latter approach is unsafe, since the
+    called function may store a reference to the Python object somewhere. If
+    the Python object is used after the C++ object is destroyed, we'll crash
+    Python. 
+    
+    <p>
+    一般来说，为取得对应于<code>a1</code>...<code>a<i>N</i></code>的Python参数，
+    必须为每个参数创建新的Python对象；
+    应该是C++对象复制到那个Python对象，
+    还是Python对象只需持有该C++对象的引用/指针？
+    
+    一般来说，后者的做法是不安全的，
+    因为被调用的函数，可能在某处保存了对Python对象的引用。
+    如果该Python对象在C++对象销毁后使用，Python就会崩溃。
+    </p>
+    
+
+    <p>In keeping with the philosophy that users on the Python side shouldn't
+    have to worry about crashing the interpreter, the default behavior is to
+    copy the C++ object, and to allow a non-copying behavior only if the user
+    writes <code><a href="../../../bind/ref.html">boost::ref</a>(a1)</code>
+    instead of a1 directly. At least this way, the user doesn't get dangerous
+    behavior "by accident". It's also worth noting that the non-copying
+    ("by-reference") behavior is in general only available for class types,
+    and will fail at runtime with a Python exception if used otherwise[<a
+    href="#1">1</a>].</p>
+    
+    <p>
+    为了符合如下理念：用户在Python方应该不必担心解释器崩溃，
+    默认行为是复制C++对象，
+    仅当用户用<code><a href="../../../bind/ref.html">boost::ref</a>(a1)</code>，
+    而不是直接写a1时，
+    才允许非复制的行为。
+    
+    这样一来，至少用户不会“意外”获得危险行为。
+    同时值得注意的是，非复制（“按引用”）的行为一般仅用于类类型，
+    如果用于其他，会在运行时失败并抛Python异常[<a href="#1">1</a>]。
+    </p>
+    
+
+    <p>However, pointer types present a problem: one approach is to refuse to
+    compile if any aN has pointer type: after all, a user can always pass
+    <code>*aN</code> to pass "by-value" or <code>ref(*aN)</code> to indicate
+    a pass-by-reference behavior. However, this creates a problem for the
+    expected null pointer to <code>None</code> conversion: it's illegal to
+    dereference a null pointer value.</p>
+    
+    <p>
+    然而，指针类型有个问题：
+    一个方法就是，如果任一aN有指针类型，就拒绝编译：
+    毕竟，用户可以总是传递<code>*aN</code>来“按值”传递，
+    或传递<code>ref(*aN)</code>来指示按引用传递的行为。
+    
+    然而，对于空指针到<code>None</code>的转换，
+    这又会引发一个问题：解引用空指针是非法的。
+    </p>
+    
+
+    <p>The compromise I've settled on is this:</p>
+    
+    <p>
+    我的折衷案是这样的：
+    </p>
+    
+
+    <ol>
+      <li>The default behavior is pass-by-value. If you pass a non-null
+      pointer, the pointee is copied into a new Python object; otherwise the
+      corresponding Python argument will be None.</li>
+
+      <li>if you want by-reference behavior, use <code>ptr(aN)</code> if
+      <code>aN</code> is a pointer and <code>ref(aN)</code> otherwise. If a
+      null pointer is passed to <code>ptr(aN)</code>, the corresponding
+      Python argument will be <code>None</code>.</li>
+    </ol>
+
+    <ol>
+      <li>
+      默认行为是按值传递。
+      如果你传入非空指针，
+      所指物就复制到一个新的Python对象；
+      否则相应的Python参数将是None。
+      </li>
+
+      <li>
+      如果你想要按引用的行为，
+      如果<code>aN</code>是指针，就使用<code>ptr(aN)</code>，
+      否则用<code>ref(aN)</code>。
+      如果传递空指针到<code>ptr(aN)</code>，
+      对应的Python参数就为<code>None</code>。
+      </li>
+    </ol>
+
+    <p>As for results, we have a similar problem: if <code>ResultType</code>
+    is allowed to be a pointer or reference type, the lifetime of the object
+    it refers to is probably being managed by a Python object. When that
+    Python object is destroyed, our pointer dangles. The problem is
+    particularly bad when the <code>ResultType</code> is char const* - the
+    corresponding Python String object is typically uniquely-referenced,
+    meaning that the pointer dangles as soon as <code>call&lt;char
+    const*&gt;(...)</code> returns.</p>
+    
+    <p>
+    至于结果，存在类似的问题：
+    如果<code>ResultType</code>允许指针或引用类型，
+    它所引用的对象生命期可能是由Python对象管理的。
+    当Python对象销毁后，指针会失效。
+    
+    当<code>ResultType</code>是char const*时，
+    这个问题尤为严重——
+    对应的Python String对象是典型的唯一引用（uniquely-referenced），
+    即只要<code>call&lt;char
+    const*&gt;(...)</code>一返回，指针就失效。
+    </p>
+
+    <p>The old Boost.Python v1 deals with this issue by refusing to compile
+    any uses of <code>call&lt;char const*&gt;()</code>, but this goes both
+    too far and not far enough. It goes too far because there are cases where
+    the owning Python string object survives beyond the call (just for
+    instance, when it's the name of a Python class), and it goes not far
+    enough because we might just as well have the same problem with a
+    returned pointer or reference of any other type.</p>
+    
+    <p>
+    旧的Boost.Python V1是这样处理的，
+    它拒绝编译任何<code>call&lt;char const*&gt;()</code>，
+    但这既可以说太过，又可以说不足。
+    
+    说它太过是因为，在有些情况下，Python字符串对象在调用后仍存在
+    （举例来说，如它是Python类的名字），
+    说它不足是因为，对于返回的任何其他类型的指针或引用，
+    我们还是有同样的问题。
+    </p>
+
+    <p>In Boost.Python v2 this is dealt with by:</p>
+
+    <p>
+    在Boost.Python v2中是这样处理的：
+    </p>
+
+    <ol>
+      <li>lifting the compile-time restriction on const char* callback
+      returns</li>
+
+      <li>detecting the case when the reference count on the result Python
+      object is 1 and throwing an exception inside of
+      <code>call&lt;U&gt;(...)</code> when <code>U</code> is a pointer or
+      reference type.</li>
+    </ol>
+    
+    <ol>
+      <li>
+      解除编译时对const char*回调返回的限制
+      </li>
+
+      <li>
+      当<code>U</code>是指针或引用类型时，
+      检测结果Python对象的引用计数是1的情况，
+      碰到该情况时，在<code>call&lt;U&gt;(...)</code>中抛出异常。
+      </li>
+    </ol>
+    
+    This should be acceptably safe because users have to explicitly specify a
+    pointer/reference for <code>U</code> in <code>call&lt;U&gt;</code>, and
+    they will be protected against dangles at runtime, at least long enough
+    to get out of the <code>call&lt;U&gt;(...)</code> invocation. 
+
+    <p>
+    这样的安全性应该是令人满意的，
+    因为用户必须在<code>call&lt;U&gt;</code>中
+    为<code>U</code>显式指定指针/引用，
+    它们将在运行时受保护防止失效，
+    至少要保护到退出<code>call&lt;U&gt;(...)</code>调用。
+    </p>
+
+    <hr>
+    <a name="1">[1]</a> It would be possible to make it fail at compile-time
+    for non-class types such as int and char, but I'm not sure it's a good
+    idea to impose this restriction yet. 
+
+    <p>
+    对不是类的类型，如int和char，
+    可以让它在编译时失败，
+    但我不能肯定施加这种约束是否是一个好主意。
+    </p>
+
+    <p>Revised 
+    <!--webbot bot="Timestamp" S-Type="EDITED" S-Format="%d %B, %Y" startspan -->
+  13 November, 2002
+  <!--webbot bot="Timestamp" endspan i-checksum="39359" -->
+    </p>
+
+    <p><i>&copy; Copyright <a href=
+    "http://www.boost.org/people/dave_abrahams.htm">Dave Abrahams</a> 2002.</i></p>
+
+    <p>
+    翻译：<a href="http://blog.csdn.net/jq0123">金庆</a>
+    </p>
+
+    <p>
+    译文更新：2008.5.29
+    </p>
+        
+  </body>
+</html>
+

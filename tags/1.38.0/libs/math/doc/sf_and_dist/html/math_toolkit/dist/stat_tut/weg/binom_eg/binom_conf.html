@@ -1,0 +1,198 @@
+﻿<html>
+<head>
+<meta http-equiv="Content-Type" content="text/html; charset=UTF-8">
+<title>Calculating Confidence Limits on the Frequency of Occurrence for a Binomial Distribution</title>
+<link rel="stylesheet" href="../../../../../../../../../../doc/html/boostbook.css" type="text/css">
+<meta name="generator" content="DocBook XSL Stylesheets Vsnapshot_2006-12-17_0120">
+<link rel="start" href="../../../../../index.html" title="Math Toolkit">
+<link rel="up" href="../binom_eg.html" title="Binomial Distribution Examples">
+<link rel="prev" href="binomial_quiz_example.html" title="Binomial Quiz Example">
+<link rel="next" href="binom_size_eg.html" title="Estimating Sample Sizes for a Binomial Distribution.">
+</head>
+<body bgcolor="white" text="black" link="#0000FF" vlink="#840084" alink="#0000FF">
+<table cellpadding="2" width="100%"><tr>
+<td valign="top"><img alt="Boost C++ Libraries" width="277" height="86" src="../../../../../../../../../../boost.png"></td>
+<td align="center"><a href="../../../../../../../../../../index.html">Home</a></td>
+<td align="center"><a href="../../../../../../../../../../libs/libraries.htm">Libraries</a></td>
+<td align="center"><a href="http://www.boost.org/users/people.html">People</a></td>
+<td align="center"><a href="http://www.boost.org/users/faq.html">FAQ</a></td>
+<td align="center"><a href="../../../../../../../../../../more/index.htm">More</a></td>
+</tr></table>
+<hr>
+<div class="spirit-nav">
+<a accesskey="p" href="binomial_quiz_example.html"><img src="../../../../../../../../../../doc/html/images/prev.png" alt="Prev"></a><a accesskey="u" href="../binom_eg.html"><img src="../../../../../../../../../../doc/html/images/up.png" alt="Up"></a><a accesskey="h" href="../../../../../index.html"><img src="../../../../../../../../../../doc/html/images/home.png" alt="Home"></a><a accesskey="n" href="binom_size_eg.html"><img src="../../../../../../../../../../doc/html/images/next.png" alt="Next"></a>
+</div>
+<div class="section" lang="en">
+<div class="titlepage"><div><div>
+  <h5 class="title">
+<a name="math_toolkit.dist.stat_tut.weg.binom_eg.binom_conf"></a><a href="binom_conf.html" title="Calculating Confidence Limits on the Frequency of Occurrence for a Binomial Distribution">
+        计算二项分布发生频率( Frequency of Occurrence for)的置信界限( Confidence Limits)</a></h5>
+</div></div></div>
+<p>
+              设想你有一个遵循二项分布(Binomial Distribution)的过程(Process)：对于每次试验，一个事件要出现，要么不出现，称作“成功”和“失败”。如果，通过实验，你想测量“成功”的发生频率，对于在N次试验中有<span class="emphasis"><em>k</em></span> 次成功的最好的估计是<span class="emphasis"><em>k</em></span> / <span class="emphasis"><em>N</em></span>。然而，我们的信心将会被试验的次数，以及发生多少次成功试验所左右。静态成员函数：<code class="computeroutput"><span class="identifier">binomial_distribution</span><span class="special">&lt;&gt;::</span><span class="identifier">find_lower_bound_on_p</span></code>
+              and <code class="computeroutput"><span class="identifier">binomial_distribution</span><span class="special">&lt;&gt;::</span><span class="identifier">find_upper_bound_on_p</span></code>
+  </p>
+<p>允许你计算发生频率(occurrence frequency)的置信区间(confidence intervals)。</p>
+<p>              例子程序<a href="../../../../../../../../example/binomial_confidence_limits.cpp" target="_top">binomial_confidence_limits.cpp</a>
+  举例说明了它们的使用方法。 例子程序通过定义一个打印对于不同的必然系数(degrees of certainty)的置信界限(confidence limit)的表格的函数开始：</p>
+<pre class="programlisting"><span class="preprocessor">#include</span> <span class="special">&lt;</span><span class="identifier">iostream</span><span class="special">&gt;</span>
+<span class="preprocessor">#include</span> <span class="special">&lt;</span><span class="identifier">iomanip</span><span class="special">&gt;</span>
+<span class="preprocessor">#include</span> <span class="special">&lt;</span><span class="identifier">boost</span><span class="special">/</span><span class="identifier">math</span><span class="special">/</span><span class="identifier">distributions</span><span class="special">/</span><span class="identifier">binomial</span><span class="special">.</span><span class="identifier">hpp</span><span class="special">&gt;</span>
+
+<span class="keyword">void</span> <span class="identifier">confidence_limits_on_frequency</span><span class="special">(</span><span class="keyword">unsigned</span> <span class="identifier">trials</span><span class="special">,</span> <span class="keyword">unsigned</span> <span class="identifier">successes</span><span class="special">)</span>
+<span class="special">{</span>
+   <span class="comment">//
+</span>   <span class="comment">// trials = 总的试验次数.
+</span>   <span class="comment">// successes = 总的成功事件的次数.
+</span>   <span class="comment">//
+</span>   <span class="comment">// 计算一个遵循二项分布的事件出现
+</span>   <span class="comment">// 频率的置信界限</span>
+   <span class="comment">//
+</span>   <span class="keyword">using</span> <span class="keyword">namespace</span> <span class="identifier">std</span><span class="special">;</span>
+   <span class="keyword">using</span> <span class="keyword">namespace</span> <span class="identifier">boost</span><span class="special">::</span><span class="identifier">math</span><span class="special">;</span>
+
+   <span class="comment">// 打印基本信息:
+</span>   <span class="identifier">cout</span> <span class="special">&lt;&lt;</span>
+      <span class="string">"___________________________________________\n"</span>
+      <span class="string">"2-Sided Confidence Limits For Success Ratio\n"</span>
+      <span class="string">"___________________________________________\n\n"</span><span class="special">;</span>
+   <span class="identifier">cout</span> <span class="special">&lt;&lt;</span> <span class="identifier">setprecision</span><span class="special">(</span><span class="number">7</span><span class="special">);</span>
+   <span class="identifier">cout</span> <span class="special">&lt;&lt;</span> <span class="identifier">setw</span><span class="special">(</span><span class="number">40</span><span class="special">)</span> <span class="special">&lt;&lt;</span> <span class="identifier">left</span> <span class="special">&lt;&lt;</span> <span class="string">"Number of Observations"</span> <span class="special">&lt;&lt;</span> <span class="string">"=  "</span> <span class="special">&lt;&lt;</span> <span class="identifier">trials</span> <span class="special">&lt;&lt;</span> <span class="string">"\n"</span><span class="special">;</span>
+   <span class="identifier">cout</span> <span class="special">&lt;&lt;</span> <span class="identifier">setw</span><span class="special">(</span><span class="number">40</span><span class="special">)</span> <span class="special">&lt;&lt;</span> <span class="identifier">left</span> <span class="special">&lt;&lt;</span> <span class="string">"Number of successes"</span> <span class="special">&lt;&lt;</span> <span class="string">"=  "</span> <span class="special">&lt;&lt;</span> <span class="identifier">successes</span> <span class="special">&lt;&lt;</span> <span class="string">"\n"</span><span class="special">;</span>
+   <span class="identifier">cout</span> <span class="special">&lt;&lt;</span> <span class="identifier">setw</span><span class="special">(</span><span class="number">40</span><span class="special">)</span> <span class="special">&lt;&lt;</span> <span class="identifier">left</span> <span class="special">&lt;&lt;</span> <span class="string">"Sample frequency of occurrence"</span> <span class="special">&lt;&lt;</span> <span class="string">"=  "</span> <span class="special">&lt;&lt;</span> <span class="keyword">double</span><span class="special">(</span><span class="identifier">successes</span><span class="special">)</span> <span class="special">/</span> <span class="identifier">trials</span> <span class="special">&lt;&lt;</span> <span class="string">"\n"</span><span class="special">;</span>
+</pre>
+<p>
+  现在这个函数定义了一个显著性水平表(table of significance levels)： 这些概率是真实的发生频率位于计算区间之外的概率：</p>
+<pre class="programlisting"><span class="keyword">double</span> <span class="identifier">alpha</span><span class="special">[]</span> <span class="special">=</span> <span class="special">{</span> <span class="number">0.5</span><span class="special">,</span> <span class="number">0.25</span><span class="special">,</span> <span class="number">0.1</span><span class="special">,</span> <span class="number">0.05</span><span class="special">,</span> <span class="number">0.01</span><span class="special">,</span> <span class="number">0.001</span><span class="special">,</span> <span class="number">0.0001</span><span class="special">,</span> <span class="number">0.00001</span> <span class="special">};</span>
+</pre>
+<p>
+              打印漂亮的表头信息：</p>
+<pre class="programlisting"><span class="identifier">cout</span> <span class="special">&lt;&lt;</span> <span class="string">"\n\n"</span>
+        <span class="string">"_______________________________________________________________________\n"</span>
+        <span class="string">"Confidence        Lower CP       Upper CP       Lower JP       Upper JP\n"</span>
+        <span class="string">" Value (%)        Limit          Limit          Limit          Limit\n"</span>
+        <span class="string">"_______________________________________________________________________\n"</span><span class="special">;</span>
+</pre>
+<p>
+              现在，对于重要的部分 - 区间本身 -对于每个值<span class="emphasis"><em>alpha</em></span>， 我们调用函数 <code class="computeroutput"><span class="identifier">find_lower_bound_on_p</span></code>
+              以及函数<code class="computeroutput"><span class="identifier">find_lower_upper_on_p</span></code>
+              来分别获得下界和上界。注意：因为我们计算一个两侧区间(two-sided interval)，我们必须将 alpha
+              的值除以2。</p>
+<p>
+              请注意：计算两个单独的单侧边界区间(<span class="emphasis"><em>single sided bounds)</em></span>,
+  每一个的风险水平(risk level)为 &#945; 与计算一个双侧区间(two-sided interval)是不同的。当我们已经计算了两个单侧区间(single-sided interval)，真值(true value)在这两个区间之外的概率风险(risk)为&#945;，那么：</p>
+<p>真值(true value)比下边界(lower bound)小的风险(risk)为 &#945;。</p>
+<div class="itemizedlist"></div>
+<p>
+              且</p>
+<div class="itemizedlist"><ul type="disc">
+  <li>
+                真值(true value)比上边界( upper bound)大的风险(risk)也为&#945;。</li>
+</ul>
+</div>
+<p>
+              所以真值(true value)超出<span class="bold"><strong>上边界或下边界</strong></span>
+              的风险(risk)是<span class="bold"><strong>两倍</strong></span> alpha，因此真值(true value)在这个范围之内的概率并不是与某人想的一样高。这就是为什么在下面的计算中要使用&#945;/2。</p>
+<p>
+              相反，我们已经计算了一个单侧区间(single-sided interval)，例如：<span class="emphasis"><em>"计算一个下边界使得我们有P% 的把握真实的发生频率大于某个值"</em></span>
+              ，那么<span class="bold"><strong>不需要</strong></span> 除以2.</p>
+<p>
+              最后，注意：<code class="computeroutput"><span class="identifier">binomial_distribution</span></code>
+  为这种计算提供了两种方法作为选择，在这个例子中，我们使用两种方法来打印结果：</p>
+<pre class="programlisting">   <span class="keyword">for</span><span class="special">(</span><span class="keyword">unsigned</span> <span class="identifier">i</span> <span class="special">=</span> <span class="number">0</span><span class="special">;</span> <span class="identifier">i</span> <span class="special">&lt;</span> <span class="keyword">sizeof</span><span class="special">(</span><span class="identifier">alpha</span><span class="special">)/</span><span class="keyword">sizeof</span><span class="special">(</span><span class="identifier">alpha</span><span class="special">[</span><span class="number">0</span><span class="special">]);</span> <span class="special">++</span><span class="identifier">i</span><span class="special">)</span>
+   <span class="special">{</span>
+      <span class="comment">// Confidence value:
+</span>      <span class="identifier">cout</span> <span class="special">&lt;&lt;</span> <span class="identifier">fixed</span> <span class="special">&lt;&lt;</span> <span class="identifier">setprecision</span><span class="special">(</span><span class="number">3</span><span class="special">)</span> <span class="special">&lt;&lt;</span> <span class="identifier">setw</span><span class="special">(</span><span class="number">10</span><span class="special">)</span> <span class="special">&lt;&lt;</span> <span class="identifier">right</span> <span class="special">&lt;&lt;</span> <span class="number">100</span> <span class="special">*</span> <span class="special">(</span><span class="number">1</span><span class="special">-</span><span class="identifier">alpha</span><span class="special">[</span><span class="identifier">i</span><span class="special">]);</span>
+      <span class="comment">// 计算 Clopper Pearson 界限:
+</span>      <span class="keyword">double</span> <span class="identifier">l</span> <span class="special">=</span> <span class="identifier">binomial_distribution</span><span class="special">&lt;&gt;::</span><span class="identifier">find_lower_bound_on_p</span><span class="special">(</span>
+                     <span class="identifier">trials</span><span class="special">,</span> <span class="identifier">successes</span><span class="special">,</span> <span class="identifier">alpha</span><span class="special">[</span><span class="identifier">i</span><span class="special">]/</span><span class="number">2</span><span class="special">);</span>
+      <span class="keyword">double</span> <span class="identifier">u</span> <span class="special">=</span> <span class="identifier">binomial_distribution</span><span class="special">&lt;&gt;::</span><span class="identifier">find_upper_bound_on_p</span><span class="special">(</span>
+                     <span class="identifier">trials</span><span class="special">,</span> <span class="identifier">successes</span><span class="special">,</span> <span class="identifier">alpha</span><span class="special">[</span><span class="identifier">i</span><span class="special">]/</span><span class="number">2</span><span class="special">);</span>
+      <span class="comment">// 打印 Clopper Pearson 界限:
+</span>      <span class="identifier">cout</span> <span class="special">&lt;&lt;</span> <span class="identifier">fixed</span> <span class="special">&lt;&lt;</span> <span class="identifier">setprecision</span><span class="special">(</span><span class="number">5</span><span class="special">)</span> <span class="special">&lt;&lt;</span> <span class="identifier">setw</span><span class="special">(</span><span class="number">15</span><span class="special">)</span> <span class="special">&lt;&lt;</span> <span class="identifier">right</span> <span class="special">&lt;&lt;</span> <span class="identifier">l</span><span class="special">;</span>
+      <span class="identifier">cout</span> <span class="special">&lt;&lt;</span> <span class="identifier">fixed</span> <span class="special">&lt;&lt;</span> <span class="identifier">setprecision</span><span class="special">(</span><span class="number">5</span><span class="special">)</span> <span class="special">&lt;&lt;</span> <span class="identifier">setw</span><span class="special">(</span><span class="number">15</span><span class="special">)</span> <span class="special">&lt;&lt;</span> <span class="identifier">right</span> <span class="special">&lt;&lt;</span> <span class="identifier">u</span><span class="special">;</span>
+      <span class="comment">// 计算 Jeffreys Prior 界限:
+</span>      <span class="identifier">l</span> <span class="special">=</span> <span class="identifier">binomial_distribution</span><span class="special">&lt;&gt;::</span><span class="identifier">find_lower_bound_on_p</span><span class="special">(</span>
+            <span class="identifier">trials</span><span class="special">,</span> <span class="identifier">successes</span><span class="special">,</span> <span class="identifier">alpha</span><span class="special">[</span><span class="identifier">i</span><span class="special">]/</span><span class="number">2</span><span class="special">,</span> 
+            <span class="identifier">binomial_distribution</span><span class="special">&lt;&gt;::</span><span class="identifier">jeffreys_prior_interval</span><span class="special">);</span>
+      <span class="identifier">u</span> <span class="special">=</span> <span class="identifier">binomial_distribution</span><span class="special">&lt;&gt;::</span><span class="identifier">find_upper_bound_on_p</span><span class="special">(</span>
+            <span class="identifier">trials</span><span class="special">,</span> <span class="identifier">successes</span><span class="special">,</span> <span class="identifier">alpha</span><span class="special">[</span><span class="identifier">i</span><span class="special">]/</span><span class="number">2</span><span class="special">,</span> 
+            <span class="identifier">binomial_distribution</span><span class="special">&lt;&gt;::</span><span class="identifier">jeffreys_prior_interval</span><span class="special">);</span>
+      <span class="comment">// 打印 Jeffreys Prior 界限:
+</span>      <span class="identifier">cout</span> <span class="special">&lt;&lt;</span> <span class="identifier">fixed</span> <span class="special">&lt;&lt;</span> <span class="identifier">setprecision</span><span class="special">(</span><span class="number">5</span><span class="special">)</span> <span class="special">&lt;&lt;</span> <span class="identifier">setw</span><span class="special">(</span><span class="number">15</span><span class="special">)</span> <span class="special">&lt;&lt;</span> <span class="identifier">right</span> <span class="special">&lt;&lt;</span> <span class="identifier">l</span><span class="special">;</span>
+      <span class="identifier">cout</span> <span class="special">&lt;&lt;</span> <span class="identifier">fixed</span> <span class="special">&lt;&lt;</span> <span class="identifier">setprecision</span><span class="special">(</span><span class="number">5</span><span class="special">)</span> <span class="special">&lt;&lt;</span> <span class="identifier">setw</span><span class="special">(</span><span class="number">15</span><span class="special">)</span> <span class="special">&lt;&lt;</span> <span class="identifier">right</span> <span class="special">&lt;&lt;</span> <span class="identifier">u</span> <span class="special">&lt;&lt;</span> <span class="identifier">std</span><span class="special">::</span><span class="identifier">endl</span><span class="special">;</span>
+   <span class="special">}</span>
+   <span class="identifier">cout</span> <span class="special">&lt;&lt;</span> <span class="identifier">endl</span><span class="special">;</span>
+<span class="special">}</span>
+</pre>
+<p>
+  这就是所有需要做的，让我看一下从2到10的成功比(success ratio)的一些样本输出，首先对于20次试验：</p>
+<pre class="programlisting">___________________________________________
+2-Sided Confidence Limits For Success Ratio
+___________________________________________
+
+Number of Observations                  =  20
+Number of successes                     =  4
+Sample frequency of occurrence          =  0.2
+
+
+_______________________________________________________________________
+Confidence        Lower CP       Upper CP       Lower JP       Upper JP
+ Value (%)        Limit          Limit          Limit          Limit
+_______________________________________________________________________
+    50.000        0.12840        0.29588        0.14974        0.26916
+    75.000        0.09775        0.34633        0.11653        0.31861
+    90.000        0.07135        0.40103        0.08734        0.37274
+    95.000        0.05733        0.43661        0.07152        0.40823
+    99.000        0.03576        0.50661        0.04655        0.47859
+    99.900        0.01905        0.58632        0.02634        0.55960
+    99.990        0.01042        0.64997        0.01530        0.62495
+    99.999        0.00577        0.70216        0.00901        0.67897
+</pre>
+<p>
+              就如你所看到的那样，即使是在95% 的置信水平(confidence level)，范围也是相当的宽 (选择这个例子来与<a href="http://www.itl.nist.gov/div898/handbook/" target="_top">NIST/SEMATECH
+              e-Handbook of Statistical Methods.</a> <a href="http://www.itl.nist.gov/div898/handbook/prc/section2/prc241.htm" target="_top">here</a>进行比较)。注意： Clopper-Pearson 计算方法 (上面的 CP ) 产生的结果与 Jeffreys Prior
+              方法产生的结果显然更悲观(pessimistic)一些 (上面的JP)。</p>
+<p>
+              与2000次试验的输出进行比较：</p>
+<pre class="programlisting">___________________________________________
+2-Sided Confidence Limits For Success Ratio
+___________________________________________
+
+Number of Observations                  =  2000
+Number of successes                     =  400
+Sample frequency of occurrence          =  0.2000000
+
+
+_______________________________________________________________________
+Confidence        Lower CP       Upper CP       Lower JP       Upper JP
+ Value (%)        Limit          Limit          Limit          Limit
+_______________________________________________________________________
+    50.000        0.19382        0.20638        0.19406        0.20613
+    75.000        0.18965        0.21072        0.18990        0.21047
+    90.000        0.18537        0.21528        0.18561        0.21503
+    95.000        0.18267        0.21821        0.18291        0.21796
+    99.000        0.17745        0.22400        0.17769        0.22374
+    99.900        0.17150        0.23079        0.17173        0.23053
+    99.990        0.16658        0.23657        0.16681        0.23631
+    99.999        0.16233        0.24169        0.16256        0.24143
+</pre>
+<p>
+              现在，即使置信水平(confidence level)很高，界限与实验计算值0.2是非常接近的。更进一步，两种算法之间的区别也更小了。.
+  </p>
+</div>
+<table xmlns:rev="http://www.cs.rpi.edu/~gregod/boost/tools/doc/revision" width="100%"><tr>
+<td align="left"></td>
+<td align="right"><div class="copyright-footer">Copyright ?2006 , 2007, 2008 John Maddock, Paul A. Bristow, Hubert
+      Holin, Xiaogang Zhang and Bruno Lalande<p>
+        Distributed under the Boost Software License, Version 1.0. (See accompanying
+        file LICENSE_1_0.txt or copy at <a href="http://www.boost.org/LICENSE_1_0.txt" target="_top">http://www.boost.org/LICENSE_1_0.txt</a>)
+      </p>
+</div></td>
+</tr></table>
+<hr>
+<div class="spirit-nav">
+<a accesskey="p" href="binomial_quiz_example.html"><img src="../../../../../../../../../../doc/html/images/prev.png" alt="Prev"></a><a accesskey="u" href="../binom_eg.html"><img src="../../../../../../../../../../doc/html/images/up.png" alt="Up"></a><a accesskey="h" href="../../../../../index.html"><img src="../../../../../../../../../../doc/html/images/home.png" alt="Home"></a><a accesskey="n" href="binom_size_eg.html"><img src="../../../../../../../../../../doc/html/images/next.png" alt="Next"></a>
+</div>
+</body>
+</html>

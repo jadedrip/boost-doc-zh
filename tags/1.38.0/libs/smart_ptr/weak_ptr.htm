@@ -1,0 +1,317 @@
+<!DOCTYPE HTML PUBLIC "-//W3C//DTD HTML 4.01 Transitional//EN">
+<html>
+<head>
+
+		
+		
+  <title>weak_ptr</title>
+  <meta http-equiv="Content-Type" content="text/html; charset=UTF-8">
+</head>
+
+
+	<body bgcolor="#ffffff" text="#000000">
+
+		
+<h1><a href="../../index.htm"><img alt="boost.png (6897 bytes)" src="../../boost.png" align="middle" border="0" height="86" width="277"></a>weak_ptr 类模板</h1>
+
+		
+<p><a href="#Introduction">Introduction 简介</a><br>
+
+			<a href="#Synopsis">Synopsis 概要</a><br>
+
+			<a href="#Members">Members 成员</a><br>
+
+			<a href="#functions">Free Functions 自由函数</a><br>
+
+			<a href="#FAQ">Frequently Asked Questions 常见问题</a>
+		</p>
+
+		
+<h2><a name="Introduction">Introduction 简介</a></h2>
+
+		
+<p><b>weak_ptr</b> 类模板存储一个引向已被 <b>shared_ptr</b> 管理的对象的 "weak reference"（弱引用）。为了访问这个对象，一个 <strong>weak_ptr</strong> 可以利用 <a href="shared_ptr.htm#constructors"><strong>shared_ptr</strong> 的构造函数</a>或成员函数 <strong><a href="#lock">lock</a></strong> 转换为 <strong>shared_ptr</strong>。当最后一个指向对象的 <b>shared_ptr</b> 消失，而对象也被删除后，从一个引向已被删除对象的 <b>weak_ptr</b> 实例获取 <strong>shared_ptr</strong> 的企图就会失败：构造函数会抛出一个 <strong>boost::bad_weak_ptr</strong> 类型的异常，而 <strong>weak_ptr::lock</strong> 会返回一个 <em>empty</em> <strong>shared_ptr</strong>。</p>
+
+		
+<p>每一个 <b>weak_ptr</b> 都符合 C++ 标准库的 <b>CopyConstructible</b> 和 <b>Assignable</b> 的必要条件，并因此能够用于标准库容器。因为提供了比较操作，因此 <b>weak_ptr</b> 可以和标准库中的关联式容器一起工作。</p>
+
+		
+<p><strong>weak_ptr</strong> 的操作绝不会抛出异常。</p>
+
+		
+<p>这个类模板被 <b>T</b> 参数化，<b>T</b> 是被指向的对象的类型。</p>
+
+		
+<p>相对于 <strong>shared_ptr</strong>，<strong>weak_ptr</strong> 提供了一个非常有限的操作子集，因为在多线程程序中访问它所存储的指针是非常危险的，甚至有时在一个单线程程序中也是不安全的（也就是说，它可能引起未定义行为）。姑且假设 <b>weak_ptr</b> 有一个返回 raw pointer（裸指针）的 <b>get</b> 成员函数，考虑下面这个无辜的代码片段：</p>
+
+		
+<pre>shared_ptr&lt;int&gt; p(new int(5));<br>weak_ptr&lt;int&gt; q(p);<br><br>// some time later<br><br>if(int * r = q.get())<br>{<br>    // use *r<br>}<br></pre>
+
+		
+<p>设想在 <strong>if</strong> 之后，但是又恰恰在 <strong>r</strong> 被使用之前，另一个线程执行了语句 <code>p.reset()</code>。这样 <strong>r</strong> 就成了一个 dangling pointer（悬挂指针）。</p>
+
+		
+<p>解决这个问题的方案是从 <strong>q</strong> 创建一个临时的 <strong>shared_ptr</strong>：</p>
+
+		
+<pre>shared_ptr&lt;int&gt; p(new int(5));<br>weak_ptr&lt;int&gt; q(p);<br><br>// some time later<br><br>if(shared_ptr&lt;int&gt; r = q.<a href="#lock">lock</a>())<br>{<br>    // use *r<br>}<br></pre>
+
+		
+<p>这样，<strong>r</strong> 就持有一个引向 <strong>q</strong> 所指向的对象的引用。即使在其它线程中执行了 <code>p.reset()</code>，那个对象也会继续活着，直到 <strong>r</strong> 离开作用域或者被 reset。通过获得一个指向这个对象的 <strong>shared_ptr</strong>，我们可以有效地保住它不被析构。</p>
+
+		
+<h2><a name="Synopsis">Synopsis 概要</a></h2>
+
+		
+<pre>namespace boost {<br><br>  template&lt;class T&gt; class weak_ptr {<br><br>    public:<br>      typedef T <a href="#element_type">element_type</a>;<br><br>      <a href="#default-constructor">weak_ptr</a>();<br><br>      template&lt;class Y&gt; <a href="#constructors">weak_ptr</a>(shared_ptr&lt;Y&gt; const &amp; r);<br>      <a href="#constructors">weak_ptr</a>(weak_ptr const &amp; r);<br>      template&lt;class Y&gt; <a href="#constructors">weak_ptr</a>(weak_ptr&lt;Y&gt; const &amp; r);<br><br>      <a href="#destructor">~weak_ptr</a>();<br><br>      weak_ptr &amp; <a href="#assignment">operator=</a>(weak_ptr const &amp; r);<br>      template&lt;class Y&gt; weak_ptr &amp; <a href="#assignment">operator=</a>(weak_ptr&lt;Y&gt; const &amp; r);<br>      template&lt;class Y&gt; weak_ptr &amp; <a href="#assignment">operator=</a>(shared_ptr&lt;Y&gt; const &amp; r);<br><br>      long <a href="#use_count">use_count</a>() const;<br>      bool <a href="#expired">expired</a>() const;<br>      shared_ptr&lt;T&gt; <a href="#lock">lock</a>() const;<br><br>      void <a href="#reset">reset</a>();<br>      void <a href="#swap">swap</a>(weak_ptr&lt;T&gt; &amp; b);<br>  };<br><br>  template&lt;class T, class U&gt;<br>    bool <a href="#comparison">operator&lt;</a>(weak_ptr&lt;T&gt; const &amp; a, weak_ptr&lt;U&gt; const &amp; b);<br><br>  template&lt;class T&gt;<br>    void <a href="#free-swap">swap</a>(weak_ptr&lt;T&gt; &amp; a, weak_ptr&lt;T&gt; &amp; b);<br>}<br></pre>
+
+		
+<h2><a name="Members">Members 成员</a></h2>
+
+		
+<h3><a name="element_type">element_type 元素类型</a></h3>
+
+		
+<pre>typedef T element_type;</pre>
+
+		
+<blockquote>
+			
+  <p>提供模板参数 T 的类型。</p>
+
+		</blockquote>
+
+		
+<h3><a name="default-constructor">constructors 构造函数</a></h3>
+
+		
+<pre>weak_ptr();</pre>
+
+		
+<blockquote>
+			
+  <p><b>作用：</b>构造一个 <em>empty</em> <b>weak_ptr</b>。</p>
+
+			
+  <p><b>后置条件：</b><code>use_count() == 0</code>。</p>
+
+			
+  <p><b>抛出：</b>无。</p>
+
+		</blockquote>
+<a name="constructors"></a>
+		
+<pre>template&lt;class Y&gt; weak_ptr(shared_ptr&lt;Y&gt; const &amp; r);<br>weak_ptr(weak_ptr const &amp; r);<br>template&lt;class Y&gt; weak_ptr(weak_ptr&lt;Y&gt; const &amp; r);</pre>
+
+		
+<blockquote>
+			
+  <p><b>作用：</b>如果 <strong>r</strong> 为 <em>empty</em>，构造一个 <em>empty</em> <strong>weak_ptr</strong>，否则，构造一个和 <strong>r</strong> <em>shares ownership</em>（共享所有权）的 <b>weak_ptr</b>，就像存储了 <strong>r</strong> 中所存储指针的一个拷贝。</p>
+
+			
+  <p><b>后置条件：</b><code>use_count() == r.use_count()</code>。</p>
+
+			
+  <p><b>抛出：</b>无。</p>
+
+		</blockquote>
+
+		
+<h3><a name="destructor">destructor 析构函数</a></h3>
+
+		
+<pre>~weak_ptr();</pre>
+
+		
+<blockquote>
+			
+  <p><b>作用：</b>销毁这个 <b>weak_ptr</b>，但对于所存储指针所指向的对象没有作用。</p>
+
+			
+  <p><b>抛出：</b>无。</p>
+
+		</blockquote>
+
+		
+<h3><a name="assignment">assignment 赋值</a></h3>
+
+		
+<pre>weak_ptr &amp; operator=(weak_ptr const &amp; r);<br>template&lt;class Y&gt; weak_ptr &amp; operator=(weak_ptr&lt;Y&gt; const &amp; r);<br>template&lt;class Y&gt; weak_ptr &amp; operator=(shared_ptr&lt;Y&gt; const &amp; r);</pre>
+
+		
+<blockquote>
+			
+  <p><b>作用：</b>等价于 <code>weak_ptr(r).swap(*this)</code>。</p>
+
+			
+  <p><b>抛出：</b>无。</p>
+
+			
+  <p><b>注意：</b>实现可以自由地经由不同的手段达到其效果（以及隐含的保证），而不创建临时变量。</p>
+
+		</blockquote>
+
+		
+<h3><a name="use_count">use_count 使用计数</a></h3>
+
+		
+<pre>long use_count() const;</pre>
+
+		
+<blockquote>
+			
+  <p><b>返回：</b>如果 <strong>*this</strong> 为 <em>empty</em>，返回 0，否则，返回和 <strong>*this</strong> <em>share ownership</em>（共享所有权）的 <b>shared_ptr</b> 对象的数目。</p>
+
+			
+  <p><b>抛出：</b>无。</p>
+
+			
+  <p><b>注意：</b><code>use_count()</code> 达不到必要的效率。只用于调试和测试的目的。而不要用于产品代码。</p>
+
+		</blockquote>
+
+		
+<h3><a name="expired">expired 过期</a></h3>
+
+		
+<pre>bool expired() const;</pre>
+
+		
+<blockquote>
+			
+  <p><b>返回：</b><code>use_count() == 0</code>。</p>
+
+			
+  <p><b>抛出：</b>无。</p>
+
+			
+  <p><b>注意：</b><code>expired()</code> 可能比 <code>use_count()</code> 更快。</p>
+
+		</blockquote>
+
+		
+<h3><a name="lock">lock 锁</a></h3>
+
+		
+<pre>shared_ptr&lt;T&gt; lock() const;</pre>
+
+		
+<blockquote>
+			
+  <p><b>返回：</b><code>expired()? shared_ptr&lt;T&gt;(): shared_ptr&lt;T&gt;(*this)</code>。</p>
+
+			
+  <p><b>抛出：</b>无。</p>
+
+		</blockquote>
+
+		
+<h3><a name="reset">reset 重置</a></h3>
+
+		
+<pre>void reset();</pre>
+
+		
+<blockquote>
+			
+  <p><b>作用：</b>等价于 <code>weak_ptr().swap(*this)</code>。</p>
+
+		</blockquote>
+
+		
+<h3><a name="swap">swap 交换</a></h3>
+
+		
+<pre>void swap(weak_ptr &amp; b);</pre>
+
+		
+<blockquote>
+			
+  <p><b>作用：</b>交换两个智能指针的内容。</p>
+
+			
+  <p><b>抛出：</b>无。</p>
+
+		</blockquote>
+
+		
+<h2><a name="functions">Free Functions 自由函数</a></h2>
+
+		
+<h3><a name="comparison">comparison 比较</a></h3>
+
+		
+<pre>template&lt;class T, class U&gt;<br>  bool operator&lt;(weak_ptr&lt;T&gt; const &amp; a, weak_ptr&lt;U&gt; const &amp; b);</pre>
+
+		
+<blockquote>
+			
+  <p><b>返回：</b>一个未确定值，以致于</p>
+
+			
+  <ul>
+
+				<li>
+					<b>operator&lt;</b> 是一个严格意义上的 C++ 标准 25.3 <code>[lib.alg.sorting]</code> 中描述的 weak ordering（弱顺序）；
+				</li>
+    <li>
+					等值关系通过 <strong>operator&lt;</strong> 来定义，<code>!(a &lt; b) &amp;&amp; !(b &lt; a)</code>，在这种情况下，当且仅当两个 <strong>weak_ptr</strong> 实例 <em>share ownership</em>（共享所有权）或者都为 <em>empty</em> 时，两个 <strong>weak_ptr</strong> 相等。</li>
+  </ul>
+
+			
+  <p><b>抛出：</b>无。</p>
+
+			
+  <p><b>注意：</b>允许 <strong>weak_ptr</strong> 对象在关联式容器中作为键值使用。</p>
+
+		</blockquote>
+
+		
+<h3><a name="free-swap">swap 交换</a></h3>
+
+		
+<pre>template&lt;class T&gt;<br>  void swap(weak_ptr&lt;T&gt; &amp; a, weak_ptr&lt;T&gt; &amp; b)</pre>
+
+		
+<blockquote>
+			
+  <p><b>作用：</b>等价于 <code>a.swap(b)</code>。</p>
+
+			
+  <p><b>抛出：</b>无。</p>
+
+			
+  <p><b>注意：</b>与 <b>std::swap</b> 的接口匹配。为泛型编程提供帮助。</p>
+
+		</blockquote>
+
+		
+<h2><a name="FAQ">Frequently Asked Questions 常见问题</a></h2>
+
+		
+<p><b>问：</b>一个对象能不能在自己的构造函数内创建一个指向自己的 <strong>weak_ptr</strong> 呢？</p>
+
+		
+<p><b>答：</b>不能。<strong>weak_ptr</strong> 只能从一个 <strong>shared_ptr</strong> 创建，而在对象构造的时候指向对象的 <strong>shared_ptr</strong> 还不存在。即使你能创建一个指向 <strong> this</strong> 的临时 <strong>shared_ptr</strong>，它也会在构造函数结尾处离开作用域，而所有的 <strong>weak_ptr</strong> 实例立马过期。</p>
+
+		
+<p>解决方案是把构造函数做成 private 的，并配备一个返回 <strong>shared_ptr</strong> 的工厂函数。<br>
+</p>
+
+		
+<pre>class X<br>{<br>private:<br><br>    X();<br><br>public:<br><br>    static shared_ptr&lt;X&gt; create()<br>    {<br>        shared_ptr&lt;X&gt; px(new X);<br>        // create weak pointers from px here<br>        return px;<br>    }<br>};<br></pre>
+
+		
+<p><br>
+
+		</p>
+
+		
+<hr>
+<p>$Date: 2007-11-25 13:38:02 -0500 (Sun, 25 Nov 2007) $</p>
+
+<p><small>Copyright 1999 Greg Colvin and Beman Dawes. Copyright 2002 Darin 
+Adler. Copyright 2002-2005 Peter Dimov. Distributed under the Boost Software 
+License, Version 1.0. See accompanying file <a href="../../LICENSE_1_0.txt">LICENSE_1_0.txt</a> or copy at <a href="http://www.boost.org/LICENSE_1_0.txt">http://www.boost.org/LICENSE_1_0.txt</a>.</small></p>
+</body>
+</html>

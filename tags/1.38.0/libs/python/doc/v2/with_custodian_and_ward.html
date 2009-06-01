@@ -1,0 +1,538 @@
+<!DOCTYPE html PUBLIC "-//W3C//DTD HTML 4.01 Transitional//EN">
+<!-- Copyright David Abrahams 2006. Distributed under the Boost -->
+<!-- Software License, Version 1.0. (See accompanying -->
+<!-- file LICENSE_1_0.txt or copy at http://www.boost.org/LICENSE_1_0.txt) -->
+<html>
+  <head>
+    <meta name="generator" content=
+    "HTML Tidy for Cygwin (vers 1st February 2003), see www.w3.org">
+    <meta http-equiv="Content-Type" content="text/html; charset=UTF-8">
+    <link rel="stylesheet" type="text/css" href="../boost.css">
+    <title>
+      Boost.Python - &lt;boost/python/with_custodian_and_ward.hpp&gt;
+    </title>
+  </head>
+  <body>
+    <table border="0" cellpadding="7" cellspacing="0" width="100%"
+           summary="header">
+      <tr>
+        <td valign="top" width="300">
+          <h3>
+            <a href="../../../../index.htm"><img height="86" width="277"
+                 alt="C++ Boost" src="../../../../boost.png" border="0">
+                 </a>
+          </h3>
+        </td>
+        <td valign="top">
+          <h1 align="center">
+            <a href="../index.html">Boost.Python</a>
+          </h1>
+          <h2 align="center">
+            Header &lt;boost/python/with_custodian_and_ward.hpp&gt;
+          </h2>
+        </td>
+      </tr>
+    </table>
+    <hr>
+    <h2>
+      Contents
+    </h2>
+    <dl class="page-index">
+      <dt>
+        <a href="#introduction">Introduction</a>
+      </dt>
+      <dt>
+        <a href="#classes">Classes</a>
+      </dt>
+      <dd>
+        <dl class="page-index">
+          <dt>
+            <a href="#with_custodian_and_ward-spec">Class Template
+            <code>with_custodian_and_ward</code></a>
+          </dt>
+          <dd>
+            <dl class="page-index">
+              <dt>
+                <a href="#with_custodian_and_ward-spec-synopsis">Class
+                Template <code>with_custodian_and_ward</code> synopsis</a>
+              </dt>
+              <dt>
+                <a href="#with_custodian_and_ward-spec-statics">Class
+                <code>with_custodian_and_ward</code> static functions</a>
+              </dt>
+            </dl>
+          </dd>
+          <dt>
+            <a href="#with_custodian_and_ward_postcall-spec">Class Template
+            <code>with_custodian_and_ward_postcall</code></a>
+          </dt>
+          <dd>
+            <dl class="page-index">
+              <dt>
+                <a href=
+                "#with_custodian_and_ward_postcall-spec-synopsis">Class
+                Template <code>with_custodian_and_ward_postcall</code>
+                synopsis</a>
+              </dt>
+              <dt>
+                <a href=
+                "#with_custodian_and_ward_postcall-spec-statics">Class
+                <code>with_custodian_and_ward_postcall</code> static
+                functions</a>
+              </dt>
+            </dl>
+          </dd>
+        </dl>
+      </dd>
+      <dt>
+        <a href="#examples">Example</a>
+      </dt>
+    </dl>
+    <hr>
+    <h2>
+      <a name="introduction">Introduction</a>
+    </h2>This header provides faciliites for establishing a lifetime
+    dependency between two of a function's Python argument or result objects.
+    The <i>ward</i> object will not be destroyed until after the custodian as
+    long as the <i>custodian</i> object supports <a href=
+    "http://www.python.org/doc/current/lib/module-weakref.html">weak
+    references</a> (Boost.Python extension classes all support weak
+    references). If the <i>custodian</i> object does not support weak
+    references and is not <code>None</code>, an appropriate exception will be
+    thrown. The two class templates <code>with_custodian_and_ward</code> and
+    <code>with_custodian_and_ward_postcall</code> differ in the point at
+    which they take effect. 
+    
+    <p>
+    这个头文件提供了在函数的两个Python参数或结果对象之间建立生命期依赖性的工具。
+
+    只要 <i>custodian（监护者）</i> 对象支持<a href=
+    "http://www.python.org/doc/current/lib/module-weakref.html">弱引用</a>，
+    <i>ward（受监护者）</i> 对象就不会在监护者之前被销毁。
+    
+    如果 <i>custodian</i> 对象不支持弱引用，
+    并且不是 <code>None</code>，
+    将抛出一个适当的异常。
+    
+    两个类模板 <code>with_custodian_and_ward</code> 和
+    <code>with_custodian_and_ward_postcall</code> 
+    的区别是它们起效的时间点。
+    </p>
+    
+    <p>
+      In order to reduce the chance of inadvertently creating dangling
+      pointers, the default is to do lifetime binding <i>before</i> the
+      underlying C++ object is invoked. However, before invocation the result
+      object is not available, so
+      <code>with_custodian_and_ward_postcall</code> is provided to bind
+      lifetimes after invocation. Also, if a C++ exception is thrown after
+      <code>with_custodian_and_ward&lt;&gt;::precall</code> but before the
+      underlying C++ object actually stores a pointer, the lifetime of the
+      custodian and ward objects will be artificially bound together, so one
+      might choose <code>with_custodian_and_ward_postcall</code> instead,
+      depending on the semantics of the function being wrapped.
+    </p>
+    
+    <p>
+      为了减少无意间创建野指针的机会，
+      默认在涉及底层C++对象<i>之前</i>进行生命期绑定。
+      
+      然而，结果对象在调用之前并不存在，
+      因此，提供了 <code>with_custodian_and_ward_postcall</code>，
+      用于在调用之后绑定生命期。
+      
+      同时，如果在
+      <code>with_custodian_and_ward&lt;&gt;::precall</code> 之后，
+      但在底层C++对象实际保存指针之前，抛出了C++异常，
+      监护者和受监护者对象将被人为地绑在一起，
+      因此根据被封装函数的语义，
+      可能需要改而选择 <code>with_custodian_and_ward_postcall</code>。
+    </p>
+    
+    <p>
+      Please note that this is <i>not</i> the appropriate tool to use when
+      wrapping functions which <b>transfer ownership</b> of a raw pointer
+      across the function-call boundary. Please see the <a href=
+      "faq.html#ownership">FAQ</a> if you want to do that.
+    </p>
+
+    <p>
+      请注意，
+      当封装的函数会跨越函数调用边界转移原始指针所有权时，
+      这<i>不是<i>恰当的工具。
+      
+      如果你想那样做，请查看 <a href=
+      "faq.html#ownership">FAQ</a>。
+    </p>
+
+    <h2>
+      <a name="classes"></a>Classes
+    </h2>
+    <h3>
+      <a name="with_custodian_and_ward-spec"></a>Class template
+      <code>with_custodian_and_ward</code>
+    </h3>
+    <table border="1" summary="with_custodian_and_ward template parameters">
+      <caption>
+        <b><code>with_custodian_and_ward</code> template parameters</b>
+      </caption>
+      <tr>
+        <th>
+          Parameter
+        </th>
+        <th>
+          Requirements
+        </th>
+        <th>
+          Description
+        </th>
+        <th>
+          Default
+        </th>
+      </tr>
+      <tr>
+        <td>
+          <code>custodian</code>
+        </td>
+        <td>
+          A positive compile-time constant of type <code>std::size_t</code>.
+          
+          <p>一个正的编译时 <code>std::size_t</code> 常量。
+          </p>
+          
+        </td>
+        <td>
+          The 1-based index of the parameter which is the dependency in the
+          lifetime relationship to be established. If used to wrap a member
+          function, parameter 1 is the target object (<code>*this</code>).
+          Note that if the target Python object type doesn't support weak
+          references, a Python <code>TypeError</code> exception will be
+          raised when the C++ object being wrapped is called.
+          
+          <p>从1开始的参数序号，
+          该参数是待建的生命期关系的宿主方。
+          
+          如果用于封装成员函数，参数1是目标对象（<code>*this</code>）。
+          
+          注意如果目标Python对象类型不支持弱引用，
+          当调用该C++封装对象时，
+          将引发一个Python <code>TypeError</code> 异常。
+          </p>
+          
+        </td>
+      </tr>
+      <tr>
+        <td>
+          <code>ward</code>
+        </td>
+        <td>
+          A positive compile-time constant of type <code>std::size_t</code>.
+          
+          <p>一个正的编译时 <code>std::size_t</code> 常量。
+          </p>
+          
+        </td>
+        <td>
+          The 1-based index of the parameter which is the dependent in the
+          lifetime relationship to be established. If used to wrap a member
+          function, parameter 1 is the target object (<code>*this</code>).
+          
+          <p>从1开始的参数序号，
+          该参数是待建的生命期关系的从属物。
+          
+          如果用于封装成员函数，参数1是目标对象（<code>*this</code>）。
+          </p>
+          
+        </td>
+      </tr>
+      <tr>
+        <td>
+          <code>Base</code>
+        </td>
+        <td>
+          A model of <a href="CallPolicies.html">CallPolicies</a>
+          
+          <p>一个 <a href="CallPolicies.html">CallPolicies</a> 模型
+          </p>
+          
+        </td>
+        <td>
+          Used for <a href="CallPolicies.html#composition">policy
+          composition</a>.
+          
+          <p>用于<a href="CallPolicies.html#composition">策略组合</a>。
+          </p>
+          
+        </td>
+        <td>
+          <code><a href=
+          "default_call_policies.html#default_call_policies-spec">default_call_policies</a></code>
+        </td>
+      </tr>
+    </table>
+    <h4>
+      <a name="with_custodian_and_ward-spec-synopsis"></a>Class template
+      <code>with_custodian_and_ward</code> synopsis
+    </h4>
+    <pre>
+namespace boost { namespace python
+{
+   template &lt;std::size_t custodian, std::size_t ward, class Base = default_call_policies&gt;
+   struct with_custodian_and_ward : Base
+   {
+      static bool precall(PyObject* args);
+   };
+}}
+</pre>
+    <h4>
+      <a name="with_custodian_and_ward-spec-statics"></a>Class
+      <code>with_custodian_and_ward</code> static functions
+    </h4>
+    <pre>
+bool precall(PyObject* args);
+</pre>
+    <dl class="function-semantics">
+      <dt>
+        <b>Requires:</b> <code><a href=
+        "http://www.python.org/doc/2.2/api/tupleObjects.html#l2h-476">PyTuple_Check</a>(args)
+        != 0</code>
+      </dt>
+      <dt>
+        <b>Effects:</b> Makes the lifetime of the argument indicated by
+        <code>ward</code> dependent on the lifetime of the argument indicated
+        by <code>custodian</code>.
+      </dt>
+      <dt>
+        <b>Returns:</b> <code>false</code> and <code><a href=
+        "http://www.python.org/doc/2.2/api/exceptionHandling.html#l2h-71">PyErr_Occurred</a>()&nbsp;!=&nbsp;0</code>
+        upon failure, <code>true</code> otherwise.
+      </dt>
+    </dl><!-- xxxxxx -->
+    
+    <dl class="function-semantics">
+      <dt>
+        <b>要求：</b> <code><a href=
+        "http://www.python.org/doc/2.2/api/tupleObjects.html#l2h-476"
+        >PyTuple_Check</a>(args) != 0</code>
+      </dt>
+      <dt>
+        <b>效果：</b> 让 <code>ward</code>
+        所指示的参数的生命期依赖于
+        <code>custodian</code>
+        所指示的参数的生命期。
+      </dt>
+      <dt>
+        <b>返回：</b> 失败时为
+        <code>false</code>，并且 <code><a href=
+        "http://www.python.org/doc/2.2/api/exceptionHandling.html#l2h-71"
+        >PyErr_Occurred</a>()&nbsp;!=&nbsp;0</code>，
+        否则为 <code>true</code>。
+      </dt>
+    </dl><!-- xxxxxx -->
+    
+    <h3>
+      <a name="with_custodian_and_ward_postcall-spec"></a>Class template
+      <code>with_custodian_and_ward_postcall</code>
+    </h3>
+    <table border="1" summary=
+    "with_custodian_and_ward_postcall template parameters">
+      <caption>
+        <b><code>with_custodian_and_ward_postcall</code> template
+        parameters</b>
+      </caption>
+      <tr>
+        <th>
+          Parameter
+        </th>
+        <th>
+          Requirements
+        </th>
+        <th>
+          Description
+        </th>
+        <th>
+          Default
+        </th>
+      </tr>
+      <tr>
+        <td>
+          <code>custodian</code>
+        </td>
+        <td>
+          A compile-time constant of type <code>std::size_t</code>.
+          
+          <p>一个编译时 <code>std::size_t</code> 常量。
+          </p>
+          
+        </td>
+        <td>
+          The index of the parameter which is the dependency in the lifetime
+          relationship to be established. Zero indicates the result object; 1
+          indicates the first argument. If used to wrap a member function,
+          parameter 1 is the target object (<code>*this</code>). Note that if
+          the target Python object type doesn't support weak references, a
+          Python <code>TypeError</code> exception will be raised when the C++
+          object being wrapped is called.
+          
+          <p>参数的序号，
+          该参数是待建的生命期关系的宿主方。
+          
+          零表示结果对象；
+          1表示第一个参数。
+          
+          如果用于封装成员函数，
+          参数1是目标对象（<code>*this</code>）。
+          
+          注意如果目标Python对象类型不支持弱引用，
+          当调用封装的C++对象时，
+          将引发Python <code>TypeError</code> 异常。
+          </p>
+          
+        </td>
+      </tr>
+      <tr>
+        <td>
+          <code>ward</code>
+        </td>
+        <td>
+          A compile-time constant of type <code>std::size_t</code>.
+          
+          <p>一个编译时 <code>std::size_t</code> 常量。
+          </p>
+          
+        </td>
+        <td>
+          The index of the parameter which is the dependent in the lifetime
+          relationship to be established. Zero indicates the result object; 1
+          indicates the first argument. If used to wrap a member function,
+          parameter 1 is the target object (<code>*this</code>).
+          
+          <p>参数的序号，
+          该参数是待建生命期关系的从属物。
+          
+          零表示结果对象；
+          1表示第一个参数。
+          如果用于封装成员函数，
+          参数1是目标对象（<code>*this</code>）。
+          </p>
+          
+        </td>
+      </tr>
+      <tr>
+        <td>
+          <code>Base</code>
+        </td>
+        <td>
+          A model of <a href="CallPolicies.html">CallPolicies</a>
+          
+          <p>一个 <a href="CallPolicies.html">CallPolicies</a> 模型
+          </p>
+          
+        </td>
+        <td>
+          Used for <a href="CallPolicies.html#composition">policy
+          composition</a>.
+          
+          <p>用于<a href="CallPolicies.html#composition">策略组合</a>。
+          </p>
+          
+        </td>
+        <td>
+          <code><a href=
+          "default_call_policies.html#default_call_policies-spec">default_call_policies</a></code>
+        </td>
+      </tr>
+    </table>
+    <h4>
+      <a name="with_custodian_and_ward_postcall-spec-synopsis"></a>Class
+      template <code>with_custodian_and_ward_postcall</code> synopsis
+    </h4>
+    <pre>
+namespace boost { namespace python
+{
+   template &lt;std::size_t custodian, std::size_t ward, class Base = default_call_policies&gt;
+   struct with_custodian_and_ward_postcall : Base
+   {
+      static PyObject* postcall(PyObject* args, PyObject* result);
+   };
+}}
+</pre>
+    <h4>
+      <a name="with_custodian_and_ward_postcall-spec-statics"></a>Class
+      <code>with_custodian_and_ward_postcall</code> static functions
+    </h4>
+    <pre>
+PyObject* postcall(PyObject* args, PyObject* result);
+</pre>
+    <dl class="function-semantics">
+      <dt>
+        <b>Requires:</b> <code><a href=
+        "http://www.python.org/doc/2.2/api/tupleObjects.html#l2h-476">PyTuple_Check</a>(args)
+        != 0</code>, <code>result&nbsp;!=&nbsp;0</code>.
+      </dt>
+      <dt>
+        <b>Effects:</b> Makes the lifetime of the object indicated by
+        <code>ward</code> dependent on the lifetime of the object indicated
+        by <code>custodian</code>.
+      </dt>
+      <dt>
+        <b>Returns:</b> <code>0</code> and <code><a href=
+        "http://www.python.org/doc/2.2/api/exceptionHandling.html#l2h-71">PyErr_Occurred</a>()&nbsp;!=&nbsp;0</code>
+        upon failure, <code>true</code> otherwise.
+      </dt>
+    </dl>
+
+    <dl class="function-semantics">
+      <dt>
+        <b>要求；</b> <code><a href=
+        "http://www.python.org/doc/2.2/api/tupleObjects.html#l2h-476"
+        >PyTuple_Check</a>(args) != 0</code>, <code>result&nbsp;!=&nbsp;0</code>。
+      </dt>
+      <dt>
+        <b>效果：</b> 让
+        <code>ward</code> 所指示对象的生命期依赖于
+        <code>custodian</code> 所指示对象的生命期。
+      </dt>
+      <dt>
+        <b>返回：</b> 失败时为 <code>0</code>，并且 <code><a href=
+        "http://www.python.org/doc/2.2/api/exceptionHandling.html#l2h-71"
+        >PyErr_Occurred</a>()&nbsp;!=&nbsp;0</code>，
+        否则为 <code>true</code>。
+      </dt>
+    </dl>
+    
+    <h2>
+      <a name="examples"></a>Example
+    </h2>The following example shows how
+    <code>with_custodian_and_ward_postcall</code> is used by the library to
+    implement <code><a href=
+    "return_internal_reference.html#return_internal_reference-spec">return_internal_reference</a></code>
+    
+    <p>下例显示了库如何用
+    <code>with_custodian_and_ward_postcall</code> 
+    实现 <code><a href=
+    "return_internal_reference.html#return_internal_reference-spec"
+    >return_internal_reference</a></code>
+    </p>
+    
+    <pre>
+template &lt;std::size_t owner_arg = 1, class Base = default_call_policies&gt;
+struct return_internal_reference
+    : with_custodian_and_ward_postcall&lt;0, owner_arg, Base&gt;
+{
+   typedef <a href=
+"reference_existing_object.html#reference_existing_object-spec">reference_existing_object</a> result_converter;
+};
+</pre>
+    <p>
+      Revised 
+      <!--webbot bot="Timestamp" S-Type="EDITED" S-Format="%d %B, %Y" startspan -->
+       13 November, 2002 
+      <!--webbot bot="Timestamp" endspan i-checksum="39359" -->
+      </p>
+    <p>
+      <i>&copy; Copyright <a href="http://www.boost.org/people/dave_abrahams.htm">Dave
+      Abrahams</a> 2002. </i>
+    </p>
+  </body>
+</html>
