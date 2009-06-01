@@ -3,8 +3,8 @@
 <meta http-equiv="Content-Type" content="text/html; charset=ISO-8859-1">
 <title>Ownership smart pointers</title>
 <link rel="stylesheet" href="../boostbook.css" type="text/css">
-<meta name="generator" content="DocBook XSL Stylesheets V1.73.2">
-<link rel="start" href="../index.html" title="The Boost C++ Libraries BoostBook Documentation Subset">
+<meta name="generator" content="DocBook XSL Stylesheets V1.74.3">
+<link rel="home" href="../index.html" title="The Boost C++ Libraries BoostBook Documentation Subset">
 <link rel="up" href="../interprocess.html" title="Chapter 9. Boost.Interprocess">
 <link rel="prev" href="streams.html" title="Direct iostream formatting: vectorstream and bufferstream">
 <link rel="next" href="architecture.html" title="Architecture and internals">
@@ -156,42 +156,40 @@
       <span class="special">:</span> <span class="identifier">m_intrusive_ptr</span><span class="special">(</span><span class="identifier">ptr</span><span class="special">){}</span>
 <span class="special">};</span>
 
-<span class="keyword">int</span> <span class="identifier">main</span> <span class="special">()</span>
+<span class="keyword">int</span> <span class="identifier">main</span><span class="special">()</span>
 <span class="special">{</span>
-   <span class="identifier">shared_memory_object</span><span class="special">::</span><span class="identifier">remove</span><span class="special">(</span><span class="string">"my_shmem"</span><span class="special">);</span>
+   <span class="comment">//Remove shared memory on construction and destruction
+</span>   <span class="keyword">struct</span> <span class="identifier">shm_remove</span>
+   <span class="special">{</span>
+      <span class="identifier">shm_remove</span><span class="special">()</span> <span class="special">{</span> <span class="identifier">shared_memory_object</span><span class="special">::</span><span class="identifier">remove</span><span class="special">(</span><span class="string">"MySharedMemory"</span><span class="special">);</span> <span class="special">}</span>
+      <span class="special">~</span><span class="identifier">shm_remove</span><span class="special">(){</span> <span class="identifier">shared_memory_object</span><span class="special">::</span><span class="identifier">remove</span><span class="special">(</span><span class="string">"MySharedMemory"</span><span class="special">);</span> <span class="special">}</span>
+   <span class="special">}</span> <span class="identifier">remover</span><span class="special">;</span>
 
-   <span class="keyword">try</span><span class="special">{</span>
-      <span class="comment">//Create shared memory
-</span>      <span class="identifier">managed_shared_memory</span> <span class="identifier">shmem</span><span class="special">(</span><span class="identifier">create_only</span><span class="special">,</span> <span class="string">"my_shmem"</span><span class="special">,</span> <span class="number">10000</span><span class="special">);</span>
+   <span class="comment">//Create shared memory
+</span>   <span class="identifier">managed_shared_memory</span> <span class="identifier">shmem</span><span class="special">(</span><span class="identifier">create_only</span><span class="special">,</span> <span class="string">"MySharedMemory"</span><span class="special">,</span> <span class="number">10000</span><span class="special">);</span>
 
-      <span class="comment">//Create the unique reference counted object in shared memory
-</span>      <span class="identifier">N</span><span class="special">::</span><span class="identifier">reference_counted_class</span> <span class="special">*</span><span class="identifier">ref_counted</span> <span class="special">=</span> 
-         <span class="identifier">shmem</span><span class="special">.</span><span class="identifier">construct</span><span class="special">&lt;</span><span class="identifier">N</span><span class="special">::</span><span class="identifier">reference_counted_class</span><span class="special">&gt;</span>
-            <span class="special">(</span><span class="string">"ref_counted"</span><span class="special">)(</span><span class="identifier">shmem</span><span class="special">.</span><span class="identifier">get_segment_manager</span><span class="special">());</span>
+   <span class="comment">//Create the unique reference counted object in shared memory
+</span>   <span class="identifier">N</span><span class="special">::</span><span class="identifier">reference_counted_class</span> <span class="special">*</span><span class="identifier">ref_counted</span> <span class="special">=</span> 
+      <span class="identifier">shmem</span><span class="special">.</span><span class="identifier">construct</span><span class="special">&lt;</span><span class="identifier">N</span><span class="special">::</span><span class="identifier">reference_counted_class</span><span class="special">&gt;</span>
+         <span class="special">(</span><span class="string">"ref_counted"</span><span class="special">)(</span><span class="identifier">shmem</span><span class="special">.</span><span class="identifier">get_segment_manager</span><span class="special">());</span>
 
-      <span class="comment">//Create an array of ten intrusive pointer owners in shared memory
-</span>      <span class="identifier">intrusive_ptr_owner</span> <span class="special">*</span><span class="identifier">intrusive_owner_array</span> <span class="special">=</span> 
-         <span class="identifier">shmem</span><span class="special">.</span><span class="identifier">construct</span><span class="special">&lt;</span><span class="identifier">intrusive_ptr_owner</span><span class="special">&gt;</span>
-            <span class="special">(</span><span class="identifier">anonymous_instance</span><span class="special">)[</span><span class="number">10</span><span class="special">](</span><span class="identifier">ref_counted</span><span class="special">);</span>
+   <span class="comment">//Create an array of ten intrusive pointer owners in shared memory
+</span>   <span class="identifier">intrusive_ptr_owner</span> <span class="special">*</span><span class="identifier">intrusive_owner_array</span> <span class="special">=</span> 
+      <span class="identifier">shmem</span><span class="special">.</span><span class="identifier">construct</span><span class="special">&lt;</span><span class="identifier">intrusive_ptr_owner</span><span class="special">&gt;</span>
+         <span class="special">(</span><span class="identifier">anonymous_instance</span><span class="special">)[</span><span class="number">10</span><span class="special">](</span><span class="identifier">ref_counted</span><span class="special">);</span>
 
-      <span class="comment">//Now test that reference count is ten
-</span>      <span class="keyword">if</span><span class="special">(</span><span class="identifier">ref_counted</span><span class="special">-&gt;</span><span class="identifier">use_count</span><span class="special">()</span> <span class="special">!=</span> <span class="number">10</span><span class="special">)</span>
-         <span class="keyword">return</span> <span class="number">1</span><span class="special">;</span>
+   <span class="comment">//Now test that reference count is ten
+</span>   <span class="keyword">if</span><span class="special">(</span><span class="identifier">ref_counted</span><span class="special">-&gt;</span><span class="identifier">use_count</span><span class="special">()</span> <span class="special">!=</span> <span class="number">10</span><span class="special">)</span>
+      <span class="keyword">return</span> <span class="number">1</span><span class="special">;</span>
 
-      <span class="comment">//Now destroy the array of intrusive pointer owners
-</span>      <span class="comment">//This should destroy every intrusive_ptr and because of
-</span>      <span class="comment">//that reference_counted_class will be destroyed
-</span>      <span class="identifier">shmem</span><span class="special">.</span><span class="identifier">destroy_ptr</span><span class="special">(</span><span class="identifier">intrusive_owner_array</span><span class="special">);</span>
+   <span class="comment">//Now destroy the array of intrusive pointer owners
+</span>   <span class="comment">//This should destroy every intrusive_ptr and because of
+</span>   <span class="comment">//that reference_counted_class will be destroyed
+</span>   <span class="identifier">shmem</span><span class="special">.</span><span class="identifier">destroy_ptr</span><span class="special">(</span><span class="identifier">intrusive_owner_array</span><span class="special">);</span>
 
-      <span class="comment">//Now the reference counted object should have been destroyed
-</span>      <span class="keyword">if</span><span class="special">(</span><span class="identifier">shmem</span><span class="special">.</span><span class="identifier">find</span><span class="special">&lt;</span><span class="identifier">intrusive_ptr_owner</span><span class="special">&gt;(</span><span class="string">"ref_counted"</span><span class="special">).</span><span class="identifier">first</span><span class="special">)</span>
-         <span class="keyword">return</span> <span class="number">1</span><span class="special">;</span>
-   <span class="special">}</span>
-   <span class="keyword">catch</span><span class="special">(...){</span>
-      <span class="identifier">shared_memory_object</span><span class="special">::</span><span class="identifier">remove</span><span class="special">(</span><span class="string">"my_shmem"</span><span class="special">);</span>
-      <span class="keyword">throw</span><span class="special">;</span>
-   <span class="special">}</span>
-   <span class="identifier">shared_memory_object</span><span class="special">::</span><span class="identifier">remove</span><span class="special">(</span><span class="string">"my_shmem"</span><span class="special">);</span>
+   <span class="comment">//Now the reference counted object should have been destroyed
+</span>   <span class="keyword">if</span><span class="special">(</span><span class="identifier">shmem</span><span class="special">.</span><span class="identifier">find</span><span class="special">&lt;</span><span class="identifier">intrusive_ptr_owner</span><span class="special">&gt;(</span><span class="string">"ref_counted"</span><span class="special">).</span><span class="identifier">first</span><span class="special">)</span>
+      <span class="keyword">return</span> <span class="number">1</span><span class="special">;</span>
    <span class="comment">//Success!
 </span>   <span class="keyword">return</span> <span class="number">0</span><span class="special">;</span>
 <span class="special">}</span>
@@ -278,60 +276,59 @@
 <span class="keyword">int</span> <span class="identifier">main</span> <span class="special">()</span>
 <span class="special">{</span>
    <span class="comment">//Create shared memory
-</span>   <span class="identifier">shared_memory_object</span><span class="special">::</span><span class="identifier">remove</span><span class="special">(</span><span class="string">"my_shmem"</span><span class="special">);</span>
-   <span class="keyword">try</span><span class="special">{</span>
-      <span class="identifier">managed_shared_memory</span> <span class="identifier">shmem</span><span class="special">(</span><span class="identifier">create_only</span><span class="special">,</span> <span class="string">"my_shmem"</span><span class="special">,</span> <span class="number">10000</span><span class="special">);</span>
+</span>   <span class="comment">//Remove shared memory on construction and destruction
+</span>   <span class="keyword">struct</span> <span class="identifier">shm_remove</span>
+   <span class="special">{</span>
+      <span class="identifier">shm_remove</span><span class="special">()</span> <span class="special">{</span> <span class="identifier">shared_memory_object</span><span class="special">::</span><span class="identifier">remove</span><span class="special">(</span><span class="string">"MySharedMemory"</span><span class="special">);</span> <span class="special">}</span>
+      <span class="special">~</span><span class="identifier">shm_remove</span><span class="special">(){</span> <span class="identifier">shared_memory_object</span><span class="special">::</span><span class="identifier">remove</span><span class="special">(</span><span class="string">"MySharedMemory"</span><span class="special">);</span> <span class="special">}</span>
+   <span class="special">}</span> <span class="identifier">remover</span><span class="special">;</span>
 
-      <span class="comment">//In the first try, there will be no exceptions
-</span>      <span class="comment">//in the second try we will throw an exception
-</span>      <span class="keyword">for</span><span class="special">(</span><span class="keyword">int</span> <span class="identifier">i</span> <span class="special">=</span> <span class="number">0</span><span class="special">;</span> <span class="identifier">i</span> <span class="special">&lt;</span> <span class="number">2</span><span class="special">;</span> <span class="special">++</span><span class="identifier">i</span><span class="special">){</span>
-         <span class="comment">//Create an object in shared memory
-</span>         <span class="identifier">my_class</span> <span class="special">*</span> <span class="identifier">my_object</span> <span class="special">=</span> <span class="identifier">shmem</span><span class="special">.</span><span class="identifier">construct</span><span class="special">&lt;</span><span class="identifier">my_class</span><span class="special">&gt;(</span><span class="string">"my_object"</span><span class="special">)();</span>
-         <span class="identifier">my_class</span> <span class="special">*</span> <span class="identifier">my_object2</span> <span class="special">=</span> <span class="identifier">shmem</span><span class="special">.</span><span class="identifier">construct</span><span class="special">&lt;</span><span class="identifier">my_class</span><span class="special">&gt;(</span><span class="identifier">anonymous_instance</span><span class="special">)();</span>
-         <span class="identifier">shmem</span><span class="special">.</span><span class="identifier">destroy_ptr</span><span class="special">(</span><span class="identifier">my_object2</span><span class="special">);</span>
-         
-         <span class="comment">//Since the next shared memory allocation can throw
-</span>         <span class="comment">//assign it to a scoped_ptr so that if an exception occurs
-</span>         <span class="comment">//we destroy the object automatically
-</span>         <span class="identifier">my_deleter</span><span class="special">&lt;</span><span class="identifier">my_class</span><span class="special">&gt;</span> <span class="identifier">d</span><span class="special">(</span><span class="identifier">shmem</span><span class="special">.</span><span class="identifier">get_segment_manager</span><span class="special">());</span>
+   <span class="identifier">managed_shared_memory</span> <span class="identifier">shmem</span><span class="special">(</span><span class="identifier">create_only</span><span class="special">,</span> <span class="string">"MySharedMemory"</span><span class="special">,</span> <span class="number">10000</span><span class="special">);</span>
 
-         <span class="keyword">try</span><span class="special">{</span>
-            <span class="identifier">scoped_ptr</span><span class="special">&lt;</span><span class="identifier">my_class</span><span class="special">,</span> <span class="identifier">my_deleter</span><span class="special">&lt;</span><span class="identifier">my_class</span><span class="special">&gt;</span> <span class="special">&gt;</span> <span class="identifier">s_ptr</span><span class="special">(</span><span class="identifier">my_object</span><span class="special">,</span> <span class="identifier">d</span><span class="special">);</span>
-            <span class="comment">//Let's emulate a exception capable operation
-</span>            <span class="comment">//In the second try, throw an exception
-</span>            <span class="keyword">if</span><span class="special">(</span><span class="identifier">i</span> <span class="special">==</span> <span class="number">1</span><span class="special">){</span>
-               <span class="keyword">throw</span><span class="special">(</span><span class="identifier">my_exception</span><span class="special">());</span>
-            <span class="special">}</span>
-            <span class="comment">//If we have passed the dangerous zone
-</span>            <span class="comment">//we can release the scoped pointer
-</span>            <span class="comment">//to avoid destruction
-</span>            <span class="identifier">s_ptr</span><span class="special">.</span><span class="identifier">release</span><span class="special">();</span>
+   <span class="comment">//In the first try, there will be no exceptions
+</span>   <span class="comment">//in the second try we will throw an exception
+</span>   <span class="keyword">for</span><span class="special">(</span><span class="keyword">int</span> <span class="identifier">i</span> <span class="special">=</span> <span class="number">0</span><span class="special">;</span> <span class="identifier">i</span> <span class="special">&lt;</span> <span class="number">2</span><span class="special">;</span> <span class="special">++</span><span class="identifier">i</span><span class="special">){</span>
+      <span class="comment">//Create an object in shared memory
+</span>      <span class="identifier">my_class</span> <span class="special">*</span> <span class="identifier">my_object</span> <span class="special">=</span> <span class="identifier">shmem</span><span class="special">.</span><span class="identifier">construct</span><span class="special">&lt;</span><span class="identifier">my_class</span><span class="special">&gt;(</span><span class="string">"my_object"</span><span class="special">)();</span>
+      <span class="identifier">my_class</span> <span class="special">*</span> <span class="identifier">my_object2</span> <span class="special">=</span> <span class="identifier">shmem</span><span class="special">.</span><span class="identifier">construct</span><span class="special">&lt;</span><span class="identifier">my_class</span><span class="special">&gt;(</span><span class="identifier">anonymous_instance</span><span class="special">)();</span>
+      <span class="identifier">shmem</span><span class="special">.</span><span class="identifier">destroy_ptr</span><span class="special">(</span><span class="identifier">my_object2</span><span class="special">);</span>
+      
+      <span class="comment">//Since the next shared memory allocation can throw
+</span>      <span class="comment">//assign it to a scoped_ptr so that if an exception occurs
+</span>      <span class="comment">//we destroy the object automatically
+</span>      <span class="identifier">my_deleter</span><span class="special">&lt;</span><span class="identifier">my_class</span><span class="special">&gt;</span> <span class="identifier">d</span><span class="special">(</span><span class="identifier">shmem</span><span class="special">.</span><span class="identifier">get_segment_manager</span><span class="special">());</span>
+
+      <span class="keyword">try</span><span class="special">{</span>
+         <span class="identifier">scoped_ptr</span><span class="special">&lt;</span><span class="identifier">my_class</span><span class="special">,</span> <span class="identifier">my_deleter</span><span class="special">&lt;</span><span class="identifier">my_class</span><span class="special">&gt;</span> <span class="special">&gt;</span> <span class="identifier">s_ptr</span><span class="special">(</span><span class="identifier">my_object</span><span class="special">,</span> <span class="identifier">d</span><span class="special">);</span>
+         <span class="comment">//Let's emulate a exception capable operation
+</span>         <span class="comment">//In the second try, throw an exception
+</span>         <span class="keyword">if</span><span class="special">(</span><span class="identifier">i</span> <span class="special">==</span> <span class="number">1</span><span class="special">){</span>
+            <span class="keyword">throw</span><span class="special">(</span><span class="identifier">my_exception</span><span class="special">());</span>
          <span class="special">}</span>
-         <span class="keyword">catch</span><span class="special">(</span><span class="keyword">const</span> <span class="identifier">my_exception</span> <span class="special">&amp;){}</span>
-         <span class="comment">//Here, scoped_ptr is destroyed
-</span>         <span class="comment">//so it we haven't thrown an exception
-</span>         <span class="comment">//the object should be there, otherwise, destroyed
-</span>         <span class="keyword">if</span><span class="special">(</span><span class="identifier">i</span> <span class="special">==</span> <span class="number">0</span><span class="special">){</span>
-            <span class="comment">//Make sure the object is alive
-</span>            <span class="keyword">if</span><span class="special">(!</span><span class="identifier">shmem</span><span class="special">.</span><span class="identifier">find</span><span class="special">&lt;</span><span class="identifier">my_class</span><span class="special">&gt;(</span><span class="string">"my_object"</span><span class="special">).</span><span class="identifier">first</span><span class="special">){</span>
-               <span class="keyword">return</span> <span class="number">1</span><span class="special">;</span>
-            <span class="special">}</span>
-            <span class="comment">//Now we can use it and delete it manually
-</span>            <span class="identifier">shmem</span><span class="special">.</span><span class="identifier">destroy</span><span class="special">&lt;</span><span class="identifier">my_class</span><span class="special">&gt;(</span><span class="string">"my_object"</span><span class="special">);</span>
+         <span class="comment">//If we have passed the dangerous zone
+</span>         <span class="comment">//we can release the scoped pointer
+</span>         <span class="comment">//to avoid destruction
+</span>         <span class="identifier">s_ptr</span><span class="special">.</span><span class="identifier">release</span><span class="special">();</span>
+      <span class="special">}</span>
+      <span class="keyword">catch</span><span class="special">(</span><span class="keyword">const</span> <span class="identifier">my_exception</span> <span class="special">&amp;){}</span>
+      <span class="comment">//Here, scoped_ptr is destroyed
+</span>      <span class="comment">//so it we haven't thrown an exception
+</span>      <span class="comment">//the object should be there, otherwise, destroyed
+</span>      <span class="keyword">if</span><span class="special">(</span><span class="identifier">i</span> <span class="special">==</span> <span class="number">0</span><span class="special">){</span>
+         <span class="comment">//Make sure the object is alive
+</span>         <span class="keyword">if</span><span class="special">(!</span><span class="identifier">shmem</span><span class="special">.</span><span class="identifier">find</span><span class="special">&lt;</span><span class="identifier">my_class</span><span class="special">&gt;(</span><span class="string">"my_object"</span><span class="special">).</span><span class="identifier">first</span><span class="special">){</span>
+            <span class="keyword">return</span> <span class="number">1</span><span class="special">;</span>
          <span class="special">}</span>
-         <span class="keyword">else</span><span class="special">{</span>
-            <span class="comment">//Make sure the object has been deleted
-</span>            <span class="keyword">if</span><span class="special">(</span><span class="identifier">shmem</span><span class="special">.</span><span class="identifier">find</span><span class="special">&lt;</span><span class="identifier">my_class</span><span class="special">&gt;(</span><span class="string">"my_object"</span><span class="special">).</span><span class="identifier">first</span><span class="special">){</span>
-               <span class="keyword">return</span> <span class="number">1</span><span class="special">;</span>
-            <span class="special">}</span>
+         <span class="comment">//Now we can use it and delete it manually
+</span>         <span class="identifier">shmem</span><span class="special">.</span><span class="identifier">destroy</span><span class="special">&lt;</span><span class="identifier">my_class</span><span class="special">&gt;(</span><span class="string">"my_object"</span><span class="special">);</span>
+      <span class="special">}</span>
+      <span class="keyword">else</span><span class="special">{</span>
+         <span class="comment">//Make sure the object has been deleted
+</span>         <span class="keyword">if</span><span class="special">(</span><span class="identifier">shmem</span><span class="special">.</span><span class="identifier">find</span><span class="special">&lt;</span><span class="identifier">my_class</span><span class="special">&gt;(</span><span class="string">"my_object"</span><span class="special">).</span><span class="identifier">first</span><span class="special">){</span>
+            <span class="keyword">return</span> <span class="number">1</span><span class="special">;</span>
          <span class="special">}</span>
       <span class="special">}</span>
    <span class="special">}</span>
-   <span class="keyword">catch</span><span class="special">(...){</span>
-      <span class="identifier">shared_memory_object</span><span class="special">::</span><span class="identifier">remove</span><span class="special">(</span><span class="string">"my_shmem"</span><span class="special">);</span>
-      <span class="keyword">throw</span><span class="special">;</span>
-   <span class="special">}</span>
-   <span class="identifier">shared_memory_object</span><span class="special">::</span><span class="identifier">remove</span><span class="special">(</span><span class="string">"my_shmem"</span><span class="special">);</span>
    <span class="keyword">return</span> <span class="number">0</span><span class="special">;</span>
 <span class="special">}</span>
 </pre>
@@ -425,8 +422,13 @@
 
 <span class="keyword">int</span> <span class="identifier">main</span> <span class="special">()</span>
 <span class="special">{</span>
-   <span class="comment">//Destroy any previous segment with the name to be used.
-</span>   <span class="identifier">shared_memory_object</span><span class="special">::</span><span class="identifier">remove</span><span class="special">(</span><span class="string">"MySharedMemory"</span><span class="special">);</span>
+   <span class="comment">//Remove shared memory on construction and destruction
+</span>   <span class="keyword">struct</span> <span class="identifier">shm_remove</span>
+   <span class="special">{</span>
+      <span class="identifier">shm_remove</span><span class="special">()</span> <span class="special">{</span> <span class="identifier">shared_memory_object</span><span class="special">::</span><span class="identifier">remove</span><span class="special">(</span><span class="string">"MySharedMemory"</span><span class="special">);</span> <span class="special">}</span>
+      <span class="special">~</span><span class="identifier">shm_remove</span><span class="special">(){</span> <span class="identifier">shared_memory_object</span><span class="special">::</span><span class="identifier">remove</span><span class="special">(</span><span class="string">"MySharedMemory"</span><span class="special">);</span> <span class="special">}</span>
+   <span class="special">}</span> <span class="identifier">remover</span><span class="special">;</span>
+
    <span class="identifier">managed_shared_memory</span> <span class="identifier">segment</span><span class="special">(</span><span class="identifier">create_only</span><span class="special">,</span> <span class="string">"MySharedMemory"</span><span class="special">,</span> <span class="number">4096</span><span class="special">);</span>
    
    <span class="comment">//Create a shared pointer in shared memory
@@ -443,7 +445,6 @@
    <span class="comment">//Destroy "shared ptr". "object to share" will be automatically destroyed
 </span>   <span class="identifier">segment</span><span class="special">.</span><span class="identifier">destroy_ptr</span><span class="special">(&amp;</span><span class="identifier">shared_ptr_instance</span><span class="special">);</span>
 
-   <span class="identifier">shared_memory_object</span><span class="special">::</span><span class="identifier">remove</span><span class="special">(</span><span class="string">"MySharedMemory"</span><span class="special">);</span>
    <span class="keyword">return</span> <span class="number">0</span><span class="special">;</span>
 <span class="special">}</span>
 </pre>
@@ -504,8 +505,7 @@
 <span class="preprocessor">#include</span> <span class="special">&lt;</span><span class="identifier">boost</span><span class="special">/</span><span class="identifier">interprocess</span><span class="special">/</span><span class="identifier">smart_ptr</span><span class="special">/</span><span class="identifier">shared_ptr</span><span class="special">.</span><span class="identifier">hpp</span><span class="special">&gt;</span>
 <span class="preprocessor">#include</span> <span class="special">&lt;</span><span class="identifier">boost</span><span class="special">/</span><span class="identifier">interprocess</span><span class="special">/</span><span class="identifier">smart_ptr</span><span class="special">/</span><span class="identifier">weak_ptr</span><span class="special">.</span><span class="identifier">hpp</span><span class="special">&gt;</span>
 <span class="preprocessor">#include</span> <span class="special">&lt;</span><span class="identifier">cassert</span><span class="special">&gt;</span>
-<span class="preprocessor">#include</span> <span class="special">&lt;</span><span class="identifier">cstdio</span><span class="special">&gt;</span>    <span class="comment">//std::remove
-</span>
+
 <span class="keyword">using</span> <span class="keyword">namespace</span> <span class="identifier">boost</span><span class="special">::</span><span class="identifier">interprocess</span><span class="special">;</span>
 
 <span class="comment">//This is type of the object we want to share
@@ -535,7 +535,11 @@
 <span class="keyword">int</span> <span class="identifier">main</span> <span class="special">()</span>
 <span class="special">{</span>
    <span class="comment">//Destroy any previous file with the name to be used.
-</span>   <span class="identifier">std</span><span class="special">::</span><span class="identifier">remove</span><span class="special">(</span><span class="string">"MyMappedFile"</span><span class="special">);</span>
+</span>   <span class="keyword">struct</span> <span class="identifier">file_remove</span> 
+   <span class="special">{</span>
+      <span class="identifier">file_remove</span><span class="special">()</span> <span class="special">{</span> <span class="identifier">file_mapping</span><span class="special">::</span><span class="identifier">remove</span><span class="special">(</span><span class="string">"MyMappedFile"</span><span class="special">);</span> <span class="special">}</span>
+      <span class="special">~</span><span class="identifier">file_remove</span><span class="special">(){</span> <span class="identifier">file_mapping</span><span class="special">::</span><span class="identifier">remove</span><span class="special">(</span><span class="string">"MyMappedFile"</span><span class="special">);</span> <span class="special">}</span>
+   <span class="special">}</span> <span class="identifier">remover</span><span class="special">;</span>
    <span class="special">{</span>
       <span class="identifier">managed_mapped_file</span> <span class="identifier">file</span><span class="special">(</span><span class="identifier">create_only</span><span class="special">,</span> <span class="string">"MyMappedFile"</span><span class="special">,</span> <span class="number">4096</span><span class="special">);</span>
 
@@ -567,6 +571,7 @@
    <span class="special">{</span>
       <span class="comment">//Reopen the mapped file and find again all owners
 </span>      <span class="identifier">managed_mapped_file</span> <span class="identifier">file</span><span class="special">(</span><span class="identifier">open_only</span><span class="special">,</span> <span class="string">"MyMappedFile"</span><span class="special">);</span>
+
       <span class="identifier">shared_ptr_owner</span> <span class="special">*</span><span class="identifier">owner1</span> <span class="special">=</span> <span class="identifier">file</span><span class="special">.</span><span class="identifier">find</span><span class="special">&lt;</span><span class="identifier">shared_ptr_owner</span><span class="special">&gt;(</span><span class="string">"owner1"</span><span class="special">).</span><span class="identifier">first</span><span class="special">;</span>
       <span class="identifier">shared_ptr_owner</span> <span class="special">*</span><span class="identifier">owner2</span> <span class="special">=</span> <span class="identifier">file</span><span class="special">.</span><span class="identifier">find</span><span class="special">&lt;</span><span class="identifier">shared_ptr_owner</span><span class="special">&gt;(</span><span class="string">"owner2"</span><span class="special">).</span><span class="identifier">first</span><span class="special">;</span>
       <span class="identifier">assert</span><span class="special">(</span><span class="identifier">owner1</span> <span class="special">&amp;&amp;</span> <span class="identifier">owner2</span><span class="special">);</span>
@@ -602,7 +607,6 @@
       <span class="comment">//The reference count will be deallocated when all weak pointers
 </span>      <span class="comment">//disappear. After that, the file is unmapped.
 </span>   <span class="special">}</span>
-   <span class="identifier">std</span><span class="special">::</span><span class="identifier">remove</span><span class="special">(</span><span class="string">"MyMappedFile"</span><span class="special">);</span>
    <span class="keyword">return</span> <span class="number">0</span><span class="special">;</span>
 <span class="special">}</span>
 </pre>
@@ -700,8 +704,7 @@
 <span class="preprocessor">#include</span> <span class="special">&lt;</span><span class="identifier">boost</span><span class="special">/</span><span class="identifier">interprocess</span><span class="special">/</span><span class="identifier">containers</span><span class="special">/</span><span class="identifier">list</span><span class="special">.</span><span class="identifier">hpp</span><span class="special">&gt;</span>
 <span class="preprocessor">#include</span> <span class="special">&lt;</span><span class="identifier">boost</span><span class="special">/</span><span class="identifier">interprocess</span><span class="special">/</span><span class="identifier">allocators</span><span class="special">/</span><span class="identifier">allocator</span><span class="special">.</span><span class="identifier">hpp</span><span class="special">&gt;</span>
 <span class="preprocessor">#include</span> <span class="special">&lt;</span><span class="identifier">cassert</span><span class="special">&gt;</span>
-<span class="preprocessor">#include</span> <span class="special">&lt;</span><span class="identifier">cstdio</span><span class="special">&gt;</span>    <span class="comment">//std::remove
-</span>
+
 <span class="keyword">using</span> <span class="keyword">namespace</span> <span class="identifier">boost</span><span class="special">::</span><span class="identifier">interprocess</span><span class="special">;</span>
 
 <span class="comment">//This is type of the object we'll allocate dynamically
@@ -731,7 +734,11 @@
 <span class="keyword">int</span> <span class="identifier">main</span> <span class="special">()</span>
 <span class="special">{</span>
    <span class="comment">//Destroy any previous file with the name to be used.
-</span>   <span class="identifier">std</span><span class="special">::</span><span class="identifier">remove</span><span class="special">(</span><span class="string">"MyMappedFile"</span><span class="special">);</span>
+</span>   <span class="keyword">struct</span> <span class="identifier">file_remove</span> 
+   <span class="special">{</span>
+      <span class="identifier">file_remove</span><span class="special">()</span> <span class="special">{</span> <span class="identifier">file_mapping</span><span class="special">::</span><span class="identifier">remove</span><span class="special">(</span><span class="string">"MyMappedFile"</span><span class="special">);</span> <span class="special">}</span>
+      <span class="special">~</span><span class="identifier">file_remove</span><span class="special">(){</span> <span class="identifier">file_mapping</span><span class="special">::</span><span class="identifier">remove</span><span class="special">(</span><span class="string">"MyMappedFile"</span><span class="special">);</span> <span class="special">}</span>
+   <span class="special">}</span> <span class="identifier">remover</span><span class="special">;</span>
    <span class="special">{</span>
       <span class="identifier">managed_mapped_file</span> <span class="identifier">file</span><span class="special">(</span><span class="identifier">create_only</span><span class="special">,</span> <span class="string">"MyMappedFile"</span><span class="special">,</span> <span class="number">65536</span><span class="special">);</span>
 
@@ -754,9 +761,8 @@
 
       <span class="comment">//Now insert all values
 </span>      <span class="keyword">for</span><span class="special">(</span><span class="keyword">int</span> <span class="identifier">i</span> <span class="special">=</span> <span class="number">0</span><span class="special">;</span> <span class="identifier">i</span> <span class="special">&lt;</span> <span class="number">100</span><span class="special">;</span> <span class="special">++</span><span class="identifier">i</span><span class="special">){</span>
-         <span class="identifier">unique_vector</span><span class="special">-&gt;</span><span class="identifier">push_back</span><span class="special">(</span>
-            <span class="identifier">make_managed_unique_ptr</span><span class="special">(</span><span class="identifier">file</span><span class="special">.</span><span class="identifier">construct</span><span class="special">&lt;</span><span class="identifier">MyType</span><span class="special">&gt;(</span><span class="identifier">anonymous_instance</span><span class="special">)(</span><span class="identifier">i</span><span class="special">),</span> <span class="identifier">file</span><span class="special">)</span>
-            <span class="special">);</span>
+         <span class="identifier">unique_ptr_type</span> <span class="identifier">p</span><span class="special">(</span><span class="identifier">make_managed_unique_ptr</span><span class="special">(</span><span class="identifier">file</span><span class="special">.</span><span class="identifier">construct</span><span class="special">&lt;</span><span class="identifier">MyType</span><span class="special">&gt;(</span><span class="identifier">anonymous_instance</span><span class="special">)(</span><span class="identifier">i</span><span class="special">),</span> <span class="identifier">file</span><span class="special">));</span>
+         <span class="identifier">unique_vector</span><span class="special">-&gt;</span><span class="identifier">push_back</span><span class="special">(</span><span class="identifier">boost</span><span class="special">::</span><span class="identifier">interprocess</span><span class="special">::</span><span class="identifier">move</span><span class="special">(</span><span class="identifier">p</span><span class="special">));</span>
          <span class="identifier">assert</span><span class="special">(</span><span class="identifier">unique_vector</span><span class="special">-&gt;</span><span class="identifier">back</span><span class="special">()-&gt;</span><span class="identifier">number_</span> <span class="special">==</span> <span class="identifier">i</span><span class="special">);</span>
       <span class="special">}</span>
       
@@ -766,7 +772,7 @@
    
       <span class="comment">//Pass ownership of all values to the list
 </span>      <span class="keyword">for</span><span class="special">(</span><span class="keyword">int</span> <span class="identifier">i</span> <span class="special">=</span> <span class="number">99</span><span class="special">;</span> <span class="special">!</span><span class="identifier">unique_vector</span><span class="special">-&gt;</span><span class="identifier">empty</span><span class="special">();</span> <span class="special">--</span><span class="identifier">i</span><span class="special">){</span>
-         <span class="identifier">unique_list</span><span class="special">-&gt;</span><span class="identifier">push_front</span><span class="special">(</span><span class="identifier">move</span><span class="special">(</span><span class="identifier">unique_vector</span><span class="special">-&gt;</span><span class="identifier">back</span><span class="special">()));</span>
+         <span class="identifier">unique_list</span><span class="special">-&gt;</span><span class="identifier">push_front</span><span class="special">(</span><span class="identifier">boost</span><span class="special">::</span><span class="identifier">interprocess</span><span class="special">::</span><span class="identifier">move</span><span class="special">(</span><span class="identifier">unique_vector</span><span class="special">-&gt;</span><span class="identifier">back</span><span class="special">()));</span>
          <span class="comment">//The unique ptr of the vector is now empty...
 </span>         <span class="identifier">assert</span><span class="special">(</span><span class="identifier">unique_vector</span><span class="special">-&gt;</span><span class="identifier">back</span><span class="special">()</span> <span class="special">==</span> <span class="number">0</span><span class="special">);</span>
          <span class="identifier">unique_vector</span><span class="special">-&gt;</span><span class="identifier">pop_back</span><span class="special">();</span>
@@ -783,6 +789,7 @@
    <span class="special">{</span>
       <span class="comment">//Reopen the mapped file and find again the list
 </span>      <span class="identifier">managed_mapped_file</span> <span class="identifier">file</span><span class="special">(</span><span class="identifier">open_only</span><span class="special">,</span> <span class="string">"MyMappedFile"</span><span class="special">);</span>
+
       <span class="identifier">unique_ptr_list_t</span>   <span class="special">*</span><span class="identifier">unique_list</span> <span class="special">=</span>
          <span class="identifier">file</span><span class="special">.</span><span class="identifier">find</span><span class="special">&lt;</span><span class="identifier">unique_ptr_list_t</span><span class="special">&gt;(</span><span class="string">"unique list"</span><span class="special">).</span><span class="identifier">first</span><span class="special">;</span>
       <span class="identifier">assert</span><span class="special">(</span><span class="identifier">unique_list</span><span class="special">);</span>
@@ -796,7 +803,6 @@
       <span class="comment">//Now destroy the list. All elements will be automatically deallocated.
 </span>      <span class="identifier">file</span><span class="special">.</span><span class="identifier">destroy_ptr</span><span class="special">(</span><span class="identifier">unique_list</span><span class="special">);</span>
    <span class="special">}</span>
-   <span class="identifier">std</span><span class="special">::</span><span class="identifier">remove</span><span class="special">(</span><span class="string">"MyMappedFile"</span><span class="special">);</span>
    <span class="keyword">return</span> <span class="number">0</span><span class="special">;</span>
 <span class="special">}</span>
 </pre>
