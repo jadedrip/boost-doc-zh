@@ -3,8 +3,8 @@
 <meta http-equiv="Content-Type" content="text/html; charset=ISO-8859-1">
 <title>Synchronization mechanisms</title>
 <link rel="stylesheet" href="../boostbook.css" type="text/css">
-<meta name="generator" content="DocBook XSL Stylesheets V1.73.2">
-<link rel="start" href="../index.html" title="The Boost C++ Libraries BoostBook Documentation Subset">
+<meta name="generator" content="DocBook XSL Stylesheets V1.74.3">
+<link rel="home" href="../index.html" title="The Boost C++ Libraries BoostBook Documentation Subset">
 <link rel="up" href="../interprocess.html" title="Chapter 9. Boost.Interprocess">
 <link rel="prev" href="offset_ptr.html" title="Mapping Address Independent Pointer: offset_ptr">
 <link rel="next" href="managed_memory_segments.html" title="Managed Memory Segments">
@@ -351,7 +351,7 @@
 <pre class="programlisting"><span class="preprocessor">#include</span> <span class="special">&lt;</span><span class="identifier">boost</span><span class="special">/</span><span class="identifier">interprocess</span><span class="special">/</span><span class="identifier">sync</span><span class="special">/</span><span class="identifier">interprocess_recursive_mutex</span><span class="special">.</span><span class="identifier">hpp</span><span class="special">&gt;</span>
 </pre>
 <div class="itemizedlist"><ul type="disc"><li>
-<code class="computeroutput"><a class="link" href="../boost/interprocess/interprocess_recursive__id3291123.html" title="Class interprocess_recursive_mutex">boost::interprocess::interprocess_recursive_mutex</a></code>:
+<code class="computeroutput"><a class="link" href="../boost/interprocess/interprocess_recursive__id1772482.html" title="Class interprocess_recursive_mutex">boost::interprocess::interprocess_recursive_mutex</a></code>:
             A recursive, anonymous mutex that can be placed in shared memory or memory
             mapped files.
           </li></ul></div>
@@ -510,13 +510,17 @@
 <span class="keyword">int</span> <span class="identifier">main</span> <span class="special">()</span>
 <span class="special">{</span>
    <span class="keyword">try</span><span class="special">{</span>
-      <span class="comment">//Erase previous shared memory
-</span>      <span class="identifier">shared_memory_object</span><span class="special">::</span><span class="identifier">remove</span><span class="special">(</span><span class="string">"shared_memory"</span><span class="special">);</span>
+      <span class="comment">//Remove shared memory on construction and destruction
+</span>      <span class="keyword">struct</span> <span class="identifier">shm_remove</span>
+      <span class="special">{</span>
+         <span class="identifier">shm_remove</span><span class="special">()</span> <span class="special">{</span> <span class="identifier">shared_memory_object</span><span class="special">::</span><span class="identifier">remove</span><span class="special">(</span><span class="string">"MySharedMemory"</span><span class="special">);</span> <span class="special">}</span>
+         <span class="special">~</span><span class="identifier">shm_remove</span><span class="special">(){</span> <span class="identifier">shared_memory_object</span><span class="special">::</span><span class="identifier">remove</span><span class="special">(</span><span class="string">"MySharedMemory"</span><span class="special">);</span> <span class="special">}</span>
+      <span class="special">}</span> <span class="identifier">remover</span><span class="special">;</span>
 
       <span class="comment">//Create a shared memory object.
 </span>      <span class="identifier">shared_memory_object</span> <span class="identifier">shm</span>
          <span class="special">(</span><span class="identifier">create_only</span>               <span class="comment">//only create
-</span>         <span class="special">,</span><span class="string">"shared_memory"</span>           <span class="comment">//name
+</span>         <span class="special">,</span><span class="string">"MySharedMemory"</span>          <span class="comment">//name
 </span>         <span class="special">,</span><span class="identifier">read_write</span>   <span class="comment">//read-write mode
 </span>         <span class="special">);</span>
 
@@ -554,12 +558,9 @@
       <span class="special">}</span>
    <span class="special">}</span>
    <span class="keyword">catch</span><span class="special">(</span><span class="identifier">interprocess_exception</span> <span class="special">&amp;</span><span class="identifier">ex</span><span class="special">){</span>
-      <span class="identifier">shared_memory_object</span><span class="special">::</span><span class="identifier">remove</span><span class="special">(</span><span class="string">"shared_memory"</span><span class="special">);</span>
       <span class="identifier">std</span><span class="special">::</span><span class="identifier">cout</span> <span class="special">&lt;&lt;</span> <span class="identifier">ex</span><span class="special">.</span><span class="identifier">what</span><span class="special">()</span> <span class="special">&lt;&lt;</span> <span class="identifier">std</span><span class="special">::</span><span class="identifier">endl</span><span class="special">;</span>
       <span class="keyword">return</span> <span class="number">1</span><span class="special">;</span>
    <span class="special">}</span>
-   <span class="comment">//Erase shared memory
-</span>   <span class="identifier">shared_memory_object</span><span class="special">::</span><span class="identifier">remove</span><span class="special">(</span><span class="string">"shared_memory"</span><span class="special">);</span>
    <span class="keyword">return</span> <span class="number">0</span><span class="special">;</span>
 <span class="special">}</span>
 </pre>
@@ -587,50 +588,48 @@
 
 <span class="keyword">int</span> <span class="identifier">main</span> <span class="special">()</span>
 <span class="special">{</span>
-   <span class="keyword">try</span><span class="special">{</span>
-      <span class="comment">//Open the shared memory object.
-</span>      <span class="identifier">shared_memory_object</span> <span class="identifier">shm</span>
-         <span class="special">(</span><span class="identifier">open_only</span>                    <span class="comment">//only create
-</span>         <span class="special">,</span><span class="string">"shared_memory"</span>              <span class="comment">//name
-</span>         <span class="special">,</span><span class="identifier">read_write</span>  <span class="comment">//read-write mode
-</span>         <span class="special">);</span>
+   <span class="comment">//Remove shared memory on destruction
+</span>   <span class="keyword">struct</span> <span class="identifier">shm_remove</span>
+   <span class="special">{</span>
+      <span class="special">~</span><span class="identifier">shm_remove</span><span class="special">(){</span> <span class="identifier">shared_memory_object</span><span class="special">::</span><span class="identifier">remove</span><span class="special">(</span><span class="string">"MySharedMemory"</span><span class="special">);</span> <span class="special">}</span>
+   <span class="special">}</span> <span class="identifier">remover</span><span class="special">;</span>
 
-      <span class="comment">//Map the whole shared memory in this process
-</span>      <span class="identifier">mapped_region</span> <span class="identifier">region</span>
-         <span class="special">(</span><span class="identifier">shm</span>                       <span class="comment">//What to map
-</span>         <span class="special">,</span><span class="identifier">read_write</span> <span class="comment">//Map it as read-write
-</span>         <span class="special">);</span>
+   <span class="comment">//Open the shared memory object.
+</span>   <span class="identifier">shared_memory_object</span> <span class="identifier">shm</span>
+      <span class="special">(</span><span class="identifier">open_only</span>                    <span class="comment">//only create
+</span>      <span class="special">,</span><span class="string">"MySharedMemory"</span>              <span class="comment">//name
+</span>      <span class="special">,</span><span class="identifier">read_write</span>  <span class="comment">//read-write mode
+</span>      <span class="special">);</span>
 
-      <span class="comment">//Get the address of the mapped region
-</span>      <span class="keyword">void</span> <span class="special">*</span> <span class="identifier">addr</span>       <span class="special">=</span> <span class="identifier">region</span><span class="special">.</span><span class="identifier">get_address</span><span class="special">();</span>
+   <span class="comment">//Map the whole shared memory in this process
+</span>   <span class="identifier">mapped_region</span> <span class="identifier">region</span>
+      <span class="special">(</span><span class="identifier">shm</span>                       <span class="comment">//What to map
+</span>      <span class="special">,</span><span class="identifier">read_write</span> <span class="comment">//Map it as read-write
+</span>      <span class="special">);</span>
 
-      <span class="comment">//Construct the shared structure in memory
-</span>      <span class="identifier">shared_memory_log</span> <span class="special">*</span> <span class="identifier">data</span> <span class="special">=</span> <span class="keyword">static_cast</span><span class="special">&lt;</span><span class="identifier">shared_memory_log</span><span class="special">*&gt;(</span><span class="identifier">addr</span><span class="special">);</span>
+   <span class="comment">//Get the address of the mapped region
+</span>   <span class="keyword">void</span> <span class="special">*</span> <span class="identifier">addr</span>       <span class="special">=</span> <span class="identifier">region</span><span class="special">.</span><span class="identifier">get_address</span><span class="special">();</span>
 
-      <span class="comment">//Write some logs
-</span>      <span class="keyword">for</span><span class="special">(</span><span class="keyword">int</span> <span class="identifier">i</span> <span class="special">=</span> <span class="number">0</span><span class="special">;</span> <span class="identifier">i</span> <span class="special">&lt;</span> <span class="number">100</span><span class="special">;</span> <span class="special">++</span><span class="identifier">i</span><span class="special">){</span>
-         <span class="comment">//Lock the mutex
-</span>         <span class="identifier">scoped_lock</span><span class="special">&lt;</span><span class="identifier">interprocess_mutex</span><span class="special">&gt;</span> <span class="identifier">lock</span><span class="special">(</span><span class="identifier">data</span><span class="special">-&gt;</span><span class="identifier">mutex</span><span class="special">);</span>
-         <span class="identifier">std</span><span class="special">::</span><span class="identifier">sprintf</span><span class="special">(</span><span class="identifier">data</span><span class="special">-&gt;</span><span class="identifier">items</span><span class="special">[(</span><span class="identifier">data</span><span class="special">-&gt;</span><span class="identifier">current_line</span><span class="special">++)</span> <span class="special">%</span> <span class="identifier">shared_memory_log</span><span class="special">::</span><span class="identifier">NumItems</span><span class="special">]</span>
-                  <span class="special">,</span><span class="string">"%s_%d"</span><span class="special">,</span> <span class="string">"process_a"</span><span class="special">,</span> <span class="identifier">i</span><span class="special">);</span>
-         <span class="keyword">if</span><span class="special">(</span><span class="identifier">i</span> <span class="special">==</span> <span class="special">(</span><span class="identifier">shared_memory_log</span><span class="special">::</span><span class="identifier">NumItems</span><span class="special">-</span><span class="number">1</span><span class="special">))</span>
-            <span class="identifier">data</span><span class="special">-&gt;</span><span class="identifier">end_b</span> <span class="special">=</span> <span class="keyword">true</span><span class="special">;</span>
-         <span class="comment">//Mutex is released here
-</span>      <span class="special">}</span>
+   <span class="comment">//Construct the shared structure in memory
+</span>   <span class="identifier">shared_memory_log</span> <span class="special">*</span> <span class="identifier">data</span> <span class="special">=</span> <span class="keyword">static_cast</span><span class="special">&lt;</span><span class="identifier">shared_memory_log</span><span class="special">*&gt;(</span><span class="identifier">addr</span><span class="special">);</span>
 
-      <span class="comment">//Wait until the other process ends
-</span>      <span class="keyword">while</span><span class="special">(</span><span class="number">1</span><span class="special">){</span>
-         <span class="identifier">scoped_lock</span><span class="special">&lt;</span><span class="identifier">interprocess_mutex</span><span class="special">&gt;</span> <span class="identifier">lock</span><span class="special">(</span><span class="identifier">data</span><span class="special">-&gt;</span><span class="identifier">mutex</span><span class="special">);</span>
-         <span class="keyword">if</span><span class="special">(</span><span class="identifier">data</span><span class="special">-&gt;</span><span class="identifier">end_a</span><span class="special">)</span>
-            <span class="keyword">break</span><span class="special">;</span>
-      <span class="special">}</span>
+   <span class="comment">//Write some logs
+</span>   <span class="keyword">for</span><span class="special">(</span><span class="keyword">int</span> <span class="identifier">i</span> <span class="special">=</span> <span class="number">0</span><span class="special">;</span> <span class="identifier">i</span> <span class="special">&lt;</span> <span class="number">100</span><span class="special">;</span> <span class="special">++</span><span class="identifier">i</span><span class="special">){</span>
+      <span class="comment">//Lock the mutex
+</span>      <span class="identifier">scoped_lock</span><span class="special">&lt;</span><span class="identifier">interprocess_mutex</span><span class="special">&gt;</span> <span class="identifier">lock</span><span class="special">(</span><span class="identifier">data</span><span class="special">-&gt;</span><span class="identifier">mutex</span><span class="special">);</span>
+      <span class="identifier">std</span><span class="special">::</span><span class="identifier">sprintf</span><span class="special">(</span><span class="identifier">data</span><span class="special">-&gt;</span><span class="identifier">items</span><span class="special">[(</span><span class="identifier">data</span><span class="special">-&gt;</span><span class="identifier">current_line</span><span class="special">++)</span> <span class="special">%</span> <span class="identifier">shared_memory_log</span><span class="special">::</span><span class="identifier">NumItems</span><span class="special">]</span>
+               <span class="special">,</span><span class="string">"%s_%d"</span><span class="special">,</span> <span class="string">"process_a"</span><span class="special">,</span> <span class="identifier">i</span><span class="special">);</span>
+      <span class="keyword">if</span><span class="special">(</span><span class="identifier">i</span> <span class="special">==</span> <span class="special">(</span><span class="identifier">shared_memory_log</span><span class="special">::</span><span class="identifier">NumItems</span><span class="special">-</span><span class="number">1</span><span class="special">))</span>
+         <span class="identifier">data</span><span class="special">-&gt;</span><span class="identifier">end_b</span> <span class="special">=</span> <span class="keyword">true</span><span class="special">;</span>
+      <span class="comment">//Mutex is released here
+</span>   <span class="special">}</span>
+
+   <span class="comment">//Wait until the other process ends
+</span>   <span class="keyword">while</span><span class="special">(</span><span class="number">1</span><span class="special">){</span>
+      <span class="identifier">scoped_lock</span><span class="special">&lt;</span><span class="identifier">interprocess_mutex</span><span class="special">&gt;</span> <span class="identifier">lock</span><span class="special">(</span><span class="identifier">data</span><span class="special">-&gt;</span><span class="identifier">mutex</span><span class="special">);</span>
+      <span class="keyword">if</span><span class="special">(</span><span class="identifier">data</span><span class="special">-&gt;</span><span class="identifier">end_a</span><span class="special">)</span>
+         <span class="keyword">break</span><span class="special">;</span>
    <span class="special">}</span>
-   <span class="keyword">catch</span><span class="special">(</span><span class="identifier">interprocess_exception</span> <span class="special">&amp;</span><span class="identifier">ex</span><span class="special">){</span>
-      <span class="identifier">shared_memory_object</span><span class="special">::</span><span class="identifier">remove</span><span class="special">(</span><span class="string">"shared_memory"</span><span class="special">);</span>
-      <span class="identifier">std</span><span class="special">::</span><span class="identifier">cout</span> <span class="special">&lt;&lt;</span> <span class="identifier">ex</span><span class="special">.</span><span class="identifier">what</span><span class="special">()</span> <span class="special">&lt;&lt;</span> <span class="identifier">std</span><span class="special">::</span><span class="identifier">endl</span><span class="special">;</span>
-      <span class="keyword">return</span> <span class="number">1</span><span class="special">;</span>
-   <span class="special">}</span>
-   <span class="identifier">shared_memory_object</span><span class="special">::</span><span class="identifier">remove</span><span class="special">(</span><span class="string">"shared_memory"</span><span class="special">);</span>
    <span class="keyword">return</span> <span class="number">0</span><span class="special">;</span>
 <span class="special">}</span>
 </pre>
@@ -639,9 +638,9 @@
 <p>
         </p>
 <p>
-          As we can see, a mutex is useful to protect data but not to notify to another
-          process an event. For this, we need a condition variable, as we will see
-          in the next section.
+          As we can see, a mutex is useful to protect data but not to notify an event
+          to another process. For this, we need a condition variable, as we will
+          see in the next section.
         </p>
 </div>
 <div class="section" lang="en">
@@ -666,12 +665,24 @@
 <span class="preprocessor">#include</span> <span class="special">&lt;</span><span class="identifier">boost</span><span class="special">/</span><span class="identifier">interprocess</span><span class="special">/</span><span class="identifier">sync</span><span class="special">/</span><span class="identifier">named_mutex</span><span class="special">.</span><span class="identifier">hpp</span><span class="special">&gt;</span>
 <span class="preprocessor">#include</span> <span class="special">&lt;</span><span class="identifier">fstream</span><span class="special">&gt;</span>
 <span class="preprocessor">#include</span> <span class="special">&lt;</span><span class="identifier">iostream</span><span class="special">&gt;</span>
+<span class="preprocessor">#include</span> <span class="special">&lt;</span><span class="identifier">cstdio</span><span class="special">&gt;</span>
+
 
 <span class="keyword">int</span> <span class="identifier">main</span> <span class="special">()</span>
 <span class="special">{</span>
    <span class="keyword">using</span> <span class="keyword">namespace</span> <span class="identifier">boost</span><span class="special">::</span><span class="identifier">interprocess</span><span class="special">;</span>
    <span class="keyword">try</span><span class="special">{</span>
-      
+      <span class="keyword">struct</span> <span class="identifier">file_remove</span>
+      <span class="special">{</span>
+         <span class="identifier">file_remove</span><span class="special">()</span> <span class="special">{</span> <span class="identifier">std</span><span class="special">::</span><span class="identifier">remove</span><span class="special">(</span><span class="string">"file_name"</span><span class="special">);</span> <span class="special">}</span>
+         <span class="special">~</span><span class="identifier">file_remove</span><span class="special">(){</span> <span class="identifier">std</span><span class="special">::</span><span class="identifier">remove</span><span class="special">(</span><span class="string">"file_name"</span><span class="special">);</span> <span class="special">}</span>
+      <span class="special">}</span> <span class="identifier">file_remover</span><span class="special">;</span>
+      <span class="keyword">struct</span> <span class="identifier">mutex_remove</span>
+      <span class="special">{</span>
+         <span class="identifier">mutex_remove</span><span class="special">()</span> <span class="special">{</span> <span class="identifier">named_mutex</span><span class="special">::</span><span class="identifier">remove</span><span class="special">(</span><span class="string">"fstream_named_mutex"</span><span class="special">);</span> <span class="special">}</span>
+         <span class="special">~</span><span class="identifier">mutex_remove</span><span class="special">(){</span> <span class="identifier">named_mutex</span><span class="special">::</span><span class="identifier">remove</span><span class="special">(</span><span class="string">"fstream_named_mutex"</span><span class="special">);</span> <span class="special">}</span>
+      <span class="special">}</span> <span class="identifier">remover</span><span class="special">;</span>
+
       <span class="comment">//Open or create the named mutex
 </span>      <span class="identifier">named_mutex</span> <span class="identifier">mutex</span><span class="special">(</span><span class="identifier">open_or_create</span><span class="special">,</span> <span class="string">"fstream_named_mutex"</span><span class="special">);</span>
 
@@ -689,11 +700,9 @@
       <span class="special">}</span>
    <span class="special">}</span>
    <span class="keyword">catch</span><span class="special">(</span><span class="identifier">interprocess_exception</span> <span class="special">&amp;</span><span class="identifier">ex</span><span class="special">){</span>
-      <span class="identifier">named_mutex</span><span class="special">::</span><span class="identifier">remove</span><span class="special">(</span><span class="string">"fstream_named_mutex"</span><span class="special">);</span>
       <span class="identifier">std</span><span class="special">::</span><span class="identifier">cout</span> <span class="special">&lt;&lt;</span> <span class="identifier">ex</span><span class="special">.</span><span class="identifier">what</span><span class="special">()</span> <span class="special">&lt;&lt;</span> <span class="identifier">std</span><span class="special">::</span><span class="identifier">endl</span><span class="special">;</span>
       <span class="keyword">return</span> <span class="number">1</span><span class="special">;</span>
    <span class="special">}</span>
-   <span class="identifier">named_mutex</span><span class="special">::</span><span class="identifier">remove</span><span class="special">(</span><span class="string">"fstream_named_mutex"</span><span class="special">);</span>
    <span class="keyword">return</span> <span class="number">0</span><span class="special">;</span>
 <span class="special">}</span>
 </pre>
@@ -865,13 +874,17 @@
 <span class="keyword">int</span> <span class="identifier">main</span> <span class="special">()</span>
 <span class="special">{</span>
 
-   <span class="comment">//Erase previous shared memory
-</span>   <span class="identifier">shared_memory_object</span><span class="special">::</span><span class="identifier">remove</span><span class="special">(</span><span class="string">"shared_memory"</span><span class="special">);</span>
+   <span class="comment">//Erase previous shared memory and schedule erasure on exit
+</span>   <span class="keyword">struct</span> <span class="identifier">shm_remove</span>
+   <span class="special">{</span>
+      <span class="identifier">shm_remove</span><span class="special">()</span> <span class="special">{</span> <span class="identifier">shared_memory_object</span><span class="special">::</span><span class="identifier">remove</span><span class="special">(</span><span class="string">"MySharedMemory"</span><span class="special">);</span> <span class="special">}</span>
+      <span class="special">~</span><span class="identifier">shm_remove</span><span class="special">(){</span> <span class="identifier">shared_memory_object</span><span class="special">::</span><span class="identifier">remove</span><span class="special">(</span><span class="string">"MySharedMemory"</span><span class="special">);</span> <span class="special">}</span>
+   <span class="special">}</span> <span class="identifier">remover</span><span class="special">;</span>
 
    <span class="comment">//Create a shared memory object.
 </span>   <span class="identifier">shared_memory_object</span> <span class="identifier">shm</span>
       <span class="special">(</span><span class="identifier">create_only</span>               <span class="comment">//only create
-</span>      <span class="special">,</span><span class="string">"shared_memory"</span>           <span class="comment">//name
+</span>      <span class="special">,</span><span class="string">"MySharedMemory"</span>           <span class="comment">//name
 </span>      <span class="special">,</span><span class="identifier">read_write</span>                <span class="comment">//read-write mode
 </span>      <span class="special">);</span>
    <span class="keyword">try</span><span class="special">{</span>
@@ -910,13 +923,10 @@
       <span class="special">}</span>
    <span class="special">}</span>
    <span class="keyword">catch</span><span class="special">(</span><span class="identifier">interprocess_exception</span> <span class="special">&amp;</span><span class="identifier">ex</span><span class="special">){</span>
-      <span class="identifier">shared_memory_object</span><span class="special">::</span><span class="identifier">remove</span><span class="special">(</span><span class="string">"shared_memory"</span><span class="special">);</span>
       <span class="identifier">std</span><span class="special">::</span><span class="identifier">cout</span> <span class="special">&lt;&lt;</span> <span class="identifier">ex</span><span class="special">.</span><span class="identifier">what</span><span class="special">()</span> <span class="special">&lt;&lt;</span> <span class="identifier">std</span><span class="special">::</span><span class="identifier">endl</span><span class="special">;</span>
       <span class="keyword">return</span> <span class="number">1</span><span class="special">;</span>
    <span class="special">}</span>
 
-   <span class="comment">//Erase shared memory
-</span>   <span class="identifier">shared_memory_object</span><span class="special">::</span><span class="identifier">remove</span><span class="special">(</span><span class="string">"shared_memory"</span><span class="special">);</span>
    <span class="keyword">return</span> <span class="number">0</span><span class="special">;</span>
 <span class="special">}</span>
 </pre>
@@ -947,7 +957,7 @@
    <span class="comment">//Create a shared memory object.
 </span>   <span class="identifier">shared_memory_object</span> <span class="identifier">shm</span>
       <span class="special">(</span><span class="identifier">open_only</span>                    <span class="comment">//only create
-</span>      <span class="special">,</span><span class="string">"shared_memory"</span>              <span class="comment">//name
+</span>      <span class="special">,</span><span class="string">"MySharedMemory"</span>              <span class="comment">//name
 </span>      <span class="special">,</span><span class="identifier">read_write</span>                   <span class="comment">//read-write mode
 </span>      <span class="special">);</span>
 
@@ -985,13 +995,10 @@
       <span class="keyword">while</span><span class="special">(!</span><span class="identifier">end_loop</span><span class="special">);</span>
    <span class="special">}</span>
    <span class="keyword">catch</span><span class="special">(</span><span class="identifier">interprocess_exception</span> <span class="special">&amp;</span><span class="identifier">ex</span><span class="special">){</span>
-      <span class="identifier">shared_memory_object</span><span class="special">::</span><span class="identifier">remove</span><span class="special">(</span><span class="string">"shared_memory"</span><span class="special">);</span>
       <span class="identifier">std</span><span class="special">::</span><span class="identifier">cout</span> <span class="special">&lt;&lt;</span> <span class="identifier">ex</span><span class="special">.</span><span class="identifier">what</span><span class="special">()</span> <span class="special">&lt;&lt;</span> <span class="identifier">std</span><span class="special">::</span><span class="identifier">endl</span><span class="special">;</span>
       <span class="keyword">return</span> <span class="number">1</span><span class="special">;</span>
    <span class="special">}</span>
 
-   <span class="comment">//Erase shared memory
-</span>   <span class="identifier">shared_memory_object</span><span class="special">::</span><span class="identifier">remove</span><span class="special">(</span><span class="string">"shared_memory"</span><span class="special">);</span>
    <span class="keyword">return</span> <span class="number">0</span><span class="special">;</span>
 <span class="special">}</span>
 </pre>
@@ -1146,51 +1153,45 @@
 
 <span class="keyword">int</span> <span class="identifier">main</span> <span class="special">()</span>
 <span class="special">{</span>
-   <span class="keyword">try</span><span class="special">{</span>
-      <span class="comment">//Erase previous shared memory
-</span>      <span class="identifier">shared_memory_object</span><span class="special">::</span><span class="identifier">remove</span><span class="special">(</span><span class="string">"shared_memory"</span><span class="special">);</span>
+   <span class="comment">//Remove shared memory on construction and destruction
+</span>   <span class="keyword">struct</span> <span class="identifier">shm_remove</span>
+   <span class="special">{</span>
+      <span class="identifier">shm_remove</span><span class="special">()</span> <span class="special">{</span> <span class="identifier">shared_memory_object</span><span class="special">::</span><span class="identifier">remove</span><span class="special">(</span><span class="string">"MySharedMemory"</span><span class="special">);</span> <span class="special">}</span>
+      <span class="special">~</span><span class="identifier">shm_remove</span><span class="special">(){</span> <span class="identifier">shared_memory_object</span><span class="special">::</span><span class="identifier">remove</span><span class="special">(</span><span class="string">"MySharedMemory"</span><span class="special">);</span> <span class="special">}</span>
+   <span class="special">}</span> <span class="identifier">remover</span><span class="special">;</span>
 
-      <span class="comment">//Create a shared memory object.
-</span>      <span class="identifier">shared_memory_object</span> <span class="identifier">shm</span>
-         <span class="special">(</span><span class="identifier">create_only</span>                  <span class="comment">//only create
-</span>         <span class="special">,</span><span class="string">"shared_memory"</span>              <span class="comment">//name
-</span>         <span class="special">,</span><span class="identifier">read_write</span>  <span class="comment">//read-write mode
-</span>         <span class="special">);</span>
+   <span class="comment">//Create a shared memory object.
+</span>   <span class="identifier">shared_memory_object</span> <span class="identifier">shm</span>
+      <span class="special">(</span><span class="identifier">create_only</span>                  <span class="comment">//only create
+</span>      <span class="special">,</span><span class="string">"MySharedMemory"</span>              <span class="comment">//name
+</span>      <span class="special">,</span><span class="identifier">read_write</span>  <span class="comment">//read-write mode
+</span>      <span class="special">);</span>
 
-      <span class="comment">//Set size
-</span>      <span class="identifier">shm</span><span class="special">.</span><span class="identifier">truncate</span><span class="special">(</span><span class="keyword">sizeof</span><span class="special">(</span><span class="identifier">shared_memory_buffer</span><span class="special">));</span>
+   <span class="comment">//Set size
+</span>   <span class="identifier">shm</span><span class="special">.</span><span class="identifier">truncate</span><span class="special">(</span><span class="keyword">sizeof</span><span class="special">(</span><span class="identifier">shared_memory_buffer</span><span class="special">));</span>
 
-      <span class="comment">//Map the whole shared memory in this process
-</span>      <span class="identifier">mapped_region</span> <span class="identifier">region</span>
-         <span class="special">(</span><span class="identifier">shm</span>                       <span class="comment">//What to map
-</span>         <span class="special">,</span><span class="identifier">read_write</span> <span class="comment">//Map it as read-write
-</span>         <span class="special">);</span>
+   <span class="comment">//Map the whole shared memory in this process
+</span>   <span class="identifier">mapped_region</span> <span class="identifier">region</span>
+      <span class="special">(</span><span class="identifier">shm</span>                       <span class="comment">//What to map
+</span>      <span class="special">,</span><span class="identifier">read_write</span> <span class="comment">//Map it as read-write
+</span>      <span class="special">);</span>
 
-      <span class="comment">//Get the address of the mapped region
-</span>      <span class="keyword">void</span> <span class="special">*</span> <span class="identifier">addr</span>       <span class="special">=</span> <span class="identifier">region</span><span class="special">.</span><span class="identifier">get_address</span><span class="special">();</span>
+   <span class="comment">//Get the address of the mapped region
+</span>   <span class="keyword">void</span> <span class="special">*</span> <span class="identifier">addr</span>       <span class="special">=</span> <span class="identifier">region</span><span class="special">.</span><span class="identifier">get_address</span><span class="special">();</span>
 
-      <span class="comment">//Construct the shared structure in memory
-</span>      <span class="identifier">shared_memory_buffer</span> <span class="special">*</span> <span class="identifier">data</span> <span class="special">=</span> <span class="keyword">new</span> <span class="special">(</span><span class="identifier">addr</span><span class="special">)</span> <span class="identifier">shared_memory_buffer</span><span class="special">;</span>
+   <span class="comment">//Construct the shared structure in memory
+</span>   <span class="identifier">shared_memory_buffer</span> <span class="special">*</span> <span class="identifier">data</span> <span class="special">=</span> <span class="keyword">new</span> <span class="special">(</span><span class="identifier">addr</span><span class="special">)</span> <span class="identifier">shared_memory_buffer</span><span class="special">;</span>
 
-      <span class="keyword">const</span> <span class="keyword">int</span> <span class="identifier">NumMsg</span> <span class="special">=</span> <span class="number">100</span><span class="special">;</span>
+   <span class="keyword">const</span> <span class="keyword">int</span> <span class="identifier">NumMsg</span> <span class="special">=</span> <span class="number">100</span><span class="special">;</span>
 
-      <span class="comment">//Insert data in the array
-</span>      <span class="keyword">for</span><span class="special">(</span><span class="keyword">int</span> <span class="identifier">i</span> <span class="special">=</span> <span class="number">0</span><span class="special">;</span> <span class="identifier">i</span> <span class="special">&lt;</span> <span class="identifier">NumMsg</span><span class="special">;</span> <span class="special">++</span><span class="identifier">i</span><span class="special">){</span>
-         <span class="identifier">data</span><span class="special">-&gt;</span><span class="identifier">nempty</span><span class="special">.</span><span class="identifier">wait</span><span class="special">();</span>
-         <span class="identifier">data</span><span class="special">-&gt;</span><span class="identifier">mutex</span><span class="special">.</span><span class="identifier">wait</span><span class="special">();</span>
-         <span class="identifier">data</span><span class="special">-&gt;</span><span class="identifier">items</span><span class="special">[</span><span class="identifier">i</span> <span class="special">%</span> <span class="identifier">shared_memory_buffer</span><span class="special">::</span><span class="identifier">NumItems</span><span class="special">]</span> <span class="special">=</span> <span class="identifier">i</span><span class="special">;</span>
-         <span class="identifier">data</span><span class="special">-&gt;</span><span class="identifier">mutex</span><span class="special">.</span><span class="identifier">post</span><span class="special">();</span>
-         <span class="identifier">data</span><span class="special">-&gt;</span><span class="identifier">nstored</span><span class="special">.</span><span class="identifier">post</span><span class="special">();</span>
-      <span class="special">}</span>
+   <span class="comment">//Insert data in the array
+</span>   <span class="keyword">for</span><span class="special">(</span><span class="keyword">int</span> <span class="identifier">i</span> <span class="special">=</span> <span class="number">0</span><span class="special">;</span> <span class="identifier">i</span> <span class="special">&lt;</span> <span class="identifier">NumMsg</span><span class="special">;</span> <span class="special">++</span><span class="identifier">i</span><span class="special">){</span>
+      <span class="identifier">data</span><span class="special">-&gt;</span><span class="identifier">nempty</span><span class="special">.</span><span class="identifier">wait</span><span class="special">();</span>
+      <span class="identifier">data</span><span class="special">-&gt;</span><span class="identifier">mutex</span><span class="special">.</span><span class="identifier">wait</span><span class="special">();</span>
+      <span class="identifier">data</span><span class="special">-&gt;</span><span class="identifier">items</span><span class="special">[</span><span class="identifier">i</span> <span class="special">%</span> <span class="identifier">shared_memory_buffer</span><span class="special">::</span><span class="identifier">NumItems</span><span class="special">]</span> <span class="special">=</span> <span class="identifier">i</span><span class="special">;</span>
+      <span class="identifier">data</span><span class="special">-&gt;</span><span class="identifier">mutex</span><span class="special">.</span><span class="identifier">post</span><span class="special">();</span>
+      <span class="identifier">data</span><span class="special">-&gt;</span><span class="identifier">nstored</span><span class="special">.</span><span class="identifier">post</span><span class="special">();</span>
    <span class="special">}</span>
-   <span class="keyword">catch</span><span class="special">(</span><span class="identifier">interprocess_exception</span> <span class="special">&amp;</span><span class="identifier">ex</span><span class="special">){</span>
-      <span class="identifier">shared_memory_object</span><span class="special">::</span><span class="identifier">remove</span><span class="special">(</span><span class="string">"shared_memory"</span><span class="special">);</span>
-      <span class="identifier">std</span><span class="special">::</span><span class="identifier">cout</span> <span class="special">&lt;&lt;</span> <span class="identifier">ex</span><span class="special">.</span><span class="identifier">what</span><span class="special">()</span> <span class="special">&lt;&lt;</span> <span class="identifier">std</span><span class="special">::</span><span class="identifier">endl</span><span class="special">;</span>
-      <span class="keyword">return</span> <span class="number">1</span><span class="special">;</span>
-   <span class="special">}</span>
-
-   <span class="comment">//Erase shared memory
-</span>   <span class="identifier">shared_memory_object</span><span class="special">::</span><span class="identifier">remove</span><span class="special">(</span><span class="string">"shared_memory"</span><span class="special">);</span>
 
    <span class="keyword">return</span> <span class="number">0</span><span class="special">;</span>
 <span class="special">}</span>
@@ -1217,48 +1218,43 @@
 
 <span class="keyword">int</span> <span class="identifier">main</span> <span class="special">()</span>
 <span class="special">{</span>
-   <span class="keyword">try</span><span class="special">{</span>
-      <span class="comment">//Create a shared memory object.
-</span>      <span class="identifier">shared_memory_object</span> <span class="identifier">shm</span>
-         <span class="special">(</span><span class="identifier">open_only</span>                    <span class="comment">//only create
-</span>         <span class="special">,</span><span class="string">"shared_memory"</span>              <span class="comment">//name
-</span>         <span class="special">,</span><span class="identifier">read_write</span>  <span class="comment">//read-write mode
-</span>         <span class="special">);</span>
+   <span class="comment">//Remove shared memory on destruction
+</span>   <span class="keyword">struct</span> <span class="identifier">shm_remove</span>
+   <span class="special">{</span>
+      <span class="special">~</span><span class="identifier">shm_remove</span><span class="special">(){</span> <span class="identifier">shared_memory_object</span><span class="special">::</span><span class="identifier">remove</span><span class="special">(</span><span class="string">"MySharedMemory"</span><span class="special">);</span> <span class="special">}</span>
+   <span class="special">}</span> <span class="identifier">remover</span><span class="special">;</span>
 
-      <span class="comment">//Map the whole shared memory in this process
-</span>      <span class="identifier">mapped_region</span> <span class="identifier">region</span>
-         <span class="special">(</span><span class="identifier">shm</span>                       <span class="comment">//What to map
-</span>         <span class="special">,</span><span class="identifier">read_write</span> <span class="comment">//Map it as read-write
-</span>         <span class="special">);</span>
+   <span class="comment">//Create a shared memory object.
+</span>   <span class="identifier">shared_memory_object</span> <span class="identifier">shm</span>
+      <span class="special">(</span><span class="identifier">open_only</span>                    <span class="comment">//only create
+</span>      <span class="special">,</span><span class="string">"MySharedMemory"</span>              <span class="comment">//name
+</span>      <span class="special">,</span><span class="identifier">read_write</span>  <span class="comment">//read-write mode
+</span>      <span class="special">);</span>
 
-      <span class="comment">//Get the address of the mapped region
-</span>      <span class="keyword">void</span> <span class="special">*</span> <span class="identifier">addr</span>       <span class="special">=</span> <span class="identifier">region</span><span class="special">.</span><span class="identifier">get_address</span><span class="special">();</span>
+   <span class="comment">//Map the whole shared memory in this process
+</span>   <span class="identifier">mapped_region</span> <span class="identifier">region</span>
+      <span class="special">(</span><span class="identifier">shm</span>                       <span class="comment">//What to map
+</span>      <span class="special">,</span><span class="identifier">read_write</span> <span class="comment">//Map it as read-write
+</span>      <span class="special">);</span>
 
-      <span class="comment">//Obtain the shared structure
-</span>      <span class="identifier">shared_memory_buffer</span> <span class="special">*</span> <span class="identifier">data</span> <span class="special">=</span> <span class="keyword">static_cast</span><span class="special">&lt;</span><span class="identifier">shared_memory_buffer</span><span class="special">*&gt;(</span><span class="identifier">addr</span><span class="special">);</span>
+   <span class="comment">//Get the address of the mapped region
+</span>   <span class="keyword">void</span> <span class="special">*</span> <span class="identifier">addr</span>       <span class="special">=</span> <span class="identifier">region</span><span class="special">.</span><span class="identifier">get_address</span><span class="special">();</span>
 
-      <span class="keyword">const</span> <span class="keyword">int</span> <span class="identifier">NumMsg</span> <span class="special">=</span> <span class="number">100</span><span class="special">;</span>
+   <span class="comment">//Obtain the shared structure
+</span>   <span class="identifier">shared_memory_buffer</span> <span class="special">*</span> <span class="identifier">data</span> <span class="special">=</span> <span class="keyword">static_cast</span><span class="special">&lt;</span><span class="identifier">shared_memory_buffer</span><span class="special">*&gt;(</span><span class="identifier">addr</span><span class="special">);</span>
 
-      <span class="keyword">int</span> <span class="identifier">extracted_data</span> <span class="special">[</span><span class="identifier">NumMsg</span><span class="special">];</span>
+   <span class="keyword">const</span> <span class="keyword">int</span> <span class="identifier">NumMsg</span> <span class="special">=</span> <span class="number">100</span><span class="special">;</span>
 
-      <span class="comment">//Extract the data
-</span>      <span class="keyword">for</span><span class="special">(</span><span class="keyword">int</span> <span class="identifier">i</span> <span class="special">=</span> <span class="number">0</span><span class="special">;</span> <span class="identifier">i</span> <span class="special">&lt;</span> <span class="identifier">NumMsg</span><span class="special">;</span> <span class="special">++</span><span class="identifier">i</span><span class="special">){</span>
-         <span class="identifier">data</span><span class="special">-&gt;</span><span class="identifier">nstored</span><span class="special">.</span><span class="identifier">wait</span><span class="special">();</span>
-         <span class="identifier">data</span><span class="special">-&gt;</span><span class="identifier">mutex</span><span class="special">.</span><span class="identifier">wait</span><span class="special">();</span>
-         <span class="identifier">extracted_data</span><span class="special">[</span><span class="identifier">i</span><span class="special">]</span> <span class="special">=</span> <span class="identifier">data</span><span class="special">-&gt;</span><span class="identifier">items</span><span class="special">[</span><span class="identifier">i</span> <span class="special">%</span> <span class="identifier">shared_memory_buffer</span><span class="special">::</span><span class="identifier">NumItems</span><span class="special">];</span>
-         <span class="identifier">data</span><span class="special">-&gt;</span><span class="identifier">mutex</span><span class="special">.</span><span class="identifier">post</span><span class="special">();</span>
-         <span class="identifier">data</span><span class="special">-&gt;</span><span class="identifier">nempty</span><span class="special">.</span><span class="identifier">post</span><span class="special">();</span>
-      <span class="special">}</span>
+   <span class="keyword">int</span> <span class="identifier">extracted_data</span> <span class="special">[</span><span class="identifier">NumMsg</span><span class="special">];</span>
+
+   <span class="comment">//Extract the data
+</span>   <span class="keyword">for</span><span class="special">(</span><span class="keyword">int</span> <span class="identifier">i</span> <span class="special">=</span> <span class="number">0</span><span class="special">;</span> <span class="identifier">i</span> <span class="special">&lt;</span> <span class="identifier">NumMsg</span><span class="special">;</span> <span class="special">++</span><span class="identifier">i</span><span class="special">){</span>
+      <span class="identifier">data</span><span class="special">-&gt;</span><span class="identifier">nstored</span><span class="special">.</span><span class="identifier">wait</span><span class="special">();</span>
+      <span class="identifier">data</span><span class="special">-&gt;</span><span class="identifier">mutex</span><span class="special">.</span><span class="identifier">wait</span><span class="special">();</span>
+      <span class="identifier">extracted_data</span><span class="special">[</span><span class="identifier">i</span><span class="special">]</span> <span class="special">=</span> <span class="identifier">data</span><span class="special">-&gt;</span><span class="identifier">items</span><span class="special">[</span><span class="identifier">i</span> <span class="special">%</span> <span class="identifier">shared_memory_buffer</span><span class="special">::</span><span class="identifier">NumItems</span><span class="special">];</span>
+      <span class="identifier">data</span><span class="special">-&gt;</span><span class="identifier">mutex</span><span class="special">.</span><span class="identifier">post</span><span class="special">();</span>
+      <span class="identifier">data</span><span class="special">-&gt;</span><span class="identifier">nempty</span><span class="special">.</span><span class="identifier">post</span><span class="special">();</span>
    <span class="special">}</span>
-   <span class="keyword">catch</span><span class="special">(</span><span class="identifier">interprocess_exception</span> <span class="special">&amp;</span><span class="identifier">ex</span><span class="special">){</span>
-      <span class="identifier">shared_memory_object</span><span class="special">::</span><span class="identifier">remove</span><span class="special">(</span><span class="string">"shared_memory"</span><span class="special">);</span>
-      <span class="identifier">std</span><span class="special">::</span><span class="identifier">cout</span> <span class="special">&lt;&lt;</span> <span class="identifier">ex</span><span class="special">.</span><span class="identifier">what</span><span class="special">()</span> <span class="special">&lt;&lt;</span> <span class="identifier">std</span><span class="special">::</span><span class="identifier">endl</span><span class="special">;</span>
-      <span class="keyword">return</span> <span class="number">1</span><span class="special">;</span>
-   <span class="special">}</span>
-
-   <span class="comment">//Erase shared memory
-</span>   <span class="identifier">shared_memory_object</span><span class="special">::</span><span class="identifier">remove</span><span class="special">(</span><span class="string">"shared_memory"</span><span class="special">);</span>
-
    <span class="keyword">return</span> <span class="number">0</span><span class="special">;</span>
 <span class="special">}</span>
 </pre>
@@ -1349,7 +1345,7 @@
           To sum up:
         </p>
 <div class="table">
-<a name="id3225792"></a><p class="title"><b>Table 9.5. Locking Possibilities</b></p>
+<a name="id1953572"></a><p class="title"><b>Table 9.5. Locking Possibilities</b></p>
 <div class="table-contents"><table class="table" summary="Locking Possibilities">
 <colgroup>
 <col>
@@ -1416,7 +1412,7 @@
           data is guaranteed to remain unchanged</strong></span>:
         </p>
 <div class="table">
-<a name="id3225904"></a><p class="title"><b>Table 9.6. Transition Possibilities</b></p>
+<a name="id1953682"></a><p class="title"><b>Table 9.6. Transition Possibilities</b></p>
 <div class="table-contents"><table class="table" summary="Transition Possibilities">
 <colgroup>
 <col>
@@ -1970,7 +1966,7 @@
 <pre class="programlisting"><span class="preprocessor">#include</span> <span class="special">&lt;</span><span class="identifier">boost</span><span class="special">/</span><span class="identifier">interprocess</span><span class="special">/</span><span class="identifier">sync</span><span class="special">/</span><span class="identifier">interprocess_upgradable_mutex</span><span class="special">.</span><span class="identifier">hpp</span><span class="special">&gt;</span>
 </pre>
 <div class="itemizedlist"><ul type="disc"><li>
-<code class="computeroutput"><a class="link" href="../boost/interprocess/interprocess_upgradable_id3291371.html" title="Class interprocess_upgradable_mutex">boost::interprocess::interprocess_upgradable_mutex</a></code>:
+<code class="computeroutput"><a class="link" href="../boost/interprocess/interprocess_upgradable_id1772717.html" title="Class interprocess_upgradable_mutex">boost::interprocess::interprocess_upgradable_mutex</a></code>:
             A non-recursive, anonymous upgradable mutex that can be placed in shared
             memory or memory mapped files.
           </li></ul></div>
@@ -2894,8 +2890,8 @@
           is closed, all file locks set by the calling process are cleared.
         </p>
 <p>
-          To sum up, if you plan to use file locking in your processes, use the following
-          restrictions:
+          To sum up, if you plan to use portable file locking in your processes,
+          use the following restrictions:
         </p>
 <div class="itemizedlist"><ul type="disc">
 <li><span class="bold"><strong>For each file, use a single <code class="computeroutput"><span class="identifier">file_lock</span></code>
