@@ -1,0 +1,47 @@
+<!DOCTYPE HTML PUBLIC "-//W3C//DTD HTML 4.01 Transitional//EN">
+<html><head>
+		
+		<title>make_shared and allocate_shared</title><meta http-equiv="Content-Type" content="text/html; charset=UTF-8"></head>
+
+	<body bgcolor="#ffffff" text="#000000">
+		<h1><a href="../../index.htm"><img alt="boost.png (6897 bytes)" src="../../boost.png" align="middle" border="0" height="86" width="277"></a>make_shared 和 allocate_shared 函数模板</h1>
+		<p><a href="#Introduction">Introduction 简介</a><br>
+			<a href="#Synopsis">Synopsis 摘要</a><br>
+			<a href="#functions">Free Functions 自由函数</a><br>
+			<a href="#example">Example 示例</a><br>
+		</p><h2><a name="Introduction">Introduction 简介</a></h2>
+		<p>使用 <a href="shared_ptr.htm"><code>shared_ptr</code></a>
+			可以消除对显式 <code>delete</code> 的使用，但是它没有提供避免显式 <code>new</code> 的支持。有用户反复地要求提供一个工厂函数，用于创建给定类型的对象并返回一个指向它的 <code>shared_ptr</code>.
+			除了方便使用和保持风格以外，这样的函数还具有异常安全性且明显更快，因为它可以对对象和相应的控制块两者同时使用单次的内存分配，以消除
+			<code>shared_ptr</code> 的构造过程中最大的一部分开销。这消除了对于 <code>shared_ptr</code> 的一个主要的抱怨。
+		</p>
+		<p>头文件 &lt;boost/make_shared.hpp&gt; 提供了一组重载的函数模板，<code>make_shared</code> 和 <code>allocate_shared</code>, 它们解决了这些需要。<code>make_shared</code> 使用全局的 operator <code>new</code> 来分配内存，而 <code>allocate_shared</code> 则使用用户所提供的分配器，可以更好地进行控制。</p>
+		<p>选择 <code>make_shared</code> 这个名字的原因是，表达式
+			<code>make_shared&lt;Widget&gt;()</code> 可以大声地读出来，并且传达了准确的意义。</p>
+		<h2><a name="Synopsis">Synopsis 摘要</a></h2>
+		<pre>namespace boost {<br><br>  template&lt;typename T&gt; class shared_ptr;<br><br>  template&lt;typename T&gt;<br>    shared_ptr&lt;T&gt; <a href="#functions">make_shared</a>();<br><br>  template&lt;typename T, typename A&gt;<br>    shared_ptr&lt;T&gt; <a href="#functions">allocate_shared</a>( A const &amp; );<br><br>#if defined( BOOST_HAS_VARIADIC_TMPL ) &amp;&amp; defined( BOOST_HAS_RVALUE_REFS )	// C++0x prototypes<br><br>  template&lt;typename T, typename... Args&gt;<br>    shared_ptr&lt;T&gt; <a href="#functions">make_shared</a>( Args &amp;&amp; ... args );<br><br>  template&lt;typename T, typename A, typename... Args&gt;<br>    shared_ptr&lt;T&gt; <a href="#functions">allocate_shared</a>( A const &amp; a, Args &amp;&amp; ... args );<br><br>#else // no C++0X support<br><br>  template&lt;typename T, typename Arg1 &gt;<br>    shared_ptr&lt;T&gt; <a href="#functions">make_shared</a>( Arg1 const &amp; arg1 );<br>  template&lt;typename T, typename Arg1, typename Arg2 &gt;<br>    shared_ptr&lt;T&gt; <a href="#functions">make_shared</a>( Arg1 const &amp; arg1, Arg2 const &amp; arg2 );<br>// ...<br>  template&lt;typename T, typename Arg1, typename Arg2, ..., typename ArgN &gt;<br>    shared_ptr&lt;T&gt; <a href="#functions">make_shared</a>( Arg1 const &amp; arg1, Arg2 const &amp; arg2, ..., ArgN const &amp; argN );<br><br>  template&lt;typename T, typename A, typename Arg1 &gt;<br>    shared_ptr&lt;T&gt; <a href="#functions">allocate_shared</a>( A const &amp; a, Arg1 const &amp; arg1 );<br>  template&lt;typename T, typename A, typename Arg1, typename Arg2 &gt;<br>    shared_ptr&lt;T&gt; <a href="#functions">allocate_shared</a>( Arg1 const &amp; arg1, Arg2 const &amp; arg2 );<br>// ...<br>  template&lt;typename T, typename A, typename Arg1, typename Arg2, ..., typename ArgN &gt;<br>    shared_ptr&lt;T&gt; <a href="#functions">allocate_shared</a>( A const &amp; a, Arg1 const &amp; arg1, Arg2 const &amp; arg2, ..., ArgN const &amp; argN );<br><br>#endif<br>}</pre>
+		<h2><a name="functions">Free Functions 自由函数</a></h2>
+		<pre>template&lt;class T, class... Args&gt;<br>    shared_ptr&lt;T&gt; make_shared( Args &amp;&amp; ... args );<br>template&lt;class T, class A, class... Args&gt;<br>    shared_ptr&lt;T&gt; allocate_shared( A const &amp; a, Args &amp;&amp; ... args );</pre>
+		<blockquote>
+			<p><b>要求：</b>表达式 <code>new( pv ) T( std::forward&lt;Args&gt;(args)... )</code> 是良好定义的，其中 <code>pv</code> 是一个 <code>void*</code>，指向适合保存一个类型为 <code>T</code> 的对象的一块内存<span style="font-family: monospace;">。</span><code>A</code> 应该是一个<em>分配器</em>，符合在C++标准的第20.1.5节(分配器要求<stong>)中的描述。<code>A</code> 的复制构造函数和析构函数不能抛出。</stong></p>
+			<p><b>效果：</b>分配一块可以保存一个类型为 <code>T</code>
+				的对象的内存，并通过 placement new 表达式 <code>new( pv ) T()</code> 或 <code>new( pv ) T( std::forward&lt;Args&gt;(args)... )</code> 在其中构造一个对象。<code>allocate_shared</code> 使用 <code>a</code> 的一个拷贝来分配内存。如果有异常抛出，则没有影响。</p>
+			<p><b>返回：</b>一个 <code>shared_ptr</code> 实例，它保存并拥有这个新构造的类型为 <code>T</code> 的对象的地址。</p>
+			<p><b>后验条件：</b><code>get() != 0 &amp;&amp; use_count() == 1</code>.</p>
+			<p><b>抛出：</b><code>bad_alloc</code>, 或是由 <code>A::allocate</code>
+				或 <code>T</code> 的构造函数抛出的异常。</p>
+			<p><b>说明：</b>该实现在单次内存分配中分配了所返回的 <code>shared_ptr</code> 以及一个类型为 <code>T</code> 的对象所要的内存。这提供了和介入式智能指针同样的效率。</p>
+			<p>如果你的编译支持右值引用和可变参数数量模板，则使用以上原型。它们完美地将 <code>args</code> 参数前转给 <code>T</code> 的构造函数。</p>
+			<p>否则，本实现将退回至将参数以常量引用的方式前转给 <code>T</code> 的构造函数。如果你需要传递一个非常量引用给 <code>T</code> 的构造函数，你可以通过将参数包装在一个 <code>boost::ref</code> 调用中来实现。另外，你被限制为最多使用9个参数(不计
+			allocate_shared 的分配器参数)。</p>
+		</blockquote>
+		<h2><a name="example">Example 救命</a></h2>
+		<pre>boost::shared_ptr&lt;std::string&gt; x = boost::make_shared&lt;std::string&gt;("hello, world!");<br>std::cout &lt;&lt; *x;</pre>
+		<hr>
+		<p>
+			$Date: 2008-05-19 15:42:39 -0400 (Mon, 19 May 2008) $</p>
+		<p><small>Copyright 2008 Peter Dimov. Copyright 2008 Frank Mori Hess.
+				Distributed under the Boost Software License,
+				Version 1.0. See accompanying file <a href="../../LICENSE_1_0.txt">LICENSE_1_0.txt</a>
+				or copy at <a href="http://www.boost.org/LICENSE_1_0.txt">http://www.boost.org/LICENSE_1_0.txt</a>.</small></p>
+	</body></html>
