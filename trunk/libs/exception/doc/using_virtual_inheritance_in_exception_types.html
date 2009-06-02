@@ -3,7 +3,7 @@
 <html xmlns='http://www.w3.org/1999/xhtml' xml:lang='en' lang='en'>
 <head>
 	<meta http-equiv='Content-Type' content='text/html; charset=utf-8'/>
-	<title>error_info::value</title>
+	<title>using virtual inheritance in exception types</title>
 	<link href='reno.css' type='text/css' rel='stylesheet'/>
 </head>
 <body>
@@ -19,18 +19,27 @@
 <!-- Copyright (c) 2006-2009 Emil Dotchevski and Reverge Studios, Inc. -->
 <!-- Distributed under the Boost Software License, Version 1.0. (See accompanying -->
 <!-- file LICENSE_1_0.txt or copy at http://www.boost.org/LICENSE_1_0.txt) -->
-<div class="RenoIncludeDIV"><div class="RenoAutoDIV"><h3>error_info::value</h3>
+<div class="RenoIncludeDIV"><div class="RenoAutoDIV"><h3>Using Virtual Inheritance in Exception Types</h3>
 </div>
-<div class="RenoIncludeDIV"><p><span class="RenoEscape">&#35;<!--<wiki>`&#35;</wiki>--></span>include &lt;<span class="RenoLink"><a href="exception_error_info_hpp.html">boost/exception/info.hpp</a></span>&gt;</p>
-<pre><span class="RenoIncludeSPAN"><span class="RenoLink"><a href="error_info_value_type.html">value_type</a></span> const &amp; <span class="RenoLink">value</span>() const;</span></pre>
-</div><h4>Description:</h4>
-<p>Returns a const reference to the copy of the value passed to <span class="RenoLink"><a href="error_info.html">error_info</a></span>'s constructor stored in the <span class="RenoLink"><a href="error_info.html">error_info</a></span> object.</p>
-<h4>Throws:</h4>
-<p>Nothing.</p>
+<p>Exception types should use virtual inheritance when deriving from other exception types. This insight is due to Andrew Koenig. Using virtual inheritance prevents ambiguity problems in the exception handler:</p>
+<pre>#include &lt;iostream&gt;
+struct my_exc1 : std::exception { char const* what() const throw(); };
+struct my_exc2 : std::exception { char const* what() const throw(); };
+struct your_exc3 : my_exc1, my_exc2 {};
+
+int
+main()
+    {
+    try { throw your_exc3(); }
+    catch(std::exception const&amp; e) {}
+    catch(...) { std::cout &lt;&lt; "whoops!" &lt;&lt; std::endl; }
+    }</pre>
+<p>The program above outputs "whoops!" because the conversion to std::exception is ambiguous.</p>
+<p>The overhead introduced by virtual inheritance is always negligible in the context of exception handling. Note that virtual bases are initialized directly by the constructor of the most-derived-type (the type passed to the throw statement, in case of exceptions.) However, typically this detail is of no concern when boost::<span class="RenoLink"><a href="exception.html">exception</a></span> is used, because it enables exception types to be trivial structs with no members (there's nothing to initialize.) See <span class="RenoLink"><a href="exception_types_as_simple_semantic_tags.html">Exception Types as Simple Semantic Tags</a></span>.</p>
 </div><div class="RenoAutoDIV"><div class="RenoHR"><hr/></div>
 <h3>See Also:</h3>
-<div class="RenoPageList"><a href="diagnostic_information.html">diagnostic_information<br/>
-</a><a href="error_info.html">error_info<br/>
+<div class="RenoPageList"><a href="boost-exception.html">Boost Exception<br/>
+</a><a href="frequently_asked_questions.html">Frequently Asked Questions<br/>
 </a></div>
 </div>
 <!-- Copyright (c) 2006-2009 Emil Dotchevski and Reverge Studios, Inc. -->
