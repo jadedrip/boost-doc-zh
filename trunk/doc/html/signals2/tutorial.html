@@ -68,9 +68,12 @@
 <tr><td>block</td><td>阻塞</td><td>&nbsp;</td></tr>
 <tr><td>combiner</td><td>合并器</td><td>&nbsp;</td></tr>
 <tr><td>compatibility form</td><td>兼容形式</td><td>&nbsp;</td></tr>
+<tr><td>concept</td><td>概念</td><td>&nbsp;</td></tr>
 <tr><td>connect</td><td>连接</td><td>&nbsp;</td></tr>
 <tr><td>connection</td><td>连接</td><td>&nbsp;</td></tr>
 <tr><td>disconnect</td><td>断开</td><td>&nbsp;</td></tr>
+<tr><td>metafunction</td><td>元函数</td><td>&nbsp;</td></tr>
+<tr><td>mutex</td><td>互斥体</td><td>&nbsp;</td></tr>
 <tr><td>portable syntax</td><td>兼容句法</td><td>可移植句法</td></tr>
 <tr><td>preferred form</td><td>首选形式</td><td>&nbsp;</td></tr>
 <tr><td>preferred syntax</td><td>首选句法</td><td>&nbsp;</td></tr>
@@ -1866,6 +1869,10 @@ private:
 <div class="section" lang="en">
 <div class="titlepage"><div><div><h3 class="title">
 <a name="signals2.tutorial.extended-slot-type"></a>Giving a Slot Access to its Connection (Advanced)</h3></div></div></div>
+
+<div class="titlepage"><div><div><h3 class="title">
+<a name="signals2.tutorial.extended-slot-type"></a>让插槽可以操作其连接（高级）</h3></div></div></div>
+
 <p>
       You may encounter situations where you wish to disconnect or block a slot's
       connection from within the slot itself.  For example, suppose you have a group
@@ -1877,6 +1884,18 @@ private:
       Therefore, you may wish to clean up old connections by having the slot
       disconnect its invoking connection when it runs.
     </p>
+
+<p>
+      可能有这样的情形：
+      你希望在插槽中断开或阻塞插槽本身的连接。
+
+      例如，有一组异步任务，当每个任务完成时会发出信号。
+      你希望用一个插槽连接所有的任务，来接收它们完成时的结果。
+
+      一旦某个任务完成并且插槽被运行，该插槽就不必再连接到这个已经完成的任务。
+      因此，你可能希望让插槽运行时断开其连接，以清理旧连接。
+    </p>
+
 <p>
       For a slot to disconnect (or block) its invoking connection, it must have
       access to a <code class="computeroutput"><a class="link" href="../boost/signals2/connection.html" title="Class connection">connection</a></code> object which references
@@ -1888,6 +1907,24 @@ private:
       in a multi-threaded environment where the signal may be invoked
       concurrently by a different thread while the slot is being connected.
     </p>
+
+<p>
+      为了让插槽断开（或阻塞）其连接，
+      它必须能够操作
+      <code class="computeroutput"><a class="link" href="../boost/signals2/connection.html" title="Class connection">connection</a></code>
+      对象，即调用的信号-插槽连接对象。
+
+      难点是，
+      <code class="computeroutput"><a class="link" href="../boost/signals2/connection.html" title="Class connection">connection</a></code>
+      对象是由
+      <code class="computeroutput"><a class="link" href="../boost/signalN.html#id1215527-bb">signal::connect</a></code>
+      方法返回的，
+      因此只有在插槽连接信号之后才能用。
+
+      在多线程环境下，这尤其麻烦，
+      当插槽正在被连接时，信号可能被其他线程并发调用。
+    </p>
+
 <p>
       Therefore, the signal classes provide
       <code class="computeroutput"><a class="link" href="../boost/signals2/signalN.html#id1208227-bb">signal::connect_extended</a></code>
@@ -1899,16 +1936,45 @@ private:
       <code class="computeroutput"><a class="link" href="../boost/signals2/signalN.html#boost.signals2.signalN.extended_slot_type">signal::extended_slot_type</a></code>
       typedef.
     </p>
+
+<p>
+      因此，信号类提供了
+      <code class="computeroutput"><a class="link" href="../boost/signals2/signalN.html#id1208227-bb">signal::connect_extended</a></code>
+      方法，它允许连接信号的插槽接受一个额外参数。
+
+      该额外参数是个 <code class="computeroutput"><a class="link" href="../boost/signals2/connection.html" title="Class connection">connection</a></code>
+      对象，它指向当前调用插槽的信号-插槽连接。
+      
+      <code class="computeroutput"><a class="link" href="../boost/signals2/signalN.html#id1208227-bb">signal::connect_extended</a></code>
+      使用的插槽类型由
+      <code class="computeroutput"><a class="link" href="../boost/signals2/signalN.html#boost.signals2.signalN.extended_slot_type">signal::extended_slot_type</a></code>
+      定义。
+      
+    </p>
+
 <p>
       The examples section includes an
       <a class="link" href="examples.html#signals2.examples.tutorial.extended_slot" title="extended_slot">extended_slot</a>
       program which demonstrates the syntax for using
       <code class="computeroutput"><a class="link" href="../boost/signals2/signalN.html#id1208227-bb">signal::connect_extended</a></code>.
     </p>
+
+<p>
+      例程一节中有个
+      <a class="link" href="examples.html#signals2.examples.tutorial.extended_slot" title="extended_slot">extended_slot</a>
+      程序，它演示了
+      <code class="computeroutput"><a class="link" href="../boost/signals2/signalN.html#id1208227-bb">signal::connect_extended</a></code>
+      的用法。
+    </p>
+
 </div>
 <div class="section" lang="en">
 <div class="titlepage"><div><div><h3 class="title">
 <a name="signals2.tutorial.signal-mutex-template-parameter"></a>Changing the <code class="computeroutput">Mutex</code> Type of a Signal (Advanced).</h3></div></div></div>
+
+<div class="titlepage"><div><div><h3 class="title">
+<a name="signals2.tutorial.signal-mutex-template-parameter"></a>改变信号的互斥体类型（高级）</h3></div></div></div>
+
 <p>
       For most cases the default type of <code class="computeroutput"><a class="link" href="../boost/signals2/mutex.html" title="Class mutex">boost::signals2::mutex</a></code> for
       a <code class="computeroutput"><a class="link" href="../boost/signal.html" title="Class template signal">signal</a></code>'s <code class="computeroutput">Mutex</code> template type parameter should
@@ -1918,6 +1984,27 @@ private:
       (the <code class="computeroutput">Lockable</code> concept also includes a <code class="computeroutput">try_lock()</code> method
       but this library does not require try locking).
     </p>
+
+<p>
+      <code class="computeroutput"><a class="link" href="../boost/signal.html" title="Class template signal">signal</a></code>
+      的模板类型参数
+      <code class="computeroutput">Mutex</code>
+      默认为
+      <code class="computeroutput"><a class="link" href="../boost/signals2/mutex.html" title="Class mutex">boost::signals2::mutex</a></code>，
+      多数情况下，这应该能行。
+
+      如果你希望使用其他的互斥体（mutex）类型，那么它必须可缺省构造，
+      并且满足由 Boost.Thread 库所定义的
+      <code class="computeroutput">Lockable</code>
+      概念（concept）。
+      
+      即，它必须具有
+      <code class="computeroutput">lock()</code> 和 <code class="computeroutput">unlock()</code>
+      方法（<code class="computeroutput">Lockable</code> 概念同时包含了
+      <code class="computeroutput">try_lock()</code> 方法，
+      但本库没用到）。
+    </p>
+
 <p>
       The Boost.Signals2 library provides one alternate mutex class for use with <code class="computeroutput"><a class="link" href="../boost/signal.html" title="Class template signal">signal</a></code>:
       <code class="computeroutput"><a class="link" href="../boost/signals2/dummy_mutex.html" title="Class dummy_mutex">boost::signals2::dummy_mutex</a></code>.  This is a fake mutex for
@@ -1926,6 +2013,20 @@ private:
       <code class="computeroutput">boost::mutex</code> and the <code class="computeroutput">std::mutex</code> from
       C++0x.
     </p>
+
+<p>
+      Boost.Signals2 库提供了另外一个可用于
+      <code class="computeroutput"><a class="link" href="../boost/signal.html" title="Class template signal">signal</a></code>
+      的互斥体类：
+      <code class="computeroutput"><a class="link" href="../boost/signals2/dummy_mutex.html" title="Class dummy_mutex">boost::signals2::dummy_mutex</a></code>。
+      这是个用于单线程的假互斥体，因为在单线程中，用真实的互斥体加锁是无谓的开销。
+
+      其它可用于 <code class="computeroutput"><a class="link" href="../boost/signal.html" title="Class template signal">signal</a></code>
+      的互斥体类型有：
+      <code class="computeroutput">boost::mutex</code>
+      和 C++0x 的 <code class="computeroutput">std::mutex</code>。
+    </p>
+
 <p>
       Changing a signal's <code class="computeroutput">Mutex</code> template type parameter can be tedious, due to
       the large number of template parameters which precede it.  The
@@ -1935,6 +2036,26 @@ private:
       an argument and uses a <code class="computeroutput"><a class="link" href="../boost/signals2/dummy_mutex.html" title="Class dummy_mutex">boost::signals2::dummy_mutex</a></code>
       for its <code class="computeroutput">Mutex</code> types, you could write:
     </p>
+
+<p>
+      更改信号的
+      <code class="computeroutput">Mutex</code>
+      模板类型参数很烦，
+      因为在它之前有许多模板参数。
+
+      这时，<code class="computeroutput"><a class="link" href="../boost/signals2/signal_type.html" title="Class template signal_type">signal_type</a></code>
+      元函数（metafunction）就特别有用，
+      它开启了
+      <code class="computeroutput"><a class="link" href="../boost/signal.html" title="Class template signal">signal</a></code>
+      类的命名模板类型参数。
+      
+      例如，声明一个信号，接收一个 <code class="computeroutput">int</code>
+      参数，并使用
+      <code class="computeroutput"><a class="link" href="../boost/signals2/dummy_mutex.html" title="Class dummy_mutex">boost::signals2::dummy_mutex</a></code>
+      作为其 <code class="computeroutput">Mutex</code>
+      类型，你可以这样写：
+    </p>
+
 <pre class="programlisting">namespace bs2 = boost::signals2;
 using bs2::keywords;
 bs2::signal_type&lt;void (int), mutex_type&lt;bs2::dummy_mutex&gt; &gt;::type sig;
@@ -1956,7 +2077,7 @@ bs2::signal_type&lt;void (int), mutex_type&lt;bs2::dummy_mutex&gt; &gt;::type si
 <td align="right"><div class="copyright-footer">Copyright © 2001-2004 Douglas Gregor<br>Copyright © 2007-2009 Frank Mori Hess
 
       <p>翻译：<a href="http://blog.csdn.net/jq0123">金庆</a></p>
-      <p>译文更新：2009.6.5</p>
+      <p>译文更新：2009.6.11</p>
 
     <p>Distributed under the Boost
     Software License, Version 1.0. (See accompanying file
