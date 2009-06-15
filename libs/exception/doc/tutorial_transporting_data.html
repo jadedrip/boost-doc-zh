@@ -19,16 +19,16 @@
 <!-- Copyright (c) 2006-2009 Emil Dotchevski and Reverge Studios, Inc. -->
 <!-- Distributed under the Boost Software License, Version 1.0. (See accompanying -->
 <!-- file LICENSE_1_0.txt or copy at http://www.boost.org/LICENSE_1_0.txt) -->
-<div class="RenoIncludeDIV"><div class="RenoAutoDIV"><h2>Transporting of Arbitrary Data to the Catch Site</h2>
+<div class="RenoIncludeDIV"><div class="RenoAutoDIV"><h2>向catch端传递任意的数据</h2>
 </div>
-<p>All exception types that derive from boost::<span class="RenoLink"><a href="exception.html">exception</a></span> can be used as type-safe containers of arbitrary data objects, while complying with the no-throw requirements (15.5.1) of the ANSI C++ standard for exception types.</p>
-<p>When exceptions derive from boost::<span class="RenoLink"><a href="exception.html">exception</a></span>, arbitrary data can be added to exception objects:</p>
-<div><ul><li>At the point of the throw;</li>
-<li>At a later time as exceptions bubble up the call stack.</li>
+<p>所有从 boost::<span class="RenoLink"><a href="exception.html">exception</a></span> 继承的子类对象都可以作为类型安全的任意数据的容器使用, 而且这个异常类型还遵从ANSI C++对异常类型无抛出规范(15.5.1)的要求.</p>
+<p>当异常是从 boost::<span class="RenoLink"><a href="exception.html">exception</a></span> 继承, 任何的数据都可以添加到异常对象中, 当:</p>
+<div><ul><li>异常抛出的时候;</li>
+<li>在以后某个调用栈展开的时刻.</li>
 </ul></div>
 <div class="RenoIncludeDIV"><div class="RenoAutoDIV"><h3>Adding of Arbitrary Data at the Point of the Throw</h3>
 </div>
-<p>The following example demonstrates how errno can be stored in exception objects using Boost Exception:</p>
+<p>下面的实例说明了如何使用Boost Exception向异常对象添加errno:</p>
 <pre>#include &lt;<span class="RenoLink"><a href="exception_hpp.html">boost/exception.hpp</a></span>&gt;
 #include &lt;errno.h&gt;
 #include &lt;iostream&gt;
@@ -43,10 +43,10 @@ f()
     throw my_error() &lt;&lt; errno_info(errno); //(3)
     }
 </pre>
-<p>First, we instantiate the <span class="RenoLink"><a href="error_info.html">error_info</a></span> template using a unique identifier -- tag_errno, and the type of the info it identifies -- int. This provides compile-time type safety for the various values stored in exception objects.</p>
-<p>Second, we define class my_error, which derives from boost::<span class="RenoLink"><a href="exception.html">exception</a></span>.</p>
-<p>Finally, (3) illustrates how the typedef from (1) can be used with <span class="RenoLink"><a href="exception_operator_shl.html">operator&lt;&lt;</a></span> to store values in exception objects at the point of the throw.</p>
-<p>The stored errno value can be recovered at a later time like this:</p>
+<p>首先, 我们使用唯一的标识符tag_errno和其对应的数据类型int实例化 <span class="RenoLink"><a href="error_info.html">error_info</a></span> 模板对象. 这确保了向异常对象存储的各种数据对象是编译时类型安全的.</p>
+<p>而后, 我们定义了 my_error, 这是一个从 boost::<span class="RenoLink"><a href="exception.html">exception</a></span>继承的类型.</p>
+<p>最后, (3) 说明了在异常对象的抛出点, 如何联合使用在 (1) 定义的typedef和操作符 <span class="RenoLink"><a href="operator_shl_exception.html">operator&lt;&lt;</a></span> ,把数据存储在异常对象当中.</p>
+<p>存储的 errno 数值可以在其后的某个时间像这样被恢复出来:</p>
 <pre>// ...continued
 
 void
@@ -63,18 +63,18 @@ g()
             std::cerr &lt;&lt; "Error code: " &lt;&lt; *err;
         }
     }</pre>
-<p>The <span class="RenoLink"><a href="get_error_info.html">get_error_info</a></span> function template is instantiated with the typedef from (1), and is passed an exception object of a polymorphic type. If the exception object contains the requested value, err will point to it; otherwise a null pointer is returned.</p>
-</div><div class="RenoIncludeDIV"><div class="RenoAutoDIV"><h3>Adding of Arbitrary Data to Active Exception Objects</h3>
+<p>函数模板 <span class="RenoLink"><a href="get_error_info.html">get_error_info</a></span> 通过(1)处的typedef实例化, 并传入多态类型的异常对象作为参数. 如果异常对象包含需要的数据, 返回的对象智能指针; 否则返回空指针.</p>
+</div><div class="RenoIncludeDIV"><div class="RenoAutoDIV"><h3>向活动的异常对象添加任意的数据</h3>
 </div>
-<p>Sometimes the throw site does not have all the information that is needed at the catch site to make sense of what went wrong. Let's say we have an exception type file_read_error, which takes a file name in its constructor. Consider the following function:</p>
+<p>有时候 throw 端没有足够的信息, 这些信息使得catch端能够辨明错误的意义. 假定我们有一个异常对象,类型是 file_read_error, 它的的构造函数需要一个文件名作为参数. 考虑下面的函数:</p>
 <pre>void
 file_read( FILE * f, void * buffer, size_t size )
     {
     if( size!=fread(buffer,1,size,f) )
         throw file_read_error(????);
     }</pre>
-<p>How can the file_read function pass a file name to the exception type constructor? All it has is a FILE handle.</p>
-<p>Using boost::<span class="RenoLink"><a href="exception.html">exception</a></span> allows us to free the file_read function from the burden of storing the file name in exceptions it throws:</p>
+<p>函数 file_read 如何向异常类型的构造函数传递一个文件名作为参数 ? 它知道的全部信息是一个文件句柄对象.</p>
+<p>使用 boost::<span class="RenoLink"><a href="exception.html">exception</a></span> ,我们就不必再函数 file_read 进行异常抛出的时候向异常对象传入文件名参数:</p>
 <pre>#include &lt;<span class="RenoLink"><a href="exception_hpp.html">boost/exception.hpp</a></span>&gt;
 #include &lt;stdio.h&gt;
 #include &lt;errno.h&gt;
@@ -89,7 +89,7 @@ file_read( FILE * f, void * buffer, size_t size )
     if( size!=fread(buffer,1,size,f) )
         throw file_read_error() &lt;&lt; errno_info(errno);
     }</pre>
-<p>If file_read detects a failure, it throws an exception which contains the information that is available at the time, namely the errno. Other relevant information, such as the file name, can be added in a context higher up the call stack, where it is known naturally:</p>
+<p>如果函数 file_read 检测到错误的发生, 他会抛出相关的异常对象, 其中包含当时能够得到的错误信息,即errno. 其他相关的信息,例如文件名, 可以在高端的调用堆栈上下文环境中得到,并添加到对象当中,那时它很自然的就知道了这个信息:</p>
 <pre>#include &lt;<span class="RenoLink"><a href="exception_hpp.html">boost/exception.hpp</a></span>&gt;
 #include &lt;boost/shared_ptr.hpp&gt;
 #include &lt;stdio.h&gt;
@@ -117,10 +117,10 @@ parse_file( char const * file_name )
         throw;
         }
     }</pre>
-<p>The above function is (almost) exception-neutral -- if an exception is emitted by any function call within the try block, parse_file does not need to do any real work, but it intercepts any boost::<span class="RenoLink"><a href="exception.html">exception</a></span> object, stores the file name, and re-throws using a throw-expression with no operand (15.1.6). The rationale for catching any boost::<span class="RenoLink"><a href="exception.html">exception</a></span> object is that the file name is relevant to any failure that occurs in parse_file, <i>even if the failure is unrelated to file I/O</i>.</p>
-</div><div class="RenoIncludeDIV"><div class="RenoAutoDIV"><h3>Adding Grouped Data to Exceptions</h3>
+<p>上面的实例(几乎)是异常中立的 -- 如果在try代码块中,任何的函数抛出了异常, parse_file 不需要做特别的工作, 而只是截获任何的 boost::<span class="RenoLink"><a href="exception.html">exception</a></span> 对象, 存储文件名,然后重新抛出. 截获  boost::<span class="RenoLink"><a href="exception.html">exception</a></span> 对象是因为文件名和发生在函数 parse_file 中的错误相关,<i>即便是这个错误和文件 I/O 无关</i>. </p>
+</div><div class="RenoIncludeDIV"><div class="RenoAutoDIV"><h3>向异常对象添加组数据</h3>
 </div>
-<p>The code snippet below demonstrates how boost::<span class="RenoLink"><a href="http://www.boost.org/libs/tuple/doc/tuple_users_guide.html">tuple</a></span> can be used to bundle the name of the function that failed, together with the reported errno so that they can be added to exception objects more conveniently together:</p>
+<p>下面的代码片段展示了 boost::<span class="RenoLink"><a href="http://www.boost.org/libs/tuple/doc/tuple_users_guide.html">tuple</a></span> 的用法, 用它把发生错误的函数名称和errno信息打包存储到异常对象当中,这样更加方便:</p>
 <pre>#include &lt;<span class="RenoLink"><a href="exception_error_info_group_hpp.html">boost/exception/info_tuple.hpp</a></span>&gt;
 #include &lt;boost/shared_ptr.hpp&gt;
 #include &lt;stdio.h&gt;
@@ -144,9 +144,9 @@ file_open( char const * name, char const * mode )
             file_name_info(name) &lt;&lt;
             clib_failure("fopen",errno);
     }</pre>
-<p>Note that the members of a boost::<span class="RenoLink"><a href="http://www.boost.org/libs/tuple/doc/tuple_users_guide.html">tuple</a></span> are stored separately in exception objects; they can only be retrieved individually, using <span class="RenoLink"><a href="get_error_info.html">get_error_info</a></span>.</p>
+<p>注意到 boost::<span class="RenoLink"><a href="http://www.boost.org/libs/tuple/doc/tuple_users_guide.html">tuple</a></span> 的各个成员是单独存储到异常对象中的; 它们也只能单独的获取出来, 使用函数 <span class="RenoLink"><a href="get_error_info.html">get_error_info</a></span> .</p>
 </div></div><div class="RenoAutoDIV"><div class="RenoHR"><hr/></div>
-<h3>See Also:</h3>
+<h3>参见:</h3>
 <div class="RenoPageList"><a href="boost-exception.html">Boost Exception<br/>
 </a><a href="tutorial_enable_error_info.html">Integrating Boost Exception in Existing Exception Class Hierarchies<br/>
 </a></div>

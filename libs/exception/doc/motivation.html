@@ -19,23 +19,23 @@
 <!-- Copyright (c) 2006-2009 Emil Dotchevski and Reverge Studios, Inc. -->
 <!-- Distributed under the Boost Software License, Version 1.0. (See accompanying -->
 <!-- file LICENSE_1_0.txt or copy at http://www.boost.org/LICENSE_1_0.txt) -->
-<div class="RenoIncludeDIV"><div class="RenoAutoDIV"><h3>Motivation</h3>
+<div class="RenoIncludeDIV"><div class="RenoAutoDIV"><h3>动机</h3>
 </div>
-<p>Traditionally, when using exceptions to report failures, the throw site:</p>
-<div><ul><li>creates an exception object of the appropriate type, and</li>
-<li>stuffs it with data relevant to the detected error.</li>
+<p>传统上, 使用异常机制报告错误, 在抛出端:</p>
+<div><ul><li>创建一个合适类型的异常对象, 并且</li>
+<li>向这个对象添加错误相关的数据.</li>
 </ul></div>
-<p>A higher context in the program contains a catch statement which:</p>
-<div><ul><li>selects failures based on exception types, and</li>
-<li>inspects exception objects for data required to deal with the problem.</li>
+<p>在程序的高端包含一个catch 语句:</p>
+<div><ul><li>通过异常类型选择特定的错误,并且</li>
+<li>从异常对象中抽取相关的数据处理异常问题.</li>
 </ul></div>
-<p>The main issue with this "traditional" approach is that often, the data available at the point of the throw is insufficient for the catch site to handle the failure.</p>
-<p>Here is an example of a catch statement:</p>
+<p>这种处理异常的 "传统" 方法经常导致在throw端缺乏catch端处理异常所需的足够信息.</p>
+<p>下面是一个catch端得实例:</p>
 <pre>catch( file_read_error &amp; e )
     {
     std::cerr &lt;&lt; e.file_name();
     }</pre>
-<p>And here is a possible matching throw:</p>
+<p>还有一个匹配的throw端得实例:</p>
 <pre>void
 read_file( FILE * f )
     {
@@ -45,8 +45,8 @@ read_file( FILE * f )
         throw file_read_error(???);
     ....
     }</pre>
-<p>Clearly, the problem is that the handler requires a file name but the read_file function does not have a file name to put in the exception object; all it has is a FILE pointer!</p>
-<p>In an attempt to deal with this problem, we could modify read_file to accept a file name:</p>
+<p>很清楚, 问题是处理器需要一个文件名, 但是函数 read_file 不能向异常对象提供这个文件名; 它所拥有的只是一个 FILE 指针!</p>
+<p>如果我们企图修改这个问题, 可能会修改函数 read_file ,增加一个文件名:</p>
 <pre>void
 read_file( FILE * f, char const * name )
     {
@@ -56,21 +56,21 @@ read_file( FILE * f, char const * name )
         throw file_read_error(name);
     ....
     }</pre>
-<p>This is not a real solution: it simply shifts the burden of supplying a file name to the immediate caller of the read_file function.</p>
-<blockquote><p><i>In general, the data required to handle a given library-emitted exception depends on the program that links to it. Many contexts between the throw and the catch may have relevant information which must be transported to the exception handler.</i></p></blockquote>
-<h3>Exception wrapping</h3>
-<p>The idea of exception wrapping is to catch an exception from a lower level function (such as the read_file function above), and throw a new exception object that contains the original exception (and also carries a file name.) This method seems to be particularly popular with C++ programmers with Java background.</p>
-<p>Exception wrapping leads to the following problems:</p>
-<div><ul><li>To wrap an exception object it must be copied, which may result in slicing.</li>
-<li>Wrapping is practically impossible to use in generic contexts.</li>
+<p>这不是一个真正的解决之道: 它只是简单的把提供文件名的负担转交给函数 read_file 的调用者.</p>
+<blockquote><p><i>一般来说, 处理一个函数库抛出的异常所需的数据依赖于连接它的程序. 在throw和catch端得上下文含有异常处理必须的数据.</i></p></blockquote>
+<h3>异常包裹</h3>
+<p>异常包裹,就是在在低端函数捕获异常 (例如上面的 read_file 函数), 然后重新抛出一个包含原始对象的新的异常对象 (包含文件名.) 这种方法对有Java背景的C++程序员来说,有特别的吸引力.</p>
+<p>异常包裹会导致以下的问题:</p>
+<div><ul><li>要包裹的异常对象必须被拷贝,这可能会导致对象分裂.</li>
+<li>在泛型编程的上下文环境中, 异常对象的包裹实际上不可能.</li>
 </ul></div>
-<p>The second point is actually special case of violating the exception neutrality principle. Most contexts in a program can not handle exceptions; such contexts should not interfere with the process of exception handling.</p>
-<h3>The boost::exception solution</h3>
-<div><ul><li>Simply derive your exception types from boost::<span class="RenoLink"><a href="exception.html">exception</a></span>.</li>
-<li>Confidently limit the throw site to provide only data that is available naturally.</li>
-<li>Use exception-neutral contexts between the throw and the catch to augment exceptions with more relevant data as they bubble up.</li>
+<p>第二点实际上时违反异常中立原则的一个特例. 大多数的情况下程序不能处理异常,不能干扰异常处理的正常流程.</p>
+<h3>boost::exception 的解决方案</h3>
+<div><ul><li>简单的从 boost::<span class="RenoLink"><a href="exception.html">exception</a></span> 继承你需要的异常类型.</li>
+<li>在throw端, 很自然并且自信的把提供的数据限制为能力的范围之内.</li>
+<li>在throw和catch之间,在异常中立的上下文环境中, 向展开的异常对象添加相关的数据.</li>
 </ul></div>
-<p>For example, in the throw statement below we only add the errno code, since this is the only failure-relevant information available in this context:</p>
+<p>例如, 在下面的throw语句中我们仅需添加错误代码 errno , 因为这是在当前能够得到的唯一的错误信息:</p>
 <pre>struct exception_base: virtual std::exception, virtual boost::<span class="RenoLink"><a href="exception.html">exception</a></span> { };
 struct io_error: virtual exception_base { };
 struct file_read_error: virtual io_error { };
@@ -86,7 +86,7 @@ read_file( FILE * f )
         throw file_read_error() <span class="RenoLink"><a href="exception_operator_shl.html">&lt;&lt;</a></span> errno_code(errno);
     ....
     }</pre>
-<p>In a higher exception-neutral context, we add the file name to <i>any</i> exception that derives from boost::<span class="RenoLink"><a href="exception.html">exception</a></span>:</p>
+<p>在高端的异常中立的环境中, 我们把文件名添加到 <i>任何</i> 从 boost::<span class="RenoLink"><a href="exception.html">exception</a></span>继承的异常对象:</p>
 <pre>typedef boost::<span class="RenoLink"><a href="error_info.html">error_info</a></span>&lt;struct tag_file_name,std::string&gt; file_name;
 
 ....
@@ -108,7 +108,7 @@ catch( boost::<span class="RenoLink"><a href="exception.html">exception</a></spa
     e <span class="RenoLink"><a href="exception_operator_shl.html">&lt;&lt;</a></span> file_name("foo.txt");
     throw;
     }</pre>
-<p>Finally here is how the handler retrieves data from exceptions that derive from boost::<span class="RenoLink"><a href="exception.html">exception</a></span>:</p>
+<p>最后, 基于boost::<span class="RenoLink"><a href="exception.html">exception</a></span>抛出的异常对象, 异常处理器可以从中抽取文件名:</p>
 <pre>catch( io_error &amp; e )
     {
     std::cerr &lt;&lt; "I/O Error!\n";
@@ -119,9 +119,9 @@ catch( boost::<span class="RenoLink"><a href="exception.html">exception</a></spa
     if( int const * c=<span class="RenoLink"><a href="get_error_info.html">get_error_info</a></span>&lt;errno_code&gt;(e) )
         std::cerr &lt;&lt; "OS says: " &lt;&lt; strerror(*c) &lt;&lt; "\n";
     }</pre>
-<p>In addition, boost::<span class="RenoLink"><a href="diagnostic_information.html">diagnostic_information</a></span> can be used to compose an automatic (if not user-friendly) message that contains all of the <span class="RenoLink"><a href="error_info.html">error_info</a></span> objects added to a boost::<span class="RenoLink"><a href="exception.html">exception</a></span>. This is useful for inclusion in logs and other diagnostic objects.</p>
+<p>另外, boost::<span class="RenoLink"><a href="diagnostic_information.html">diagnostic_information</a></span> 可以用来自动合成所有的基于 <span class="RenoLink"><a href="error_info.html">error_info</a></span> 向 boost::<span class="RenoLink"><a href="exception.html">exception</a></span>对象添加的消息文本(即便这样的消息不一定是用户友好的). 这对调试对象和日志对象是非常有用的.</p>
 </div><div class="RenoAutoDIV"><div class="RenoHR"><hr/></div>
-<h3>See Also:</h3>
+<h3>参见:</h3>
 <div class="RenoPageList"><a href="boost-exception.html">Boost Exception<br/>
 </a><a href="exception_types_as_simple_semantic_tags.html">Exception Types as Simple Semantic Tags<br/>
 </a><a href="frequently_asked_questions.html">Frequently Asked Questions<br/>
