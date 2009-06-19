@@ -71,7 +71,7 @@
     返回一个
     <code class="computeroutput"><a class="link" href="../boost/signals2/connection.html" title="Class connection">connection</a></code>
     对象，让人能够进行已连接/已断开查询、手工断开，
-    及在析构模式
+    以及在析构模式
     （<code class="computeroutput"><a class="link" href="../boost/signals2/scoped_connection.html" title="Class scoped_connection">scoped_connection</a></code>）
     下自动断开。
 
@@ -185,6 +185,21 @@
       notified of an object's destruction by the
       <code class="computeroutput"><a class="link" href="../boost/signals/trackable.html" title="Class trackable">boost::signals::trackable</a></code> destructor.
     </p>
+
+<p>Signals2 的自动连接管理利用了
+      <code class="computeroutput">boost::shared_ptr</code>
+      来管理可跟踪对象的生命期。
+
+      这不同于原 Boost.Signals 库，
+      Boost.Signals 库是通过派生
+      <code class="computeroutput"><a class="link" href="../boost/signals/trackable.html" title="Class trackable">boost::signals::trackable</a></code>
+      类实现的。
+
+      对象析构时，
+      <code class="computeroutput"><a class="link" href="../boost/signals/trackable.html" title="Class trackable">boost::signals::trackable</a></code>
+      的析构函数会通知库。
+    </p>
+
 <p>Unfortunately, the <code class="computeroutput"><a class="link" href="../boost/signals/trackable.html" title="Class trackable">boost::signals::trackable</a></code>
       scheme cannot be made thread safe due
       to destructor ordering.  The destructor of an class derived from
@@ -197,6 +212,23 @@
       invoking in another thread, the signal may call into
       a partially destroyed object.
     </p>
+
+<p>不幸的是，<code class="computeroutput"><a class="link" href="../boost/signals/trackable.html" title="Class trackable">boost::signals::trackable</a></code>
+      方案因为析构函数的次序问题，不能做成线程安全的。
+
+      <code class="computeroutput"><a class="link" href="../boost/signals/trackable.html" title="Class trackable">boost::signals::trackable</a></code>
+      派生类的析构函数总是在其基类
+      <code class="computeroutput"><a class="link" href="../boost/signals/trackable.html" title="Class trackable">boost::signals::trackable</a></code>
+      的析构函数之前被调用。
+
+      然而，为了线程安全性，
+      信号和对象之间的连接需要在对象运行它的析构函数之前断开。
+
+      否则，如果对象在一个线程中被销毁，
+      而在另一个线程中，并发调用它所连接的信号，
+      该信号可能会调用到部份销毁的对象。
+    </p>
+
 <p>We solve this problem by requiring that tracked objects be
       managed by <code class="computeroutput">shared_ptr</code>.  Slots keep a
       <code class="computeroutput">weak_ptr</code> to every object the slot depends
@@ -206,6 +238,24 @@
       all of a slot's tracked objects prior to invoking the slot.  This
       insures none of the tracked objects destruct in mid-invocation.
     </p>
+
+<p>我们通过要求可跟踪对象由<code class="computeroutput">shared_ptr</code>
+      管理，来解决这个问题。
+
+      插槽持有它所依赖的每个对象的
+      <code class="computeroutput">weak_ptr</code>。
+
+      当插槽跟踪的任一
+      <code class="computeroutput">weak_ptr</code>
+      到期，该插槽的所有连接都会被断开。
+
+      此外，在触发插槽之前，信号会为所有的插槽跟踪对象
+      创建它们自己的临时
+      <code class="computeroutput">shared_ptr</code>。
+
+      这保证了在调用过程中，被跟踪对象不会被析构。
+    </p>
+
 <p>The new connection management scheme has the advantage of being
       non-intrusive.  Objects of any type may be tracked using the
       <code class="computeroutput">shared_ptr/weak_ptr</code> scheme.  The old
@@ -214,6 +264,21 @@
       base class, which is not always practical when interacting
       with classes from 3rd party libraries.
     </p>
+
+<p>新的连接管理方案的优点在于它是非侵入性的。
+
+      任何类型的对象都可使用
+      <code class="computeroutput">shared_ptr/weak_ptr</code>
+      方案来跟踪。
+
+      旧的
+      <code class="computeroutput"><a class="link" href="../boost/signals/trackable.html" title="Class trackable">boost::signals::trackable</a></code>
+      方案要求被跟踪对象派生自
+      <code class="computeroutput">trackable</code>
+      基类，
+      当使用来自第3方库的类时，这并不总是可行。
+    </p>
+
 </div>
 <div class="section" lang="en">
 <div class="titlepage"><div><div><h3 class="title">
@@ -234,6 +299,27 @@
       is invoked, since in that case the combiner may simply return an empty
       <code class="computeroutput">boost::optional</code>.
     </p>
+
+<p>
+      Boost.Signals2 的默认合并器已经改了，
+      不再是原 Boost.Signals 所默认使用的
+      <code class="computeroutput">last_value</code>
+      合并器。
+
+      这是因为 <code class="computeroutput">last_value</code>
+      要求信号调用时，至少有1个插槽连接到信号
+      （除非是 <code class="computeroutput">last_value&lt;void&gt;</code> 特化）。
+
+      在多线程环境下，信号调用与插槽的连接和断开可能同时发生，
+      很难满足这一要求。
+      
+      当使用
+      <code class="computeroutput"><a class="link" href="../boost/signals2/optional_last_value.html" title="Class template optional_last_value">optional_last_value</a></code>，
+      不要求信号调用时已连接插槽，
+      因为在这种情况下，合并器可以只是返回一个空的
+      <code class="computeroutput">boost::optional</code>。
+    </p>
+
 </div>
 <div class="section" lang="en">
 <div class="titlepage"><div><div><h3 class="title">
@@ -483,7 +569,7 @@ vs. <code class="computeroutput">+=</code>）根本是可以忽略的。
 
 <div class="titlepage"><div><div><h3 class="title">
 <a name="id3386600"></a>Signals2 互斥类</h3></div></div></div>
-	
+
 <p>
       The Boost.Signals2 library provides 2 mutex classes: <code class="computeroutput"><a class="link" href="../boost/signals2/mutex.html" title="Class mutex">boost::signals2::mutex</a></code>,
       and <code class="computeroutput"><a class="link" href="../boost/signals2/dummy_mutex.html" title="Class dummy_mutex">boost::signals2::dummy_mutex</a></code>.  The motivation for providing
@@ -495,11 +581,46 @@ vs. <code class="computeroutput">+=</code>）根本是可以忽略的。
       compiling in C++0x mode.  You may still choose to use <code class="computeroutput">boost::mutex</code>
       if you wish, by specifying it as the <code class="computeroutput">Mutex</code> template type for your signals.
     </p>
+
+<p>
+      Boost.Signals2 库提供了两个互斥类：
+      <code class="computeroutput"><a class="link" href="../boost/signals2/mutex.html" title="Class mutex">boost::signals2::mutex</a></code>，
+      和 <code class="computeroutput"><a class="link" href="../boost/signals2/dummy_mutex.html" title="Class dummy_mutex">boost::signals2::dummy_mutex</a></code>。
+
+      提供
+      <code class="computeroutput"><a class="link" href="../boost/signals2/mutex.html" title="Class mutex">boost::signals2::mutex</a></code>
+      类的动机只是因为 Boost.Thread 库当前的
+      <code class="computeroutput">boost::mutex</code>
+      类要求链接 libboost_thread。
+
+      <code class="computeroutput"><a class="link" href="../boost/signals2/mutex.html" title="Class mutex">boost::signals2::mutex</a></code>
+      类让 Signals2 保持为纯头文件库。
+
+      未来，在 C++0x 模式下编译时，
+      <code class="computeroutput"><a class="link" href="../boost/signals2/mutex.html" title="Class mutex">boost::signals2::mutex</a></code>
+      很可能会变成
+      <code class="computeroutput">std::mutex</code>
+      的 typedef，
+
+      如果您愿意，您仍然可以选择使用
+      <code class="computeroutput">boost::mutex</code>，
+      只要将它指定为信号的
+      <code class="computeroutput">Mutex</code>
+      模板类型。
+    </p>
+
 <p>
       The <code class="computeroutput"><a class="link" href="../boost/signals2/dummy_mutex.html" title="Class dummy_mutex">boost::signals2::dummy_mutex</a></code> class is provided to allow
       performance sensitive single-threaded applications to minimize overhead by avoiding unneeded
       mutex locking.
     </p>
+
+<p>
+      提供 <code class="computeroutput"><a class="link" href="../boost/signals2/dummy_mutex.html" title="Class dummy_mutex">boost::signals2::dummy_mutex</a></code>
+      类允许性能敏感的单线程应用避免不必要的互斥锁，
+      尽量减少开销。
+    </p>
+
 </div>
 <div class="section" lang="en">
 <div class="titlepage"><div><div><h3 class="title">
@@ -624,7 +745,7 @@ libsigc++ 中与 Boost.Signals 的合并器等效的是集结器（marshaller）
 <td align="right"><div class="copyright-footer">Copyright © 2001-2004 Douglas Gregor<br>Copyright © 2007-2009 Frank Mori Hess
 
     <p>翻译：<a href="http://blog.csdn.net/jq0123">金庆</a></p>
-    <p>译文更新：2009.6.18</p>
+    <p>译文更新：2009.6.19</p>
 
     <p>Distributed under the Boost
     Software License, Version 1.0. (See accompanying file
