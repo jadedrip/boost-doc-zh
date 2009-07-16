@@ -1,127 +1,57 @@
-<HTML>
-<!--
+<!DOCTYPE HTML PUBLIC "-//W3C//DTD HTML 4.01 Transitional//EN">
+<html><head><meta content="text/html; charset=UTF-8" http-equiv="content-type"><!--
   -- Copyright (c) Jeremy Siek, Lie-Quan Lee, and Andrew Lumsdaine 2000
   --
   -- Distributed under the Boost Software License, Version 1.0.
   -- (See accompanying file LICENSE_1_0.txt or copy at
   -- http://www.boost.org/LICENSE_1_0.txt)
   -->
-<Head>
-<Title>Boost Graph Library: EventVisitorList</Title>
-<BODY BGCOLOR="#ffffff" LINK="#0000ee" TEXT="#000000" VLINK="#551a8b" 
-        ALINK="#ff0000"> 
-<IMG SRC="../../../boost.png" 
-     ALT="C++ Boost" width="277" height="86"> 
+<title>Boost Graph Library: EventVisitorList</title></head>
 
-<BR Clear>
+<body alink="#ff0000" bgcolor="#ffffff" link="#0000ee" text="#000000" vlink="#551a8b"> 
+<img src="../../../boost.png" alt="C++ Boost" height="86" width="277"> 
 
-<H1>EventVisitorList Concept</H1>
+<br clear="">
 
-An EventVisitorList is either an <a
-href="./EventVisitor.html">EventVisitor</a>, or a list of
-EventVisitor's combined using <tt>std::pair</tt>. Each graph algorithm
-defines visitor adaptors that convert an EventVisitorList into the
-particular kind of visitor needed by the algorithm.
+<h1>EventVisitorList Concept 事件遍历器列表概念</h1>事件遍历器列表(EventVisitorList)是一个 <a href="./EventVisitor.html">事件遍历器EventVisitor</a> 或一列用 <tt>std::pair</tt> 组合起来的事件遍历器。每个图算法都定义了遍历器适配器，用于将一个事件遍历器列表转换为该算法所需的特定类型的遍历器。在以下的例子中，我们将示范如何用 <tt>std::pair</tt> 将多个事件遍历器组合成一个列表，以及如何使用算法的遍历器适配器类。
 
-In the following example we will show how to combine event visitors
-into a list using <tt>std::pair</tt> and how to use an algorithm's
-visitor adaptor class.
+<p>假定我们要在一个 <a href="./graph_theory_review.html#sec:dfs-algorithm">深度优先搜索</a> 中以括号结构打印各顶点的发现/完成时间。我们可以使用BGL算法 <a href="./depth_first_search.html"><tt>depth_first_search()</tt></a> 和两个事件遍历器来做到这一点。以下例子的完整代码在 <a href="../example/dfs_parenthesis.cpp">
+<tt>examples/dfs_parenthesis.cpp</tt></a> 中。首先我们定义两个事件遍历器。我们用 <tt>on_discover_vertex</tt> 和
+<tt>on_finish_vertex</tt> 作为事件点，它们是从 <a href="./DFSVisitor.html">DFS遍历器</a> 所规定的事件点列表中选出来的。
 
-<p>
-Suppose we would like to print out the parenthesis
-structure of the discover/finish times of vertices in a <a
-href="./graph_theory_review.html#sec:dfs-algorithm">depth-first
-search</a>. We can use the BGL algorithm <a
-href="./depth_first_search.html"><tt>depth_first_search()</tt></a> and
-two event visitors to accomplish this. The complete source code for
-the following example is in <a href="../example/dfs_parenthesis.cpp">
-<tt>examples/dfs_parenthesis.cpp</tt></a>. First we define the two
-event visitors. We use <tt>on_discover_vertex</tt> and
-<tt>on_finish_vertex</tt> as the event points, selected from the list
-of event points specified in <a
-href="./DFSVisitor.html">DFSVisitor</a>.
+</p><pre>struct open_paren : public base_visitor&lt;open_paren&gt; {<br>  typedef on_discover_vertex event_filter;<br>  template &lt;class Vertex, class Graph&gt;<br>  void operator()(Vertex v, Graph&amp; G) {<br>    std::cout &lt;&lt; "(" &lt;&lt; v;<br>  }<br>};<br>struct close_paren : public base_visitor&lt;close_paren&gt; {<br>  typedef on_finish_vertex event_filter;<br>  template &lt;class Vertex, class Graph&gt;<br>  void operator()(Vertex v, Graph&amp; G) {<br>    std::cout &lt;&lt; v &lt;&lt; ")";<br>  }<br>};<br></pre>接下来我们创建两个事件遍历器对象，并通过
+<tt>std::make_pair</tt> 用一个 <tt>std::pair</tt> 将它们组合成一个事件遍历器列表。
 
-<pre>
-struct open_paren : public base_visitor&lt;open_paren&gt; {
-  typedef on_discover_vertex event_filter;
-  template &lt;class Vertex, class Graph&gt;
-  void operator()(Vertex v, Graph& G) {
-    std::cout &lt;&lt; "(" &lt;&lt; v;
-  }
-};
-struct close_paren : public base_visitor&lt;close_paren&gt; {
-  typedef on_finish_vertex event_filter;
-  template &lt;class Vertex, class Graph&gt;
-  void operator()(Vertex v, Graph& G) {
-    std::cout &lt;&lt; v &lt;&lt; ")";
-  }
-};
-</pre>
+<pre>std::make_pair(open_paren(), close_paren())<br></pre>接下来我们要将这个列表传入 <tt>depth_first_search()</tt>，但是
+<tt>depth_first_search()</tt> 要的是一个<a href="./DFSVisitor.html">DFS遍历器</a>，而不是一个事件遍历器列表。因此我们要用 <a href="./dfs_visitor.html"><tt>dfs_visitor</tt></a> 适配器将事件遍历器列表变为DFS遍历器。和所有遍历器适配器一样，<tt>dfs_visitor</tt> 有一个名为
+<tt>make_dfs_visitor()</tt> 的创建函数。
 
-Next we create two event visitor objects and make an EventVisitorList
-out of them using a <tt>std::pair</tt> which created by
-<tt>std::make_pair</tt>.
+<pre>make_dfs_visitor(std::make_pair(open_paren(), close_paren()))<br></pre>现在我们可以如下将得到的遍历器对象传入
+<tt>depth_first_search()</tt> 了。
 
-<pre>
-std::make_pair(open_paren(), close_paren())
-</pre>
+<pre>  // 图对象 G 已创建 ...<br><br>  std::vector&lt;default_color_type&gt; color(num_vertices(G));<br><br>  depth_first_search(G, make_dfs_visitor(std::make_pair(open_paren(), close_paren())),<br>                     color.begin());<br></pre>要对两个以上事件遍历器创建列表的话，需要按以下方法嵌套调用
+<tt>std::make_pair</tt>：
 
-Next we want to pass this list into <tt>depth_first_search()</tt>, but
-<tt>depth_first_search()</tt> is expecting a <a
-href="./DFSVisitor.html">DFSVisitor</a>, not a EventVisitorList.  We
-therefore use the <a
-href="./dfs_visitor.html"><tt>dfs_visitor</tt></a> adaptor which turns
-an EventVisitor list into a DFSVisitor. Like all of the visitor
-adaptors, <tt>dfs_visitor</tt> has a creation function called
-<tt>make_dfs_visitor()</tt>.
-
-<pre>
-make_dfs_visitor(std::make_pair(open_paren(), close_paren()))
-</pre>
-
-Now we can pass the resulting visitor object into
-<tt>depth_first_search()</tt> as follows.
-
-<pre>
-  // graph object G is created ...
-
-  std::vector&lt;default_color_type&gt; color(num_vertices(G));
-
-  depth_first_search(G, make_dfs_visitor(std::make_pair(open_paren(), close_paren())),
-                     color.begin());
-</pre>
-
-For creating a list of more than two event visitors, nest calls to
-<tt>std::make_pair</tt> in the following way:
-
-<pre>
-std::make_pair(<i>visitor1</i>,
-  std::make_pair(<i>visitor2</i>,
-    ...
-    std::make_pair(<i>visitorN-1</i>, <i>visitorN</i>)...));
-</pre>
+<pre>std::make_pair(<i>visitor1</i>,<br>  std::make_pair(<i>visitor2</i>,<br>    ...<br>    std::make_pair(<i>visitorN-1</i>, <i>visitorN</i>)...));<br></pre>
 
 
 
-<h3>See Also</h3>
+<h3>See Also 参见</h3>
 
-<a href="./EventVisitor.html">EventVisitor</a>,
-<a href="./visitor_concepts.html">Visitor concepts</a>
+<a href="./EventVisitor.html">事件遍历器 EventVisitor</a>,
+<a href="./visitor_concepts.html">遍历器概念 Visitor concepts</a>
 
 
 <br>
-<HR>
-<TABLE>
-<TR valign=top>
-<TD nowrap>Copyright &copy 2000-2001</TD><TD>
-<A HREF="http://www.boost.org/people/jeremy_siek.htm">Jeremy Siek</A>,
-Indiana University (<A
-HREF="mailto:jsiek@osl.iu.edu">jsiek@osl.iu.edu</A>)<br>
-<A HREF="http://www.boost.org/people/liequan_lee.htm">Lie-Quan Lee</A>, Indiana University (<A HREF="mailto:llee@cs.indiana.edu">llee@cs.indiana.edu</A>)<br>
-<A HREF="http://www.osl.iu.edu/~lums">Andrew Lumsdaine</A>,
-Indiana University (<A
-HREF="mailto:lums@osl.iu.edu">lums@osl.iu.edu</A>)
-</TD></TR></TABLE>
+<hr>
+<table>
+<tbody><tr valign="top">
+<td nowrap="nowrap">Copyright © 2000-2001</td><td>
+<a href="http://www.boost.org/people/jeremy_siek.htm">Jeremy Siek</a>,
+Indiana University (<a href="mailto:jsiek@osl.iu.edu">jsiek@osl.iu.edu</a>)<br>
+<a href="http://www.boost.org/people/liequan_lee.htm">Lie-Quan Lee</a>, Indiana University (<a href="mailto:llee@cs.indiana.edu">llee@cs.indiana.edu</a>)<br>
+<a href="http://www.osl.iu.edu/%7Elums">Andrew Lumsdaine</a>,
+Indiana University (<a href="mailto:lums@osl.iu.edu">lums@osl.iu.edu</a>)
+</td></tr></tbody></table>
 
-</BODY>
-</HTML> 
+</body></html>
