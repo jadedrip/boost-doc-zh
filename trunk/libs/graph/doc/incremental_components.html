@@ -1,421 +1,282 @@
-<HTML>
-<!--
+<!DOCTYPE HTML PUBLIC "-//W3C//DTD HTML 4.01 Transitional//EN">
+<html><head><meta content="text/html; charset=UTF-8" http-equiv="content-type"><!--
   -- Copyright (c) Jeremy Siek, Lie-Quan Lee, and Andrew Lumsdaine 2000
   --
   -- Distributed under the Boost Software License, Version 1.0.
   -- (See accompanying file LICENSE_1_0.txt or copy at
   -- http://www.boost.org/LICENSE_1_0.txt)
   -->
-<Head>
-<Title>Boost Graph Library: Incremental Connected Components</Title>
-<BODY BGCOLOR="#ffffff" LINK="#0000ee" TEXT="#000000" VLINK="#551a8b" 
-        ALINK="#ff0000"> 
-<IMG SRC="../../../boost.png" 
-     ALT="C++ Boost" width="277" height="86"> 
+<title>Boost Graph Library: Incremental Connected Components</title></head>
+<body alink="#ff0000" bgcolor="#ffffff" link="#0000ee" text="#000000" vlink="#551a8b"> 
+<img src="../../../boost.png" alt="C++ Boost" height="86" width="277"> 
 
-<BR Clear>
+<br clear="">
 
-<H1>Incremental Connected Components</H1>
-
-<P>
-This section describes a family of functions and classes that work
-together to calculate the connected components of an undirected graph.
-The algorithm used here is based on the disjoint-sets (fast
-union-find) data structure&nbsp;[<A
-HREF="bibliography.html#clr90">8</A>,<A
-HREF="bibliography.html#tarjan83:_data_struct_network_algo">27</A>]
-which is a good method to use for situations where the graph is
-growing (edges are being added) and the connected components
-information needs to be updated repeatedly. This method does not cover
-the situation where edges are both added and removed from the graph,
-hence it is called <b><i>incremental</i></b><a
-href="bibliography.html#eppstein97:dynamic_graph">[42]</a> (and not
-fully dynamic). The disjoint-sets class is described in Section <A
-HREF="../../disjoint_sets/disjoint_sets.html">Disjoint Sets</A>.
-
-<P>
-The following five operations are the primary functions that you will
-use to calculate and maintain the connected components.  The objects
-used here are a graph <TT>g</TT>, a disjoint-sets structure <TT>ds</TT>,
-and vertices <TT>u</TT> and <TT>v</TT>.
-
-<P>
-
-<UL>
-<LI><TT>initialize_incremental_components(g, ds)</TT> 
-<BR>
-Basic initialization of the disjoint-sets structure. Each
-    vertex in the graph <TT>g</TT> is in its own set.
-</LI>
-<LI><TT>incremental_components(g, ds)</TT> 
-<BR>
-The connected components are calculated based on the edges in the graph
-    <TT>g</TT> and the information is embedded in <TT>ds</TT>.
-</LI>
-<LI><TT>ds.find_set(v)</TT> 
-<BR>
-Extracts the component information for vertex <TT>v</TT> from the
-    disjoint-sets.
-</LI>
-<LI><TT>ds.union_set(u, v)</TT> 
-<BR>
-Update the disjoint-sets structure when edge <i>(u,v)</i> is added to the graph.
-</LI>
-</UL>
-
-<P>
-
-<H3>Complexity</H3>
-
-<P>
-The time complexity for the whole process is <i>O(V + E
-alpha(E,V))</i> where <i>E</i> is the total number of edges in the
-graph (by the end of the process) and <i>V</i> is the number of
-vertices.  <i>alpha</i> is the inverse of Ackermann's function which
-has explosive recursively exponential growth. Therefore its inverse
-function grows <I>very</I> slowly. For all practical purposes
-<i>alpha(m,n) <= 4</i> which means the time complexity is only
-slightly larger than <i>O(V + E)</i>.
-
-<P>
-
-<H3>Example</H3>
-
-<P>
-Maintain the connected components of a graph while adding edges using
-the disjoint-sets data structure. The full source code for this
-example can be found in <a
-href="../example/incremental_components.cpp"><TT>examples/incremental_components.cpp</TT></a>.
-
-<P>
-<PRE>
-typedef adjacency_list &lt;vecS, vecS, undirectedS&gt; Graph;
-typedef graph_traits&lt;Graph&gt;::vertex_descriptor Vertex;
-typedef graph_traits&lt;Graph&gt;::vertices_size_type size_type;
-
-const int N = 6;
-Graph G(N);
-
-std::vector&lt;size_type&gt; rank(num_vertices(G));
-std::vector&lt;Vertex&gt; parent(num_vertices(G));
-typedef size_type* Rank;
-typedef Vertex* Parent;
-disjoint_sets&lt;Rank, Parent&gt;  ds(&amp;rank[0], &amp;parent[0]);
-
-initialize_incremental_components(G, ds);
-incremental_components(G, ds);
-
-graph_traits&lt;Graph&gt;::edge_descriptor e;
-bool flag;
-boost::tie(e,flag) = add_edge(0, 1, G);
-ds.union_set(0,1);
-
-boost::tie(e,flag) = add_edge(1, 4, G);
-ds.union_set(1,4);
-
-boost::tie(e,flag) = add_edge(4, 0, G);
-ds.union_set(4,0);
-
-boost::tie(e,flag) = add_edge(2, 5, G);
-ds.union_set(2,5);
-
-cout &lt;&lt; &quot;An undirected graph:&quot; &lt;&lt; endl;
-print_graph(G, get(vertex_index, G));
-cout &lt;&lt; endl;
-
-graph_traits&lt;Graph&gt;::vertex_iterator i,end;
-for (boost::tie(i, end) = vertices(G); i != end; ++i)
-  cout &lt;&lt; &quot;representative[&quot; &lt;&lt; *i &lt;&lt; &quot;] = &quot; &lt;&lt; 
-    ds.find_set(*i) &lt;&lt; endl;;
-cout &lt;&lt; endl;
-
-typedef component_index&lt;unsigned int&gt; Components;
-Components components(&amp;parent[0], &amp;parent[0] + parent.size());
-
-for (Components::size_type c = 0; c &lt; components.size(); ++c) {
-  cout &lt;&lt; &quot;component &quot; &lt;&lt; c &lt;&lt; &quot; contains: &quot;;
-  Components::value_type::iterator
-    j = components[c].begin(),
-    jend = components[c].end();
-  for ( ; j != jend; ++j)
-    cout &lt;&lt; *j &lt;&lt; &quot; &quot;;
-  cout &lt;&lt; endl;
-}
-</PRE>
-
-<P>
-<hr>
-<p>
-
-<H2><A NAME="sec:initialize-incremental-components"></A>
-<TT>initialize_incremental_components</TT>
-</H2>
-
-<P>
-<DIV ALIGN="left">
-<TABLE CELLPADDING=3 border>
-<TR><TH ALIGN="LEFT"><B>Graphs:</B></TH>
-<TD ALIGN="LEFT">undirected</TD>
-</TR>
-<TR><TH ALIGN="LEFT"><B>Properties:</B></TH>
-<TD ALIGN="LEFT">rank, parent (in disjoint-sets)</TD>
-</TR>
-<TR><TH ALIGN="LEFT"><B>Complexity:</B></TH>
-<TD></TD>
-</TR>
-</TABLE>
-</DIV>
-
-<P>
-<PRE>
-template &lt;class VertexListGraph, class DisjointSets&gt; 
-void initialize_incremental_components(VertexListGraph&amp; G, DisjointSets&amp; ds)
-</PRE>
-
-<P>
-This prepares the disjoint-sets data structure for the incremental
-connected components algorithm by making each vertex in the graph a
-member of its own component (or set).
-
-<P>
-
-<H3>Where Defined</H3>
-
-<P>
-<a href="../../../boost/graph/incremental_components.hpp"><TT>boost/graph/incremental_components.hpp</TT></a>
+<h1>Incremental Connected Components 增量连通分支</h1>
 
 <p>
-<hr>
-<P>
+本节介绍一组函数和类，它们共同协作完成对一个无向图的连通分支的计算。这里所用的算法是基于不相交集合(快速合并-查找)数据结构的[<a href="bibliography.html#clr90">8</a>,<a href="bibliography.html#tarjan83:_data_struct_network_algo">27</a>]，在图不断增长(加入新边)以及需要不断更新连通分支信息的情况下，这是一种好方法。不过这种方法不能用于既有加边也有减边的情况，因此它被称为 <b><i>增量的</i></b><a href="bibliography.html#eppstein97:dynamic_graph">[42]</a> (不是完全动态的)。不相交集合类在 <a href="../../disjoint_sets/disjoint_sets.html">不相交集合</a> 一节中介绍。
 
-<H2><A NAME="sec:incremental-components"></A>
-<TT>incremental_components</TT>
-</H2>
+</p><p>以下五种操作是用于计算和维护连通分支的基本函数。这里所用的对象有图 <tt>g</tt>, 不相交集合结构 <tt>ds</tt>, 以及顶点 <tt>u</tt> 和 <tt>v</tt>。
 
-<P>
-<DIV ALIGN="left">
-<TABLE CELLPADDING=3 border>
-<TR><TH ALIGN="LEFT"><B>Graphs:</B></TH>
-<TD ALIGN="LEFT">undirected</TD>
-</TR>
-<TR><TH ALIGN="LEFT"><B>Properties:</B></TH>
-<TD ALIGN="LEFT">rank, parent (in disjoint-sets)</TD>
-</TR>
-<TR><TH ALIGN="LEFT"><B>Complexity:</B></TH>
-<TD ALIGN="LEFT"><i>O(E)</i></TD>
-</TR>
-</TABLE>
-</DIV>
+</p><ul>
+<li><tt>initialize_incremental_components(g, ds)</tt> 
+<br>对不相交集合结构的基本初始化。图 <tt>g</tt> 中的每个顶点对应自身的一个集合。
+</li>
+<li><tt>incremental_components(g, ds)</tt> 
+<br>基于图
+    <tt>g</tt> 中的边以及 <tt>ds</tt> 中的信息计算连通分支。
+</li>
+<li><tt>ds.find_set(v)</tt> 
+<br>从不相交集合中获取顶点 <tt>v</tt> 的分支信息。
+</li>
+<li><tt>ds.union_set(u, v)</tt> 
+<br>在边 <i>(u,v)</i> 被加入至图中时，更新不相交集合结构。
+</li>
+</ul>
 
 <p>
-<PRE>
-template &lt;class EdgeListGraph, class DisjointSets&gt;
-void incremental_components(EdgeListGraph&amp; g, DisjointSets&amp; ds)
-</PRE>
 
-<P>
-This function calculates the connected components of the graph,
-embedding the results in the disjoint-sets data structure.
+</p><h3>Complexity 复杂度</h3>
 
-<P>
+<p>整个过程的时间复杂度为 <i>O(V + E
+alpha(E,V))</i>，其中 <i>E</i> 为图中的总边数(整个过程结束后)，<i>V</i> 为顶点数。<i>alpha</i> 是逆 Ackermann 函数，Ackermann 函数具有爆炸性的递归指数增长。因此逆 Ackermann 函数增长非常缓慢。对于所有有实际意义的输入，<i>alpha(m,n) &lt;= 4</i>，这意味着时间复杂度仅仅轻微大于 <i>O(V + E)</i>。
 
-<H3>Where Defined</H3>
+</p><p>
 
-<P>
-<a href="../../../boost/graph/incremental_components.hpp"><TT>boost/graph/incremental_components.hpp</TT></a>
+</p><h3>Example 示例</h3>
 
-<P>
+<p>使用不相交集合数据结构，在往一个图中增加边时，维护其连通分支。该例子的完整源代码可以在 <a href="../example/incremental_components.cpp"><tt>examples/incremental_components.cpp</tt></a> 中找到。
 
-<H3>Requirements on Types</H3>
-
-<P>
-
-<UL>
-<LI>The graph type must be a model of <a href="./EdgeListGraph.html">EdgeListGraph</a>.
-</LI>
-</UL>
-
-<P>
-<hr>
-<p>
-
-<H2><A NAME="sec:same-component">
-<TT>same_component</TT></A>
-</H2>
-
-<P>
-<DIV ALIGN="left">
-<TABLE CELLPADDING=3 border>
-<TR><TH ALIGN="LEFT"><B>Properties:</B></TH>
-<TD ALIGN="LEFT">rank, parent (in disjoint-sets)</TD>
-</TR>
-<TR><TH ALIGN="LEFT"><B>Complexity:</B></TH>
-<TD ALIGN="LEFT"><i>O(alpha(E,V))</i></TD>
-</TR>
-</TABLE>
-</DIV>
-
-<P>
-<PRE>
-template &lt;class Vertex, class DisjointSet&gt;
-bool same_component(Vertex u, Vertex v, DisjointSet&amp; ds)
-</PRE>
-
-<P>
-This function determines whether <TT>u</TT> and <TT>v</TT> are in the same
-component.
-
-<P>
-
-<H3>Where Defined</H3>
-
-<P>
-<a href="../../../boost/graph/incremental_components.hpp"><TT>boost/graph/incremental_components.hpp</TT></a>
-
-<P>
-
-<H3>Requirements on Types</H3>
-
-<P>
-
-<UL>
-<LI><TT>Vertex</TT> must be compatible with the rank and parent
-    property maps of the <TT>DisjointSets</TT> data structure.
-</LI>
-</UL>
-
-<P>
-<hr>
-<p>
-
-<H2><A NAME="sec:component-index"></A>
-<TT>component_index</TT>
-</H2>
+</p><pre>typedef adjacency_list &lt;vecS, vecS, undirectedS&gt; Graph;<br>typedef graph_traits&lt;Graph&gt;::vertex_descriptor Vertex;<br>typedef graph_traits&lt;Graph&gt;::vertices_size_type size_type;<br><br>const int N = 6;<br>Graph G(N);<br><br>std::vector&lt;size_type&gt; rank(num_vertices(G));<br>std::vector&lt;Vertex&gt; parent(num_vertices(G));<br>typedef size_type* Rank;<br>typedef Vertex* Parent;<br>disjoint_sets&lt;Rank, Parent&gt;  ds(&amp;rank[0], &amp;parent[0]);<br><br>initialize_incremental_components(G, ds);<br>incremental_components(G, ds);<br><br>graph_traits&lt;Graph&gt;::edge_descriptor e;<br>bool flag;<br>boost::tie(e,flag) = add_edge(0, 1, G);<br>ds.union_set(0,1);<br><br>boost::tie(e,flag) = add_edge(1, 4, G);<br>ds.union_set(1,4);<br><br>boost::tie(e,flag) = add_edge(4, 0, G);<br>ds.union_set(4,0);<br><br>boost::tie(e,flag) = add_edge(2, 5, G);<br>ds.union_set(2,5);<br><br>cout &lt;&lt; "An undirected graph:" &lt;&lt; endl;<br>print_graph(G, get(vertex_index, G));<br>cout &lt;&lt; endl;<br><br>graph_traits&lt;Graph&gt;::vertex_iterator i,end;<br>for (boost::tie(i, end) = vertices(G); i != end; ++i)<br>  cout &lt;&lt; "representative[" &lt;&lt; *i &lt;&lt; "] = " &lt;&lt; <br>    ds.find_set(*i) &lt;&lt; endl;;<br>cout &lt;&lt; endl;<br><br>typedef component_index&lt;unsigned int&gt; Components;<br>Components components(&amp;parent[0], &amp;parent[0] + parent.size());<br><br>for (Components::size_type c = 0; c &lt; components.size(); ++c) {<br>  cout &lt;&lt; "component " &lt;&lt; c &lt;&lt; " contains: ";<br>  Components::value_type::iterator<br>    j = components[c].begin(),<br>    jend = components[c].end();<br>  for ( ; j != jend; ++j)<br>    cout &lt;&lt; *j &lt;&lt; " ";<br>  cout &lt;&lt; endl;<br>}<br></pre>
 
 <p>
-<PRE>
-component_index&lt;Index&gt;
-</PRE>
+</p><hr>
+<p>
 
-<P>
-The is a class that provides an STL container-like view for the
-components of the graph. Each component is a container-like object,
-and the <TT>component_index</TT> object provides access to the
-component objects via <TT>operator[]</TT>. A <TT>component_index</TT>
-object is initialized with the parents property in the disjoint-sets
-calculated from the <TT>incremental_components()</TT> function.
+</p><h2><a name="sec:initialize-incremental-components"></a>
+<tt>initialize_incremental_components</tt>
+</h2>
 
-<P>
+<p>
+</p><div align="left">
+<table border="1" cellpadding="3">
+<tbody><tr><th align="left"><b>图：</b></th>
+<td align="left">无向</td>
+</tr>
+<tr><th align="left"><b>属性：</b></th>
+<td align="left">秩，(在不相交集合中的)父节点</td>
+</tr>
+<tr><th align="left"><b>复杂度：</b></th>
+<td></td>
+</tr>
+</tbody></table>
+</div>
 
-<H3>Where Defined</H3>
+<p>
+</p><pre>template &lt;class VertexListGraph, class DisjointSets&gt; <br>void initialize_incremental_components(VertexListGraph&amp; G, DisjointSets&amp; ds)<br></pre>
 
-<P>
-<a href="../../../boost/graph/incremental_components.hpp"><TT>boost/graph/incremental_components.hpp</TT></a>
+<p>为增量连通分支算法准备不相交集合数据结构，将图中每个顶点作为其自身分支(或集合)的成员。
 
-<P>
+</p><p>
 
-<H3>Members</H3>
+</p><h3>Where Defined 定义于</h3>
 
-<P>
+<p>
+<a href="../../../boost/graph/incremental_components.hpp"><tt>boost/graph/incremental_components.hpp</tt></a>
+
+</p><p>
+</p><hr>
+<p>
+
+</p><h2><a name="sec:incremental-components"></a>
+<tt>incremental_components</tt>
+</h2>
+
+<p>
+</p><div align="left">
+<table border="1" cellpadding="3">
+<tbody><tr><th align="left"><b>图：</b></th>
+<td align="left">无向</td>
+</tr>
+<tr><th align="left"><b>属性：</b></th>
+<td align="left">秩，(在不相交集合中的)父节点</td>
+</tr>
+<tr><th align="left"><b>复杂度：</b></th>
+<td align="left"><i>O(E)</i></td>
+</tr>
+</tbody></table>
+</div>
+
+<p>
+</p><pre>template &lt;class EdgeListGraph, class DisjointSets&gt;<br>void incremental_components(EdgeListGraph&amp; g, DisjointSets&amp; ds)<br></pre>
+
+<p>该函数计算该图的连通分支，将结果嵌入到不相交集合的数据结构中。
+
+</p><p>
+
+</p><h3>Where Defined 定义于</h3>
+
+<p>
+<a href="../../../boost/graph/incremental_components.hpp"><tt>boost/graph/incremental_components.hpp</tt></a>
+
+</p><p>
+
+</p><h3>Requirements on Types 对类型的要求</h3>
+
+<ul>
+<li>图的类型必须符合 <a href="./EdgeListGraph.html">边列表图EdgeListGraph</a>。
+</li>
+</ul>
+
+<p>
+</p><hr>
+<p>
+
+</p><h2><a name="sec:same-component">
+<tt>same_component</tt></a>
+</h2>
+
+<p>
+</p><div align="left">
+<table border="1" cellpadding="3">
+<tbody><tr><th align="left"><b>属性：</b></th>
+<td align="left">秩，(在不相交集合中的)父节点</td>
+</tr>
+<tr><th align="left"><b>复杂度：</b></th>
+<td align="left"><i>O(alpha(E,V))</i></td>
+</tr>
+</tbody></table>
+</div>
+
+<p>
+</p><pre>template &lt;class Vertex, class DisjointSet&gt;<br>bool same_component(Vertex u, Vertex v, DisjointSet&amp; ds)<br></pre>
+
+<p>该函数判断 <tt>u</tt> 与 <tt>v</tt> 是否属于同一个分支。
+
+</p><p>
+
+</p><h3>Where Defined 定义于</h3>
+
+<p>
+<a href="../../../boost/graph/incremental_components.hpp"><tt>boost/graph/incremental_components.hpp</tt></a>
+
+</p><p>
+
+</p><h3>Requirements on Types 对类型的要求</h3>
+
+<ul>
+<li><tt>Vertex</tt> 必须兼容于 <tt>DisjointSets</tt> 数据结构的 rank 和 parent
+    属性映射。
+</li>
+</ul>
+
+<p>
+</p><hr>
+<p>
+
+</p><h2><a name="sec:component-index"></a>
+<tt>component_index</tt>
+</h2>
+
+<p>
+</p><pre>component_index&lt;Index&gt;<br></pre>
+
+<p>该类为图的分支提供一个类似于STL容器的视图。每个分支是一个类似于容器的对象，<tt>component_index</tt> 对象提供通过 <tt>operator[]</tt>&nbsp;对分支对象的访问。<tt>component_index</tt>
+对象是用从 <tt>incremental_components()</tt> 函数计算得到的不相交集合中的父节点属性进行初始化的。</p><h3>Where Defined 定义于</h3>
+
+<p>
+<a href="../../../boost/graph/incremental_components.hpp"><tt>boost/graph/incremental_components.hpp</tt></a>
+
+</p><p>
+
+</p><h3>Members 成员</h3>
+
+<p>
  
-<table border>
+<table border="1">
 
-<tr>
-<th>Member</th> <th>Description</th>
+<tbody><tr>
+<th>成员</th> <th>说明</th>
 </tr>
 
 <tr>
 <td><tt>size_type</tt></td>
-<td>The type used for representing the number of components.</td>
+<td>用于表示分支数量的类型。</td>
 </tr>
 
 
 <tr>
 <td><tt>value_type</tt></td>
-<td>
-The type for a component object. The component type has the following members.
+<td>分支对象的类型。分支类型具有以下成员。
 </td>
 </tr>
  
 <tr>
 <td><tt>value_type::value_type</tt></td>
-<td>
-The value type of a component object is a vertex ID.
+<td>分支对象的值类型为顶点ID。
 </td>
 </tr>
 
 <tr>
 <td><tt>value_type::iterator</tt></td>
-<td>
-This iterator can be used to traverse all of the vertices
-in the component. This iterator dereferences to give a vertex ID.
+<td>该迭代器可用于遍历该分支中的所有顶点。解引用该迭代器得到一个顶点ID。
 </td>
 </tr>
 
 <tr>
 <td><tt>value_type::const_iterator</tt></td>
-<td>
-The const iterator.
+<td>常量迭代器。
 </td>
 </tr>
 
 <tr>
 <td><tt>value_type::iterator value_type::begin() const</tt></td>
-<td>
-Return an iterator pointing to the first vertex in the component.
+<td>返回一个迭代器，指向该分支中的第一个顶点。
 </td>
 </tr>
 
 <tr>
 <td><tt>value_type::iterator value_type::end() const</tt></td>
-<td>
-Return an iterator pointing past the end of the last vertex in the
-component.
+<td>返回一个迭代器，指向该分支中最后一个顶点之后。
 </td>
-<tr>
+</tr><tr>
 
-<tr>
+</tr><tr>
 <td>
 <tt>
 template &lt;class ComponentsContainer&gt;
 component_index(const ComponentsContainer&amp; c)
 </tt>
 </td>
-<td>
-Construct the <TT>component_index</TT> using the information
-from the components container <TT>c</TT> which was the result
-of executing <TT>connected_components_on_edgelist</TT>.
+<td>用分支容器 <tt>c</tt> 中的信息构造 <tt>component_index</tt>，<tt>c</tt> 是执行 <tt>connected_components_on_edgelist</tt> 所得到的结果。
 </td>
 </tr>
 
 <tr>
 <td><tt>value_type operator[](size_type i)</tt></td>
 <td>
-Returns the <TT>i</TT>th component in the graph.
+返回图中第 <tt>i</tt> 个分支。
 </td>
 </tr>
 
 <tr>
 <td><tt>size_type component_index::size()</tt></td>
-<td>
-Returns the number of components in the graph.
+<td>返回图中的分支数量。
 </td>
 
-</table> 
+</tr></tbody></table> 
 
 <br>
-<HR>
-<TABLE>
-<TR valign=top>
-<TD nowrap>Copyright &copy 2000-2001</TD><TD>
-<A HREF="http://www.boost.org/people/jeremy_siek.htm">Jeremy Siek</A>,
-Indiana University (<A
-HREF="mailto:jsiek@osl.iu.edu">jsiek@osl.iu.edu</A>)<br>
-<A HREF="http://www.boost.org/people/liequan_lee.htm">Lie-Quan Lee</A>, Indiana University (<A HREF="mailto:llee@cs.indiana.edu">llee@cs.indiana.edu</A>)<br>
-<A HREF="http://www.osl.iu.edu/~lums">Andrew Lumsdaine</A>,
-Indiana University (<A
-HREF="mailto:lums@osl.iu.edu">lums@osl.iu.edu</A>)
-</TD></TR></TABLE>
+</p><hr>
+<table>
+<tbody><tr valign="top">
+<td nowrap="nowrap">Copyright © 2000-2001</td><td>
+<a href="http://www.boost.org/people/jeremy_siek.htm">Jeremy Siek</a>,
+Indiana University (<a href="mailto:jsiek@osl.iu.edu">jsiek@osl.iu.edu</a>)<br>
+<a href="http://www.boost.org/people/liequan_lee.htm">Lie-Quan Lee</a>, Indiana University (<a href="mailto:llee@cs.indiana.edu">llee@cs.indiana.edu</a>)<br>
+<a href="http://www.osl.iu.edu/%7Elums">Andrew Lumsdaine</a>,
+Indiana University (<a href="mailto:lums@osl.iu.edu">lums@osl.iu.edu</a>)
+</td></tr></tbody></table>
 
-</BODY>
-</HTML> 
+</body></html>
