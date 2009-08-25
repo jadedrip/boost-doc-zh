@@ -1,6 +1,6 @@
 <html>
 <head>
-<meta http-equiv="Content-Type" content="text/html; charset=ISO-8859-1">
+<meta http-equiv="Content-Type" content="text/html; charset=UTF-8">
 <title>Timer.5 - Synchronising handlers in multithreaded programs</title>
 <link rel="stylesheet" href="../../boostbook.css" type="text/css">
 <meta name="generator" content="DocBook XSL Stylesheets V1.74.3">
@@ -24,41 +24,35 @@
 </div>
 <div class="section" lang="en">
 <div class="titlepage"><div><div><h3 class="title">
-<a name="boost_asio.tutorial.tuttimer5"></a><a class="link" href="tuttimer5.html" title="Timer.5 - Synchronising handlers in multithreaded programs"> Timer.5 - Synchronising
-      handlers in multithreaded programs</a>
+<a name="boost_asio.tutorial.tuttimer5"></a><a class="link" href="tuttimer5.html" title="Timer.5 - Synchronising handlers in multithreaded programs"> Timer.5 - 多线程同步回调</a>
 </h3></div></div></div>
 <p>
-        This tutorial demonstrates the use of the boost::asio::strand class to synchronise
-        callback handlers in a multithreaded program.
+        本示例程序示范了使用boost::asio::strand 类来创建多线程程序中的同步回调句柄。
       </p>
 <p>
-        The previous four tutorials avoided the issue of handler synchronisation
-        by calling the <a class="link" href="../reference/io_service/run.html" title="io_service::run">io_service::run()</a>
-        function from one thread only. As you already know, the asio library provides
-        a guarantee that callback handlers will only be called from threads that
-        are currently calling <a class="link" href="../reference/io_service/run.html" title="io_service::run">io_service::run()</a>.
-        Consequently, calling <a class="link" href="../reference/io_service/run.html" title="io_service::run">io_service::run()</a>
-        from only one thread ensures that callback handlers cannot run concurrently.
+        前四个例程只是在单线程下使用<a class="link" href="../reference/io_service/run.html" title="io_service::run">io_service::run()</a>
+        函数来避免处理函同步。
+         如你所见，Asio库保证回调句柄仅能被当前正在调用
+        <a class="link" href="../reference/io_service/run.html" title="io_service::run">io_service::run()</a>.
+        函数的线程调用。
+         因此，在单线程中调用<a class="link" href="../reference/io_service/run.html" title="io_service::run">io_service::run()</a>
+        能确保回调句柄不被并发运行。
       </p>
 <p>
-        The single threaded approach is usually the best place to start when developing
-        applications using asio. The downside is the limitations it places on programs,
-        particularly servers, including:
+        单线程通常是使用Asio开发应用程序最好的方式。下面是Asio在程序中的局限性，尤其是服务器方面，包括：
       </p>
 <div class="itemizedlist"><ul type="disc">
 <li>
-          Poor responsiveness when handlers can take a long time to complete.
+          操作需要较长时间处理才能完成时弱响应。
         </li>
 <li>
-          An inability to scale on multiprocessor systems.
+         在大规模的多处理机系统中表现不佳。
         </li>
 </ul></div>
 <p>
-        If you find yourself running into these limitations, an alternative approach
-        is to have a pool of threads calling <a class="link" href="../reference/io_service/run.html" title="io_service::run">io_service::run()</a>.
-        However, as this allows handlers to execute concurrently, we need a method
-        of synchronisation when handlers might be accessing a shared, thread-unsafe
-        resource.
+        如果你发现自己陷入这些局限时，一个可供选择的方法是创建一个每个线程都调用<a class="link" href="../reference/io_service/run.html" title="io_service::run">io_service::run()</a>
+        的线程池。
+        不过，因为这允许并发操作，当访问一个共享、非线程安全的资源时，我们需要一个同步方式。
       </p>
 <pre class="programlisting"><span class="preprocessor">#include</span> <span class="special">&lt;</span><span class="identifier">iostream</span><span class="special">&gt;</span>
 <span class="preprocessor">#include</span> <span class="special">&lt;</span><span class="identifier">boost</span><span class="special">/</span><span class="identifier">asio</span><span class="special">.</span><span class="identifier">hpp</span><span class="special">&gt;</span>
@@ -67,27 +61,21 @@
 <span class="preprocessor">#include</span> <span class="special">&lt;</span><span class="identifier">boost</span><span class="special">/</span><span class="identifier">date_time</span><span class="special">/</span><span class="identifier">posix_time</span><span class="special">/</span><span class="identifier">posix_time</span><span class="special">.</span><span class="identifier">hpp</span><span class="special">&gt;</span>
 </pre>
 <p>
-        We start by defining a class called <code class="computeroutput"><span class="identifier">printer</span></code>,
-        similar to the class in the previous tutorial. This class will extend the
-        previous tutorial by running two timers in parallel.
+        让我们从定义一个名为<code class="computeroutput"><span class="identifier">printer</span></code>的类开始，这与前一个示例中的类很相似。这个类是上一个例子的扩展，这里我们使用两个并行的定时器。
       </p>
 <pre class="programlisting"><span class="keyword">class</span> <span class="identifier">printer</span>
 <span class="special">{</span>
 <span class="keyword">public</span><span class="special">:</span>
 </pre>
 <p>
-        In addition to initialising a pair of boost::asio::deadline_timer members,
-        the constructor initialises the <code class="computeroutput"><span class="identifier">strand_</span></code>
-        member, an object of type boost::asio::strand.
+        除了初始化一对boost::asio::deadline_timer 成员变量外，构造函数还初始化一个boost::asio::strand类型<code class="computeroutput"><span class="identifier">strand_</span></code>
+        成员变量。
       </p>
 <p>
-        An boost::asio::strand guarantees that, for those handlers that are dispatched
-        through it, an executing handler will be allowed to complete before the next
-        one is started. This is guaranteed irrespective of the number of threads
-        that are calling <a class="link" href="../reference/io_service/run.html" title="io_service::run">io_service::run()</a>.
-        Of course, the handlers may still execute concurrently with other handlers
-        that were not dispatched through an boost::asio::strand, or were dispatched
-        through a different boost::asio::strand object.
+        boost::asio::strand 对象保证：对于通过它来分派执行的众操作中，只有一个操作执行完成之后才允许进入下一个操作。
+        这种保证与多少个线程调用<a class="link" href="../reference/io_service/run.html" title="io_service::run">io_service::run()</a>
+        无关。当然，如果不是通过一个boost::asio::strand对象分派，
+        或者通过其它不同的boost::asio::strand对象分派，这些操作仍旧可能是并发的。
       </p>
 <pre class="programlisting">  <span class="identifier">printer</span><span class="special">(</span><span class="identifier">boost</span><span class="special">::</span><span class="identifier">asio</span><span class="special">::</span><span class="identifier">io_service</span><span class="special">&amp;</span> <span class="identifier">io</span><span class="special">)</span>
     <span class="special">:</span> <span class="identifier">strand_</span><span class="special">(</span><span class="identifier">io</span><span class="special">),</span>
@@ -97,12 +85,9 @@
   <span class="special">{</span>
 </pre>
 <p>
-        When initiating the asynchronous operations, each callback handler is "wrapped"
-        using the boost::asio::strand object. The <a class="link" href="../reference/io_service__strand/wrap.html" title="io_service::strand::wrap">strand::wrap()</a>
-        function returns a new handler that automatically dispatches its contained
-        handler through the boost::asio::strand object. By wrapping the handlers
-        using the same boost::asio::strand, we are ensuring that they cannot execute
-        concurrently.
+        当开始同步操作时，每一个回调句柄都使用boost::asio::strand对象进行“包装”。<a class="link" href="../reference/io_service__strand/wrap.html" title="io_service::strand::wrap">strand::wrap()</a>
+        函数返回一个新的通过boost::asio::strand对象自动分派的内部句柄。
+         通过同一boost::asio::strand对象对句柄进行“ 包装”，我们可以保证操作不会并发执行。
       </p>
 <pre class="programlisting">    <span class="identifier">timer1_</span><span class="special">.</span><span class="identifier">async_wait</span><span class="special">(</span><span class="identifier">strand_</span><span class="special">.</span><span class="identifier">wrap</span><span class="special">(</span><span class="identifier">boost</span><span class="special">::</span><span class="identifier">bind</span><span class="special">(&amp;</span><span class="identifier">printer</span><span class="special">::</span><span class="identifier">print1</span><span class="special">,</span> <span class="keyword">this</span><span class="special">)));</span>
     <span class="identifier">timer2_</span><span class="special">.</span><span class="identifier">async_wait</span><span class="special">(</span><span class="identifier">strand_</span><span class="special">.</span><span class="identifier">wrap</span><span class="special">(</span><span class="identifier">boost</span><span class="special">::</span><span class="identifier">bind</span><span class="special">(&amp;</span><span class="identifier">printer</span><span class="special">::</span><span class="identifier">print2</span><span class="special">,</span> <span class="keyword">this</span><span class="special">)));</span>
@@ -114,11 +99,9 @@
   <span class="special">}</span>
 </pre>
 <p>
-        In a multithreaded program, the handlers for asynchronous operations should
-        be synchronised if they access shared resources. In this tutorial, the shared
-        resources used by the handlers (<code class="computeroutput"><span class="identifier">print1</span></code>
-        and <code class="computeroutput"><span class="identifier">print2</span></code>) are <code class="computeroutput"><span class="identifier">std</span><span class="special">::</span><span class="identifier">cout</span></code>
-        and the <code class="computeroutput"><span class="identifier">count_</span></code> data member.
+        在一个多线程程序中，当访问同一共享资源时，异步操作必须是同步的。在本例中，<code class="computeroutput"><span class="identifier">print1</span></code>
+        和<code class="computeroutput"><span class="identifier">print2</span></code>)函数使用的共享资源<code class="computeroutput"><span class="identifier">std</span><span class="special">::</span><span class="identifier">cout</span></code>
+        和<code class="computeroutput"><span class="identifier">count_</span></code>数据成员。
       </p>
 <pre class="programlisting">  <span class="keyword">void</span> <span class="identifier">print1</span><span class="special">()</span>
   <span class="special">{</span>
@@ -152,15 +135,12 @@
 <span class="special">};</span>
 </pre>
 <p>
-        The <code class="computeroutput"><span class="identifier">main</span></code> function now causes
+        <code class="computeroutput"><span class="identifier">main</span></code>函数中，
         <a class="link" href="../reference/io_service/run.html" title="io_service::run">io_service::run()</a>
-        to be called from two threads: the main thread and one additional thread.
-        This is accomplished using an boost::thread object.
+        现在被两个线程调用：主线程和一个附加线程。这一切依赖于boost::thread对象来完成。
       </p>
 <p>
-        Just as it would with a call from a single thread, concurrent calls to <a class="link" href="../reference/io_service/run.html" title="io_service::run">io_service::run()</a> will
-        continue to execute while there is "work" left to do. The background
-        thread will not exit until all asynchronous operations have completed.
+        正如它被一个单线程调用一样，<a class="link" href="../reference/io_service/run.html" title="io_service::run">io_service::run()</a>的并发调用会一直持续到无任何“工作”可做。后台线程直到所有异步操作都完成后才会退出。
       </p>
 <pre class="programlisting"><span class="keyword">int</span> <span class="identifier">main</span><span class="special">()</span>
 <span class="special">{</span>
@@ -174,19 +154,18 @@
 <span class="special">}</span>
 </pre>
 <p>
-        See the <a class="link" href="tuttimer5/src.html" title="Source listing for Timer.5">full source listing</a>
+        查看<a class="link" href="tuttimer5/src.html" title="Source listing for Timer.5">本例全部源代码</a>
       </p>
 <p>
-        Return to the <a class="link" href="../tutorial.html" title="Tutorial">tutorial index</a>
+        返回<a class="link" href="../tutorial.html" title="Tutorial">指南</a>
       </p>
 <p>
-        Previous: <a class="link" href="tuttimer4.html" title="Timer.4 - Using a member function as a handler">Timer.4 - Using a
-        member function as a handler</a>
+        前一例: <a class="link" href="tuttimer4.html" title="Timer.4 - Using a member function as a handler">Timer.4 - 成员函数作为回调函数</a>
       </p>
 </div>
 <table xmlns:rev="http://www.cs.rpi.edu/~gregod/boost/tools/doc/revision" width="100%"><tr>
 <td align="left"></td>
-<td align="right"><div class="copyright-footer">Copyright � 2003 - 2008 Christopher M. Kohlhoff<p>
+<td align="right"><div class="copyright-footer">Copyright © 2003 - 2008 Christopher M. Kohlhoff<p>
         Distributed under the Boost Software License, Version 1.0. (See accompanying
         file LICENSE_1_0.txt or copy at <a href="http://www.boost.org/LICENSE_1_0.txt" target="_top">http://www.boost.org/LICENSE_1_0.txt</a>)
       </p>
