@@ -1,0 +1,635 @@
+<!DOCTYPE HTML PUBLIC "-//W3C//DTD HTML 4.01 Transitional//EN">
+<html><head>
+<meta http-equiv="Content-Type" content="text/html; charset=UTF-8"><title>Design Rationale</title>
+
+<link rel="stylesheet" href="../boostbook.css" type="text/css">
+<meta name="generator" content="DocBook XSL Stylesheets V1.73.2">
+<link rel="start" href="../index.html" title="The Boost C++ Libraries BoostBook Documentation Subset">
+<link rel="up" href="../signals.html" title="Chapter 14. Boost.Signals">
+<link rel="prev" href="s04.html" title="Design Overview">
+<link rel="next" href="tests.html" title="Testsuite"></head>
+<body style="color: black; background-color: white;" alink="#0000ff" link="#0000ff" vlink="#840084">
+<table cellpadding="2" width="100%">
+<tbody>
+<tr>
+<td valign="top"><img alt="Boost C++ Libraries" src="../../../boost.png" height="86" width="277"></td>
+<td align="center"><a href="../../../index.html">Home</a></td>
+<td align="center"><a href="../../../libs/libraries.htm">Libraries</a></td>
+<td align="center"><a href="http://www.boost.org/people/people.htm">People</a></td>
+<td align="center"><a href="http://www.boost.org/more/faq.htm">FAQ</a></td>
+<td align="center"><a href="../../../more/index.htm">More</a></td>
+</tr>
+</tbody>
+</table>
+<hr>
+<div class="spirit-nav"><a accesskey="p" href="s05.html"><img style="border: 0px solid ; width: 19px; height: 19px;" src="../../../doc/html/images/prev.png" alt="Prev"></a><a accesskey="u" href="../signals.html"><img src="../../../doc/html/images/up.png" alt="Up"></a><a accesskey="h" href="../index.html"><img src="../../../doc/html/images/home.png" alt="Home"></a><a accesskey="n" href="tests.html"><img src="../../../doc/html/images/next.png" alt="Next"></a>
+</div>
+<div class="section" lang="en">
+<div class="titlepage">
+<div>
+<div>
+<h2 class="title" style="clear: both;"><a name="id1285823"></a>Design Rationale</h2>
+<h2 class="title" style="clear: both;">
+<a name="id1285823"></a>设计原理</h2>
+</div>
+</div>
+</div>
+<div class="toc">
+<dl>
+<dt><span class="section"><a href="s05.html#id1285833">Choice of Slot Definitions</a></span></dt>
+<dt><span class="section"><a href="s05.html#id1285940">User-level Connection Management</a></span></dt>
+<dt><span class="section"><a href="s05.html#id1286132">Combiner Interface</a></span></dt>
+<dt><span class="section"><a href="s05.html#id1286317">Connection Interfaces: += operator</a></span></dt>
+<dt><span class="section"><a href="s05.html#id1286512"><code class="computeroutput">trackable</code>
+rationale</a></span></dt>
+<dt><span class="section"><a href="s05.html#id1286716">Comparison with other Signal/Slot
+implementations</a></span></dt>
+</dl>
+</div>
+<div class="toc">
+<dl>
+<dt><span class="section"><a href="s05.html#id1285833">插槽定义的选择</a></span></dt>
+<dt><span class="section"><a href="s05.html#id1285940">用户层连接管理</a></span></dt>
+<dt><span class="section"><a href="s05.html#id1286132">合并器接口</a></span></dt>
+<dt><span class="section"><a href="s05.html#id1286317">连接的接口：+= 运算符</a></span></dt>
+<dt><span class="section"><a href="s05.html#id1286512"><code class="computeroutput">trackable</code>
+的原理</a></span></dt>
+<dt><span class="section"><a href="s05.html#id1286716">与其他信号/插槽实现的比较</a></span></dt>
+</dl>
+</div>
+<div class="section" lang="en">
+<div class="titlepage">
+<div>
+<div>
+<h3 class="title"><a name="id1285833"></a>Choice
+of Slot Definitions</h3>
+<h3 class="title">
+<a name="id1285833"></a>插槽定义的选择</h3>
+</div>
+</div>
+</div>
+<p> The definition of a slot differs amongst signals and slots
+libraries. Within Boost.Signals, a slot is defined in a very loose
+manner: it can be any function object that is callable given parameters
+of the types specified by the signal, and whose return value is
+convertible to the result type expected by the signal. However,
+alternative definitions have associated pros and cons that were
+considered prior to the construction of Boost.Signals.</p>
+<p> 不同的信号和插槽库中，插槽的定义是不同的。 在 Boost.Signals 中，插槽的定义很宽松： 它可以是任意函数对象，
+只要它可以输入信号所指定类型的参数进行调用， 并且其返回值可转换为信号所要求的结果类型。 然而，不同的定义各有好坏， 需要在
+Boost.Signals 的构造之前进行仔细考虑。 </p>
+<div class="itemizedlist">
+<ul type="disc">
+<li>
+<p><span class="bold"><strong>Slots derive
+from a specific base class</strong></span>: generally a
+scheme such as this will require all user-defined slots to derive from
+some library-specified <code class="computeroutput">Slot</code>
+abstract class that defines a virtual function calling the slot.
+Adaptors can be used to convert a definition such as this to a
+definition similar to that used by Boost.Signals, but the use of a
+large number of small adaptor classes containing virtual functions has
+been found to cause an unacceptable increase in the size of executables
+(polymorphic class types require more code than non-polymorphic types).</p>
+<p><span class="bold"><strong>插槽派生自特殊的基类</strong></span>：
+通常这样的方案要求所有用户定义的插槽派生自库所指定的某个 <code class="computeroutput">Slot</code>
+抽象类，该抽象类定义了一个调用插槽的虚函数。 可以使用一个适配器将这样一个定义转换到类似 Boost.Signals 所用的定义。
+但是发现使用大量包含虚函数的小适配类 会导致执行程序的大小增长到不可接受的程度 （多态类类型比非多态类型需要更多的代码）。 </p>
+<p> This approach does have the benefit of simplicity of
+implementation and user interface, from an object-oriented perspective.</p>
+<p> 从面向对象的观点看，这种方法不具有实现上和用户接口上简单性的好处。 </p>
+</li>
+<li>
+<p><span class="bold"><strong>Slots
+constructed from a set of primitives</strong></span>: in
+this scheme the slot can have a limited set of types (often derived
+from a common abstract base class) that are constructed from some
+library-defined set of primitives that often include conversions from
+free function pointers and member function pointers, and a limited set
+of binding capabilities. Such an approach is reasonably simple and
+cover most common cases, but it does not allow a large degree of
+flexibility in slot construction. Libraries for function object
+composition have become quite advanced and it is out of the scope of a
+signals and slots library to encorporate such enhancements. Thus
+Boost.Signals does not include argument binding or function object
+composition primitives, but instead provides a hook (via the <code class="computeroutput"><a class="link" href="../boost/visit_each.html" title="Function template visit_each">visit_each</a></code>
+mechanism) that allows existing binder/composition libraries to provide
+the necessary information to Signals.</p>
+<p><span class="bold"><strong>插槽构造自一套原语</strong></span>：
+在这个方案中，插槽可以具有一组有限的类型 （往往是派生自共同的抽象基类）， 它们构造自某套由库定义的原语，
+原语往往包括从自由函数指针和成员函数指针到插槽的转换， 和一组有限的绑定能力。 这样一种方法比较简单并适用于大多数的普通情况，
+但是它不允许插槽构造中的高度灵活性。 用于函数对象组合的库已经变得相当发达， 信号和插槽库不应该加入这种增强功能。 所以
+Boost.Signals 没有包含参数绑定或函数对象组合原语， 但是转而提供了一个钩子（通过 <code class="computeroutput"><a class="link" href="../boost/visit_each.html" title="Function template visit_each">visit_each</a></code>
+机制），以允许现有的绑定/组合库向 Signals 库提供必要的信息。 </p>
+</li>
+</ul>
+</div>
+<p> Users not satisfied with the slot definition choice may opt
+to replace the default slot function type with an alternative that
+meets their specific needs.</p>
+<p> 如果不满意该插槽定义的选择， 用户可以选择用另外的符合他们需要的类型替换默认的插槽函数类型。 </p>
+</div>
+<div class="section" lang="en">
+<div class="titlepage">
+<div>
+<div>
+<h3 class="title"><a name="id1285940"></a>User-level
+Connection Management</h3>
+<h3 class="title">
+<a name="id1285940"></a>用户层连接管理</h3>
+</div>
+</div>
+</div>
+<p> Users need to have fine control over the connection of
+signals to slots and their eventual disconnection. The approach taken
+by Boost.Signals is to return a <code class="computeroutput"><a class="link" href="../boost/signals/connection.html" title="Class connection">connection</a></code>
+object that enables connected/disconnected query, manual disconnection,
+and an automatic disconnection on destruction mode. Some other possible
+interfaces include:</p>
+<p> 用户需要精确控制信号到插槽的连接和它们最后的断开。 Boost.Signals 所采用的方法是返回一个 <code class="computeroutput"><a class="link" href="../boost/signals/connection.html" title="Class connection">connection</a></code>
+对象，让人能够进行已连接/已断开查询、手工断开，及在析构模式下自动断开。 其他一些可能的接口包括： </p>
+<div class="itemizedlist">
+<ul type="disc">
+<li>
+<p><span class="bold"><strong>Pass slot to
+disconnect</strong></span>: in this interface model, the
+disconnection of a slot connected with <code class="computeroutput">sig.<a class="link" href="../boost/signalN.html#id417694-bb">connect</a>(slot)</code>
+is performed via <code class="computeroutput">sig.<a class="link" href="../boost/signalN.html#id481008-bb">disconnect</a>(slot)</code>.
+Internally, a linear search using slot comparison is performed and the
+slot, if found, is removed from the list. Unfortunately, querying
+connectedness will generally also end up as linear-time operations.
+This model also fails for implementation reasons when slots become more
+complex than simple function pointers, member function pointers and a
+limited set of compositions and argument binders: to match the slot
+given in the call to <code class="computeroutput"><a class="link" href="../boost/signalN.html#id481008-bb">disconnect</a></code>
+with an existing slot we would need to be able to compare arbitrary
+function objects, which is not feasible.</p>
+<p><span class="bold"><strong>断开时传递插槽</strong></span>：
+在这个接口模型下， 通过 <code class="computeroutput">sig.<a class="link" href="../boost/signalN.html#id417694-bb">connect</a>(slot)</code>
+连接的插槽，断开时是通过 <code class="computeroutput">sig.<a class="link" href="../boost/signalN.html#id481008-bb">disconnect</a>(slot)</code>
+进行的。 在内部，将利用插槽比较，执行一个线性搜索， 如果找到该插槽，就从链表中删除。 不幸的是，查询连接一般也将成为线性时间的操作。
+当插槽变得更复杂时， 比简单函数指针、成员函数指针和一组有限的组合和参数绑定更复杂时， 该模型也因实现上的原因而不可用： 为了在现存插槽中匹配
+<code class="computeroutput"><a class="link" href="../boost/signalN.html#id481008-bb">disconnect</a></code>
+调用中输入的插槽， 我们需要能够比较任意函数对象， 而这是不可能的。 </p>
+</li>
+<li>
+<p><span class="bold"><strong>Pass a token
+to disconnect</strong></span>: this approach identifies
+slots with a token that is easily comparable (e.g., a string), enabling
+slots to be arbitrary function objects. While this approach is
+essentially equivalent to the approach taken by Boost.Signals, it is
+possibly more error-prone for several reasons:</p>
+<p><span class="bold"><strong>断开时传递一个标记</strong></span>：
+这个方法用一个容易比较的标记来标识插槽（例如用字符串）， 插槽可以是任意的函数对象。 虽然这个方法本质上等效于 Boost.Signals
+所采用的方法，
+但是因为以下几个原因，它更容易出错：
+</p>
+<div class="itemizedlist">
+<ul type="circle">
+<li>
+<p>Connections and disconnections must be paired, so the
+problem becomes similar to the problems incurred when pairing <code class="computeroutput">new</code> and <code class="computeroutput">delete</code> for dynamic
+memory allocation. While errors of this sort would not be catastrophic
+for a signals and slots implementation, their detection is generally
+nontrivial.</p>
+<p>连接与断开必须配对， 因此问题变得类似于动态内存分配中的 <code class="computeroutput">new</code> 和 <code class="computeroutput">delete</code> 配对时所产生的问题。
+虽然这种错误对于信号插槽库实现来说并不是灾难性的， 但是要检测它们通常并不简单。 </p>
+</li>
+<li>
+<p>Tokens must be unique, otherwise two slots will have
+the same name and will be indistinguishable. In environments where many
+connections will be made dynamically, name generation becomes an
+additional task for the user. Uniqueness of tokens also results in an
+additional failure mode when attempting to connect a slot using a token
+that has already been used.</p>
+<p>标记必须唯一，否则两个插槽就会具有相同的名字而不可区分。
+在动态产生许多连接的环境下，名字生成将成为用户的额外负担。 标记的唯一性也导致了额外的失败模式， 如试图用一个已经被使用的标记连接一个插槽。 </p>
+</li>
+<li>
+<p>More parameterization would be required, because the
+token type must be user-defined. Additional parameterization steepens
+the learning curver and overcomplicates a simple interface.</p>
+<p>需要更多的参数，因为标记的类型必须是用户定义的。 额外的参数使学习曲线变得陡峭，使简单的接口过度复杂。 </p>
+</li>
+</ul>
+</div>
+<p> This type of interface is supported in Boost.Signals via
+the slot grouping mechanism. It augments the <code class="computeroutput"><a class="link" href="../boost/signals/connection.html" title="Class connection">connection</a></code>
+object-based connection management scheme.</p>
+<p> 这类接口在 Boost.Signals 中通过插槽编组机制获得支持。 它是支持基于 <code class="computeroutput"><a class="link" href="../boost/signals/connection.html" title="Class connection">connection</a></code>
+对象的连接管理机制的理由。 </p>
+</li>
+</ul>
+</div>
+</div>
+<div class="section" lang="en">
+<div class="titlepage">
+<div>
+<div>
+<h3 class="title"><a name="id1286132"></a>Combiner
+Interface</h3>
+<h3 class="title">
+<a name="id1286132"></a>合并器接口</h3>
+</div>
+</div>
+</div>
+<p> The Combiner interface was chosen to mimic a call to an
+algorithm in the C++ standard library. It is felt that by viewing slot
+call results as merely a sequence of values accessed by input
+iterators, the combiner interface would be most natural to a proficient
+C++ programmer. Competing interface design generally required the
+combiners to be constructed to conform to an interface that would be
+customized for (and limited to) the Signals library. While these
+interfaces are generally enable more straighforward implementation of
+the signals &amp; slots libraries, the combiners are unfortunately
+not reusable (either in other signals &amp; slots libraries or
+within other generic algorithms), and the learning curve is steepened
+slightly to learn the specific combiner interface.</p>
+<p> 合并器（Combiner）接口模仿了对C++标准库算法的调用。 对熟练的C++程序员来说，合并器是感觉最自然的接口，
+因为它把插槽调用的结果看作仅仅是一系列通过输入迭代器访问的值。 与之匹敌的接口设计一般要求合并器构造成符合一定的接口，
+使之可以为信号库定制（并局限于库）。 虽然这些接口通常使信号插槽库的实现更简单，
+但可惜这种合并器不可重用（在其他信号插槽库或在其他通用算法中）， 并且学习特殊的合并器接口的学习曲线有点陡。 </p>
+<p> The Signals formulation of combiners is based on the combiner
+using the "pull" mode of communication, instead of the more complex
+"push" mechanism. With a "pull" mechanism, the combiner's state can be
+kept on the stack and in the program counter, because whenever new data
+is required (i.e., calling the next slot to retrieve its return value),
+there is a simple interface to retrieve that data immediately and
+without returning from the combiner's code. Contrast this with the
+"push" mechanism, where the combiner must keep all state in class
+members because the combiner's routines will be invoked for each signal
+called. Compare, for example, a combiner that returns the maximum
+element from calling the slots. If the maximum element ever exceeds
+100, no more slots are to be called.</p>
+<p> Signals 库的合并器设计方案基于使用“拉（pull）”模式通讯的合并器， 而不是更复杂的“推（push）”机制。
+用“拉”机制，合并器的状态可以保存在栈上，并保持程序计数器寄存器， 因为无论何时需要新数据时（即调用下一插槽来提取其返回值），
+有一个简单的接口来立即提取那个数据， 而不必从合并器的代码中返回。 “推”机制与此相反，它的合并器必须在类成员中保存所有的状态，
+因为每次调用信号都会引起合并器函数的调用。
+比较下例合并器的两种实现，
+该合并器返回插槽调用的最大元素。
+如果最大元素超过 100，就不再调用以后的插槽。 </p>
+<div class="informaltable">
+<table class="table">
+<colgroup><col><col></colgroup>
+<thead><tr>
+<th align="left">
+<p>Pull</p>
+</th>
+<th align="left">
+<p>Push</p>
+</th>
+</tr>
+</thead><tbody>
+<tr>
+<td align="left">
+<pre xmlns:rev="http://www.cs.rpi.edu/~gregod/boost/tools/doc/revision" class="table-programlisting">struct pull_max {<br> typedef int result_type;<br><br> template&lt;typename InputIterator&gt;<br> result_type operator()(InputIterator first,<br> InputIterator last)<br> {<br> if (first == last)<br> throw std::runtime_error("Empty!");<br><br> int max_value = *first++;<br> while(first != last &amp;&amp; *first &lt;= 100) {<br> if (*first &gt; max_value)<br> max_value = *first;<br> ++first;<br> }<br><br> return max_value;<br> }<br>};<br></pre>
+</td>
+<td align="left">
+<pre xmlns:rev="http://www.cs.rpi.edu/~gregod/boost/tools/doc/revision" class="table-programlisting">struct push_max {<br> typedef int result_type;<br><br> push_max() : max_value(), got_first(false) {}<br><br> // returns false when we want to stop<br> bool operator()(int result) {<br> if (result &gt; 100)<br> return false;<br><br> if (!got_first) {<br> got_first = true;<br> max_value = result;<br> return true;<br> }<br><br> if (result &gt; max_value)<br> max_value = result;<br><br> return true;<br> }<br><br> int get_value() const <br> { <br> if (!got_first)<br> throw std::runtime_error("Empty!");<br> return max_value; <br> }<br><br>private:<br> int max_value; <br> bool got_first;<br>};<br></pre>
+</td>
+</tr>
+</tbody>
+</table>
+</div>
+<p>There are several points to note in these examples. The "pull"
+version is a reusable function object that is based on an input
+iterator sequence with an integer <code class="computeroutput">value_type</code>,
+and is very straightforward in design. The "push" model, on the other
+hand, relies on an interface specific to the caller and is not
+generally reusable. It also requires extra state values to determine,
+for instance, if any elements have been received. Though code quality
+and ease-of-use is generally subjective, the "pull" model is clearly
+shorter and more reusable and will often be construed as easier to
+write and understand, even outside the context of a signals &amp;
+slots library.</p>
+<p>该例中要注意几点。 “拉”的版本是个可重用的函数对象， 基于 <code class="computeroutput">value_type</code> 为整数的输入迭代器序列，
+并且设计上非常简单。 另一方面，“推”的版本依赖于调用者专有的接口，一般不是可重用的。 它同时要求额外的状态值，例如，是否已经接收过元素。
+尽管代码质量和易用性是主观性的， “拉”模式明显更短并且重用性更好，并且往往更容易编写和理解， 即使是脱离信号插槽库的上下文。 </p>
+<p> The cost of the "pull" combiner interface is paid in the
+implementation of the Signals library itself. To correctly handle slot
+disconnections during calls (e.g., when the dereference operator is
+invoked), one must construct the iterator to skip over disconnected
+slots. Additionally, the iterator must carry with it the set of
+arguments to pass to each slot (although a reference to a structure
+containing those arguments suffices), and must cache the result of
+calling the slot so that multiple dereferences don't result in multiple
+calls. This apparently requires a large degree of overhead, though if
+one considers the entire process of invoking slots one sees that the
+overhead is nearly equivalent to that in the "push" model, but we have
+inverted the control structures to make iteration and dereference
+complex (instead of making combiner state-finding complex).</p>
+<p> “拉”合并器接口的代价支付于 Signals 库本身的实现中。
+为了正确处理在调用中的插槽断开（例如当调用解引用运算符时）， 你必须让迭代器跳过已断开的插槽。 另外，迭代器必须携带一组参数以传送到每个插槽
+（尽管一个包含那些参数的结构的引用就足够了）， 并且必须缓存插槽调用的结果， 这样多次解引用才不会导致多次调用。 这显然需要很大的开销，
+尽管如果考虑调用插槽整个过程，该开销几乎等同于“推”模型的开销， 但是我们颠倒了控制结构， 让迭代和解引用变复杂了
+（替代了合并器状态查找的复杂性）。 </p>
+</div>
+<div class="section" lang="en">
+<div class="titlepage">
+<div>
+<div>
+<h3 class="title"><a name="id1286317"></a>Connection
+Interfaces: += operator</h3>
+<h3 class="title">
+<a name="id1286317"></a>连接的接口：+= 运算符</h3>
+</div>
+</div>
+</div>
+<p> Boost.Signals supports a connection syntax with the form <code class="computeroutput">sig.<a class="link" href="../boost/signalN.html#id417694-bb">connect</a>(slot)</code>,
+but a more terse syntax <code class="computeroutput">sig
++= slot</code> has been suggested (and has been used by other
+signals &amp; slots implementations). There are several reasons as
+to why this syntax has been rejected:</p>
+<p> Boost.Signals 支持形如 <code class="computeroutput">sig.<a class="link" href="../boost/signalN.html#id417694-bb">connect</a>(slot)</code>
+的连接语法， 但是有人建议用更简洁的语法 <code class="computeroutput">sig +=
+slot</code> （并已被其他信号插槽实现所用）。 为什么拒绝这个语法有以下几个原因： </p>
+<div class="itemizedlist">
+<ul type="disc">
+<li>
+<p><span class="bold"><strong>It's
+unnecessary</strong></span>: the connection syntax supplied
+by Boost.Signals is no less powerful that that supplied by the <code class="computeroutput">+=</code> operator. The savings
+in typing (<code class="computeroutput">connect()</code>
+vs. <code class="computeroutput">+=</code>) is
+essentially negligible. Furthermore, one could argue that calling <code class="computeroutput">connect()</code> is more
+readable than an overload of <code class="computeroutput">+=</code>.</p>
+<p><span class="bold"><strong>没必要</strong></span>：
+Boost.Signals 提供的连接语法并不比 <code class="computeroutput">+=</code>
+运算符差。 少打几个字符（<code class="computeroutput">connect()</code>
+vs. <code class="computeroutput">+=</code>）根本是可以忽略的。
+另外，有人主张调用 <code class="computeroutput">connect()</code>
+比 <code class="computeroutput">+=</code> 重载可读性更好。</p>
+</li>
+<li>
+<p><span class="bold"><strong>Ambiguous
+return type</strong></span>: there is an ambiguity
+concerning the return value of the <code class="computeroutput">+=</code>
+operation: should it be a reference to the signal itself, to enable <code class="computeroutput">sig += slot1 += slot2</code>,
+or should it return a <code class="computeroutput"><a class="link" href="../boost/signals/connection.html" title="Class connection">connection</a></code>
+for the newly-created signal/slot connection?</p>
+<p><span class="bold"><strong>返回类型二义性</strong></span>：
+<code class="computeroutput">+=</code>
+运算符的返回值存在二义性。 它应该是返回信号本身的引用，可以 <code class="computeroutput">sig
++= slot1 += slot2</code>， 还是返回新建的信号/插槽连接的一个 <code class="computeroutput"><a class="link" href="../boost/signals/connection.html" title="Class connection">connection</a></code>
+？</p>
+</li>
+<li>
+<p><span class="bold"><strong>Gateway to
+operators -=, +</strong></span>: when one has added a
+connection operator <code class="computeroutput">+=</code>,
+it seems natural to have a disconnection operator <code class="computeroutput">-=</code>. However, this
+presents problems when the library allows arbitrary function objects to
+implicitly become slots, because slots are no longer comparable. </p>
+<p><span class="bold"><strong>通往运算符 -=、+</strong></span>：
+当添加一个连接运算符 <code class="computeroutput">+=</code>，
+好像自然地要有一个断开运算符 <code class="computeroutput">-=</code>。
+然而， 当库允许任意的函数对象隐式地变成插槽时， 这里出现了问题， 因为插槽不再具有比较性。 </p>
+<p> The second obvious addition when one has <code class="computeroutput">operator+=</code> would be to
+add a <code class="computeroutput">+</code>
+operator that supports addition of multiple slots, followed by
+assignment to a signal. However, this would require implementing <code class="computeroutput">+</code> such that it can
+accept any two function objects, which is technically infeasible.</p>
+<p> 当具有 <code class="computeroutput">operator+=</code>
+时，第二个明显会添加的是 <code class="computeroutput">+</code>
+运算符，以支持多个插槽相加，然后再赋值到信号。 然而，这要求实现 <code class="computeroutput">+</code>
+可以接收任意两个函数对象， 这在技术上是不可行的。 </p>
+</li>
+</ul>
+</div>
+</div>
+<div class="section" lang="en">
+<div class="titlepage">
+<div>
+<div>
+<h3 class="title"><a name="id1286512"></a><code class="computeroutput">trackable</code> rationale</h3>
+<h3 class="title">
+<a name="id1286512"></a><code class="computeroutput">trackable</code> 的原理</h3>
+</div>
+</div>
+</div>
+<div class="toc">
+<dl>
+<dt><span class="section"><a href="s05.html#id1286559"><code class="computeroutput">trackable</code>
+copying behavior</a></span></dt>
+<dt><span class="section"><a href="s05.html#id1286623">Why derivation from <code class="computeroutput">trackable</code>?</a></span></dt>
+</dl>
+</div>
+<div class="toc">
+<dl>
+<dt><span class="section"><a href="s05.html#id1286559"><code class="computeroutput">trackable</code>
+的复制行为</a></span></dt>
+<dt><span class="section"><a href="s05.html#id1286623">为什么要派生自 <code class="computeroutput">trackable</code>？</a></span></dt>
+</dl>
+</div>
+<p> The <code class="computeroutput"><a class="link" href="../boost/signals/trackable.html" title="Class trackable">trackable</a></code>
+class is the primary user interface to automatic connection lifetime
+management, and its design affects users directly. Two issues stick out
+most: the odd copying behavior of <code class="computeroutput">trackable</code>,
+and the limitation requiring users to derive from <code class="computeroutput">trackable</code> to create
+types that can participate in automatic connection management.</p>
+<p> <code class="computeroutput"><a class="link" href="../boost/signals/trackable.html" title="Class trackable">trackable</a></code>
+类是自动连接生命期管理主要的用户接口， 它的设计直接影响用户。 有两个问题最为突出： <code class="computeroutput">trackable</code> 古怪的复制行为，
+和用户创建可以参与自动连接管理的类型时， 要求派生自 <code class="computeroutput">trackable</code>
+的限制。 </p>
+<div class="section" lang="en">
+<div class="titlepage">
+<div>
+<div>
+<h4 class="title"><a name="id1286559"></a><code class="computeroutput">trackable</code> copying
+behavior</h4>
+<h4 class="title">
+<a name="id1286559"></a><code class="computeroutput">trackable</code> 的复制行为</h4>
+</div>
+</div>
+</div>
+<p> The copying behavior of <code class="computeroutput"><a class="link" href="../boost/signals/trackable.html" title="Class trackable">trackable</a></code> is
+essentially that <code class="computeroutput"><a class="link" href="../boost/signals/trackable.html" title="Class trackable">trackable</a></code>
+subobjects are never copied; instead, the copy operation is merely a
+no-op. To understand this, we look at the nature of a signal-slot
+connection and note that the connection is based on the entities that
+are being connected; when one of the entities is destroyed, the
+connection is destroyed. Therefore, when a <code class="computeroutput"><a class="link" href="../boost/signals/trackable.html" title="Class trackable">trackable</a></code>
+subobject is copied, we cannot copy the connections because the
+connections don't refer to the target entity - they refer to the source
+entity. This reason is dual to the reason signals are noncopyable: the
+slots connected to them are connected to that particular signal, not
+the data contained in the signal.</p>
+<p><code class="computeroutput"><a class="link" href="../boost/signals/trackable.html" title="Class trackable">trackable</a></code>
+的复制行为基本上是 <code class="computeroutput"><a class="link" href="../boost/signals/trackable.html" title="Class trackable">trackable</a></code>
+子对象不可复制。 相反，复制运算符只是个空操作。 为理解这一点，我们来看看信号-插槽连接的性质， 并留意该连接是基于正在被连接的实体的；
+当实体之一被销毁时，连接就被销毁。 因此，当一个 <code class="computeroutput"><a class="link" href="../boost/signals/trackable.html" title="Class trackable">trackable</a></code>
+子对象被复制时， 我们不能复制连接，因为连接不能引用目标实体——它们只能引用原实体。 这个原因是因为信号是不可复制的：
+连接到信号的插槽是连接到该特定的信号，而不是信号中所包含的数据。 </p>
+</div>
+<div class="section" lang="en">
+<div class="titlepage">
+<div>
+<div>
+<h4 class="title"><a name="id1286623"></a>Why
+derivation from <code class="computeroutput">trackable</code>?</h4>
+<h4 class="title">
+<a name="id1286623"></a>为什么要派生自 <code class="computeroutput">trackable</code>？</h4>
+</div>
+</div>
+</div>
+<p> For <code class="computeroutput"><a class="link" href="../boost/signals/trackable.html" title="Class trackable">trackable</a></code> to
+work properly, there are two constraints:</p>
+<p> 为了让 <code class="computeroutput"><a class="link" href="../boost/signals/trackable.html" title="Class trackable">trackable</a></code>
+正常工作，有两个约束： </p>
+<div class="itemizedlist">
+<ul type="disc">
+<li>
+<p><code class="computeroutput"><a class="link" href="../boost/signals/trackable.html" title="Class trackable">trackable</a></code>
+must have storage space to keep track of all connections made to this
+object.</p>
+<p><code class="computeroutput"><a class="link" href="../boost/signals/trackable.html" title="Class trackable">trackable</a></code>
+必须跟踪保存这个对象的所作的所有连接。</p>
+</li>
+<li>
+<p><code class="computeroutput"><a class="link" href="../boost/signals/trackable.html" title="Class trackable">trackable</a></code>
+must be notified when the object is being destructed so that it can
+disconnect its connections.</p>
+<p>当 <code class="computeroutput"><a class="link" href="../boost/signals/trackable.html" title="Class trackable">trackable</a></code>
+正在被析构时， 必须通知该对象， 以使它能够断开它的所有连接。 </p>
+</li>
+</ul>
+</div>
+<p>Clearly, deriving from <code class="computeroutput"><a class="link" href="../boost/signals/trackable.html" title="Class trackable">trackable</a></code>
+meets these two guidelines. We have not yet found a superior solution.</p>
+<p>显然，派生自 <code class="computeroutput"><a class="link" href="../boost/signals/trackable.html" title="Class trackable">trackable</a></code>
+符合这两个方针。 我们还没有找到更好的解决安案。</p>
+</div>
+</div>
+<div class="section" lang="en">
+<div class="titlepage">
+<div>
+<div>
+<h3 class="title"><a name="id1286716"></a>Comparison
+with other Signal/Slot implementations</h3>
+<h3 class="title">
+<a name="id1286716"></a>与其他信号/插槽实现的比较</h3>
+</div>
+</div>
+</div>
+<div class="toc">
+<dl>
+<dt><span class="section"><a href="s05.html#id1286723">libsigc++</a></span></dt>
+<dt><span class="section"><a href="s05.html#id1286803">.NET delegates</a></span></dt>
+</dl>
+</div>
+<div class="section" lang="en">
+<div class="titlepage">
+<div>
+<div>
+<h4 class="title"><a name="id1286723"></a>libsigc++</h4>
+</div>
+</div>
+</div>
+<p> <a href="http://libsigc.sourceforge.net" target="_top">libsigc++</a> is a C++ signals &amp;
+slots library that originally started as part of an initiative to wrap
+the C interfaces to <a href="http://www.gtk.org" target="_top">GTK</a> libraries in C++, and has grown
+to be a separate library maintained by Karl Nelson. There are many
+similarities between libsigc++ and Boost.Signals, and indeed
+Boost.Signals was strongly influenced by Karl Nelson and libsigc++. A
+cursory inspection of each library will find a similar syntax for the
+construction of signals and in the use of connections and automatic
+connection lifetime management. There are some major differences in
+design that separate these libraries:</p>
+<p> <a href="http://libsigc.sourceforge.net" target="_top">libsigc++</a> 是个C++信号插槽库， 最初开始于一个项目的一部分，
+用C++封装 <a href="http://www.gtk.org" target="_top">GTK</a>
+库的C接口， 并且发展成为一个独立的库，由 Karl Nelson 维护。 libsigc++ 和 Boost.Signals
+之间有很多相同之处， 其实 Boost.Signals 受 Karl Nelson 和 libsigc++ 影响很大。
+粗略地检查这两个库就会发现相似的语法， 如在信号的构造，和连接及自动连接生命期管理的使用。 这两个库在设计上的主要区别是： </p>
+<div class="itemizedlist">
+<ul type="disc">
+<li>
+<p><span class="bold"><strong>Slot
+definitions</strong></span>: slots in libsigc++ are created
+using a set of primitives defined by the library. These primitives
+allow binding of objects (as part of the library), explicit adaptation
+from the argument and return types of the signal to the argument and
+return types of the slot (libsigc++ is, by default, more strict about
+types than Boost.Signals). A discussion of this approach with a
+comparison against the approach taken by Boost.Signals is given in
+Choice of Slot Definitions.</p>
+<p><span class="bold"><strong>插槽定义</strong></span>：
+libsigc++ 中的插槽用一套库定义的原语创建。 这些原语允许对象绑定（作为库的一部分），
+显式地把信号的参数和返回类型适配为插槽的参数和返回类型 （相比 Boost.Signals，libsigc++ 在默认情况下对类型更严格）。
+对这个方法的讨论， 同时还有与 Boost.Signals 所采用方法的比较， 见“插槽定义的选择”一节。 </p>
+</li>
+<li>
+<p><span class="bold"><strong>Combiner/Marshaller
+interface</strong></span>: the equivalent to Boost.Signals
+combiners in libsigc++ are the marshallers. Marshallers are similar to
+the "push" interface described in Combiner Interface, and a proper
+treatment of the topic is given there.</p>
+<p><span class="bold"><strong>合并器/集结器接口</strong></span>：
+libsigc++ 中与 Boost.Signals 的合并器等效的是集结器（marshaller）。
+集结器类似于“合并器接口”一节中描述的“推”接口， 那里对该主题进行了适当的分析。 </p>
+</li>
+</ul>
+</div>
+</div>
+<div class="section" lang="en">
+<div class="titlepage">
+<div>
+<div>
+<h4 class="title"><a name="id1286803"></a>.NET
+delegates</h4>
+</div>
+</div>
+</div>
+<p> <a href="http://www.microsoft.com" target="_top">Microsoft</a>
+has introduced the .NET Framework and an associated set of languages
+and language extensions, one of which is the delegate. Delegates are
+similar to signals and slots, but they are more limited than most C++
+signals and slots implementations in that they:</p>
+<p> <a href="http://www.microsoft.com" target="_top">微
+软</a> 引入了 .NET 框架，并关联了一组语言和语言扩展， 其中之一就是委托（delegate）。 委托类似于信号插槽，
+但是它比大多数C++信号插槽的实现具有更多的限制， 表现在： </p>
+<div class="itemizedlist">
+<ul type="disc">
+<li>
+<p>Require exact type matches between a delegate and what it
+is calling.</p>
+<p>在委托和它的调用之间，要求精确的类型匹配。</p>
+</li>
+<li>
+<p>Only return the result of the last target called, with no
+option for customization.</p>
+<p>仅返回最后调用目标的结果，无法定制。</p>
+</li>
+<li>
+<p>Must call a method with <code class="computeroutput">this</code>
+already bound.</p>
+<p>必须调用一个 <code class="computeroutput">this</code>
+已绑定的方法。 </p>
+</li>
+</ul>
+</div>
+</div>
+</div>
+</div>
+<table xmlns:rev="http://www.cs.rpi.edu/~gregod/boost/tools/doc/revision" width="100%">
+<tbody>
+<tr>
+<td align="left">
+<p><small>Last revised: November 25, 2007 at 13:38:02
+-0500</small></p>
+</td>
+<td align="right">
+<div class="copyright-footer">Copyright © 2001-2004
+Douglas Gregor
+<p>翻译：<a href="http://blog.csdn.net/jq0123">金庆</a></p>
+<p>译文更新：2008.7.10</p>
+<p>Use, modification and distribution is subject to the
+Boost Software License, Version 1.0. (See accompanying file <code class="filename">LICENSE_1_0.txt</code> or copy at <a href="http://www.boost.org/LICENSE_1_0.txt" target="_top">http://www.boost.org/LICENSE_1_0.txt</a>)</p>
+</div>
+</td>
+</tr>
+</tbody>
+</table>
+<hr>
+<div class="spirit-nav"><a accesskey="p" href="s05.html"><img style="border: 0px solid ; width: 19px; height: 19px;" src="../../../doc/html/images/prev.png" alt="Prev"></a><a accesskey="u" href="../signals.html"><img src="../../../doc/html/images/up.png" alt="Up"></a><a accesskey="h" href="../index.html"><img src="../../../doc/html/images/home.png" alt="Home"></a><a accesskey="n" href="tests.html"><img src="../../../doc/html/images/next.png" alt="Next"></a>
+</div>
+</body></html>

@@ -1,0 +1,228 @@
+<!DOCTYPE html PUBLIC "-//W3C//DTD XHTML 1.0 Transitional//EN" "http://www.w3.org/TR/xhtml1/DTD/xhtml1-transitional.dtd">
+<html xmlns="http://www.w3.org/1999/xhtml" xml:lang="en" lang="en">
+<head>
+<!-- Copyright Aleksey Gurtovoy 2006. Distributed under the Boost --><!-- Software License, Version 1.0. (See accompanying --><!-- file LICENSE_1_0.txt or copy at http://www.boost.org/LICENSE_1_0.txt) -->
+
+
+
+  
+  
+  
+  <meta http-equiv="Content-Type" content="text/html; charset=utf-8" />
+
+
+
+
+  
+  
+  
+  <meta name="generator" content="Docutils 0.3.6: http://docutils.sourceforge.net/" />
+
+
+
+
+
+  
+  
+  
+  
+  
+  
+  <title>THE BOOST MPL LIBRARY: Broken Integral Constant Expressions</title>
+  <link rel="stylesheet" href="../style.css" type="text/css" />
+</head>
+
+
+<body class="docframe">
+
+
+
+
+<table class="header">
+
+
+
+  <tbody>
+
+
+
+    <tr class="header">
+
+
+
+      <td class="header-group navigation-bar"><span class="navigation-group"><a href="./portability.html" class="navigation-link">Prev</a>&nbsp;<a href="./incomplete-support-for.html" class="navigation-link">Next</a></span><span class="navigation-group-separator">&nbsp;|&nbsp;</span><span class="navigation-group">Back&nbsp;<a href="./incomplete-support-for.html" class="navigation-link">Along</a></span><span class="navigation-group-separator">&nbsp;|&nbsp;</span><span class="navigation-group"><a href="./portability.html" class="navigation-link">Up</a>&nbsp;<a href="../index.html" class="navigation-link">Home</a></span><span class="navigation-group-separator">&nbsp;|&nbsp;</span><span class="navigation-group"><a href="./tutorial_toc.html" class="navigation-link">Full TOC</a></span></td>
+
+
+
+
+      <td class="header-group page-location"><a href="../index.html" class="navigation-link">标题页</a> / <a href="technical-details.html" class="navigation-link">技术细节</a>&nbsp;/ <a href="portability.html" class="navigation-link">可移植性</a><a href="./portability.html" class="navigation-link"></a>&nbsp;/ <a href="./broken-integral-constant.html" class="navigation-link">有问题的整型常量表达式</a></td>
+
+
+
+
+    </tr>
+
+
+
+  
+  
+  
+  </tbody>
+</table>
+
+
+
+<div class="header-separator"></div>
+
+
+
+
+<div class="section" id="broken-integral-constant">
+<h1><a class="toc-backref" href="./portability.html#id74" name="broken-integral-constant">有问题的整型常量表达式</a></h1>
+
+
+
+
+<p>这可能是我们要讨论的可移植性问题中最令人惊讶的一个，这是因为许多C++程序员每天的经验似乎都显示出在这方面不存在问题。毕竟，象以下这样的编译期整数计算：</p>
+
+
+
+
+<pre class="literal-block">enum flags {<br />      flag1     = (1 &lt;&lt; 0)<br />    , flag2     = (1 &lt;&lt; 1)<br />    , flag3     = (1 &lt;&lt; 2)<br />    ...<br />    };<br /></pre>
+
+
+
+
+<p>在C++中是非常平常的，几乎没有一个编译器会不能正确处理。计算本身很少会有问题，但是当你试图在一些不完善的编译器上将它与模板一起使用时，就
+会出现各种各样的新问题。幸好，和我们要讨论的其它可移植性问题一样，随着新版本编译器的发布，这个问题已渐渐消失。绝大多数最新的编译器已不存在这个问
+题。</p>
+
+
+
+
+<div class="section" id="the-problem">
+<h2><a name="the-problem">问题</a></h2>
+
+
+
+
+<p>实际上这个问题是多方面的；有多个不同的子问题。有一些出现在某些编译器上，另一些则出现在其它编译器上，同一段代码在某个编译器上可以正常工作而
+在另一个编译器上则出现问题的情况并不少见。如果这对于你来说是一个维护的恶梦，确实如此！如果你对于问题的详细列表感兴趣，请参考 John
+Maddock 的 "<a class="reference" href="../../../../more/int_const_guidelines.htm" target="_top">Coding Guidelines for Integral Constant
+Expressions</a>" 总结。我们在这里所进行的讨论，只是告诉你，如果你的代码不得不在某个有问题的编译器上使用，你可以确实地假定如果你决定继续与之战斗，很有可能你无法维持很长的时间。</p>
+
+
+
+
+</div>
+
+
+
+
+<div class="section" id="the-symptoms">
+<h2><a name="the-symptoms">征兆</a></h2>
+
+
+
+
+<p>从正面说，当你遇到整数计算的问题，诊断通常都很容易：错误信息会为你指出代码中出问题的明确位置，而且提示也明确地说明了错误的本质，或者如果你
+多次遇到同样的错误，就会很容易发现它。例如，如果我们在&nbsp; MSVC 7.1 (一个优秀的编译器!)中尝试以下代码片段：</p>
+
+
+
+
+<pre class="literal-block">void value();<br /><br />// 比较两个整型常量<br />template&lt; typename N1, typename N2 &gt; struct less<br />    : bool_&lt; (N1::value &lt; N2::value) &gt; // line #8<br />{<br />};<br /></pre>
+
+
+
+
+<p>我们会得到：</p>
+
+
+
+
+<pre class="literal-block">portability.cpp(8) : warning C4346: 'N2::value' : dependent name is not a type<br />        prefix with 'typename' to indicate a type<br />        portability.cpp(10) : see reference to class template instantiation 'less&lt;N1,N2&gt;' being compiled<br />portability.cpp(8) : error C2143: syntax error : missing ',' before ')'<br />portability.cpp(9) : error C2143: syntax error : missing ';' before '{'<br />portability.cpp(10) : error C2143: syntax error : missing ';' before '}'<br />portability.cpp(10) : fatal error C1004: unexpected end of file found<br /></pre>
+
+
+
+
+<p>错误提示本身距离理想情况还很远，不过至少指出了正确的行数，甚至是行中的正确部分。上述信息基本可以视为"在小括号中有些东西错了"，以及"语法错误"部分已经是充分的线索。</p>
+
+
+
+
+</div>
+
+
+
+
+<div class="section" id="the-solution">
+<h2><a name="the-solution">解决的方法</a></h2>
+
+
+
+
+<p>不管这个问题有多少变化，以及各种解决方法相互冲突，这个问题还是可以被隐藏在一个库的抽象层之下。基本意思非常简单：我们可以将常量包装在类型中来传递。剩下就是实现相关的元函数来操作这些包装物，我们又回到安全的地方。</p>
+
+
+
+
+<p>如果你觉得这些很熟悉，可能是由于你已经对看过了MPL，而且知道我们刚才所说的方法其实就是在本库中实现这种计算的标准方法。虽然它是通过更为广
+泛的观察所得到的，但是事实上这对于那些关心他们的元编程程序的用户来说是很方便的。MPL已经在这了，更重要的是，它们已经实现了必要的解决方法，因此
+你的数字代码就可以工作了。实际上，如果你支持使用本库的类型包装器惯用法，这些特殊问题就不会"泄漏"出这个抽象层。</p>
+
+
+
+
+<p>最后提醒一下，这是有代价的，主要是降低了可读性，以及在某些编译器上会增加编译的时间开销。在大多数情形下，基于类型的算术计算的好处还是超过这些缺点的。</p>
+
+
+
+
+</div>
+
+
+
+
+</div>
+
+
+
+
+
+<div class="footer-separator"></div>
+
+
+
+
+<table class="footer">
+
+
+
+  <tbody>
+
+
+
+    <tr class="footer">
+
+
+
+      <td class="header-group navigation-bar"><span class="navigation-group"><a href="./portability.html" class="navigation-link">Prev</a>&nbsp;<a href="./incomplete-support-for.html" class="navigation-link">Next</a></span><span class="navigation-group-separator">&nbsp;|&nbsp;</span><span class="navigation-group">Back&nbsp;<a href="./incomplete-support-for.html" class="navigation-link">Along</a></span><span class="navigation-group-separator">&nbsp;|&nbsp;</span><span class="navigation-group"><a href="./portability.html" class="navigation-link">Up</a>&nbsp;<a href="../index.html" class="navigation-link">Home</a></span><span class="navigation-group-separator">&nbsp;|&nbsp;</span><span class="navigation-group"><a href="./tutorial_toc.html" class="navigation-link">Full TOC</a></span></td>
+
+
+
+
+    </tr>
+
+
+
+  
+  
+  
+  </tbody>
+</table>
+
+
+
+</body>
+</html>

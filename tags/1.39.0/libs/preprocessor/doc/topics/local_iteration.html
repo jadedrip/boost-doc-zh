@@ -1,0 +1,139 @@
+<!DOCTYPE HTML PUBLIC "-//W3C//DTD HTML 4.01 Transitional//EN">
+<html>
+<head>
+  <meta content="text/html; charset=UTF-8" http-equiv="content-type">
+
+	
+	
+  <title>local_iteration.html</title>
+  <link rel="stylesheet" type="text/css" href="../styles.css">
+</head>
+
+<body>
+
+<h4>局部迭代</h4>
+
+<div>局部迭代是一种简单的竖向重复结构。它以用户所指定的某个区间中的每一个数字来扩展宏。每个扩展单独为一行。
+</div>
+
+<h4>指南</h4>
+
+<div>这个机制要求两个信息来操作：一个是进行迭代的区间，另一个是在每次迭代中要进行扩展的宏。
+这些信息通过两个 <i>命名外部参数</i> 来获得。这些参数由用户自定义的名为 <b>BOOST_PP_LOCAL_LIMITS</b> 和 <b>BOOST_PP_LOCAL_MACRO</b> 的宏所指定。
+</div>
+
+<div>
+	<b>BOOST_PP_LOCAL_LIMITS</b> 指定了要迭代的值区间。它必须展开为一个 <i>tuple</i>，其中包含两个元素 -- 一个下界和一个上界。上界和下界都必须是 <i>0</i> 到 <b>BOOST_PP_LIMIT_ITERATION</b> 间的数值。例如，如果用户希望某个宏以0到10之间的数字展开，<b>BOOST_PP_LOCAL_LIMITS</b> 就应该定义为：
+</div>
+
+<div class="code">
+<pre>#define BOOST_PP_LOCAL_LIMITS (0, 10)<br></pre>
+</div>
+
+<div>注意，在宏的名字后要留有空白。这个宏不是带有两个参数。在上例中，如果没有留空白，将产生一个预处理错误，因为 <i>0</i> 和 <i>10</i> 都是无效的标识符。
+</div>
+
+<div>在 <b>BOOST_PP_LOCAL_LIMITS</b> 宏中指定的上界和下界都必须是 <i>可求值参数</i>。这意味着它们可以含有简单的算术或逻辑表达式。例如，上面的定义可以写为：
+</div>
+
+<div class="code">
+<pre>#define N() 5<br>#define BOOST_PP_LOCAL_LIMITS (0, N() + 5)<br></pre>
+</div>
+
+<div>因此，如果宏名后的空白被省略，也可能变为语法有效的定义：
+</div>
+
+<div class="code">
+<pre>#define A 0<br>#define B 10<br>#define BOOST_PP_LOCAL_LIMITS(A, B)<br>   // 注意：没有空白<br></pre>
+</div>
+
+<div>如果这样，就会在本机制内部试图使用该宏时发生错误。错误的提示可能很晦涩，因此你要时刻记住留空。上例的正确版本应该是：
+</div>
+
+<div class="code">
+<pre>#define A 0<br>#define B 10<br>#define BOOST_PP_LOCAL_LIMITS (A, B)<br>   // 注意：留有空白<br></pre>
+</div>
+
+<div>
+	<b>BOOST_PP_LOCAL_MACRO</b> 是由本机制展开的宏。这个宏将在每次迭代中以迭代的当前数字来展开。它必须定义为一个单参的宏，或者是一个可以用一个参数来调用的宏：
+</div>
+
+<div class="code">
+<pre>#define BOOST_PP_LOCAL_MACRO(n) \<br>   template&lt;&gt; struct sample&lt;n&gt; { }; \<br>   /**/<br></pre>
+</div>
+
+<div>
+	...或者...
+</div>
+
+<div class="code">
+<pre>#define SAMPLE(n) \<br>   template&lt;&gt; struct sample&lt;n&gt; { }; \<br>   /**/<br><br>#define BOOST_PP_LOCAL_MACRO SAMPLE<br></pre>
+</div>
+
+<div>只要定义这两个宏，就可以通过 <i>包含</i> <b>BOOST_PP_LOCAL_ITERATE</b>() 来发起局部迭代。
+</div>
+
+<div class="code">
+<pre>??=include BOOST_PP_LOCAL_ITERATE()<br></pre>
+</div>
+
+<div>
+	(<code>??=</code> 记号是 <code>#</code> 的三字母表示法。我使用这个三字母表示法是为了清楚地表示我不是在<i>包含</i>一个文件，而是在定义或展开一个宏，不过这并不是必需的。此外也可以使用两字母表示法 <code>%:</code>。有些编译器不接受三字母表示法和两字母表示法，要记住这一点。除此以外，你可以按你的喜好选择使用哪一种表示法。)
+</div>
+
+<div>为了重复 <code>sample</code> 的特化，必须将以下这些放在一起....
+</div>
+
+<div class="code">
+<pre>#define BOOST_PP_LOCAL_MACRO(n) \<br>   template&lt;&gt; struct sample&lt;n&gt; { }; \<br>   /**/<br><br>#define BOOST_PP_LOCAL_LIMITS (0, 10)<br>??=include BOOST_PP_LOCAL_ITERATE()<br></pre>
+</div>
+
+<div>
+	这将针对 0 到 10 之间的每个数字产生一系列的 <code>sample</code> 特化。得到的输出就象：
+</div>
+
+<div class="code">
+<pre>template&lt;&gt; struct sample&lt;0&gt; { };<br>template&lt;&gt; struct sample&lt;1&gt; { };<br>template&lt;&gt; struct sample&lt;2&gt; { };<br><br>// ...<br><br>template&lt;&gt; struct sample&lt;10&gt; { };<br></pre>
+</div>
+
+<div>在局部迭代结束后，<b>BOOST_PP_LOCAL_LIMITS</b> 和 <b>BOOST_PP_LOCAL_MACRO</b> 都会自动去定义。如果那些值需要在以后的局部迭代器重新使用，它们就必须间接地进行定义：
+</div>
+
+<div class="code">
+<pre>#define LIMITS (0, 10)<br><br>#define SAMPLE(n) \<br>   template&lt;&gt; struct sample&lt;n&gt; { }; \<br>   /**/<br><br>#define BOOST_PP_LOCAL_LIMITS LIMITS<br>#define BOOST_PP_LOCAL_MACRO(n) SAMPLE(n)<br><br>??=include BOOST_PP_LOCAL_ITERATE()<br></pre>
+</div>
+
+<h4>参见</h4>
+
+<ul>
+
+	<li><a href="../ref/local_iterate.html">BOOST_PP_LOCAL_ITERATE</a></li>
+
+	<li><a href="../ref/local_limits.html">BOOST_PP_LOCAL_LIMITS</a></li>
+
+	<li><a href="../ref/local_macro.html">BOOST_PP_LOCAL_MACRO</a></li>
+
+</ul>
+
+<div class="sig">- Paul Mensonides</div>
+
+	
+<hr size="1">
+	
+<div style="margin-left: 0px;">
+		<i>&copy; Copyright <a href="http://www.housemarque.com" target="_top">Housemarque Oy</a> 2002</i>
+		<br>
+<i>&copy; Copyright Paul Mensonides 2002</i>
+	</div>
+
+	
+<div style="margin-left: 0px;">
+		
+<p><small>Distributed under the Boost Software License, Version 1.0. (See
+		accompanying file <a href="../../../../LICENSE_1_0.txt">LICENSE_1_0.txt</a> or
+		copy at <a href="http://www.boost.org/LICENSE_1_0.txt">www.boost.org/LICENSE_1_0.txt</a>)</small></p>
+
+	</div>
+
+</body>
+</html>

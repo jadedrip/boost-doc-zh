@@ -1,0 +1,674 @@
+﻿<!DOCTYPE html PUBLIC "-//W3C//DTD HTML 4.01 Transitional//EN"
+"http://www.w3.org/TR/html4/loose.dtd">
+
+<html>
+<head>
+  <meta http-equiv="Content-Language" content="en-us">
+  <meta http-equiv="Content-Type" content="text/html; charset=UTF-8">
+  <link rel="stylesheet" type="text/css" href="../../../../boost.css">
+
+  <title>Boost Interval Arithmetic Library</title>
+</head>
+
+<body lang="en">
+  <h1><img src="../../../../boost.png" alt="boost.png (6897 bytes)" align=
+  "middle"> 区间算术库</h1>
+
+  <center>
+    <table width="80%" summary="">
+      <tbody>
+        <tr>
+          <td valign="top"><b>本页目录:</b><br>
+          <a href="#intro">简介</a><br>
+          <a href="#synopsis">概要</a><br>
+          <a href="#interval">interval 模板类</a><br>
+          <a href="#opers">操作和函数</a><br>
+          <a href="#interval_lib">interval 支持库</a><br>
+          <!--<a href="#compil">Compilation notes</a><br>-->
+           <a href="#dangers">常见的缺陷和危险</a><br>
+          <a href="#rationale">基本原理</a><br>
+          <a href="#acks">变更历史以及致谢</a></td>
+
+          <td><b>与本页相关的其它页面:</b><br>
+          <a href="rounding.htm">舍入策略</a><br>
+          <a href="checking.htm">检查策略</a><br>
+          <a href="policies.htm">策略操作</a><br>
+          <a href="comparisons.htm">比较</a><br>
+          <a href="numbers.htm">基本数字类型要求</a><br>
+          <a href="guide.htm">选择你自己的区间类型</a><br>
+          <a href="examples.htm">测试和例子程序</a><br>
+          <a href="includes.htm">头文件包含</a><br>
+          <a href="todo.htm">改进表中的一些事项</a></td>
+        </tr>
+      </tbody>
+    </table>
+  </center>
+
+  <h2 id="intro">简介和概览</h2>
+
+  <p>就像库的名字暗示的那样，这个库打算用来操作数学区间. 它由一个头文件&lt;<a href=
+  "../../../../boost/numeric/interval.hpp">boost/numeric/interval.hpp</a>&gt;构成并且包含一个主要的可以用作interval&lt;T&gt;的类型</code>.事实上,这个interval模板被声明为<code>interval&lt;T,Policies&gt;</code> ,其中，<code>Policies</code> 是一个用来控制这个interval 类的不同行为的策略类;
+  <code>interval&lt;T&gt;</code>碰巧为类型T选择了默认的策略.</p>
+
+  <p><span style="color: #FF0000; font-weight: bold">注意!</span>
+  针对于本地浮点数格式的区间算术并不是对每一种处理器，操作系统和编译器的结合都得到保证. 下面是一个已知的当使用interval&lt;float&gt;和interval&lt;double&gt;与一些基本的算术运算符可以正确工作的系统的列表.</p>
+
+  <ul>
+    <li>x86体系硬件由 GCC, Visual C++
+    &ge; 7.1, Intel 编译器 (&ge; 8 windows 版本), CodeWarrior (&ge; 9)编译器支持, 只要传统的x87 浮点运算单元用于浮点运算 (没有<code>-mfpmath=sse2</code>编译选项支持).</li>
+
+    <li>Sparc硬件由GCC 和 Sun 编译器支持.</li>
+
+    <li>PowerPC硬件由 GCC 和 CodeWarrior 编译器支持, 当浮点运算不是由 Altivec unit 来完成的时候.</li>
+
+    <li>Alpha硬件由GCC支持, 平方根运算可能是一个例外. 必须使用-mfp-rounding-mode=d -mieee编译选项.</li>
+  </ul>
+
+  <p>上面的列表并不是全面的，即使一种系统并不提供针对于硬件浮点数类型的得到保证的计算 ，这个 interval库仍然可以与用户自定义的数据类型一起使用以及进行方块算术(box arithmetic).</p>
+
+  <h3>区间算术</h3>
+
+  <p>区间是一对数，这对数用于表示它们之间的所有的数. (当边界值被包含的时候区间被称作闭区间.) 这个库的目的是将一般的算术运算扩展到区间之上. 这些区间将被写作 [<i>a</i>,<i>b</i>]
+  用于表示<i>a</i> 和 <i>b</i>之间的所有数(包括a和b ).
+  <i>a</i> 和 <i>b</i> 可以是无限的 (但它们不能是同样的无限(same infinite)) 并且满足<i>a</i> &le; <i>b</i>.</p>
+
+  <p>区间算术的基本性质是包含性质(<em><strong>inclusion property</strong></em>):</p>
+
+  <dl>
+    <dd>`如果<i>f</i>是关于一组数的函数, <i>f</i> 可以被扩展为定义在一个区间上的新的函数. 新的函数 <i>f</i> 带有一个区间参数并且返回一个区间。例如: &forall; <i>x</i> &isin; [<i>a</i>,<i>b</i>], <i>f</i>(<i>x</i>)
+    &isin; <i>f</i>([<i>a</i>,<i>b</i>]).''</dd>
+  </dl>
+
+  <p>这个性质并不仅限于只有一个参数的函数.
+  只要有可能, 区间结果应当是可以满足区间性质的最小的一个区间 (如果新的函数永远都返回 [-&infin;,+&infin;]，那么这个新的函数将没有实际的用处).</p>
+
+  <p>至少有两个原因一个用户会使用这个库.
+  最明显的一个原因是当用户需要进行区间运算. 一个例子是当输入的数据具有固有的不精确性，输入变量可以由区间来取代数字进行传递。另一个例子是一个用于解方程的应用程序，通过平分一个区间直到这个区间的宽度足够窄。第三个例子是计算机图形学中的应用程序，与 矩形(boxes) , 弦，射线相关的计算可以通过区间简化为与点相关的计算.</p>
+
+  <p>另一个使用区间的常见的原因是当计算机不能产生精确结果的时候: 通过使用区间, 可以量化舍入错误的传播. 这种方法经常用在数值计算当中. 例如，假设计算机存储的数字带有10个十进制有效数字. 对于 1 + 1E-100 -
+  1这种计算问题, 计算机的计算结果为0,虽然实际的正确结果为 1E-100.
+  在区间算术的帮助之下，这计算机计算的结果将会是 [0,1E-9].
+  对于这么小的一个计算结果，[0,1E-9]是一个非常大的区间, 但现在精度是已知的，不需要计算误差的传播.</p>
+
+  <h3>数字，舍入，以及异常行为</h3>
+
+  <p><em><strong>基数字类型(base number type)</strong></em> 是用来保存区间边界值的类型. 为了成功的使用区间算术, 基数字类型(base number type) 必须体现出一些<a href=
+  "rounding.htm">特性</a>. 首先, 依据区间的定义, 基数字类型必须是完全有序的, 所以，例如,
+  <code>complex&lt;T&gt;</code>不能作为区间的基数字类型. 针对于基本数字类型的函数应当与全序(total order)相兼容 (例如，如果 x&gt;y 并且 z&gt;t, 那么应当满足 x+z &gt; y+t), 所以，模数类型(modulo types)也是不可用的.</p>
+
+  <p>其次, 计算必须是精确的或者提供一些舍入方式  (例如, 向负无穷或是向正无穷舍入) 如果我们想要保证包含性质(inclusion property). 注意, 我们也可以明确地指定没有舍入,是精确的, 例如,如果基数字类型是精确的. 那么数字运算的结果永远都是可以表示而没有精度的损失.如果数字类型不是精确的, 我们仍然可以指定没有舍入,
+  必然的结果是包含性质不再得到保证.</p>
+
+  <p>最后, 因为严惩的精度损失永远都是可能的, 一些数必须用来表示无限的概念或者必须定义一种异常行为. 对于NaN(<i>Not a Number</i>)也会发生同样的情况.<br></p>
+
+  <p>给定所有的这些, 有人可能想要限制interval模板参数T的类型为浮点数类型 <code>float</code>, <code>double</code>, 和 <code>long double</code>, 就像 IEEE-754 标准定义的那样. 事实上,如果区间算术打算用来取代处理器的浮点运算单元提供的浮点运算,这些类型是最好的选择.然而,不像<code>std::complex</code>, 我们不想局限于这些类型. 这就是为什么我们允许用两种策略来指定舍入和异常行为(舍入和检查).我们仍然提供了针对于浮点类型的高度优化的舍入和检查类
+  .</p>
+
+  <h3>运算和函数</h3>
+
+  <p>在包含性质的指导下,可以很直接地定义区间上的初等算术运算(elementary arithmetic operations). 例如, 如果 [a,b]
+  是 [c,d] 两个区间, [a,b]+[c,d]可以通过取包含所有的x+y 的和的最小的区间来计算,其中 x 属于 [a,b] 且 y 属于 [c,d];
+    在这种情况下,  a+c 向下舍入并且 b+d向上舍入就足够的. 类似的也定义了其它的运算符和函数(在下面查看它们的定义).</p>
+  <h3>比较</h3>
+
+  <p>同样也定义了一些比较运算符. 给定两个区间, 结果是一个三态布尔类型
+  {<i>false</i>,<i>true,indeterminate</i>}. 答案 <i>false</i> 和 <i>true</i> 很容易操作 ,因为它们能够直接映射为布尔<i>true</i> 和 <i>false</i>.但是这种情况并不适用于 <em>indeterminate</em>  因为比较运算符假定是布尔函数. 因此, 为了获取布尔值,我们应该怎么办呢?</p>
+
+  <p>一种解决方案是采纳一个异常行为, 比如，一个失败的断言或是抛出一个异常.在这种情况下,如果结果是未定义的，那么将会触发一个异常.</p>
+
+  <p>另一种解决方案是将未定义映射为 <i>false</i> 或<i>true</i>. 如果选择<i>false</i> , 比较将被称作"<em>确定</em>;" 实际上, 
+  [<i>a</i>,<i>b</i>] &lt; [<i>c</i>,<i>d</i>]为真，当且仅当: &forall; <i>x</i> &isin; [<i>a</i>,<i>b</i>] &forall; <i>y</i>
+  &isin; [<i>c</i>,<i>d</i>], <i>x</i> &lt; <i>y</i>. 如果选择<i>true</i> , 比较将被称作是 "<i>可能</i>;" 实际上, [<i>a</i>,<i>b</i>] &lt; [<i>c</i>,<i>d</i>] 为真，当且仅当: &exist; <i>x</i> &isin; [<i>a</i>,<i>b</i>] &exist; <i>y</i>
+  &isin; [<i>c</i>,<i>d</i>], <i>x</i> &lt; <i>y</i>.</p>
+
+  <p>因为任意一种解决方案都有一个清楚定义的语义，我们并不清楚到底应当强制使用哪一个解决方案. 出于这样的 原因，默认的行为是通过在未定义的情况抛出一个异常来模仿真正的比较运算。另一种可以选择的方式是通过使用特定的比较名字空间，同样有一些明确命名的比较函数. 详细内容参见<a href="comparisons.htm">比较</a>页面.<br></p>
+
+  <h3>库的概览以及使用</h3>
+
+  <p>这个库提供两个不同的使用层次.一个是使用基本的类模板<code>interval&lt;T&gt;</code>而不指定所使用的策略. 这仅仅需要知道和理解上面描述的内容以及名字空间boost中的内容.除<code>interval&lt;T&gt;</code>之外, 这种层次的使用提供算术运算符(<code>+</code>, <code>-</code>, <code>*</code>,
+  <code>/</code>), 代数和分段代数函数
+  (<code>abs</code>, <code>square</code>, <code>sqrt</code>,
+  <code>pow</code>), 超越函数和三角函数
+  (<code>exp</code>, <code>log</code>, <code>sin</code>, <code>cos</code>,
+  <code>tan</code>, <code>asin</code>, <code>acos</code>, <code>atan</code>,
+  <code>sinh</code>, <code>cosh</code>, <code>tanh</code>,
+  <code>asinh</code>, <code>acosh</code>, <code>atanh</code>), 以及标准的比较运算符(<code>&lt;</code>, <code>&lt;=</code>,
+  <code>&gt;</code>, <code>&gt;=</code>, <code>==</code>, <code>!=</code>),
+  以及一些区间特定的函数 (<code>min</code>,
+  <code>max</code>, 与标准的<code>std::min</code>
+  and <code>std::max</code>相比，这些函数具有不同的意义; <code>lower</code>, <code>upper</code>,
+  <code>width</code>, <code>median</code>, <code>empty</code>,
+  <code>singleton</code>, <code>equal</code>, <code>in</code>,
+  <code>zero_in</code>, <code>subset</code>, <code>proper_subset</code>,
+  <code>overlap</code>, <code>intersection</code>, <code>hull</code>,
+  <code>bisect</code>).</p>
+
+  <p>对于一些带有多个<code>interval&lt;T&gt;</code> 类型参数的函数, 所有的变量类型<code>T</code>和<code>interval&lt;T&gt;</code>组合的转化，其中至少包含一个<code>interval&lt;T&gt;</code>类型的参数, 都被考虑到了，为的是避免从T到一个单元素的<code>interval&lt;T&gt;</code>的转换. 这是出于效率的考虑 (有时导致不必要的测试).</p>
+
+  <p>库的更高级的使用是手动选择舍入和检查策略并将其传递给<code>interval&lt;T, Policies&gt;</code>通过使用Policies<code>:= boost::numeric::interval_lib::policies&lt;Rounding,Checking&gt;</code>.
+  合适的策略能够通过使用 <code>boost::numeric::interval_lib</code>中提供的各种类来进行组装，这些类在<a href="#interval_lib">区间支持库</a>中有详细的描述.同样也可以通过重载运算符来选择比较的方式，.<br>
+  .</p>
+
+  <h2><a name="synopsis" id="synopsis"></a>概要</h2>
+  <pre>
+namespace boost {
+namespace numeric {
+
+namespace interval_lib {
+/*对于区间类的声明这个声明是必须的*/
+template &lt;class T&gt; struct default_policies;
+
+/* ... ; 名字空间 interval_lib 的完整概要可以在<a href=
+"#interval_lib">这里</a>找到 */
+
+} // namespace interval_lib
+
+
+/* 模板 interval_policies; 类的定义可以在<a href=
+"policies.htm">这里</a>找到 */
+template&lt;class Rounding, class Checking&gt;
+struct interval_policies;
+
+/* 模板类 interval; 类的定义可以在 <a href=
+"#interval">这里</a>找到 */
+template&lt;class T, class Policies = typename interval_lib::default_policies&lt;T&gt;::type &gt; class interval;
+
+/* 涉及区间的算术运算符 */
+template &lt;class T, class Policies&gt;  interval&lt;T, Policies&gt; operator+(const interval&lt;T, Policies&gt;&amp; x);
+template &lt;class T, class Policies&gt;  interval&lt;T, Policies&gt; operator-(const interval&lt;T, Policies&gt;&amp; x);
+
+template &lt;class T, class Policies&gt;  interval&lt;T, Policies&gt; operator+(const interval&lt;T, Policies&gt;&amp; x, const interval&lt;T, Policies&gt;&amp; y);
+template &lt;class T, class Policies&gt;  interval&lt;T, Policies&gt; operator+(const interval&lt;T, Policies&gt;&amp; x, const T&amp; y);
+template &lt;class T, class Policies&gt;  interval&lt;T, Policies&gt; operator+(const T&amp; x, const interval&lt;T, Policies&gt;&amp; y);
+
+template &lt;class T, class Policies&gt;  interval&lt;T, Policies&gt; operator-(const interval&lt;T, Policies&gt;&amp; x, const interval&lt;T, Policies&gt;&amp; y);
+template &lt;class T, class Policies&gt;  interval&lt;T, Policies&gt; operator-(const interval&lt;T, Policies&gt;&amp; x, const T&amp; y);
+template &lt;class T, class Policies&gt;  interval&lt;T, Policies&gt; operator-(const T&amp; x, const interval&lt;T, Policies&gt;&amp; y);
+
+template &lt;class T, class Policies&gt;  interval&lt;T, Policies&gt; operator*(const interval&lt;T, Policies&gt;&amp; x, const interval&lt;T, Policies&gt;&amp; y);
+template &lt;class T, class Policies&gt;  interval&lt;T, Policies&gt; operator*(const interval&lt;T, Policies&gt;&amp; x, const T&amp; y);
+template &lt;class T, class Policies&gt;  interval&lt;T, Policies&gt; operator*(const T&amp; x, const interval&lt;T, Policies&gt;&amp; y);
+
+template &lt;class T, class Policies&gt;  interval&lt;T, Policies&gt; operator/(const interval&lt;T, Policies&gt;&amp; x, const interval&lt;T, Policies&gt;&amp; y);
+template &lt;class T, class Policies&gt;  interval&lt;T, Policies&gt; operator/(const interval&lt;T, Policies&gt;&amp; x, const T&amp; y);
+template &lt;class T, class Policies&gt;  interval&lt;T, Policies&gt; operator/(const T&amp; r, const interval&lt;T, Policies&gt;&amp; x);
+
+/* 代数函数: sqrt, abs, square, pow, nth_root */
+template &lt;class T, class Policies&gt;  interval&lt;T, Policies&gt; abs(const interval&lt;T, Policies&gt;&amp; x);
+template &lt;class T, class Policies&gt;  interval&lt;T, Policies&gt; sqrt(const interval&lt;T, Policies&gt;&amp; x);
+template &lt;class T, class Policies&gt;  interval&lt;T, Policies&gt; square(const interval&lt;T, Policies&gt;&amp; x);
+template &lt;class T, class Policies&gt;  interval&lt;T, Policies&gt; pow(const interval&lt;T, Policies&gt;&amp; x, int y);
+template &lt;class T, class Policies&gt;  interval&lt;T, Policies&gt; nth_root(const interval&lt;T, Policies&gt;&amp; x, int y);
+
+/* 超越函数: exp, log */
+template &lt;class T, class Policies&gt;  interval&lt;T, Policies&gt; exp(const interval&lt;T, Policies&gt;&amp; x);
+template &lt;class T, class Policies&gt;  interval&lt;T, Policies&gt; log(const interval&lt;T, Policies&gt;&amp; x);
+
+/* fmod, 针对于三角函数的参数简化 (如下) */
+template &lt;class T, class Policies&gt;  interval&lt;T, Policies&gt; fmod(const interval&lt;T, Policies&gt;&amp; x, const interval&lt;T, Policies&gt;&amp; y);
+template &lt;class T, class Policies&gt;  interval&lt;T, Policies&gt; fmod(const interval&lt;T, Policies&gt;&amp; x, const T&amp; y);
+template &lt;class T, class Policies&gt;  interval&lt;T, Policies&gt; fmod(const T&amp; x, const interval&lt;T, Policies&gt;&amp; y);
+
+/* 三角函数*/
+template &lt;class T, class Policies&gt;  interval&lt;T, Policies&gt; sin(const interval&lt;T, Policies&gt;&amp; x);
+template &lt;class T, class Policies&gt;  interval&lt;T, Policies&gt; cos(const interval&lt;T, Policies&gt;&amp; x);
+template &lt;class T, class Policies&gt;  interval&lt;T, Policies&gt; tan(const interval&lt;T, Policies&gt;&amp; x);
+template &lt;class T, class Policies&gt;  interval&lt;T, Policies&gt; asin(const interval&lt;T, Policies&gt;&amp; x);
+template &lt;class T, class Policies&gt;  interval&lt;T, Policies&gt; acos(const interval&lt;T, Policies&gt;&amp; x);
+template &lt;class T, class Policies&gt;  interval&lt;T, Policies&gt; atan(const interval&lt;T, Policies&gt;&amp; x);
+
+/* 双曲三角函数 */
+template &lt;class T, class Policies&gt;  interval&lt;T, Policies&gt; sinh(const interval&lt;T, Policies&gt;&amp; x);
+template &lt;class T, class Policies&gt;  interval&lt;T, Policies&gt; cosh(const interval&lt;T, Policies&gt;&amp; x);
+template &lt;class T, class Policies&gt;  interval&lt;T, Policies&gt; tanh(const interval&lt;T, Policies&gt;&amp; x);
+template &lt;class T, class Policies&gt;  interval&lt;T, Policies&gt; asinh(const interval&lt;T, Policies&gt;&amp; x);
+template &lt;class T, class Policies&gt;  interval&lt;T, Policies&gt; acosh(const interval&lt;T, Policies&gt;&amp; x);
+template &lt;class T, class Policies&gt;  interval&lt;T, Policies&gt; atanh(const interval&lt;T, Policies&gt;&amp; x);
+
+/* min, max 外部函数 (不是 std::min/max, 如下) */
+template &lt;class T, class Policies&gt;  interval&lt;T, Policies&gt; max(const interval&lt;T, Policies&gt;&amp; x, const interval&lt;T, Policies&gt;&amp; y);
+template &lt;class T, class Policies&gt;  interval&lt;T, Policies&gt; max(const interval&lt;T, Policies&gt;&amp; x, const T&amp; y);
+template &lt;class T, class Policies&gt;  interval&lt;T, Policies&gt; max(const T&amp; x, const interval&lt;T, Policies&gt;&amp; y);
+template &lt;class T, class Policies&gt;  interval&lt;T, Policies&gt; min(const interval&lt;T, Policies&gt;&amp; x, const interval&lt;T, Policies&gt;&amp; y);
+template &lt;class T, class Policies&gt;  interval&lt;T, Policies&gt; min(const interval&lt;T, Policies&gt;&amp; x, const T&amp; y);
+template &lt;class T, class Policies&gt;  interval&lt;T, Policies&gt; min(const T&amp; x, const interval&lt;T, Policies&gt;&amp; y);
+
+/* 边界相关的区间函数 */
+template &lt;class T, class Policies&gt;  T lower(const interval&lt;T, Policies&gt;&amp; x);
+template &lt;class T, class Policies&gt;  T upper(const interval&lt;T, Policies&gt;&amp; x);
+template &lt;class T, class Policies&gt;  T width(const interval&lt;T, Policies&gt;&amp; x);
+template &lt;class T, class Policies&gt;  T median(const interval&lt;T, Policies&gt;&amp; x);
+template &lt;class T, class Policies&gt;  T norm(const interval&lt;T, Policies&gt;&amp; x);
+
+/* 边界相关的区间函数 */
+template &lt;class T, class Policies&gt;  bool empty(const interval&lt;T, Policies&gt;&amp; b);
+template &lt;class T, class Policies&gt;  bool singleton(const interval&lt;T, Policies&gt;&amp; x);
+template &lt;class T, class Policies&gt;  bool equal(const interval&lt;T, Policies&gt;&amp; x, const interval&lt;T, Policies&gt;&amp; y);
+template &lt;class T, class Policies&gt;  bool in(const T&amp; r, const interval&lt;T, Policies&gt;&amp; b);
+template &lt;class T, class Policies&gt;  bool zero_in(const interval&lt;T, Policies&gt;&amp; b);
+template &lt;class T, class Policies&gt;  bool subset(const interval&lt;T, Policies&gt;&amp; a, const interval&lt;T, Policies&gt;&amp; b);
+template &lt;class T, class Policies&gt;  bool proper_subset(const interval&lt;T, Policies&gt;&amp; a, const interval&lt;T, Policies&gt;&amp; b);
+template &lt;class T, class Policies&gt;  bool overlap(const interval&lt;T, Policies&gt;&amp; x, const interval&lt;T, Policies&gt;&amp; y);
+
+/* 设置操作的区间函数 */
+template &lt;class T, class Policies&gt;  interval&lt;T, Policies&gt; intersection(const interval&lt;T, Policies&gt;&amp; x, const interval&lt;T, Policies&gt;&amp; y);
+template &lt;class T, class Policies&gt;  interval&lt;T, Policies&gt; hull(const interval&lt;T, Policies&gt;&amp; x, const interval&lt;T, Policies&gt;&amp; y);
+template &lt;class T, class Policies&gt;  interval&lt;T, Policies&gt; hull(const interval&lt;T, Policies&gt;&amp; x, const T&amp; y);
+template &lt;class T, class Policies&gt;  interval&lt;T, Policies&gt; hull(const T&amp; x, const interval&lt;T, Policies&gt;&amp; y);
+template &lt;class T, class Policies&gt;  interval&lt;T, Policies&gt; hull(const T&amp; x, const T&amp; y);
+template &lt;class T, class Policies&gt;  std::pair&lt;interval&lt;T, Policies&gt;, interval&lt;T, Policies&gt; &gt; bisect(const interval&lt;T, Policies&gt;&amp; x);
+
+/* 区间比较运算符 */
+template&lt;class T, class Policies&gt;  bool operator&lt;(const interval&lt;T, Policies&gt;&amp; x, const interval&lt;T, Policies&gt;&amp; y);
+template&lt;class T, class Policies&gt;  bool operator&lt;(const interval&lt;T, Policies&gt;&amp; x, const T&amp; y);
+template&lt;class T, class Policies&gt;  bool operator&lt;(const T&amp; x, const interval&lt;T, Policies&gt;&amp; y);
+
+template&lt;class T, class Policies&gt;  bool operator&lt;=(const interval&lt;T, Policies&gt;&amp; x, const interval&lt;T, Policies&gt;&amp; y);
+template&lt;class T, class Policies&gt;  bool operator&lt;=(const interval&lt;T, Policies&gt;&amp; x, const T&amp; y);
+template&lt;class T, class Policies&gt;  bool operator&lt;=(const T&amp; x, const interval&lt;T, Policies&gt;&amp; y);
+
+template&lt;class T, class Policies&gt;  bool operator&gt;(const interval&lt;T, Policies&gt;&amp; x, const interval&lt;T, Policies&gt;&amp; y);
+template&lt;class T, class Policies&gt;  bool operator&gt;(const interval&lt;T, Policies&gt;&amp; x, const T&amp; y);
+template&lt;class T, class Policies&gt;  bool operator&gt;(const T&amp; x, const interval&lt;T, Policies&gt;&amp; y);
+
+template&lt;class T, class Policies&gt;  bool operator&gt;=(const interval&lt;T, Policies&gt;&amp; x, const interval&lt;T, Policies&gt;&amp; y);
+template&lt;class T, class Policies&gt;  bool operator&gt;=(const interval&lt;T, Policies&gt;&amp; x, const T&amp; y);
+template&lt;class T, class Policies&gt;  bool operator&gt;=(const T&amp; x, const interval&lt;T, Policies&gt;&amp; y);
+</pre>
+  <pre>
+template&lt;class T, class Policies&gt;  bool operator==(const interval&lt;T, Policies&gt;&amp; x, const interval&lt;T, Policies&gt;&amp; y);
+template&lt;class T, class Policies&gt;  bool operator==(const interval&lt;T, Policies&gt;&amp; x, const T&amp; y);
+template&lt;class T, class Policies&gt;  bool operator==(const T&amp; x, const interval&lt;T, Policies&gt;&amp; y);
+
+template&lt;class T, class Policies&gt;  bool operator!=(const interval&lt;T, Policies&gt;&amp; x, const interval&lt;T, Policies&gt;&amp; y);
+template&lt;class T, class Policies&gt;  bool operator!=(const interval&lt;T, Policies&gt;&amp; x, const T&amp; y);
+template&lt;class T, class Policies&gt;  bool operator!=(const T&amp; x, const interval&lt;T, Policies&gt;&amp; y);
+
+namespace interval_lib {
+
+template&lt;class T, class Policies&gt;  interval&lt;T, Policies&gt; division_part1(const interval&lt;T, Policies&gt;&amp; x, const interval&lt;T, Policies&amp; y, bool&amp; b);
+template&lt;class T, class Policies&gt;  interval&lt;T, Policies&gt; division_part2(const interval&lt;T, Policies&gt;&amp; x, const interval&lt;T, Policies&amp; y, bool b = true);
+template&lt;class T, class Policies&gt;  interval&lt;T, Policies&gt; multiplicative_inverse(const interval&lt;T, Policies&gt;&amp; x);
+
+template&lt;class I&gt;  I add(const typename I::base_type&amp; x, const typename I::base_type&amp; y);
+template&lt;class I&gt;  I sub(const typename I::base_type&amp; x, const typename I::base_type&amp; y);
+template&lt;class I&gt;  I mul(const typename I::base_type&amp; x, const typename I::base_type&amp; y);
+template&lt;class I&gt;  I div(const typename I::base_type&amp; x, const typename I::base_type&amp; y);
+
+} // namespace interval_lib
+
+} // namespace numeric
+} // namespace boost
+</pre>
+
+  <h2><a name="interval" id="interval"></a>模板类<code>interval</code></h2>
+  模板类
+  interval 的公共接口保持在最小数量:
+  <pre>
+template &lt;class T, class Policies = typename interval_lib::default_policies&lt;T&gt;::type&gt;
+class interval
+{
+  public:
+  typedef T base_type;
+  typedef Policies traits_type;
+
+  interval();
+  interval(T const &amp;v);
+  template&lt;class T1&gt; interval(T1 const &amp;v);
+  interval(T const &amp;l, T const &amp;u);
+  template&lt;class T1, class T2&gt; interval(T1 const &amp;l, T2 const &amp;u);
+  interval(interval&lt;T, Policies&gt; const &amp;r);
+  template&lt;class Policies1&gt; interval(interval&lt;T, Policies1&gt; const &amp;r);
+  template&lt;class T1, class Policies1&gt; interval(interval&lt;T1, Policies1&gt; const &amp;r);
+
+  interval &amp;operator=(T const &amp;v);
+  template&lt;class T1&gt; interval &amp;operator=(T1 const &amp;v);
+  interval &amp;operator=(interval&lt;T, Policies&gt; const &amp;r);
+  template&lt;class Policies1&gt; interval &amp;operator=(interval&lt;T, Policies1&gt; const &amp;r);
+  template&lt;class T1, class Policies1&gt; interval &amp;operator=(interval&lt;T1, Policies1&gt; const &amp;r);
+
+  void assign(T const &amp;l, T const &amp;u);
+
+  T const &amp;lower() const;
+  T const &amp;upper() const;
+
+  static interval empty();
+  static interval whole();
+  static interval hull(T const &amp;x, T const &amp;y);
+
+  interval&amp; operator+= (T const &amp;r);
+  interval&amp; operator-= (T const &amp;r);
+  interval&amp; operator*= (T const &amp;r);
+  interval&amp; operator/= (T const &amp;r);
+  interval&amp; operator+= (interval const &amp;r);
+  interval&amp; operator-= (interval const &amp;r);
+  interval&amp; operator*= (interval const &amp;r);
+  interval&amp; operator/= (interval const &amp;r);
+};
+</pre>
+
+  <p>构造函数创建包含它们的参数的区间. 如果有两个参数, 第一个参数假定为左边界,第二个参数假定为右边界. 因此, 这些参数应当是有序的.如果 !(l &lt;= u) 没有得到满足, 将会使用检查策略创建一个空区间. 如果没有给定任何参数, 创建的区间是一个单独的0.</p>
+
+  <p>如果参数的类型与基数字类型相同, 这些参数值将直接作为区间的边界值. 如果类型不一样, 库将会使用舍入策略来进行转化(<code>conv_down</code> 和 <code>conv_up</code>)并且创建一个包含的区间. 如果输入参数是一个使用不同策略的区间, 输入的区间将被检查，为了正确的传播它的无意义(emptiness )
+  (如果区间为空).</p>
+
+  <p>赋值运算符也有类型的情况,除了它们明显的只带有一个参数. 同样有一个赋值函数assign用于直接改变区间的边界值. 它的行为类似于带有两个参数的构造函数如果参数不是有序的. 没有只带有一个区间或者一个数字作为参数的赋值函数，在这种情况下可以使用赋值运算符。</p>
+
+  <p>边界值的类型和区间的策略定义了区间所能包含的数值集合. 例如，在使用默认策略的情况下,
+  区间是实数值的子集. 静态函数<code>empty</code> 和 <code>whole</code> 产生区间子集分别是空集和全集. 它们是静态成员函数而不是全局函数,因为它们不能推导出返回值的类型.类似地，函数hull. empty 和 whole涉及到检查策略，用于获取结果区间的边界值
+  .</p>
+
+  <h2><a name="opers" id="opers"></a>运算和函数</h2>
+
+  <p>下面的一些函数 ，除了 min 和 max 都针对于基本类型进行了定义，这是区间类interval仅有的要求(但是策略可以有自己的要求
+  ).</p>
+
+  <h4>运算符<code>+</code> <code>-</code> <code>*</code> <code>/</code>
+  <code>+=</code> <code>-=</code> <code>*=</code> <code>/=</code></h4>
+
+  <p>基本的运算符是一元的取负和二元的<code>+</code>
+  <code>-</code> <code>*</code> <code>/</code>. 一元取负运算符带有一个区间参数，并返回一个区间. 二元的运算符带有两个区间参数或者是一个区间和一个数字并且返回一个区间. 如果一个参数是一个数字而不是一个区间,你可以预期结果是一样的，就好像这个数字首先被转化成一个区间。这种情况对于下面的所有的函数和运算符都是通用的.</p>
+
+  <p>同样有一些赋值运算符<code>+=</code> <code>-=</code>
+  <code>*=</code> <code>/=</code>.没有太多需要说明: <code>x op=
+  y</code> 等价于<code>x = x op y</code>. 如果在运算过程中抛出异常,左值不会受影响 (但是有可能在基类型的赋值过程中抛出异常).</p>
+
+  <p>运算符<code>/</code> 和 <code>/=</code> 将试图产生一个空集合，如果除数为0 . 如果除数包含0 (但不仅是0), 结果将会是包含除法结果的最小区间; 所以，它的一个边界将会是无限的, 但它可能不是整个区间
+  .</p>
+
+  <h4><code>lower</code> <code>upper</code> <code>median</code>
+  <code>width</code> <code>norm</code></h4>
+
+  <p><code>lower</code>, <code>upper</code>, <code>median</code> respectively
+  计算下边界,上边界 ,以及区间的中值(<code>(lower+upper)/2</code>舍入到最邻近的值 ).
+  <code>width</code> 计算区间的宽度(<code>upper-lower</code> 上边界朝正无穷舍入). <code>norm</code>
+  计算区间的上边界的绝对值;它是一个数学范数 (就是它的名字)类似于实数的绝对值. <br>
+  </p>
+
+  <h4><code>min</code> <code>max</code> <code>abs</code> <code>square</code>
+  <code>pow</code> <code>nth_root</code> <code>division_part?</code>
+  <code>multiplicative_inverse</code></h4>
+
+  <p>同样定义了函数<code>min</code>, <code>max</code> 和<code>abs</code>. 请不要将它们与标准库中的相混淆(也可以叫: <code>a&lt;b?a:b</code>, <code>a&gt;b?a:b</code>,
+  <code>a&lt;0?-a:a</code>). 这些函数兼容区间算术的初等性质(elementary property). 例如,
+  max([<i>a</i>,<i>b</i>], [<i>c</i>,<i>d</i>]) = {max(<i>x</i>,<i>y</i>)
+  其中 <i>x</i> 属于 [<i>a</i>,<i>b</i>] 且 <i>y</i> 属于
+  [<i>c</i>,<i>d</i>]}.它们并没有在名字空间std中定义，而是在名字空间boost中定义，为的是避免与其它定义冲突.  </p>
+
+  <p><code>square</code> 函数非常特别. 就像你可以从它的名字中推测的那样, 它计算参数的平方. 提供这个函数的理由是: 当X包含0时 ,<code>square(x)</code> 不是<code>x*x</code> 而是一个子集.例如 , [-2,2]*[-2,2]
+  = [-4,4] 但是 [-2,2]&sup2; = [0,4]; 结果是一个更小的区间.
+  因此, <code>square(x)</code>应当被使用square(x)代替<code>x*x</code> 因为它更加精确并且有一个小的性能提升
+  .</p>
+
+  <p>类似于<code>square</code>, <code>pow</code> 提供了一个更加高效和精确的方法来计算区间的整数幂. 请注意:
+  当幂指数为0，并且区间不为空, 结果是1, 即使输入区间包含0. <code>nth_root</code> 计算区间的整数根 (<code>nth_root(pow(x,k),k)</code> 包含<code>x</code> 或者 <code>abs(x)</code> 依据 <code>k</code> 是奇数还是偶数).如果整数参数不是正数， <code>nth_root</code> 的结果是未定义的. <code>multiplicative_inverse</code>  计算<code>1/x</code>.</p>
+
+  <p>当用户希望除法运算返回离散的区间时，<code>division_part1</code> 和 <code>division_part2</code> 就很有用. 例如,包含  [2,3] / [-2,1] 的最窄的闭区间不是 [-&infin;,&infin;]  而是[-&infin;,-1] 和 [2,&infin;]的并集. 当计算的结果可以用一个单独的区间来表示的时候 , <code>division_part1</code> 返回这个区间并将布尔引用设为<code>false</code>.
+  然而,如果结果需要两个区间来表示, <code>division_part1</code>
+  返回负的部分并将布尔引用设为<code>true</code>; 现在调用 <code>division_part2</code> 应当获取正的部分. 第二个函数可以将第一个函数返回的布尔值作为最后一个参数 .如果布尔参数没有给定, 它的值假定为真，并且，如果除法运算没有产生第二个区间，这个函数的行为是未定义的，.</p>
+
+  <h4><code>intersect</code> <code>hull</code> <code>overlap</code>
+  <code>in</code> <code>zero_in</code> <code>subset</code>
+  <code>proper_subset</code> <code>empty</code> <code>singleton</code>
+  <code>equal</code></h4>
+
+  <p><code>intersect</code> 计算两个闭集的交集,
+  <code>hull</code> 计算包含两个参数的最小区间; 这些参数可以是数字或者是区间.如果有一个参数是一个非法的数字或者一个空的区间, 这个函数将会只使用另一个参数来计算结果区间 (如果被检查策略允许的话).</p>
+
+  <p>没有并集函数，因为如果两个区间没有相交，两个区间的并集就不是一个区间，如果它们相交，函数hull计算并集。</p>
+
+  <p>函数<code>overlap</code> 测试两个区间是否有共同的子集. <code>in</code> 测试一个数字是否在一个区间中;
+  <code>zero_in</code> 测试0 是否在一个区间中.
+  <code>subset</code> 测试第一个区间是否是第二个区间的子集，
+  <code>proper_subset</code> 测试它是否是一个真子集.
+  <code>empty</code> 和 <code>singleton</code>测试一个区间是否为空或者是一个单元素区间. 最后，<code>equal</code>测试两个区间是否相等
+  .</p>
+
+  <h4><code>sqrt</code> <code>log</code> <code>exp</code> <code>sin</code>
+  <code>cos</code> <code>tan</code> <code>asin</code> <code>acos</code>
+  <code>atan</code> <code>sinh</code> <code>cosh</code> <code>tanh</code>
+  <code>asinh</code> <code>acosh</code> <code>atanh</code>
+  <code>fmod</code></h4>
+
+  <p>同样也定义了函数<code>sqrt</code>, <code>log</code>, <code>exp</code>,
+  <code>sin</code>, <code>cos</code>, <code>tan</code>, <code>asin</code>,
+  <code>acos</code>, <code>atan</code>, <code>sinh</code>, <code>cosh</code>,
+  <code>tanh</code>, <code>asinh</code>, <code>acosh</code>,
+  <code>atanh</code>. 并没有太多的需要说明;这些函数扩展传统函数到区间之上并且满足基本的区间运算性质. 当当输入的区间完全在函数的处理范围之外时，它们使用<a href=
+  "checking.htm">检查</a>策略来产生空的区间。
+  .</p>
+
+  <p>函数<code>fmod(interval x, interval y)</code> 期望最小边界是正的， 并且返回区间Z满足 <code>0 &lt;= z.lower() &lt; y.upper()</code> 且  <code>z</code> 是 <code>x-n*y</code> 的超集(N是一个整数). 因此, 如果两个参数是正的单元素区间,函数 <code>fmod(interval, interval)</code> 将会和传统的函数<code>fmod(double, double)</code>的行为一样.</p>
+
+  <p>请注意<code>fmod</code> 并不满足区间运算的包含性质. 例如, <code>fmod</code>([13,17],[7,8])的结果应当是  [0,8] (因为它必须包含 
+  [0,3] 和 [5,8]). 但是当目的是限定一个区间为了计算一个周期函数，结果并不是真的有用.这就是函数fmod返回[5,10]的理由.</p>
+
+  <h4><code>add</code> <code>sub</code> <code>mul</code>
+  <code>div</code></h4>
+
+  <p>这四个函数带有两个数字参数，并且返回一个包含的区间. 它会避免在运算之前将一个数字转化为一个区间.</p>
+
+  <h3>常量</h3>
+
+  <p>一些常量隐藏在名字空间<code>boost::numeric::interval_lib</code>中. 它们需要由区间类型明确的模板化.  函数是 <code>pi&lt;I&gt;()</code>, <code>pi_half&lt;I&gt;()</code> 和 <code>pi_twice&lt;I&gt;()</code>返回一个区间类型<code>I</code>的对象. 它们的值分别是&pi;, &pi;/2 和
+  2&pi;.</p>
+
+  <h3>异常抛出</h3>
+
+  <p>区间类和围绕这个类所定义的函数，它们本身并不抛出任何的异常，然而这并不意味着一个操作永远都不会抛出异常。例如，让我们考虑拷贝构造函数，就像上面的解释那样，缺省的拷贝构造函数由编译器产生，所以，如果基类的拷贝构造函数不抛出异常，它就不会抛出异常.</p>
+  <p>同样的情况适用于所有的函数，如果基类型或者两个策略中的一个抛出异常，函数将会抛出异常。<br>
+  </p>
+  <h2 id="interval_lib">区间支持库</h2>
+
+  <p>区间支持库包含一系列可以组合使用来满足各种基本需要的区间策略，基本的类和函数，与名字空间boost中基本的类和函数用作interval&lt;T&gt;的连接相对于(参数作为这个类型中隐含的第二个模板参数)，这些组件属于名字空间<code>boost::numeric::interval_lib</code>.</p>
+
+  <p>我们仅在这里给出一些概要并且没有为每一节制作一个单独的网页，因为它仅打算针对那些高级用户，这使得我们可以扩展每一个主题并带有一些例子.</p>
+
+  <h4>概要</h4>
+  <pre>
+namespace boost {
+namespace numeric {
+namespace interval_lib {
+/*内建的舍入策略以及其相应的特化 */
+template &lt;class T&gt;  struct rounded_math;
+template &lt;&gt;         struct rounded_math&lt;float&gt;;
+template &lt;&gt;         struct rounded_math&lt;double&gt;;
+template &lt;&gt;         struct rounded_math&lt;long double&gt;;
+
+/* 内建的舍入构造模块 */
+template &lt;class T&gt;  struct rounding_control;
+
+template &lt;class T, class Rounding = rounding_control&lt;T&gt; &gt;  struct rounded_arith_exact;
+template &lt;class T, class Rounding = rounding_control&lt;T&gt; &gt;  struct rounded_arith_std;
+template &lt;class T, class Rounding = rounding_control&lt;T&gt; &gt;  struct rounded_arith_opp;
+
+template &lt;class T, class Rounding&gt;  struct rounded_transc_dummy;
+template &lt;class T, class Rounding = rounded_arith_exact&lt;T&gt; &gt;  struct rounded_transc_exact;
+template &lt;class T, class Rounding = rounded_arith_std  &lt;T&gt; &gt;  struct rounded_transc_std;
+template &lt;class T, class Rounding = rounded_arith_opp  &lt;T&gt; &gt;  struct rounded_transc_opp;
+
+template &lt;class Rounding&gt; struct save_state;
+template &lt;class Rounding&gt; struct save_state_nothing;
+
+/* 内建的检查策略 */
+template &lt;class T&gt; struct checking_base;
+template &lt;class T, class Checking = checking_base&lt;T&gt;, class Exception = exception_create_empty&gt;   struct checking_no_empty;
+template &lt;class T, class Checking = checking_base&lt;T&gt; &gt;                                            struct checking_no_nan;
+template &lt;class T, class Checking = checking_base&lt;T&gt;, class Exception = exception_invalid_number&gt; struct checking_catch_nan;
+template &lt;class T&gt; struct checking_strict;
+
+/* 一些用于操作区间策略的元编程代码 */
+template &lt;class Rounding, class Checking&gt; struct policies;
+template &lt;class OldInterval, class NewRounding&gt; struct change_rounding;
+template &lt;class OldInterval, class NewChecking&gt; struct change_checking;
+template &lt;class OldInterval&gt; struct unprotect;
+
+/* 需要明确的模板化的常量*/
+template&lt;class I&gt; I pi();
+template&lt;class I&gt; I pi_half();
+template&lt;class I&gt; I pi_twice();
+
+/* 明确的区间比较函数:
+ * 方式可以是 cer=certainly 或者 pos=possibly,
+ * 函数 lt=less_than, gt=greater_than, le=less_than_or_equal_to, ge=greater_than_or_equal_to
+ *   eq=equal_to, ne= not_equal_to */
+template &lt;class T, class Policies&gt;  bool cerlt(const interval&lt;T, Policies&gt;&amp; x, const interval&lt;T, Policies&gt;&amp; y);
+template &lt;class T, class Policies&gt;  bool cerlt(const interval&lt;T, Policies&gt;&amp; x, const T&amp; y);
+template &lt;class T, class Policies&gt;  bool cerlt(const T&amp; x, const interval&lt;T, Policies&gt;&amp; y);
+
+template &lt;class T, class Policies&gt;  bool cerle(const interval&lt;T, Policies&gt;&amp; x, const interval&lt;T, Policies&gt;&amp; y);
+template &lt;class T, class Policies&gt;  bool cerle(const interval&lt;T, Policies&gt;&amp; x, const T&amp; y);
+template &lt;class T, class Policies&gt;  bool cerle(const T&amp; x, const interval&lt;T, Policies&gt;&amp; y);
+
+template &lt;class T, class Policies&gt;  bool cergt(const interval&lt;T, Policies&gt;&amp; x, const interval&lt;T, Policies&gt;&amp; y);
+template &lt;class T, class Policies&gt;  bool cergt(const interval&lt;T, Policies&gt;&amp; x, const T&amp; y);
+template &lt;class T, class Policies&gt;  bool cergt(const T&amp; x, const interval&lt;T, Policies&gt;&amp; y);
+
+template &lt;class T, class Policies&gt;  bool cerge(const interval&lt;T, Policies&gt;&amp; x, const interval&lt;T, Policies&gt;&amp; y);
+template &lt;class T, class Policies&gt;  bool cerge(const interval&lt;T, Policies&gt;&amp; x, const T&amp; y);
+template &lt;class T, class Policies&gt;  bool cerge(const T&amp; x, const interval&lt;T, Policies&gt;&amp; y);
+
+template &lt;class T, class Policies&gt;  bool cereq(const interval&lt;T, Policies&gt;&amp; x, const interval&lt;T, Policies&gt;&amp; y);
+template &lt;class T, class Policies&gt;  bool cereq(const interval&lt;T, Policies&gt;&amp; x, const T&amp; y);
+template &lt;class T, class Policies&gt;  bool cereq(const T&amp; x, const interval&lt;T, Policies&gt;&amp; y);
+
+template &lt;class T, class Policies&gt;  bool cerne(const interval&lt;T, Policies&gt;&amp; x, const interval&lt;T, Policies&gt;&amp; y);
+template &lt;class T, class Policies&gt;  bool cerne(const interval&lt;T, Policies&gt;&amp; x, const T&amp; y);
+template &lt;class T, class Policies&gt;  bool cerne(const T&amp; x, const interval&lt;T, Policies&gt;&amp; y);
+
+template &lt;class T, class Policies&gt;  bool poslt(const interval&lt;T, Policies&gt;&amp; x, const interval&lt;T, Policies&gt;&amp; y);
+template &lt;class T, class Policies&gt;  bool poslt(const interval&lt;T, Policies&gt;&amp; x, const T&amp; y);
+template &lt;class T, class Policies&gt;  bool poslt(const T&amp; x, const interval&lt;T, Policies&gt;&amp; y);
+
+template &lt;class T, class Policies&gt;  bool posle(const interval&lt;T, Policies&gt;&amp; x, const interval&lt;T, Policies&gt;&amp; y);
+template &lt;class T, class Policies&gt;  bool posle(const interval&lt;T, Policies&gt;&amp; x, const T&amp; y);
+template &lt;class T, class Policies&gt;  bool posle(const T&amp; x, const interval&lt;T, Policies&gt;&amp; y);
+
+template &lt;class T, class Policies&gt;  bool posgt(const interval&lt;T, Policies&gt;&amp; x, const interval&lt;T, Policies&gt;&amp; y);
+template &lt;class T, class Policies&gt;  bool posgt(const interval&lt;T, Policies&gt;&amp; x, const T&amp; y);
+template &lt;class T, class Policies&gt;  bool posgt(const T&amp; x, const interval&lt;T, Policies&gt; &amp; y);
+
+template &lt;class T, class Policies&gt;  bool posge(const interval&lt;T, Policies&gt;&amp; x, const interval&lt;T, Policies&gt;&amp; y);
+template &lt;class T, class Policies&gt;  bool posge(const interval&lt;T, Policies&gt;&amp; x, const T&amp; y);
+template &lt;class T, class Policies&gt;  bool posge(const T&amp; x, const interval&lt;T, Policies&gt;&amp; y);
+
+template &lt;class T, class Policies&gt;  bool poseq(const interval&lt;T, Policies&gt;&amp; x, const interval&lt;T, Policies&gt;&amp; y);
+template &lt;class T, class Policies&gt;  bool poseq(const interval&lt;T, Policies&gt;&amp; x, const T&amp; y);
+template &lt;class T, class Policies&gt;  bool poseq(const T&amp; x, const interval&lt;T, Policies&gt;&amp; y);
+
+template &lt;class T, class Policies&gt;  bool posne(const interval&lt;T, Policies&gt;&amp; x, const interval&lt;T, Policies&gt;&amp; y);
+template &lt;class T, class Policies&gt;  bool posne(const interval&lt;T, Policies&gt;&amp; x, const T&amp; y);
+template &lt;class T, class Policies&gt;  bool posne(const T&amp; x, const interval&lt;T, Policies&gt;&amp; y);
+
+/* 比较名字空间 */
+namespace compare {
+  namespace certain;
+  namespace possible;
+  namespace lexicographic;
+  namespace set;
+  namespace tribool;
+} // namespace compare
+
+} // namespace interval_lib
+} // namespace numeric
+} // namespace boost
+</pre>
+
+  <p>每一个区间支持库的组件在其专属的页面中有详细的描述.</p>
+
+  <ul>
+    <li><a href="comparisons.htm">比较</a></li>
+
+    <li><a href="rounding.htm">舍入</a></li>
+
+    <li><a href="checking.htm">检查</a></li>
+  </ul>
+
+  <h2 id="dangers">常见的缺陷和危险</h2>
+
+  <h4>检查</h4>
+
+  <p>最大的问题之一可能是正确的使用比较函数和运算符.首先， 函数和运算符并不试图了解两个区间是不是相同的数学对象，因此，如果比较操作是"确定的"， 那么，<code>x != x</code>永远为真，
+  除非<code>x</code>是一个单元素的区间; 对于  <code>cereq</code> 和 <code>cerne</code>也有同样的问题</p>
+
+  <p>另一个使人误解的解释是: 你不能一直期望  [a,b] &lt; [c,d] 等价于 !([a,b] &gt;= [c,d]) 因为比较并不是必须的完全的. 相等和小于比较，应当被视为两个不相关的运算符. 然而，默认的比较运算符满足这些性质，因为无论何时 
+  [a,b] 和 [c,d] 相交，它们将会抛出一个异常，.</p>
+
+  <h4>区间值 和 引用</h4>
+
+  <p>这个问题是前面那个问题的衍生问题. 库中的所有的函数只会考虑区间的值，而不是区间的引用 .特别是你不能期望下面是相等的(除非X是一个单元素的区间): <code>x/x</code> 与 1, <code>x*x</code> 与 <code>square(x)</code>, <code>x-x</code> 与 0, 等等. 因此主要的问题是区间算术并不会区分相同变量的不同出现. 因此，无论何时，在尽可能的情况下：用户必须重写方程来消除同一个变量的多次出现，
+  例如 , <code>square(x)-2*x</code> 远没有  <code>square(x-1)-1</code>精确
+  .</p>
+
+  <h4>不受保护的舍入</h4>
+
+  <p>就像<a href="rounding.htm#perf">前面</a>解释的那样，当基本类型是基本的浮点类型的时候，一个好的加速计算的方法是在区间算法的热点上(hot spots)去掉保护，这种方法是安全的，并且也是区间运算的一个改进，但是请雇：任何的基本的浮点运算运算在不受保护的块中，可能会有未定义的行为出现 (但只针对于当前线程). 并且不要忘记创建一个舍入对象就像在这个<a href="rounding.htm#perfexp">例子</a>中解释的那样.</p>
+
+  <h2 id="rationale">基本原理</h2>
+
+  <p>这个库的目的是提供一个高效且通用的方式来处理区间算术。通过使用模板化的类boost::numeric::interval，我们提供的原理的最大的论点是这个模板的格式.</p>
+
+  <p>提供一个类型为 
+  double的interval类或者遵循<code>std::complex</code> 只允许针对于<code>float</code>, <code>double</code>, 以及 <code>long
+  double</code>特化的类将会是很容易的. 我们决定不这样做而是允许区间类interval同样适用于用户自定义的类型, 例如.固定精度的大浮点类型(MPFR, etc),有理数等等.</p>
+
+  <p><strong>策略设计.</strong> .虽然曾经尝试使这个类模板只有一个模板参数，实际迫使我们使用策略，这个类的行为可以由两个策略设置，这两个策略类被包装成一个策略类，这是为了理好的易用性(策略类可以通过默认来选择)和可读性。
+  .</p>
+
+  <p>第一个策略提供了所有的需要定义在interval类型之上的针对于基本类型的数学函数，第二个策略被用来设置当运算中出现异常时的处理方式.</p>
+
+  <p>我们可以预见任何的这些策略的组合都将是合适的，更重要的是，我们想要使得这个库的用户可以重用这个类模板，与此同时，也可以选择类的行为表现，参见<a href="guide.htm">这一页</a>提供的例子.</p>
+
+  <p><strong>舍入策略.</strong> 这个库为基本的类型 float 和
+  double提供了特别实现的舍入策略. 为了使得这些实现正确并且快速,这个库需发针对舍入方式做很多的工作. 一些处理器提供直接的处理并且一些机制被提供用于加速计算. 表面上看起来为了获取几个CPU周期的性能提升是一件繁重而且碰运气的事情，但实际上，依赖于特定的计算机，加速比可以很容易达到2 到 3 ，更重要的是，这些优化并不会任何主要方式上影响接口(对于我们选择的设计，任何东西都可以被添加，通过特化或通过传递不同的模板参数).</p>
+
+  <p><strong>Pred/succ.</strong> 在以前的版本中，提供了两个函数 <code>pred</code> 和 <code>succ</code>, 以及各种相关函数，比如<code>widen</code>. 出发点是通过一个ULP (越少越好)来扩大区间, 例如. 为了保证包含性质.
+  一旦产生一个T类型的区间, 我们不能够针对于一个随机模板参数定义一个ULP. 反过来, 舍入策略允许我们完全避免使用ULP同时使得区间更加紧凑(如果结果是一个单元素区间就没有必要加宽这个区间).加宽这个区间也是无用的，我们决定放弃这些函数.</p>
+
+  <p><strong>Specialization of <code>std::less</code>.</strong> 因为&lt;运算符信赖于用户局部所选择的比较名字空间，所以不可能正确的特化 std::less，因此，对于所有需要使用它的算法和模板，你需要明确的提供一个这样的类(例如,
+  <code>std::map</code>).</p>
+
+  <p><strong>Input/output.</strong> 这个区间库并没有包含输入输出运算符，打印一个区间的值需要很多的定制，一些人想要打印边界值，另一些人可能想要打印中位数和区间的宽度等等，例子文件列举了一些可能性，当用户定义它们自己的运算符 ，例子程序可以作为一个基础。
+  .</p>
+
+  <p><strong>Mixed operations with integers.</strong> 当使用和复用模板代码时，存在2x 即操作符的使用是很平常的，然而，这个库并没有默认提供它们，因为从int 到基本类型的转化并不总是正确的，考虑将一个32位的整数转化为一个单精义的浮点数，所以，这些函数被放在了一个单独的头文件中，如果用户想从这些混合的运算符中获益，用户需要明确地包含这些头文件，另一点，由于它们定义的方式，没有混合的比较运算符，。</p>
+
+  <p><strong>Interval-aware functions.</strong> 这个库中所定义的函数明显在意它们所操作的区间并且它们依据通常的区间算术定理，因此，相比于通常遇到的非区间敏感(interval-aware)的函数,它们可能会有一个不同的表现 ，例如，函数max被经典的集合扩展定义 并且结果不会一直是两个参数中的一个 (如果区间没有相交，那么结果是两个区间中的一个).</p>
+
+  <p>这种行为与 <code>std::max</code> 返回它两个参数中的一个的引用不同. 所以，如果用户希望返回一个引用，他应当使用<code>std::max</code> 因为那刚好是这个函数所做. 请注意:当区间相交时,<code>std::max</code> 将会抛出一个异常. 这种行为并没有居先(predate)
+   C++标准中所描述的，<code>因为参数是不等价的，并且它允许在 a &lt;= b</code> 和 <code>&amp;b == &amp;std::max(a,b)</code>之间有一个等价(一些特殊的情况由实现来定). 然而，它与SGI中定义的也不同，因为它并不返回第一个参数，即使任何一个参数都不比另一个大.</p>
+
+  <h2 id="acks">变更历史以及致谢</h2>
+
+  <p>这个库主要由Jens Maurer先前的工作的启发，关于它的工作的一些讨论在<a href=
+  "http://www.mscs.mu.edu/%7Egeorgec/IFAQ/maurer1.html">这里</a>介绍. Jeremy Siek
+  和 Maarten Keijzer 提供了一些针对于MSVC和Sparc平台舍入的控制.</p>
+
+  <p>Guillaume Melquiond, Herv&eacute; Br&ouml;nnimann 和 Sylvain Pion
+  从Jens所留下的库开启这项工作并添加策略设计.
+  Guillaume 和 Sylvain 在代码上做出了巨大的努力，尤其是可移植性和针对于大多数架构的舍入模式的调整.
+  Guillaume 完成大部分的编码，而 Sylvain 和  Herv&eacute; 为这个库的编写提供了一些有用的组件.
+  基于 Guillaume's的优秀的开端，Hervé 重新组织以及撰写文档中的章节 
+  .</p>
+
+  <p>这份材料部分基于NSF CAREER Grant CCR-0133599之下的国家科学基金(NSF)所提供的支持. 在文档中所描述的任何意见,
+  发现和评判或建议都是作者的个人观点，并不必然反映NSF的观点.</p>
+  <hr>
+
+  <p><a href="http://validator.w3.org/check?uri=referer"><img border="0" src=
+  "http://www.w3.org/Icons/valid-html401" alt="Valid HTML 4.01 Transitional"
+  height="31" width="88"></a></p>
+
+  <p>Revised 
+  <!--webbot bot="Timestamp" s-type="EDITED" s-format="%Y-%m-%d" startspan -->2006-12-25<!--webbot bot="Timestamp" endspan i-checksum="12174" --></p>
+
+  <p><i>Copyright &copy; 2002 Guillaume Melquiond, Sylvain Pion, Herv&eacute;
+  Br&ouml;nnimann, Polytechnic University<br>
+  Copyright &copy; 2003-2006 Guillaume Melquiond, ENS Lyon</i></p>
+
+  <p><i>Distributed under the Boost Software License, Version 1.0. (See
+  accompanying file <a href="../../../../LICENSE_1_0.txt">LICENSE_1_0.txt</a>
+  or copy at <a href=
+  "http://www.boost.org/LICENSE_1_0.txt">http://www.boost.org/LICENSE_1_0.txt</a>)</i></p>
+</body>
+</html>

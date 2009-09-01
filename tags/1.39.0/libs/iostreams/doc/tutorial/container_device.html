@@ -1,0 +1,207 @@
+<!DOCTYPE HTML PUBLIC "-//W3C//DTD HTML 4.01 Transitional//EN">
+<html>
+<head>
+
+  
+  <meta content="text/html; charset=UTF-8" http-equiv="content-type">
+
+
+    
+    
+  
+  
+  <title>Tutorial</title>
+  <link rel="stylesheet" href="../../../../boost.css">
+
+
+    
+  
+  <link rel="stylesheet" href="../theme/iostreams.css">
+</head>
+
+
+<body>
+
+
+
+<!-- Begin Banner -->
+
+    
+<h1 class="title">指南</h1>
+
+
+    
+<hr class="banner">
+
+<!-- End Banner -->
+
+<!-- Begin Nav -->
+
+<div class="nav">
+    <a href="container_sink.html"><img src="../../../../doc/html/images/prev.png" border="0" height="19" width="19"></a>
+    <a href="tutorial.html"><img src="../../../../doc/html/images/up.png" border="0" height="19" width="19"></a>
+    <a href="writing_filters.html"><img src="../../../../doc/html/images/next.png" border="0" height="19" width="19"></a>
+</div>
+
+
+
+<!-- End Nav -->
+
+<a name="container_device"></a>
+<h2>2.1.4. 编写一个 <code>container_device</code></h2>
+
+
+
+<p>假设你要编写一个设备，既要从STL容器读也要向容器写。为了可以同时使用读和写，你还需要支持在容器中的定位。有几种设备可以同时读和写；它们的
+不同在于，输入和输出是两个独立的字符序列，还是同一个序列；以及读和写是分别有独立的位置指针，还是只有一个读/写位置指针。详细说明请见<i></i> <a href="../guide/modes.html">Modes模式</a> .</p>
+
+
+
+
+<p>对单个字符序列进行读写访问且带有单个位置指针的窄字符设备被称为 <a href="../concepts/seekable_device.html">SeekableDevice可定位设备</a>。一个典型的可定位设备如下：</p>
+
+
+
+<pre class="broken_ie"><span class="preprocessor">#include</span> <span class="literal">&lt;iosfwd&gt;</span>                           <span class="comment">// streamsize, seekdir</span>
+<span class="preprocessor">#include</span> <a class="HEADER" href="../../../../boost/iostreams/categories.hpp"><span class="literal">&lt;boost/iostreams/categories.hpp&gt;</span></a>   <span class="comment">// seekable_device_tag</span>
+<span class="preprocessor">#include</span> <a class="HEADER" href="../../../../boost/iostreams/positioning.hpp"><span class="literal">&lt;boost/iostreams/positioning.hpp&gt;</span></a>  <span class="comment">// stream_offset</span>
+
+<span class="keyword">namespace</span> io = boost::iostreams;<br><br><span class="keyword">class</span> my_device {<br><span class="keyword">public</span>:<br>    <span class="keyword">typedef</span> <span class="keyword">char</span>                 char_type;<br>    <span class="keyword">typedef</span> seekable_device_tag  category;<br><br>    std::streamsize read(<span class="keyword">char</span>* s, std::streamsize n)<br>    {<br>        <span class="comment">// </span><span class="comment">从底层来源中读取最多 n 个字符到缓冲区 s 中，返回读取的字符数；</span><br>        <span class="comment">// 返回</span><span class="comment"> -1 表示 EOF</span><span class="comment"></span>
+    }
+
+    std::streamsize write(const <span class="keyword">char</span>* s, std::streamsize n)<br>    {<br>        <span class="comment">// </span><span class="comment">从缓冲区 s 中取出最多 n 个字符写入到底层的数据接收器中，</span><br>        <span class="comment">// 返回写入的字符数</span><span class="comment"></span>
+    }
+
+    stream_offset seek(stream_offset off, std::ios_base::seekdir way)
+    {
+        <span class="comment">// 定位到位置 off 并返回新的流位置。参数</span><span class="comment"> way 表示如果解释 off</span><span class="comment">:</span>
+        <span class="comment">//    - std::ios_base::beg 表示从序列起始计算偏移</span><span class="comment"></span>
+        <span class="comment">//    - std::ios_base::cur 表示从当前位置计算偏移</span><span class="comment"></span>
+        <span class="comment">//    - std::ios_base::end 表示从序列末尾计算偏移</span><span class="comment"></span>
+    }
+
+    <span class="comment">/* 其它成员 */</span>
+};</pre>
+
+
+
+<p>成员类型 <a href="../guide/traits.html#char_type"><code>char_type</code></a> 表示 my_source 要处理的字符类型，通常是 <code>char</code> 或者 <code>wchar_t</code>. 成员类型 <a href="../guide/traits.html#char_type">category</a> 表示该设备支持哪些基本 i/o 操作。分类标志 <a href="../guide/traits.html#category_tags"><code>seekable_tag</code></a> 表示支持 <a href="../functions/read.html"><code>read</code></a>, <a href="../functions/write.html"><code></code></a> <a href="../functions/write.html"><code>write</code></a> 以及单序列版本的 <a href="../functions/seek.html"><code>seek</code></a>&nbsp;.</p>
+
+
+
+<p>类型 <a href="../functions/positioning.html#synopsis"><code>stream_offset</code></a> 用于 Iostreams 库保存流的位置。</p>
+
+
+
+<p>你可将上述例子改为：</p>
+
+
+
+<pre class="broken_ie"><span class="preprocessor">#include</span> <a class="HEADER" href="../../../../boost/iostreams/concepts.hpp"><span class="literal">&lt;boost/iostreams/concepts.hpp&gt;</span></a>  <span class="comment">// seekable_device</span>
+
+<span class="keyword">class</span> my_source : <span class="keyword">public</span> seekable_device {<br><span class="keyword">public</span>:<br>    std::streamsize read(<span class="keyword">char</span>* s, std::streamsize n);<br>    std::streamsize write(const <span class="keyword">char</span>* s, std::streamsize n);<br>    stream_offset seek(stream_offset off, std::ios_base::seekdir way);<br><br>    <span class="comment">/* Other members */</span>
+};</pre>
+
+
+
+<p>这里的 <a href="../classes/device.html#synopsis"><code>seekable_device</code></a> 是一个便于使用的基类，提供了成员类型 <code>char_type</code> 和 <code>category</code>, 而成员函数 <code>close</code> 和 <code>imbue</code> 为空操作，所以无需提供。
+
+</p>
+
+<p>现在你已经准备好编写你的 <code>container_device</code> 了。同样，我们假定你的容器迭代器为随机访问迭代器。</p>
+
+
+
+<pre class="broken_ie"><span class="preprocessor">#include</span> <span class="literal">&lt;algorithm&gt;</span>                       <span class="comment">// copy, min</span>
+<span class="preprocessor">#include</span> <span class="literal">&lt;iosfwd&gt;</span>                          <span class="comment">// streamsize</span>
+<span class="preprocessor">#include</span> <a class="header" href="../../../../boost/iostreams/categories.hpp"><span class="literal">&lt;boost/iostreams/categories.hpp&gt;</span></a>  <span class="comment">// source_tag</span>
+
+<span class="keyword">namespace</span> boost { <span class="keyword">namespace</span> iostreams { <span class="keyword">namespace</span> example {<br><br><span class="keyword">template</span>&lt;<span class="keyword">typename</span> Container&gt;<br><span class="keyword">class</span> container_device {<br><span class="keyword">public</span>:<br>    <span class="keyword">typedef</span> <span class="keyword">typename</span> Container::value_type  char_type;<br>    <span class="keyword">typedef</span> seekable_device_tag             category;<br>    container_device(Container&amp; container) <br>        : container_(container), pos_(<span class="numeric_literal">0</span>)<br>        { }<br><br>    std::streamsize read(char_type* s, std::streamsize n)<br>    {<br>        <span class="keyword">using</span> <span class="keyword">namespace</span> std;<br>        streamsize amt = <span class="keyword">static_cast</span>&lt;streamsize&gt;(container_.size() - pos_);<br>        streamsize result = (min)(n, amt);<br>        <span class="keyword">if</span> (result != <span class="numeric_literal">0</span>) {<br>            std::copy( container_.begin() + pos_, <br>                       container_.begin() + pos_ + result, <br>                       s );<br>            pos_ += result;<br>            <span class="keyword">return</span> result;<br>        } <span class="keyword">else</span> {<br>            <span class="keyword">return</span> <span class="numeric_literal">-1</span>; <span class="comment">// EOF</span>
+        }
+    }
+    std::streamsize write(<span class="keyword">const</span> char_type* s, std::streamsize n)<br>    {<br>        <span class="keyword">using</span> <span class="keyword">namespace</span> std;<br>        streamsize result = <span class="numeric_literal">0</span>;<br>        <span class="keyword">if</span> (pos_ != container_.size()) {<br>            streamsize amt = <br>                <span class="keyword">static_cast</span>&lt;streamsize&gt;(container_.size() - pos_);<br>            streamsize result = (min)(n, amt);<br>            std::copy(s, s + result, container_.begin() + pos_);<br>            pos_ += result;<br>        }<br>        <span class="keyword">if</span> (result &lt; n) {<br>            container_.insert(container_.end(), s, s + n);<br>            pos_ = container_.size();<br>        }<br>        <span class="keyword">return</span> n;<br>    }<br>    stream_offset seek(stream_offset off, std::ios_base::seekdir way)<br>    {<br>        <span class="keyword">using</span> <span class="keyword">namespace</span> std;<br><br>        <span class="comment">// 计算 pos_ 的新值</span>
+        stream_offset next;
+        <span class="keyword">if</span> (way == ios_bas::beg) {<br>            next = off;<br>        } <span class="keyword">else</span> <span class="keyword">if</span> (way == ios_bas::cur) {<br>            next = pos_ + off;<br>        } <span class="keyword">else</span> <span class="keyword">if</span> (way == ios_bas::end) {<br>            next = container_.size() + off - <span class="numeric_literal">1</span>;<br>        }<br><br>        <span class="comment">// 检查错误</span>
+        <span class="keyword">if</span> (next &lt; <span class="numeric_literal">0</span> || next &gt;= container_.size())<br>            <span class="keyword">throw</span> ios_base::failure("bad seek offset");<br><br>        pos_ = next;<br>        <span class="keyword">return</span> pos_;<br>    }<br><br>    Container&amp; container() { <span class="keyword">return</span> container_; }<br><span class="keyword">private</span>:<br>    <span class="keyword">typedef</span> <span class="keyword">typename</span> Container::size_type   size_type;<br>    Container&amp;  container_;<br>    size_type   pos_;<br>};<br><br>} } } <span class="comment">// End namespace boost::iostreams:example</span></pre>
+
+
+
+<p>这里请留意：</p>
+
+
+
+
+<ul>
+  <li>成员类型 <code>char_type</code> 被定义为等价于容器的 <code>value_type</code>;
+  </li>
+  <li>成员类型 <code>category</code> 告诉 Iostreams 库 <code>container_</code><code>device</code> 是一个 <a href="../concepts/seekable_device.html">可定位设备</a><a href="../concepts/sink.html"></a>；
+  </li>
+  <li><code>container_</code><code>device</code> 可以由一个 <code>Container</code> 实例来构造，该实例的引用被保存，且可以通过成员函数 <code>container()</code> 来访问；</li>
+  <li><code>read</code> 的实现与 <a href="container_source.html"><code>container_source</code></a> 中的一样。
+  </li>
+
+</ul>
+
+
+
+<p><code>write</code> 的实现与 <a href="container_sink.html"><code>container_sink</code></a> 中的有点不同。不再是简单地把字符添加到容器中，首先要检查当前字符位置是否在容器的中间。如果是，则尝试通过覆盖容器中已有字符来满足写入请示，从当前字符位置开始。如果在写入过程中到达容器的末端，则将剩余字符插入到容器末尾。</p>
+
+
+
+<p><code>seek</code> 的实现非常清楚。首先，基于 <code>off</code> 和 <code>way</code> 计算新的字符位置：如果 <code>way</code> 为 <code>ios_base::beg</code>, 则新的字符位置就是 <code>off</code>; 如果 <code>way</code> 是 <code>ios_base::cur</code>, 则新的字符位置是 <code>pos_ + off</code>; 如果 <code>way</code> 是 <code>ios_base::end</code>, 则新的字符位置是 <code>container_.size() + off - 1</code>. 接着，检查新的字符位置是不是有效的偏移值，如果不是则抛出一个异常。<code>std::basic_streambuf</code> 的实例允许返回 <code>-1</code>
+以表示失败，但是 Boost Iostreams 库的策略是，错误应该经抛出异常(<i>见</i>&nbsp;<a href="../guide/exceptions.html">Exceptions异常</a>)来表示。最后，设置新的位置并返回它。</p>
+
+
+
+<p>你可以这样使用 container_device：</p>
+
+
+
+<pre class="broken_ie"><span class="preprocessor">#include</span> <span class="literal">&lt;cassert&gt;</span>
+<span class="preprocessor">#include</span> <span class="literal">&lt;ios&gt;</span> <span class="comment">// ios_base::beg</span>
+<span class="preprocessor">#include</span> <span class="literal">&lt;string&gt;</span>
+<span class="preprocessor">#include</span> <a class="header" href="../../../../boost/iostreams/stream.hpp"><span class="literal">&lt;boost/iostreams/stream.hpp&gt;</span></a>
+<span class="preprocessor">#include</span> <a class="header" href="../../example/container_device.hpp"><span class="literal">&lt;libs/iostreams/example/container_device.hpp&gt;</span></a>
+
+<span class="keyword">namespace</span> io = boost::iostreams;<br><span class="keyword">namespace</span> ex = boost::iostreams::example;<br><br><span class="keyword">int</span> main()<br>{<br>    <span class="keyword">using</span> <span class="keyword">namespace</span> std;<br>    <span class="keyword">typedef</span> ex::container_device&lt;string&gt; string_device;<br><br>    string                            one, two;<br>    io::stream&lt;string_device&gt;  io(one);<br>    io &lt;&lt; <span class="literal">"Hello World!"</span>;<br>    io.flush();<br>    io.seekg(0, BOOST_IOS::beg); <span class="comment">// seek to the beginning</span>
+    getline(io, two);
+    assert(one == <span class="literal">"Hello World!"</span>);<br>    assert(two == <span class="literal">"Hello World!"</span>);<br>}</pre>
+
+
+
+<!-- Begin Nav -->
+
+<div class="nav">
+    <a href="container_sink.html"><img src="../../../../doc/html/images/prev.png" border="0" height="19" width="19"></a>
+    <a href="tutorial.html"><img src="../../../../doc/html/images/up.png" border="0" height="19" width="19"></a>
+    <a href="writing_filters.html"><img src="../../../../doc/html/images/next.png" border="0" height="19" width="19"></a>
+</div>
+
+
+
+<!-- End Nav -->
+
+<!-- Begin Footer -->
+
+<hr>
+
+<p class="copyright">Revised
+<!--webbot bot="Timestamp" S-Type="EDITED" S-Format="%d %B, %Y" startspan -->
+20 May, 2004
+<!--webbot bot="Timestamp" endspan i-checksum="38504" -->
+</p>
+
+
+
+<p class="copyright">&copy; Copyright <a href="http://www.kangaroologic.com" target="_top">Jonathan Turkanis</a>, 2004</p>
+
+
+<p class="copyright"> 
+    Use, modification, and distribution are subject to the Boost Software License, Version 2.0. (See accompanying file <a href="../../../../LICENSE_1_0.txt">LICENSE_1_0.txt</a> or copy at <a href="http://www.boost.org/LICENSE_1_0.txt">http://www.boost.org/LICENSE_1_0.txt</a>)
+</p>
+
+
+<!-- End Footer -->
+
+</body>
+</html>

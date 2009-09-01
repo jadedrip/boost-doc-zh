@@ -1,0 +1,260 @@
+﻿<!DOCTYPE HTML PUBLIC "-//SoftQuad Software//DTD HoTMetaL PRO 5.0::19981217::extensions to HTML 4.0//EN" "hmpro5.dtd">
+
+<HTML>
+
+<HEAD>
+<META HTTP-EQUIV="Content-Type" CONTENT="text/html; charset=UTF-8">
+<LINK REL="stylesheet" TYPE="text/css" HREF="../../boost.css">
+<TITLE>Header </TITLE>
+</HEAD>
+
+<BODY BGCOLOR="#FFFFFF" TEXT="#000000" LINK="#0000FF" VLINK="#800080">
+<H2 align="left"><IMG SRC="../../boost.png" WIDTH="276" HEIGHT="86"></H2>
+
+<blockquote>
+  <blockquote>
+    <blockquote>
+      <blockquote>
+        <blockquote>
+          <blockquote>
+<H2 align="left">头文件 &lt;<A HREF="../../boost/utility/in_place_factory.hpp">boost/utility/in_place_factory.hpp</A>&gt; </H2>
+
+<H2 align="left">头文件 &lt;<A HREF="../../boost/utility/typed_in_place_factory.hpp">boost/utility/typed_in_place_factory.hpp</A>&gt; </H2>
+
+          </blockquote>
+        </blockquote>
+      </blockquote>
+    </blockquote>
+  </blockquote>
+</blockquote>
+<p>&nbsp;</p>
+
+<H2>Contents</H2>
+<DL CLASS="page-index">
+  <DT><A HREF="#mot">Motivation（动机）</A></DT>
+  <DT><A HREF="#framework">Framework（框架）</A></DT>
+  <DT><A HREF="#specification">Specification（规范）</A></DT>
+  <DT><A HREF="#container-usage">Container-side Usage（容器侧用法）</A></DT>
+  <DT><A HREF="#user-usage">User-side Usage（用户侧用法）</A></DT>
+</DL>
+
+<HR>
+
+<H2><A NAME="mot"></A>Motivation（动机）</H2>
+
+<p>假设我们有一个类</p>
+<pre>struct X
+{
+  X ( int, std:::string ) ;
+} ;</pre>
+<p>还有一个支持空状态（也就是说，可以包含 0 个对象）的 X 的容器：</p>
+<pre>struct C
+{
+   C() : contained_(0) {}
+  ~C() { delete contained_ ; }
+  X* contained_ ;
+} ;</pre>
+<p>一个容器被设计成支持空状态一般不需要被包含对象是可缺省构造的，但一般需要它是可拷贝构造的，以此作为初始化存入对象的机制：</p>
+<pre>struct C
+{
+   C() : contained_(0) {}
+   C ( X const& v ) : contained_ ( new X(v) ) {}
+  ~C() { delete contained_ ; }
+  X* contained_ ;
+} ;</pre>
+<p>这里有一个微妙的问题：因为用来初始化存入对象的机制是拷贝构造，必须存在一个早先构造的从其拷贝的源对象。这个对象可能是临时的而且除了作为源以外不提供其它目的</p>
+<pre>void foo()
+{
+  // Temporary object created.
+  C c( X(123,"hello") ) ;
+}
+</pre>
+<p>这个问题的一个解决方案是支持被包含对象在存入容器时的直接构造。<br>
+在这个方案中，用户直接为容器提供 X 的构造函数的参数：</p>
+<pre>struct C
+{
+   C() : contained_(0) {}
+   C ( X const& v ) : contained_ ( new X(v) ) {}
+   C ( int a0, std::string a1 ) : contained_ ( new X(a0,a1) ) {}
+  ~C() { delete contained_ ; }
+  X* contained_ ;
+} ;</pre>
+<pre>void foo()
+{
+  // Wrapped object constructed in-place
+  // No temporary created.
+  C c(123,"hello") ;
+}
+</pre>
+<p>很显然，这个方案不太好看，因为容器必须重复所有从被包含类型重载的构造函数（至少是那些所有被容器直接支持的）。</p>
+
+<H2><A NAME="framework"></A>Framework（框架）</H2>
+<p>本库提出一个框架允许某些容器就地直接构造被包含对象而不需要整套从被包含类型重载的构造函数。它也允许容器取消对被包含类型的可被拷贝构造的需求，因为对象可以就地直接构造，而不需要一个拷贝。<br>
+对容器的仅由的需求是它必须提供适当的存储空间（也就是说，恰当的对齐和大小）。自然，容器一般要支持未初始化存储空间以避免就地构造覆盖一个已完整构造的对象（这将是就地构造的目标失败）。</p>
+<p>为了这个目的，框架总共提供两个类的家族，称为：InPlaceFactories 和 TypedInPlaceFactories。<br>
+基本上，这些类持有一个实际参数的序列和一个使用这些参数就地构造一个对象的方法。这个家族中的每一个成员仅仅是参数类表的数目（和类型）不同。第一个家族持有对象的类型在为此目的提供的方法中进行直接构造，反之，第二个家族在它自己的工厂类中合成类型。</p>
+<p>从容器的观点看，使用框架相当于调用工厂的方法去就地构造对象。从用户的观点看，它相当于创建正确的工厂对象来持有参数并将它传递给容器。<br>
+以下这个简化的示例展示了基本的思想。一个完整的示例在框架的正式规范中：</p>
+<pre>struct C
+{
+   template&lt;class InPlaceFactory&gt;
+   C ( InPlaceFactory const& aFactoty )
+    :
+    contained_ ( uninitialized_storage() )
+   {
+     aFactory.template apply&lt;X&gt;(contained_);
+   }
+
+  ~C() 
+  { 
+    contained_ -> X::~X();
+    delete[] contained_ ; 
+  }
+
+  char* uninitialized_storage() { return new char[sizeof(X)] ; }
+
+  char* contained_ ;
+} ;
+
+void foo()
+{
+  C c( in_place(123,"hello" ) ;
+}
+</pre>
+
+<HR>
+
+<H2><A NAME="specification">Specification（规范）</A></H2>
+
+<p>以下是 'in_place_factory' 类家族的第一个成员，以及它的相应的辅助模板函数。家族的其它成员仅仅是模板（以及构造函数）参数的数目和类型有所变化。</p>
+<PRE>namespace boost {
+
+struct in_place_factory_base {} ;
+
+template&lt;class A0&gt;
+class in_place_factory : public in_place_factory_base
+{
+  public:</PRE>
+
+<PRE>    in_place_factory ( A0 const& a0 ) : m_a0(a0) {}
+
+    template&lt; class T &gt;
+    void apply ( void* address ) const
+    {
+      new (address) T(m_a0);
+    }
+
+  private:</PRE>
+
+<PRE>    A0 const& m_a0 ;
+} ;
+
+template&lt;class A0&gt;
+in_place_factory&lt;A0&gt; in_place ( A0 const& a0 )
+{
+  return in_place_factory&lt;A0&gt;(a0);
+}
+</PRE>
+
+<p>类似地，以下是 ' typed_in_place_factory ' 类家族的第一个成员，以及它的相应的辅助模板函数。家族的其它成员仅仅是模板（以及构造函数）参数的数目和类型有所变化。</p>
+<PRE>namespace boost {
+
+struct typed_in_place_factory_base {} ;
+
+template&lt;class T, class A0&gt;
+class typed_in_place_factory : public typed_in_place_factory_base
+{
+  public:</PRE>
+
+<PRE>    typed_in_place_factory ( A0 const& a0 ) : m_a0(a0) {}
+
+    void apply ( void* address ) const
+    {
+      new (address) T(m_a0);
+    }
+
+  private:</PRE>
+
+<PRE>    A0 const& m_a0 ;
+} ;
+
+template&lt;class T, class A0&gt;
+typed_in_place_factory&lt;A0&gt; in_place ( A0 const& a0 )
+{
+  return typed_in_place_factory&lt;T,A0&gt;(a0);
+}</PRE>
+
+<PRE>}
+</PRE>
+
+<p>就像你看到的，'in_place_factory' 和 'typed_in_place_factory' 模板类仅仅是指定目标类型的方法不同：在第一个家族中，类型作为一个模板参数传给 apply 成员函数，而第二个作为工厂类的一部分给出。<br>
+当容器持有一个唯一的非多态类型（就像 Boost.Optional 的情况），它知道被包含对象的精确的动态类型并可以将它传递给一个（无类型）工厂的 apply() 方法。在这种情况下，最终用户可以使用一个不需要被构造对象的类型就可以被构造出来的 'in_place_factory' 实例。<br>
+然而，如果容器持有异种的或多态的对象（就像 Boost.Variant 的情况），要被构造的对象的动态类型必须有工厂函数自己知道。在这种情况下，最终用户必须使用一个 'typed_in_place_factory' 来代替。</p>
+
+<HR>
+
+<h2><A NAME="container-usage">Container-side Usage（容器侧用法）</a></h2>
+
+<p>就像在介绍性的简化示例中展示的，容器类必须包含“接受这些工厂的一个实例，并传递对象的存储空间到工厂的 apply 方法”的方法。<br>
+然而，工厂类的类型不能完全在容器类中指定，因为那样会使工厂的整体目标“允许容器为被包含对象的构造函数接受一个可变参数列表”失败。<br>
+正确的函数重载必须基于每一个家族中所有类中那个唯一独特而通用的特性，也就是那个基类。<br>
+依靠容器类，你可以使用 'enable_if' 生成正确的重载，或者使用下面的 following dispatch 技术（在 Boost.Optional 类中使用）：</p>
+<pre>struct C
+{
+   C() : contained_(0) {}
+   C ( X const& v ) : contained_ ( new X(v) ) {}
+
+   template&lt;class Expr&gt
+   C ( Expr const& expr )
+    :
+    contained_ ( uninitialized_storage() )
+   {
+    construct(expr,&expr)
+   }
+
+  ~C() { delete contained_ ; }
+
+  template&lt;class InPlaceFactory&gt;
+  void construct ( InPlaceFactory const& aFactory, boost::in_place_factory_base* )
+  {
+    aFactory.template apply&lt;X&gt;(contained_);
+  }
+
+  template&lt;class TypedInPlaceFactory&gt;
+  void construct ( TypedInPlaceFactory const& aFactory, boost::typed_in_place_factory_base* )
+  {
+    aFactory.apply(contained_);
+  }
+
+  X* uninitialized_storage() { return static_cast&lt;X*&gt;(new char[sizeof(X)]) ; }
+
+  X* contained_ ;
+} ;
+</pre>
+
+<hr>
+
+<h2><A NAME="user-usage">User-side Usage（用户侧用法）</a></h2>
+
+<p>最终用户传给容器一个工厂对象的实例，它持有直接在容器内部构造被包含对象所需要的实际参数。为了这一点，可以使用辅助模板函数 'in_place'。<br>
+调用 'in_place(a0,a1,a2,...,an)' 用给定的参数列表构造一个（无类型）'in_place_factory' 实例。<br>
+调用 'in_place<T>(a0,a1,a2,...,an)' 用给定参数列表为类型 'T' 构造一个 'typed_in_place_factory' 实例。</p>
+<pre>void foo()
+{
+  C a( in_place(123,"hello") ) ;    // in_place_factory passed
+  C b( in_place&lt;X&gt;(456,"world") ) ; // typed_in_place_factory passed
+}
+</pre>
+
+<P>Revised September 17, 2004</P>
+<p> Copyright Fernando Luis Cacciola Carballal, 2004</p>
+<p> Use, modification, and distribution are subject to the Boost Software
+License, Version 1.0. (See accompanying file <a href="../../LICENSE_1_0.txt">
+LICENSE_1_0.txt</a> or copy at <a href="http://www.boost.org/LICENSE_1_0.txt">
+www.boost.org/LICENSE_1_0.txt</a>)</p>
+<P>Developed by <A HREF="mailto:fernando_cacciola@hotmail.com">Fernando Cacciola</A>,
+the latest version of this file can be found at <A
+HREF="http://www.boost.org">www.boost.org</A>, and the boost
+<A HREF="http://www.boost.org/more/mailing_lists.htm#main">discussion lists</A></P>
+</BODY>
+</HTML>

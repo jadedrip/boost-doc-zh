@@ -1,0 +1,112 @@
+<html>
+<head>
+<meta http-equiv="Content-Type" content="text/html; charset=UTF-8">
+<title>Portability（可移植性）</title>
+<link rel="stylesheet" href="../boostbook.css" type="text/css">
+<meta name="generator" content="DocBook XSL Stylesheets V1.73.2">
+<link rel="start" href="../index.html" title="The Boost C++ Libraries BoostBook Documentation Subset">
+<link rel="up" href="../hash.html" title="Chapter 8. Boost.Functional/Hash">
+<link rel="prev" href="combine.html" title="Combining hash values">
+<link rel="next" href="disable.html" title="Disabling The Extensions">
+</head>
+<body bgcolor="white" text="black" link="#0000FF" vlink="#840084" alink="#0000FF">
+<table cellpadding="2" width="100%"><tr>
+<td valign="top"><img alt="Boost C++ Libraries" width="277" height="86" src="../../../boost.png"></td>
+<td align="center"><a href="../../../index.html">Home</a></td>
+<td align="center"><a href="../../../libs/libraries.htm">Libraries</a></td>
+<td align="center"><a href="http://www.boost.org/users/people.html">People</a></td>
+<td align="center"><a href="http://www.boost.org/users/faq.html">FAQ</a></td>
+<td align="center"><a href="../../../more/index.htm">More</a></td>
+</tr></table>
+<hr>
+<div class="spirit-nav">
+<a accesskey="p" href="combine.html"><img src="../../../doc/html/images/prev.png" alt="Prev"></a><a accesskey="u" href="../hash.html"><img src="../../../doc/html/images/up.png" alt="Up"></a><a accesskey="h" href="../index.html"><img src="../../../doc/html/images/home.png" alt="Home"></a><a accesskey="n" href="disable.html"><img src="../../../doc/html/images/next.png" alt="Next"></a>
+</div>
+<div class="section" lang="en">
+<div class="titlepage"><div><div><h2 class="title" style="clear: both">
+<a name="hash.portability"></a><a class="link" href="portability.html" title="Portability">Portability（可移植性）</a>
+</h2></div></div></div>
+<p><code class="computeroutput"><a class="link" href="../boost/hash.html" title="Struct template hash">boost::hash</a></code> 尽可能按照可移植的要求写成，但是，不幸的是，若干早期版本的编译器不支持参数以来查找（argument dependent lookup (ADL)）——用于定制化的机制。在这些编译器上，定制化重载 <code class="computeroutput"><span class="identifier">hash_value</span></code> 需要声明在 boost 名字空间中。</p>
+<p>在一个严格符合标准的编译器上，当 <code class="computeroutput"><a class="link" href="../boost/hash.html" title="Struct template hash">boost::hash</a></code> 被实例化时，定义在 boost 名字空间中的重载不会被找到，所以在这些编译器上重载和类应该声明在同一个名字空间中。</p>
+<p>假设我们有一个简单的定制类型：</p>
+<pre class="programlisting"><span class="keyword">namespace</span> <span class="identifier">foo</span>
+<span class="special">{</span>
+    <span class="keyword">template</span> <span class="special">&lt;</span><span class="keyword">class</span> <span class="identifier">T</span><span class="special">&gt;</span>
+    <span class="keyword">class</span> <span class="identifier">custom_type</span>
+    <span class="special">{</span>
+        <span class="identifier">T</span> <span class="identifier">value</span><span class="special">;</span>
+    <span class="keyword">public</span><span class="special">:</span>
+        <span class="identifier">custom_type</span><span class="special">(</span><span class="identifier">T</span> <span class="identifier">x</span><span class="special">)</span> <span class="special">:</span> <span class="identifier">value</span><span class="special">(</span><span class="identifier">x</span><span class="special">)</span> <span class="special">{}</span>
+
+        <span class="keyword">friend</span> <span class="identifier">std</span><span class="special">::</span><span class="identifier">size_t</span> <span class="identifier">hash_value</span><span class="special">(</span><span class="identifier">custom_type</span> <span class="identifier">x</span><span class="special">)</span>
+        <span class="special">{</span>
+            <code class="computeroutput"><a class="link" href="../boost/hash.html" title="Struct template hash">boost::hash</a></code><span class="special">&lt;</span><span class="keyword">int</span><span class="special">&gt;</span> <span class="identifier">hasher</span><span class="special">;</span>
+            <span class="keyword">return</span> <span class="identifier">hasher</span><span class="special">(</span><span class="identifier">x</span><span class="special">.</span><span class="identifier">value</span><span class="special">);</span>
+        <span class="special">}</span>
+    <span class="special">};</span>
+<span class="special">}</span>
+</pre>
+<p>在一个符合标准的编译器上，当这个类型调用 <code class="computeroutput"><span class="identifier">hash_value</span></code> 时，它会查找这个类型内部的名字空间并找到 <code class="computeroutput"><span class="identifier">hash_value</span></code>，但是在不支持 ADL 的编译器上，找不到，<code class="computeroutput"><span class="identifier">hash_value</span></code>。让事情变得更糟糕的是，有些支持 ADL 的编译器不会发现定义在类内部的友元类。</p>
+<p>所以，首先要将这个成员函数移出这个类：</p>
+<pre class="programlisting"><span class="keyword">namespace</span> <span class="identifier">foo</span>
+<span class="special">{</span>
+    <span class="keyword">template</span> <span class="special">&lt;</span><span class="keyword">class</span> <span class="identifier">T</span><span class="special">&gt;</span>
+    <span class="keyword">class</span> <span class="identifier">custom_type</span>
+    <span class="special">{</span>
+        <span class="identifier">T</span> <span class="identifier">value</span><span class="special">;</span>
+    <span class="keyword">public</span><span class="special">:</span>
+        <span class="identifier">custom_type</span><span class="special">(</span><span class="identifier">T</span> <span class="identifier">x</span><span class="special">)</span> <span class="special">:</span> <span class="identifier">value</span><span class="special">(</span><span class="identifier">x</span><span class="special">)</span> <span class="special">{}</span>
+
+        <span class="identifier">std</span><span class="special">::</span><span class="identifier">size_t</span> <span class="identifier">hash</span><span class="special">(</span><span class="identifier">custom_type</span> <span class="identifier">x</span><span class="special">)</span>
+        <span class="special">{</span>
+            <code class="computeroutput"><a class="link" href="../boost/hash.html" title="Struct template hash">boost::hash</a></code><span class="special">&lt;</span><span class="identifier">T</span><span class="special">&gt;</span> <span class="identifier">hasher</span><span class="special">;</span>
+            <span class="keyword">return</span> <span class="identifier">hasher</span><span class="special">(</span><span class="identifier">value</span><span class="special">);</span>
+        <span class="special">}</span>
+    <span class="special">};</span>
+
+    <span class="keyword">template</span> <span class="special">&lt;</span><span class="keyword">class</span> <span class="identifier">T</span><span class="special">&gt;</span>
+    <span class="keyword">inline</span> <span class="identifier">std</span><span class="special">::</span><span class="identifier">size_t</span> <span class="identifier">hash_value</span><span class="special">(</span><span class="identifier">custom_type</span><span class="special">&lt;</span><span class="identifier">T</span><span class="special">&gt;</span> <span class="identifier">x</span><span class="special">)</span>
+    <span class="special">{</span>
+        <span class="keyword">return</span> <span class="identifier">x</span><span class="special">.</span><span class="identifier">hash</span><span class="special">();</span>
+    <span class="special">}</span>
+<span class="special">}</span>
+</pre>
+<p>不幸的是，因为有些编译器不支持模板友元，我不能将 hash_value 声明为友元，所以我声明了一个成员函数来计算散列，再从 hash_value 中调用它。</p>
+<p>对于不支持 ADL 的编译器，hash_value 要定义在 boost 名字空间中：</p>
+<pre class="programlisting"><span class="preprocessor">#ifdef</span> <span class="identifier">BOOST_NO_ARGUMENT_DEPENDENT_LOOKUP</span>
+<span class="keyword">namespace</span> <span class="identifier">boost</span>
+<span class="preprocessor">#else</span>
+<span class="keyword">namespace</span> <span class="identifier">foo</span>
+<span class="preprocessor">#endif</span>
+<span class="special">{</span>
+    <span class="keyword">template</span> <span class="special">&lt;</span><span class="keyword">class</span> <span class="identifier">T</span><span class="special">&gt;</span>
+    <span class="identifier">std</span><span class="special">::</span><span class="identifier">size_t</span> <span class="identifier">hash_value</span><span class="special">(</span><span class="identifier">foo</span><span class="special">::</span><span class="identifier">custom_type</span><span class="special">&lt;</span><span class="identifier">T</span><span class="special">&gt;</span> <span class="identifier">x</span><span class="special">)</span>
+    <span class="special">{</span>
+        <span class="keyword">return</span> <span class="identifier">x</span><span class="special">.</span><span class="identifier">hash</span><span class="special">();</span>
+    <span class="special">}</span>
+<span class="special">}</span>
+</pre>
+<p>这个例子的完整代码在 <a href="../../../libs/functional/hash/examples/portable.cpp" target="_top">/libs/functional/hash/examples/portable.cpp</a>。</p>
+<a name="hash.portability.other_issues"></a><h3>
+<a name="id2919952"></a>
+      <a class="link" href="portability.html#hash.portability.other_issues">Other Issues（其它问题）</a>
+    </h3>
+<p>在 Visual C++ 版本 6.5 和 7.0 中，<code class="computeroutput"><span class="identifier">hash_value</span></code> 没有为内建数组重载。<code class="computeroutput"><a class="link" href="../boost/hash.html" title="Struct template hash">boost::hash</a></code>, <code class="computeroutput"><a class="link" href="reference.html#boost.hash_combine">boost::hash_combine</a></code> 和 <code class="computeroutput"><a class="link" href="reference.html#boost.hash_range">boost::hash_range</a></code> 都使用一个 workaround 来支持内建数组，所以在大多数情况下，这不再是个问题。</p>
+<p>在 Visual C++ 版本 6.5 和 7.0 中，函数指针没有被正确地支持。</p>
+<p>在 Solaris 上使用 GCC 时，<code class="computeroutput"><span class="identifier">boost</span><span class="special">::</span><span class="identifier">hash_value</span><span class="special">(</span><span class="keyword">long</span> <span class="keyword">double</span><span class="special">)</span></code> 将 <code class="computeroutput"><span class="keyword">long</span> <span class="keyword">double</span></code>s 当做 <code class="computeroutput"><span class="keyword">double</span></code>s 处理——所以散列函数不会考虑整个值域空间。</p>
+</div>
+<table xmlns:rev="http://www.cs.rpi.edu/~gregod/boost/tools/doc/revision" width="100%"><tr>
+<td align="left"></td>
+<td align="right"><div class="copyright-footer">Copyright © 2005-2008 Daniel
+      James<p>
+        Distributed under the Boost Software License, Version 1.0. (See accompanying
+        file LICENSE_1_0.txt or copy at <a href="http://www.boost.org/LICENSE_1_0.txt" target="_top">http://www.boost.org/LICENSE_1_0.txt</a>)
+      </p>
+</div></td>
+</tr></table>
+<hr>
+<div class="spirit-nav">
+<a accesskey="p" href="combine.html"><img src="../../../doc/html/images/prev.png" alt="Prev"></a><a accesskey="u" href="../hash.html"><img src="../../../doc/html/images/up.png" alt="Up"></a><a accesskey="h" href="../index.html"><img src="../../../doc/html/images/home.png" alt="Home"></a><a accesskey="n" href="disable.html"><img src="../../../doc/html/images/next.png" alt="Next"></a>
+</div>
+</body>
+</html>

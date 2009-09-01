@@ -1,0 +1,1501 @@
+<!DOCTYPE HTML PUBLIC "-//W3C//DTD HTML 4.01 Transitional//EN">
+<html>
+<head>
+
+
+  
+  
+  <meta http-equiv="Content-Language" content="en-us">
+
+
+  
+  
+  <meta http-equiv="Content-Type" content="text/html; charset=UTF-8">
+
+
+
+  
+  
+  <title>The Boost Format library</title>
+</head>
+
+
+<body bgcolor="white" text="black">
+
+
+  
+<h1><img alt="boost.png (6897 bytes)" src="../../../boost.png" align="middle" height="86" width="277">The Boost Format library</h1>
+
+
+
+  
+<p><code><a href="../../../boost/format.hpp">&lt;boost/format.hpp&gt;</a></code> 中的format类提供了类'printf'的格式化，它以类型安全的方式实现允许输出用户自定义的类型。<span style="font-size: 10.5pt; font-family: 宋体;"></span><br>
+
+</p>
+
+
+
+  
+<ul>
+
+
+    <li><a href="#synopsis">大纲</a></li>
+
+
+
+    <li><a href="#how_it_works">它是如何工作的</a></li>
+
+  <li><a href="#examples">例子</a></li>
+
+
+
+    <li>
+      <a href="#syntax">语法</a>
+
+      
+    
+    <ul>
+
+
+        <li><a href="#printf_directives">printf 格式化规格语法</a></li>
+
+
+
+        <li><a href="#printf_differences">与&nbsp;printf 不兼容的地方</a></li>
+
+
+      
+    
+    </ul>
+
+
+    </li>
+
+
+
+    <li><a href="#manipulators">操纵子和内部类状态</a></li>
+
+
+
+    <li><a href="#user-defined">自定义类型</a></li>
+
+
+
+    <li><a href="#alternatives">其他选择</a></li>
+
+
+
+    <li><a href="#exceptions">异常</a></li>
+
+
+
+    <li><a href="#performance">表现</a></li>
+
+
+
+    <li><a href="#extract">类接口提取</a></li>
+
+
+
+    <li><a href="#rationale">基本原理</a></li>
+
+
+  
+</ul>
+
+<a name="synopsis" id="synopsis"></a>
+  
+<hr>
+
+  
+<h2>大纲</h2>
+
+
+
+  
+<p><span style="font-size: 12pt; font-family: 宋体; color: black;">一个<span lang="EN-US">format</span>对象从一个格式化字符串构造，它以重复的％操作符给出参数。接着每个参数转换成字符串，它们被按照格式合成一个字符串。</span></p>
+
+
+
+  
+<blockquote>
+    
+  
+  <pre>cout &lt;&lt; boost::format("writing %1%,  x=%2% : %3%-th try") % "toto" % 40.23 % 50; <br>     // prints "writing toto,  x=40.230 : 50-th try"<br></pre>
+
+
+  </blockquote>
+
+<a name="how_it_works" id="how_it_works"></a>
+  
+<hr>
+
+  
+<h2>它是如何工作的</h2>
+
+
+
+  
+<ol>
+
+
+    <li><span style="font-size: 12pt; font-family: 宋体; color: black;">当你调用<span lang="EN-US">format(s)</span>，这里<span lang="EN-US">s</span>是一个用于格式化的字符串。它从格式化字符串中分析并且查找里面的所有指示并且为下一步准备内部结构。</span></li>
+
+
+
+    <li><span style="font-size: 12pt; font-family: 宋体; color: black;">接着，要么马上，像</span>
+
+      
+    
+    <blockquote>
+        
+      
+      <pre>cout &lt;&lt; format("%2% %1%") % 36 % 77 )<br></pre>
+
+
+      </blockquote>
+
+    <span style="font-size: 12pt; font-family: 宋体;">或者迟些，像</span>
+
+      
+    
+    <blockquote>
+        
+      
+      <pre>format fmter("%2% %1%");<br>fmter % 36; fmter % 77;<br></pre>
+
+
+      </blockquote>
+
+    <span style="font-size: 12pt; font-family: 宋体; color: black;">你将变量传送给格式化器。</span><br>
+
+    <span style="font-size: 12pt; font-family: 宋体; color: black;">这些变量被存进一个内部<span lang="EN-US">stream</span>，它的状态按照格式化字符串中的格式化选项来设定（如果有的话）。<span lang="EN-US">Format</span>对象保留最后的字符串结果。</span>
+    </li>
+
+
+
+    <li><span style="font-size: 12pt; font-family: 宋体; color: black;">一旦是所有的参数都已经传送给格式化对象了，你可以把格式化对象存进一个<span lang="EN-US">stream</span>中，可以用<span lang="EN-US">str()</span>成员函数得到它的字符串值，或者使用<span lang="EN-US">boost</span>命名空间中的自由函数</span><i><span style="font-size: 12pt; font-family: &quot;Times New Roman&quot;;" lang="EN-US">str(const format&amp; )</span><span style="font-size: 12pt; font-family: 宋体;">。</span></i><span style="font-size: 12pt; font-family: 宋体; color: black;" lang="EN-US">format</span><span style="font-size: 12pt; font-family: 宋体; color: black;">对象中的结果字符串保持可取直到另一个参数被传递进来，这时它将重新初始化。</span>
+
+      
+    
+    <blockquote>
+        
+      
+      <pre>// fmter was previously created and fed arguments, it can print the result :<br>cout &lt;&lt; fmter ;  <br><br>// You can take the string result :<br>string s  = fmter.str();<br><br>// possibly several times :<br>s = fmter.str( );<br><br>// You can also do all steps at once :<br>cout &lt;&lt; boost::format("%2% %1%") % 36 % 77; <br><br>// using the str free function :<br>string s2 = str( format("%2% %1%") % 36 % 77 );<br><br>      </pre>
+
+
+      </blockquote>
+
+
+    </li>
+
+
+
+    <li><span style="font-size: 12pt; font-family: 宋体;">可选的，第</span><span style="font-size: 12pt; font-family: &quot;Times New Roman&quot;;" lang="EN-US">三步</span><span style="font-size: 12pt; font-family: 宋体;">之后，你可以重用</span><span style="font-size: 12pt; font-family: &quot;Times New Roman&quot;;" lang="EN-US">format</span><span style="font-size: 12pt; font-family: 宋体;">对象并且在第二步重新开始</span><span style="font-size: 12pt; font-family: &quot;Times New Roman&quot;;" lang="EN-US">:<i> fmter % 18 % 39;</i> </span><span style="font-size: 12pt; font-family: 宋体;">用格式化字符串格式化新的变量，保存有关第一步的复杂的处理。</span></li>
+
+
+  
+</ol>
+
+<span style="font-size: 12pt; font-family: 宋体;">总而言之，</span><span style="font-size: 12pt; font-family: &quot;Times New Roman&quot;;" lang="EN-US">format</span><span style="font-size: 12pt; font-family: 宋体;">类把一个格式化字符串转换成（最后使用类</span><span style="font-size: 12pt; font-family: &quot;Times New Roman&quot;;" lang="EN-US">prinf</span><span style="font-size: 12pt; font-family: 宋体;">指示）对一个内部</span><span style="font-size: 12pt; font-family: &quot;Times New Roman&quot;;" lang="EN-US">stream</span><span style="font-size: 12pt; font-family: 宋体;">的操作，最后以字符串格式返回，或者直接输出到一个输出流。</span> <a name="examples" id="examples"></a>
+  
+<hr>
+
+  
+<h2>例子</h2>
+
+
+
+  
+<blockquote>
+    
+  
+  <pre>using namespace std;<br>using boost::format;<br>using boost::io::group;<br></pre>
+
+
+  </blockquote>
+
+
+
+  
+<ul>
+
+
+    <li>重新排列的简单输出：
+
+      
+    
+    <blockquote>
+        
+      
+      <pre>cout &lt;&lt; format("%1% %2% %3% %2% %1% \n") % "11" % "22" % "333"; // 'simple' style.<br><br>      </pre>
+
+
+      </blockquote>
+
+输出 : "11 22 333 22 11 \n"
+    </li>
+
+
+
+    <li>更精确的格式化，带 Posix-printf 位置指示符：
+
+      
+    
+    <blockquote>
+        
+      
+      <pre>cout &lt;&lt; format("(x,y) = (%1$+5d,%2$+5d) \n") % -23 % 35;     // Posix-Printf style<br><br>      </pre>
+
+
+      </blockquote>
+
+输出 : "(x,y) = ( -23, +35) \n"
+    </li>
+
+
+
+    <li>经典的 printf 指示符，没有重排：
+
+      
+    
+    <blockquote>
+        
+      
+      <pre>cout &lt;&lt; format("writing %s,  x=%s : %d-th step \n") % "toto" % 40.23 % 50; <br><br>      </pre>
+
+
+      </blockquote>
+
+输出 : "writing toto, x=40.23 : 50-th step \n"
+    </li>
+
+
+
+    <li>处理同一事情的几种方法：
+
+      
+    
+    <blockquote>
+        
+      
+      <pre>cout &lt;&lt; format("(x,y) = (%+5d,%+5d) \n") % -23 % 35;<br>cout &lt;&lt; format("(x,y) = (%|+5|,%|+5|) \n") % -23 % 35;<br><br>cout &lt;&lt; format("(x,y) = (%1$+5d,%2$+5d) \n") % -23 % 35;<br>cout &lt;&lt; format("(x,y) = (%|1$+5|,%|2$+5|) \n") % -23 % 35;<br><br>      </pre>
+
+
+      </blockquote>
+
+输出均为 : "(x,y) = ( -23, +35) \n"
+    </li>
+
+
+
+    <li>使用操纵子修改格式化串：
+
+      
+    
+    <blockquote>
+        
+      
+      <pre>format fmter("_%1$+5d_ %1$d \n");<br><br>format fmter2("_%1%_ %1% \n");<br>fmter2.modify_item(1, group(showpos, setw(5)) ); <br><br>cout &lt;&lt; fmter % 101 ;<br>cout &lt;&lt; fmter2 % 101 ;<br><br>      </pre>
+
+
+      </blockquote>
+
+输出均为 : "_ +101_ 101 \n"
+    </li>
+
+
+
+    <li>使用带参数的操纵子：
+
+      
+    
+    <blockquote>
+        
+      
+      <pre>cout &lt;&lt; format("_%1%_ %1% \n") % group(showpos, setw(5), 101);<br><br>      </pre>
+
+
+      </blockquote>
+
+在每个 %1% 出现时都要应用操纵子, 输出 : "_ +101_ +101 \n"
+    </li>
+
+
+
+    <li>新增的格式化特性：'绝对表格', 用在循环中以确保输出的字段在每一行中的相同位置，即使其前面参数的宽度是可变的。
+
+      
+    
+    <blockquote>
+        
+      
+      <pre>for(unsigned int i=0; i &lt; names.size(); ++i)<br>    cout &lt;&lt; format("%1%, %2%, %|40t|%3%\n") % names[i] % surname[i] % tel[i];<br><br>      </pre>
+
+
+      </blockquote>
+
+对于一些 std::vector <i>names</i>, <i>surnames</i>, 和
+      <i>tel</i> (见 sample_new_features.cpp) 输出 :
+
+      
+    
+    <blockquote>
+        
+      
+      <pre>Marc-Fran&ccedil;ois Michel, Durand,           +33 (0) 123 456 789<br>Jean, de Lattre de Tassigny,            +33 (0) 987 654 321<br></pre>
+
+
+      </blockquote>
+
+
+    </li>
+
+
+  
+</ul>
+
+
+  
+<hr>
+
+  
+<h2>示例文件</h2>
+
+
+
+  
+<p><span style="font-size: 12pt; font-family: 宋体;">程序</span>&nbsp;<a href="../example/sample_formats.cpp">sample_formats.cpp</a> <span style="font-size: 12pt; font-family: 宋体;">示例了</span><span style="font-size: 12pt; font-family: &quot;Times New Roman&quot;;" lang="EN-US">format</span><span style="font-size: 12pt; font-family: 宋体;">的一些简单应用。</span><br>
+
+</p>
+
+
+
+  
+<p><a href="../example/sample_new_features.cpp">sample_new_features.cpp</a>
+  <span style="font-size: 12pt; font-family: 宋体;">举例说明新增的格式化特征，它们以</span><span style="font-size: 12pt; font-family: &quot;Times New Roman&quot;;" lang="EN-US">prinft</span><span style="font-size: 12pt; font-family: 宋体;">的语法格式，比如简单定位，中间对齐和制表符功能。</span><br>
+
+</p>
+
+
+
+  
+<p><a href="../example/sample_advanced.cpp">sample_advanced.cpp</a>
+  <span style="font-size: 12pt; font-family: 宋体;">举例说明</span><span style="font-size: 12pt; font-family: &quot;Times New Roman&quot;;" lang="EN-US">format</span><span style="font-size: 12pt; font-family: 宋体;">高级特性，比如重用，修改格式化对象等等。</span><br>
+
+</p>
+
+
+
+  
+<p>以及 <a href="../example/sample_userType.cpp">sample_userType.cpp</a>
+  <span style="font-size: 12pt; font-family: 宋体;">示例了对于用户自定义类型中</span><span style="font-size: 12pt; font-family: &quot;Times New Roman&quot;;" lang="EN-US">format</span><span style="font-size: 12pt; font-family: 宋体;">库的行为。</span></p>
+
+<a name="syntax" id="syntax"></a>
+  
+<hr>
+
+  
+<h2>语法</h2>
+
+
+
+  
+<p><b>boost::format(</b> format-string <b>) %</b> arg1 <b>%</b> arg2
+  <b>%</b> ... <b>%</b> argN</p>
+
+
+
+  
+<p><span style="font-size: 12pt; font-family: 宋体;">格式化字符串包含的字符文本</span><span style="font-size: 12pt; font-family: &quot;Times New Roman&quot;;" lang="EN-US">,</span><span style="font-size: 12pt; font-family: 宋体;">在它当中特殊的指示器将被字符串所替换</span><span style="font-size: 12pt; font-family: &quot;Times New Roman&quot;;" lang="EN-US">,</span><span style="font-size: 12pt; font-family: 宋体;">这些字符串由所给的参数产生。<br>
+
+从</span><span style="font-size: 12pt; font-family: &quot;Times New Roman&quot;;" lang="EN-US">c</span><span style="font-size: 12pt; font-family: 宋体;">，</span><span style="font-size: 12pt; font-family: &quot;Times New Roman&quot;;" lang="EN-US">c++</span><span style="font-size: 12pt; font-family: 宋体;">世界继承来的语法其中之一是使用</span><span style="font-size: 12pt; font-family: &quot;Times New Roman&quot;;" lang="EN-US">printf</span><span style="font-size: 12pt; font-family: 宋体;">，这样</span><span style="font-size: 12pt; font-family: &quot;Times New Roman&quot;;" lang="EN-US">format</span><span style="font-size: 12pt; font-family: 宋体;">能直接使用</span><span style="font-size: 12pt; font-family: &quot;Times New Roman&quot;;" lang="EN-US">printf</span><span style="font-size: 12pt; font-family: 宋体;">的格式化字符串，并且产生一样的结果(几乎包含所有方面，细节请查看</span> <a href="#printf_differences">Incompatibilities with printf</a>)。<br>
+
+<span style="font-size: 12pt; font-family: 宋体;">这些核心语法已被扩展，来允许新特性，但是同时适合</span><span style="font-size: 12pt; font-family: &quot;Times New Roman&quot;;" lang="EN-US">c++</span><span style="font-size: 12pt; font-family: 宋体;">流的上下文。所以，</span><span style="font-size: 12pt; font-family: &quot;Times New Roman&quot;;" lang="EN-US">format</span><span style="font-size: 12pt; font-family: 宋体;">接受在格式化字符串中的一系列的指示：</span></p>
+
+
+
+  
+<ul>
+
+
+    <li><span style="font-size: 12pt; font-family: 宋体;">继承自</span><span style="font-size: 12pt; font-family: &quot;Times New Roman&quot;;" lang="EN-US">printf</span><span style="font-size: 12pt; font-family: 宋体;">的格式化字符串</span><span style="font-size: 12pt; font-family: &quot;Times New Roman&quot;;" lang="EN-US">:<b>%</b><i>spec</i></span><span style="font-size: 12pt; font-family: 宋体;">这里</span><i><span style="font-size: 12pt; font-family: &quot;Times New Roman&quot;;" lang="EN-US">spec</span></i><span style="font-size: 12pt; font-family: 宋体;">是个</span> <a href="format.html#printf_directives">printf <span style="font-size: 12pt; font-family: 宋体;">格式规则</span></a><span style="font-size: 12pt; font-family: 宋体;">，</span><span style="font-size: 12pt; font-family: &quot;Times New Roman&quot;;" lang="EN-US"> spec</span><span style="font-size: 12pt; font-family: 宋体;">传递格式选项，如宽度，对齐，用来格式化数字的基数。它仅仅在内部</span><span style="font-size: 12pt; font-family: &quot;Times New Roman&quot;;" lang="EN-US">stream</span><span style="font-size: 12pt; font-family: 宋体;">上设置合适的标志，和</span><span style="font-size: 12pt; font-family: &quot;Times New Roman&quot;;" lang="EN-US">/</span><span style="font-size: 12pt; font-family: 宋体;">或格式化参数，但是不要求合适的参数为一类特殊的类型。</span><br>
+
+    <span style="font-size: 12pt; font-family: 宋体;">比如：</span><span style="font-size: 12pt; font-family: &quot;Times New Roman&quot;;" lang="EN-US">2$x</span><span style="font-size: 12pt; font-family: 宋体;">这样的规格，对于</span><span style="font-size: 12pt; font-family: &quot;Times New Roman&quot;;" lang="EN-US">printf</span><span style="font-size: 12pt; font-family: 宋体;">意味着&ldquo;打印参数数字</span><span style="font-size: 12pt; font-family: &quot;Times New Roman&quot;;" lang="EN-US">2</span><span style="font-size: 12pt; font-family: 宋体;">，它是个</span><span style="font-size: 12pt; font-family: &quot;Times New Roman&quot;;" lang="EN-US">16</span><span style="font-size: 12pt; font-family: 宋体;">进制的整数&rdquo;，对于</span><span style="font-size: 12pt; font-family: &quot;Times New Roman&quot;;" lang="EN-US">format</span><span style="font-size: 12pt; font-family: 宋体;">来说仅仅意味着&ldquo;打印基于</span><span style="font-size: 12pt; font-family: &quot;Times New Roman&quot;;" lang="EN-US">16</span><span style="font-size: 12pt; font-family: 宋体;">进制的第二个参数&rdquo;。</span></li>
+
+
+
+    <li><span style="font-size: 12pt; font-family: 宋体;"></span><span style="font-size: 12pt; font-family: 宋体;"></span><b>%|</b><i>spec</i><b>|</b> <span style="font-size: 12pt; font-family: 宋体;">这里</span><span style="font-size: 12pt; font-family: &quot;Times New Roman&quot;;" lang="EN-US">spec</span><span style="font-size: 12pt; font-family: 宋体;">是一个打印格式规则。</span><br>
+
+    <span style="font-size: 12pt; font-family: 宋体;">框架已经介绍了，为了增加格式化字符串的可读性，但是重要的是，使在</span><span style="font-size: 12pt; font-family: &quot;Times New Roman&quot;;" lang="EN-US">spec</span><span style="font-size: 12pt; font-family: 宋体;">中的类型转换字符任意可选。这些信息对于</span><span style="font-size: 12pt; font-family: &quot;Times New Roman&quot;;" lang="EN-US">c++</span><span style="font-size: 12pt; font-family: 宋体;">变量来说是不够的，但是为了直接支持</span><span style="font-size: 12pt; font-family: &quot;Times New Roman&quot;;" lang="EN-US">printf</span><span style="font-size: 12pt; font-family: 宋体;">语法，有必要总是给出一个类型转换字符，仅仅是因为这个字符用来判断格式化字符串的末尾是至关重要的。</span><br>
+
+    <span style="font-size: 12pt; font-family: 宋体;">比如：</span><span style="font-size: 12pt; font-family: &quot;Times New Roman&quot;;" lang="EN-US">"%|-5|"</span><span style="font-size: 12pt; font-family: 宋体;">将下一个变量设置为宽度为</span><span style="font-size: 12pt; font-family: &quot;Times New Roman&quot;;" lang="EN-US">5</span><span style="font-size: 12pt; font-family: 宋体;">，左对齐，就像</span><span style="font-size: 12pt; font-family: &quot;Times New Roman&quot;;" lang="EN-US">"%-<st1:chmetcnv tcsc="0" numbertype="1" negative="False" hasspace="False" sourcevalue="5" unitname="g" w:st="on">5g</st1:chmetcnv>",
+"%-<st1:chmetcnv tcsc="0" numbertype="1" negative="False" hasspace="False" sourcevalue="5" unitname="F" w:st="on">5f</st1:chmetcnv>",
+"%-5s" ..</span><span style="font-size: 12pt; font-family: 宋体;">这样的</span><span style="font-size: 12pt; font-family: &quot;Times New Roman&quot;;" lang="EN-US">printf</span><span style="font-size: 12pt; font-family: 宋体;">格式方式。</span></li>
+
+
+
+    <li><b>%</b><i>N</i><b>%</b><br>
+
+    <span style="font-size: 12pt; font-family: 宋体;">这个简单的位置标记需要第</span><span style="font-size: 12pt; font-family: &quot;Times New Roman&quot;;" lang="EN-US">N</span><span style="font-size: 12pt; font-family: 宋体;">个参数的格式化―――而不需要任何格式化选项。</span><br>
+
+    <span style="font-size: 12pt; font-family: 宋体;">（它不过是</span><span style="font-size: 12pt; font-family: &quot;Times New Roman&quot;;" lang="EN-US">printf</span><span style="font-size: 12pt; font-family: 宋体;">的位置标志的一个简单表示（就像&ldquo;</span><span style="font-size: 12pt; font-family: &quot;Times New Roman&quot;;" lang="EN-US">%N$s</span><span style="font-size: 12pt; font-family: 宋体;">&rdquo;），但是一个主要的好处是它有更强的可读性，而且不用一个&ldquo;类型转换&rdquo;的字符）。</span></li>
+
+
+  
+</ul>
+
+<span style="font-size: 12pt; font-family: 宋体;">在标准</span><span style="font-size: 12pt; font-family: &quot;Times New Roman&quot;;" lang="EN-US">printf</span><span style="font-size: 12pt; font-family: 宋体;">格式化规格之上，新的特性被增加进来了，比如居中对齐。细节参看</span> <a href="#new_directives">new
+  format specification</a>&nbsp;. <a name="printf_directives" id="printf_directives"></a>
+
+  
+<h3>printf&nbsp;<span style="font-size: 12pt; font-family: 宋体;">格式化规则</span></h3>
+
+
+
+  
+<p><span style="font-size: 12pt; font-family: &quot;Times New Roman&quot;;" lang="EN-US">Boost.format</span><span style="font-size: 12pt; font-family: 宋体;">所支持的格式化规则严格按照</span><span style="font-size: 12pt; font-family: &quot;Times New Roman&quot;;" lang="EN-US">Unix98</span><span style="font-size: 12pt; font-family: 宋体;">的文档</span><span style="font-size: 12pt; font-family: &quot;Times New Roman&quot;;" lang="EN-US"><a href="http://www.opengroup.org/onlinepubs/7908799/xsh/fprintf.html"><span style="color: windowtext; text-decoration: none;"> </span></a></span><a href="http://www.opengroup.org/onlinepubs/7908799/xsh/fprintf.html">Open-group
+  printf</a><span style="font-size: 12pt; font-family: 宋体;">，而非标准</span><span style="font-size: 12pt; font-family: &quot;Times New Roman&quot;;" lang="EN-US">c</span><span style="font-size: 12pt; font-family: 宋体;">的</span><span style="font-size: 12pt; font-family: &quot;Times New Roman&quot;;" lang="EN-US">printf</span><span style="font-size: 12pt; font-family: 宋体;">，它不支持有位置信息的参数。（普通的标志在前两者中有同样的含义，这样都不会任何人带来麻烦）。</span><br>
+
+
+  <span style="font-size: 12pt; font-family: 宋体;">注意：在同一个格式化字符串中同时使用有位置信息（</span><span style="font-size: 12pt; font-family: &quot;Times New Roman&quot;;" lang="EN-US">e.g. %3$+d</span><span style="font-size: 12pt; font-family: 宋体;">）的格式化规则和没有位置信息（</span><span style="font-size: 12pt; font-family: &quot;Times New Roman&quot;;" lang="EN-US">e.g. %+d</span><span style="font-size: 12pt; font-family: 宋体;">）的格式化规则是会出错的。</span><i></i><br>
+
+<span style="font-size: 12pt; font-family: 宋体;">在</span><span style="font-size: 12pt; font-family: &quot;Times New Roman&quot;;" lang="EN-US">Open-group</span><span style="font-size: 12pt; font-family: 宋体;">规则中，使用同一参数多次</span><span style="font-size: 12pt; font-family: &quot;Times New Roman&quot;;" lang="EN-US">(e.g. "%1$d %1$d")</span><span style="font-size: 12pt; font-family: 宋体;">会导致未定义的行为。</span><span style="font-size: 12pt; font-family: &quot;Times New Roman&quot;;" lang="EN-US">Boost.format</span><span style="font-size: 12pt; font-family: 宋体;">在这些情况中允许多次使用同一参数。唯一的约束是它期望准确的参数个数，</span><span style="font-size: 12pt; font-family: &quot;Times New Roman&quot;;" lang="EN-US">P</span><span style="font-size: 12pt; font-family: 宋体;">是格式化用到的最大参数个数（</span><span style="font-size: 12pt; font-family: &quot;Times New Roman&quot;;" lang="EN-US">e.g., for "%1$d %10$d", P = 10</span><span style="font-size: 12pt; font-family: 宋体;">）。<br>
+
+如果提供多余或者少于</span><span style="font-size: 12pt; font-family: &quot;Times New Roman&quot;;" lang="EN-US">P</span><span style="font-size: 12pt; font-family: 宋体;">数量的参数会引起异常（除非它被另外设定，查看</span> <a href="format.html#exceptions">exceptions异常</a><span style="font-size: 12pt; font-family: &quot;Times New Roman&quot;;" lang="EN-US"> </span><span style="font-size: 12pt; font-family: 宋体;">一节）</span></p>
+
+
+
+  
+<p><br>
+
+
+  <br>
+
+<span style="font-size: 12pt; font-family: 宋体;">一个规范的</span><span style="font-size: 12pt; font-family: &quot;Times New Roman&quot;;" lang="EN-US">spec</span><span style="font-size: 12pt; font-family: 宋体;">有这样的格式</span>: [ <i>N</i><b>$</b> ] [
+  <i>flags</i> ] [ <i>width</i> ] [ <b>.</b> <i>precision</i> ]
+  <i>type-char</i><br>
+
+
+  <br>
+
+<span style="font-size: 12pt; font-family: 宋体;">方括号中的参数是可选的。下面将一一介绍每个参数域：</span></p>
+
+
+
+  
+<ul>
+
+
+    <li><span style="font-size: 12pt; font-family: &quot;Times New Roman&quot;;" lang="EN-US">N $</span><span style="font-size: 12pt; font-family: 宋体;">（可选域）指定了应用于第</span><span style="font-size: 12pt; font-family: &quot;Times New Roman&quot;;" lang="EN-US">N</span><span style="font-size: 12pt; font-family: 宋体;">个参数的格式规则。（它称之为一个位置格式规则）如果这不满足，参数将被一一提取（并且将会在后面提供参数数时产生一个错误）。</span></li>
+
+
+
+    <li>
+      <span style="font-size: 12pt; font-family: 宋体;">标志为下面序列中的任一：</span>
+
+      
+    
+    <blockquote>
+        
+      
+      <table summary="" border="1" cellpadding="5">
+
+
+          <tbody>
+
+          <tr>
+
+
+            <td><b>标志</b></td>
+
+
+
+            <td><b>含义</b></td>
+
+
+
+            <td><b><span style="font-size: 12pt; font-family: 宋体; color: black;">在内部<span lang="EN-US">stream</span>的作用</span></b></td>
+
+
+          </tr>
+
+
+
+          <tr>
+
+
+            <td><b>'-'</b></td>
+
+
+
+            <td><span style="font-size: 12pt; font-family: 宋体; color: black;">左对齐</span></td>
+
+
+
+            <td><span style="font-size: 12pt; font-family: 宋体; color: black;" lang="EN-US">N/A (</span><span style="font-size: 12pt; font-family: 宋体; color: black;">作用于后面的<span lang="EN-US">string)</span></span></td>
+
+
+          </tr>
+
+
+
+          <tr>
+
+
+            <td><b>'='</b></td>
+
+
+
+            <td><span style="font-size: 12pt; font-family: 宋体; color: black;">居中对齐</span></td>
+
+
+
+            <td><span style="font-size: 12pt; font-family: 宋体; color: black;" lang="EN-US">N/A (</span><span style="font-size: 12pt; font-family: 宋体; color: black;">作用于后面的<span lang="EN-US">string)
+            <br>
+
+
+            <i>- </i></span><i>注意<span lang="EN-US"> : </span>新增的特性，<span lang="EN-US">printf</span>中是没有的<span lang="EN-US"> -</span></i><span lang="EN-US">&nbsp;</span></span><i></i></td>
+
+
+          </tr>
+
+
+
+          <tr>
+
+
+            <td><b>'_'</b></td>
+
+
+
+            <td><span style="font-size: 12pt; font-family: 宋体; color: black;">内部对齐</span></td>
+
+
+
+            <td><span style="font-size: 12pt; font-family: 宋体; color: black;">设置内部对齐<span lang="EN-US"><br>
+
+
+            <i>- </i></span><i>注意<span lang="EN-US">:</span>新增特性，<span lang="EN-US">printf</span>中没有<span lang="EN-US"> -</span></i><span lang="EN-US"> </span></span><i></i></td>
+
+
+          </tr>
+
+
+
+          <tr>
+
+
+            <td><b>'+'</b></td>
+
+
+
+            <td><span style="font-size: 12pt; font-family: 宋体; color: black;">显示符号无论是否正数</span></td>
+
+
+
+            <td><span style="font-size: 12pt; font-family: 宋体; color: black;">设置<i><span lang="EN-US">showpos</span></i></span><i></i></td>
+
+
+          </tr>
+
+
+
+          <tr>
+
+
+            <td><b>'#'</b></td>
+
+
+
+            <td><span style="font-size: 12pt; font-family: 宋体; color: black;">显示数字的基，和小数点</span></td>
+
+
+
+            <td><span style="font-size: 12pt; font-family: 宋体; color: black;">设置<i><span lang="EN-US">showbase</span></i><span lang="EN-US"> </span>和<i><span lang="EN-US">showpoint</span></i></span><i></i></td>
+
+
+          </tr>
+
+
+
+          <tr>
+
+
+            <td><b>'0'</b></td>
+
+
+
+            <td><span style="font-size: 12pt; font-family: 宋体; color: black;">后加<span lang="EN-US">0 (</span>插在符号或者基指示器后<span lang="EN-US">)</span></span></td>
+
+
+
+            <td><span style="font-size: 12pt; font-family: 宋体; color: black;">如非左对齐<span lang="EN-US">, </span>调用<i><span lang="EN-US">setfill('0')</span></i><span lang="EN-US"> </span>并且设置<i><span lang="EN-US">internal</span></i><span lang="EN-US"> <br>
+
+
+            </span>当<span lang="EN-US">stream</span>转换成</span>&nbsp;<a href="#user-defined">user-defined output</a><span style="font-size: 12pt; font-family: 宋体; color: black;"> 后执行额外的操作</span>.</td>
+
+
+          </tr>
+
+
+
+          <tr>
+
+
+            <td><b>' '</b></td>
+
+
+
+            <td><span style="font-size: 12pt; font-family: 宋体; color: black;">如果字符串不是以<span lang="EN-US">+,-</span>开头，在已转换的字符串前插入空格</span></td>
+
+
+
+            <td><span style="font-size: 12pt; font-family: 宋体; color: black;" lang="EN-US">N/A (</span><span style="font-size: 12pt; font-family: 宋体; color: black;">作用于后面的<span lang="EN-US">string)
+            <br>
+
+
+            </span>不同于<span lang="EN-US">printf</span>的行为<span lang="EN-US">:</span>它不受内部对齐的影响</span></td>
+
+
+          </tr>
+
+
+        
+        
+        </tbody>
+      
+      </table>
+
+
+      </blockquote>
+
+
+    </li>
+
+
+
+    <li><span style="font-size: 12pt; font-family: &quot;Times New Roman&quot;;" lang="EN-US">width</span><span style="font-size: 12pt; font-family: 宋体;">指定转换而来的字符串的最小宽度。如果有必要，字符串将被对齐填补并且通过用操纵子填充设置在</span><span style="font-size: 12pt; font-family: &quot;Times New Roman&quot;;" lang="EN-US">stream</span><span style="font-size: 12pt; font-family: 宋体;">上字符或者被格式化字符串指定的字符（比如，标志&lsquo;</span><span style="font-size: 12pt; font-family: &quot;Times New Roman&quot;;" lang="EN-US">0&rsquo;,</span><span style="font-size: 12pt; font-family: 宋体;">&lsquo;</span><span style="font-size: 12pt; font-family: &quot;Times New Roman&quot;;" lang="EN-US">-</span><span style="font-size: 12pt; font-family: 宋体;">&rsquo;</span><span style="font-size: 12pt; font-family: &quot;Times New Roman&quot;;" lang="EN-US">,..</span><span style="font-size: 12pt; font-family: 宋体;">）</span><br>
+
+    <span style="font-size: 12pt; font-family: 宋体;">注意长度不仅设置在转换</span><span style="font-size: 12pt; font-family: &quot;Times New Roman&quot;;" lang="EN-US">stream</span><span style="font-size: 12pt; font-family: 宋体;">上。为了支持</span> <a href="format.html#user-defined">user-defined types</a> <span style="font-size: 12pt; font-family: 宋体;">的输出（可能对多个成员多次调用</span><span style="font-size: 12pt; font-family: &quot;Times New Roman&quot;;" lang="EN-US">&lt;&lt;</span><span style="font-size: 12pt; font-family: 宋体;">操作），宽度在</span><span style="font-size: 12pt; font-family: &quot;Times New Roman&quot;;" lang="EN-US">stream</span><span style="font-size: 12pt; font-family: 宋体;">将整个参数对象转换之后被传递进去，它是在</span><span style="font-size: 12pt; font-family: &quot;Times New Roman&quot;;" lang="EN-US">format</span><span style="font-size: 12pt; font-family: 宋体;">类中的代码实现的。</span></li>
+
+
+
+    <li>
+      <span style="font-size: 12pt; font-family: &quot;Times New Roman&quot;;" lang="EN-US">precision</span><span style="font-size: 12pt; font-family: 宋体;">（通过加小数点），设置</span><span style="font-size: 12pt; font-family: &quot;Times New Roman&quot;;" lang="EN-US">stream</span><span style="font-size: 12pt; font-family: 宋体;">的精度。</span><i></i>
+
+      
+    
+    <ul>
+
+
+        <li><span style="font-size: 12pt; font-family: 宋体;">当输出一个浮点类型数字时，它设置数字的最大数字个数</span>
+
+          
+        
+        <ul>
+
+
+            <li><span style="font-size: 12pt; font-family: 宋体;">当它是确定的或者科学计数模式时在小数点之后</span></li>
+
+
+
+            <li><span style="font-size: 12pt; font-family: 宋体;">当它是默认模式时为总数（&lsquo;普通模式</span><span style="font-size: 12pt; font-family: &quot;Times New Roman&quot;;" lang="EN-US">&rsquo;,</span><span style="font-size: 12pt; font-family: 宋体;">像</span><span style="font-size: 12pt; font-family: &quot;Times New Roman&quot;;" lang="EN-US">%g</span><span style="font-size: 12pt; font-family: 宋体;">）</span></li>
+
+
+          
+        
+        </ul>
+
+
+        </li>
+
+
+
+        <li><span style="font-size: 12pt; font-family: 宋体;">当使用字符类型</span><span style="font-size: 12pt; font-family: &quot;Times New Roman&quot;;" lang="EN-US">s</span><span style="font-size: 12pt; font-family: 宋体;">或者</span><span style="font-size: 12pt; font-family: &quot;Times New Roman&quot;;" lang="EN-US">S</span><span style="font-size: 12pt; font-family: 宋体;">时，它包含了另外的含义：转换字符串被压缩成第一类字符的精度。（注意在压缩之后才将后面的填充到</span><span style="font-size: 12pt; font-family: &quot;Times New Roman&quot;;" lang="EN-US">width</span><span style="font-size: 12pt; font-family: 宋体;">宽度）</span></li>
+
+
+      
+    
+    </ul>
+
+
+    </li>
+
+
+
+    <li>
+      <span style="font-size: 12pt; font-family: 宋体;">类型字符。它没有强迫相关的参数来为一个限制的类型集合，只是为相关的类型规则设置标志。</span>
+
+      
+    
+    <blockquote>
+        
+      
+      <table summary="" border="1" cellpadding="5">
+
+
+          <tbody>
+
+          <tr>
+
+
+            <td><span style="font-weight: bold;">字符类型</span></td>
+
+
+
+            <td><b>含义</b></td>
+
+
+
+            <td><b><span style="font-size: 12pt; font-family: 宋体; color: black;">对<span lang="EN-US">stream</span>的作用</span></b></td>
+
+
+          </tr>
+
+
+
+          <tr>
+
+
+            <td><b>p or x</b></td>
+
+
+
+            <td><span style="font-size: 12pt; font-family: 宋体; color: black;">十六进制输出</span></td>
+
+
+
+            <td>设置 <i>hex</i></td>
+
+
+          </tr>
+
+
+
+          <tr>
+
+
+            <td><b>o</b></td>
+
+
+
+            <td><span style="font-size: 12pt; font-family: 宋体; color: black;">八进制输出</span></td>
+
+
+
+            <td>设置 <i>oct</i></td>
+
+
+          </tr>
+
+
+
+          <tr>
+
+
+            <td><b>e</b></td>
+
+
+
+            <td><span style="font-size: 12pt; font-family: 宋体; color: black;">科学计数浮点格式</span></td>
+
+
+
+            <td>设置浮点域位为 <i>scientific</i></td>
+
+
+          </tr>
+
+
+
+          <tr>
+
+
+            <td><b>f</b></td>
+
+
+
+            <td><span style="font-family: 宋体;">固定</span><span style="font-size: 12pt; font-family: 宋体; color: black;">浮点格式</span></td>
+
+
+
+            <td>设置浮点域位为&nbsp;<i>fixed</i></td>
+
+
+          </tr>
+
+
+
+          <tr>
+
+
+            <td><b>g</b></td>
+
+
+
+            <td><span style="font-size: 12pt; font-family: 宋体; color: black;">默认浮点格式</span></td>
+
+
+
+            <td><span style="font-size: 12pt; font-family: 宋体; color: black;">所有浮点域位归位</span></td>
+
+
+          </tr>
+
+
+
+          <tr>
+
+
+            <td><b>X, E</b> or <b>G</b></td>
+
+
+
+            <td><span style="font-size: 12pt; font-family: 宋体; color: black;">跟小写一样，但是使用大写字符作为输出（</span><span style="font-size: 12pt; font-family: &quot;Times New Roman&quot;;" lang="EN-US">exponents, hex digits, ..</span><span style="font-size: 12pt; font-family: 宋体; color: black;">）</span></td>
+
+
+
+            <td><span style="font-size: 12pt; font-family: 宋体; color: black;">除了大写，跟小写&lsquo;<span lang="EN-US">x&rsquo;,</span>&lsquo;<span lang="EN-US">e&rsquo;,</span>&lsquo;<span lang="EN-US">g&rsquo;</span>一样</span><i></i></td>
+
+
+          </tr>
+
+
+
+          <tr>
+
+
+            <td><b>d, i</b> or <b>u</b></td>
+
+
+
+            <td><b>decimal</b>&nbsp;<span style="font-size: 12pt; font-family: 宋体; color: black;">类型输出</span></td>
+
+
+
+            <td><span style="font-size: 12pt; font-family: 宋体; color: black;">设置进制位为</span>&nbsp;<i>dec</i></td>
+
+
+          </tr>
+
+
+
+          <tr>
+
+
+            <td><b>s</b> or <b>S</b></td>
+
+
+
+            <td><span style="font-size: 12pt; font-family: 宋体; color: black;">字符串输出</span></td>
+
+
+
+            <td><span style="font-size: 12pt; font-family: 宋体; color: black;">精度格式归位，它的值传给内部域并作用后面的</span><span style="font-size: 12pt; font-family: &quot;Times New Roman&quot;;" lang="EN-US">truncation</span><span style="font-size: 12pt; font-family: 宋体;">（查看前面的</span><span style="font-size: 12pt; font-family: &quot;Times New Roman&quot;;" lang="EN-US">precision</span><span style="font-size: 12pt; font-family: 宋体;">注释）</span></td>
+
+
+          </tr>
+
+
+
+          <tr>
+
+
+            <td><b>c</b> or <b>C</b></td>
+
+
+
+            <td><span style="font-size: 12pt; font-family: 宋体; color: black;">单字符输出</span></td>
+
+
+
+            <td><span style="font-size: 12pt; font-family: 宋体; color: black;">只使用转换字符串的第一个字符</span></td>
+
+
+          </tr>
+
+
+
+          <tr>
+
+
+            <td><b>%</b></td>
+
+
+
+            <td><span style="font-size: 12pt; font-family: 宋体; color: black;">输出字符</span>&nbsp;<i>%</i></td>
+
+
+
+            <td>N/A</td>
+
+
+          </tr>
+
+
+        
+        
+        </tbody>
+      
+      </table>
+
+
+      </blockquote>
+
+
+
+      
+    
+    <p><span style="font-size: 12pt; font-family: 宋体;">注意&lsquo;</span><span style="font-size: 12pt; font-family: &quot;Times New Roman&quot;;" lang="EN-US">n&rsquo;</span><span style="font-size: 12pt; font-family: 宋体;">类型规则被忽略（相关的参数也一样），因为它不符合这里的内容。同样的，</span><span style="font-size: 12pt; font-family: &quot;Times New Roman&quot;;" lang="EN-US">printf</span><span style="font-size: 12pt; font-family: 宋体;">的&lsquo;</span><span style="font-size: 12pt; font-family: &quot;Times New Roman&quot;;" lang="EN-US">l&rsquo;,</span><span style="font-size: 12pt; font-family: 宋体;">&lsquo;</span><span style="font-size: 12pt; font-family: &quot;Times New Roman&quot;;" lang="EN-US">L&rsquo;</span><span style="font-size: 12pt; font-family: 宋体;">或&lsquo;</span><span style="font-size: 12pt; font-family: &quot;Times New Roman&quot;;" lang="EN-US">h&rsquo;</span><span style="font-size: 12pt; font-family: 宋体;">（来表示宽度、</span><span style="font-size: 12pt; font-family: &quot;Times New Roman&quot;;" lang="EN-US">long</span><span style="font-size: 12pt; font-family: 宋体;">或</span><span style="font-size: 12pt; font-family: &quot;Times New Roman&quot;;" lang="EN-US">short</span><span style="font-size: 12pt; font-family: 宋体;">类型）支持修改符（对于内部流没有影响）。</span></p>
+
+
+    </li>
+
+
+  
+</ul>
+
+<a name="new_directives" id="new_directives"></a>
+
+  
+<h3><span style="font-size: 12pt; font-family: 宋体;">新的格式规则</span></h3>
+
+
+
+  
+<ul>
+
+
+    <li><span style="font-size: 12pt; font-family: 宋体;">就像标志表所列的那样，新加了中间对齐的标志</span><span style="font-size: 12pt; font-family: &quot;Times New Roman&quot;;" lang="EN-US">(</span><span style="font-size: 12pt; font-family: 宋体;">&lsquo;</span><span style="font-size: 12pt; font-family: &quot;Times New Roman&quot;;" lang="EN-US"> = '</span><span style="font-size: 12pt; font-family: 宋体;">和&lsquo;</span><span style="font-size: 12pt; font-family: &quot;Times New Roman&quot;;" lang="EN-US">_')</span><span style="font-size: 12pt; font-family: 宋体;">。</span></li>
+
+
+
+    <li><i><b>%{</b>n</i><b>t}</b> , <span style="font-size: 12pt; font-family: 宋体;">就像标志表所列的那样，新加了中间对齐的标志</span><span style="font-size: 12pt; font-family: &quot;Times New Roman&quot;;" lang="EN-US">(</span><span style="font-size: 12pt; font-family: 宋体;">&lsquo;</span><span style="font-size: 12pt; font-family: &quot;Times New Roman&quot;;" lang="EN-US"> = '</span><span style="font-size: 12pt; font-family: 宋体;">和&lsquo;</span><span style="font-size: 12pt; font-family: &quot;Times New Roman&quot;;" lang="EN-US">_')</span><span style="font-size: 12pt; font-family: 宋体;">。</span>(见 <a href="#examples">examples例子</a> )</li>
+
+
+
+    <li><b>%{</b><i>n</i><b>T</b><i>X</i><b>}</b> <span style="font-size: 12pt; font-family: 宋体;">以同样的方式插入一个制表符，但是使用</span><span style="font-size: 12pt; font-family: &quot;Times New Roman&quot;;" lang="EN-US">X</span><span style="font-size: 12pt; font-family: 宋体;">作为填充字符以取代当前流的&lsquo;</span><span style="font-size: 12pt; font-family: &quot;Times New Roman&quot;;" lang="EN-US">fill</span><span style="font-size: 12pt; font-family: 宋体;">&rsquo;域所指示的字符（默认为空格）。</span></li>
+
+
+  
+</ul>
+
+<a name="printf_differences" id="printf_differences"></a>
+
+  
+<h2>与 printf 不兼容的地方</h2>
+
+<span style="font-size: 12pt; font-family: 宋体;">假设你有变量</span><span style="font-size: 12pt; font-family: &quot;Times New Roman&quot;;" lang="EN-US">x1,x2(c</span><span style="font-size: 12pt; font-family: 宋体;">的</span><span style="font-size: 12pt; font-family: &quot;Times New Roman&quot;;" lang="EN-US">printf</span><span style="font-size: 12pt; font-family: 宋体;">所支持的内建类型</span><span style="font-size: 12pt; font-family: &quot;Times New Roman&quot;;" lang="EN-US">),</span><span style="font-size: 12pt; font-family: 宋体;">一个格式化字符串</span><span style="font-size: 12pt; font-family: &quot;Times New Roman&quot;;" lang="EN-US">s</span><span style="font-size: 12pt; font-family: 宋体;">取代下面的</span><span style="font-size: 12pt; font-family: &quot;Times New Roman&quot;;" lang="EN-US">prinft</span><span style="font-size: 12pt; font-family: 宋体;">函数用法</span>:
+
+  
+<blockquote>
+    
+  
+  <pre>printf(s, x1, x2);<br></pre>
+
+
+  </blockquote>
+
+<br>
+
+<span style="font-size: 12pt; font-family: 宋体;">在几乎所有情况下，结果将和下面的命令一样：</span>
+
+  
+<blockquote>
+    
+  
+  <pre>cout &lt;&lt; format(s) % x1 % x2;<br></pre>
+
+
+  </blockquote>
+
+
+
+  
+<p><span style="font-size: 12pt; font-family: 宋体;">但是因为有些</span><span style="font-size: 12pt; font-family: &quot;Times New Roman&quot;;" lang="EN-US">printf</span><span style="font-size: 12pt; font-family: 宋体;">格式化规则没有对应到</span><span style="font-size: 12pt; font-family: &quot;Times New Roman&quot;;" lang="EN-US">stream</span><span style="font-size: 12pt; font-family: 宋体;">格式化选项中，</span><span style="font-size: 12pt; font-family: &quot;Times New Roman&quot;;" lang="EN-US">Boost.format</span><span style="font-size: 12pt; font-family: 宋体;">与</span><span style="font-size: 12pt; font-family: &quot;Times New Roman&quot;;" lang="EN-US">printf</span><span style="font-size: 12pt; font-family: 宋体;">比有一些明显的不足之处。无论如何，</span><span style="font-size: 12pt; font-family: &quot;Times New Roman&quot;;" lang="EN-US">format</span><span style="font-size: 12pt; font-family: 宋体;">类应该悄悄的忽略所有不支持的选项，这样</span><span style="font-size: 12pt; font-family: &quot;Times New Roman&quot;;" lang="EN-US">printf</span><span style="font-size: 12pt; font-family: 宋体;">格式化串总是能被</span><span style="font-size: 12pt; font-family: &quot;Times New Roman&quot;;" lang="EN-US">format</span><span style="font-size: 12pt; font-family: 宋体;">接受并输出几乎和</span><span style="font-size: 12pt; font-family: &quot;Times New Roman&quot;;" lang="EN-US">printf</span><span style="font-size: 12pt; font-family: 宋体;">一样的结果。</span></p>
+
+<br>
+
+<span style="font-size: 12pt; font-family: 宋体;">下面完整地列出了它们的不同之处：</span>
+
+  
+<ul>
+
+
+    <li><b>'0'</b> 和 <b>' '</b>&nbsp;<span style="font-size: 12pt; font-family: 宋体;">选项：对于数字转换</span><span style="font-size: 12pt; font-family: &quot;Times New Roman&quot;;" lang="EN-US">printf</span><span style="font-size: 12pt; font-family: 宋体;">忽略这些选项，但是</span><span style="font-size: 12pt; font-family: &quot;Times New Roman&quot;;" lang="EN-US">format</span><span style="font-size: 12pt; font-family: 宋体;">把它们应用于所有的变量类型。（所以把它们应用于自定义的类型上是可行的，比如一个</span><span style="font-size: 12pt; font-family: &quot;Times New Roman&quot;;" lang="EN-US">Rational</span><span style="font-size: 12pt; font-family: 宋体;">类，等）</span></li>
+
+
+
+    <li><span style="font-size: 12pt; font-family: 宋体;">对于</span><span style="font-size: 12pt; font-family: &quot;Times New Roman&quot;;" lang="EN-US">printf</span><span style="font-size: 12pt; font-family: 宋体;">来说精度对所有的类型参数有特殊的意义：</span><br>
+
+
+    <i>printf( "(%5.3d)" , 7 ) ;</i> prints &laquo; ( 007) &raquo;<br>
+
+    <span style="font-size: 12pt; font-family: 宋体;"></span><span style="font-size: 12pt; font-family: 宋体;">格式化时像</span><span style="font-size: 12pt; font-family: &quot;Times New Roman&quot;;" lang="EN-US">stream</span><span style="font-size: 12pt; font-family: 宋体;">一样，对所有的类型忽略精度参数。</span></li>
+
+
+
+    <li><span style="font-size: 12pt; font-family: &quot;Times New Roman&quot;;" lang="EN-US">printf</span><span style="font-size: 12pt; font-family: 宋体;">选项（用成千上万的字符集合来格式化）对于</span><span style="font-size: 12pt; font-family: &quot;Times New Roman&quot;;" lang="EN-US">format</span><span style="font-size: 12pt; font-family: 宋体;">没有作用。</span></li>
+
+
+
+    <li><span style="font-size: 12pt; font-family: 宋体;">宽度或精度设置位星号（</span><span style="font-size: 12pt; font-family: &quot;Times New Roman&quot;;" lang="EN-US">*</span><span style="font-size: 12pt; font-family: 宋体;">）</span><span style="font-size: 12pt; font-family: &quot;Times New Roman&quot;;" lang="EN-US">printf</span><span style="font-size: 12pt; font-family: 宋体;">通过从参数读取它来设置。比如：</span><i>printf("%1$d:%2$.*3$d:%4$.*3$d\n", hour, min, precision, sec);</i><br>
+
+    <span style="font-size: 12pt; font-family: 宋体;">这个类目前还不支持这样的机制。所以这样的精度或宽度会悄悄的忽略掉。</span></li>
+
+
+  
+</ul>
+
+<span style="font-size: 12pt; font-family: 宋体;">同样的，注意到特殊的</span><span style="font-size: 12pt; font-family: &quot;Times New Roman&quot;;" lang="EN-US">&rsquo;n&rsquo;</span><span style="font-size: 12pt; font-family: 宋体;">类型规则（用来告诉</span><span style="font-size: 12pt; font-family: &quot;Times New Roman&quot;;" lang="EN-US">printf</span><span style="font-size: 12pt; font-family: 宋体;">保存</span><span style="font-size: 12pt; font-family: &quot;Times New Roman&quot;;" lang="EN-US">format</span><span style="font-size: 12pt; font-family: 宋体;">输出的字符数）在</span><span style="font-size: 12pt; font-family: &quot;Times New Roman&quot;;" lang="EN-US">format</span><span style="font-size: 12pt; font-family: 宋体;">中没有用。所以格式化字符串包含这个类型规则要产生跟用</span><span style="font-size: 12pt; font-family: &quot;Times New Roman&quot;;" lang="EN-US">printf</span><span style="font-size: 12pt; font-family: 宋体;">或</span><span style="font-size: 12pt; font-family: &quot;Times New Roman&quot;;" lang="EN-US">format</span><span style="font-size: 12pt; font-family: 宋体;">转换来的同样的字符串。它不会导致</span><span style="font-size: 12pt; font-family: &quot;Times New Roman&quot;;" lang="EN-US">printf</span><span style="font-size: 12pt; font-family: 宋体;">和</span><span style="font-size: 12pt; font-family: &quot;Times New Roman&quot;;" lang="EN-US">format</span><span style="font-size: 12pt; font-family: 宋体;">格式化来的字符串的不同。使用</span><span style="font-size: 12pt; font-family: &quot;Times New Roman&quot;;" lang="EN-US">boost.format</span><span style="font-size: 12pt; font-family: 宋体;">来取得格式化字符串字符数，你可以用</span><span style="font-size: 12pt; font-family: &quot;Times New Roman&quot;;" lang="EN-US">size()</span><span style="font-size: 12pt; font-family: 宋体;">成员函数：</span>
+
+  
+<blockquote>
+    
+  
+  <pre>format formatter("%+5d");<br>cout &lt;&lt; formatter % x;<br>unsigned int n = formatter.size();<br></pre>
+
+
+  </blockquote>
+
+<a name="user-defined" id="user-defined"></a>
+  
+<hr>
+
+  
+<h2>用户自定义类型的输出</h2>
+
+
+
+  
+<p><span style="font-size: 12pt; font-family: 宋体;">对</span><span style="font-size: 12pt; font-family: &quot;Times New Roman&quot;;" lang="EN-US">stream</span><span style="font-size: 12pt; font-family: 宋体;">上所有标志的更改都会递归的作用在用户自定义的类上。（标志将保持活动状态，同时期望的</span><span style="font-size: 12pt; font-family: &quot;Times New Roman&quot;;" lang="EN-US">format</span><span style="font-size: 12pt; font-family: 宋体;">选项也一样，因为</span><span style="font-size: 12pt; font-family: &quot;Times New Roman&quot;;" lang="EN-US">&rsquo;&lt;&lt;&rsquo;</span><span style="font-size: 12pt; font-family: 宋体;">操作可能被用户自定义的类调用）</span></p>
+
+<span style="font-size: 12pt; font-family: 宋体;">比如：有一个</span><span style="font-size: 12pt; font-family: &quot;Times New Roman&quot;;" lang="EN-US">Rational</span><span style="font-size: 12pt; font-family: 宋体;">类，我们能这样使用：</span>
+
+  
+<blockquote>
+    
+  
+  <pre>Rational ratio(16,9);<br>cerr &lt;&lt; format("%#x \n")  % ratio;  // -&gt; "0x10/0x9 \n"<br></pre>
+
+
+  </blockquote>
+
+
+
+  
+<p><span style="font-size: 12pt; font-family: 宋体;">对于其他的格式化选项是另外一回事。比如，对于设置宽度应用于对象产生的最终输出，并非每个内部输出，这是幸运的：</span></p>
+
+
+
+  
+<blockquote>
+    
+  
+  <pre>cerr &lt;&lt; format("%-8d")  % ratio;  // -&gt; "16/9    "      and not    "16      /9       "<br>cerr &lt;&lt; format("%=8d")  % ratio;  // -&gt; "  16/9  "      and not    "   16   /    9   "<br></pre>
+
+
+  </blockquote>
+
+
+
+  
+<p><br>
+
+<span style="font-size: 12pt; font-family: &quot;Times New Roman&quot;;" lang="EN-US">0</span><span style="font-size: 12pt; font-family: 宋体;">和</span>' '<span style="font-size: 12pt; font-family: 宋体;">选项也是一样（对应于</span><span style="font-size: 12pt; font-family: &quot;Times New Roman&quot;;" lang="EN-US">&rsquo;+&rsquo;</span><span style="font-size: 12pt; font-family: 宋体;">它用</span><span style="font-size: 12pt; font-family: &quot;Times New Roman&quot;;" lang="EN-US">showpos</span><span style="font-size: 12pt; font-family: 宋体;">直接改变</span><span style="font-size: 12pt; font-family: &quot;Times New Roman&quot;;" lang="EN-US">stream</span><span style="font-size: 12pt; font-family: 宋体;">的状态。但是</span><span style="font-size: 12pt; font-family: &quot;Times New Roman&quot;;" lang="EN-US">printf</span><span style="font-size: 12pt; font-family: 宋体;">没有相应于</span><span style="font-size: 12pt; font-family: &quot;Times New Roman&quot;;" lang="EN-US">0</span><span style="font-size: 12pt; font-family: 宋体;">和空格的选项）那样不是很自然：</span></p>
+
+
+
+  
+<blockquote>
+    
+  
+  <pre>cerr &lt;&lt; format("%+08d \n")  % ratio;  // -&gt; "+00016/9"<br>cerr &lt;&lt; format("% 08d \n")  % ratio;  // -&gt; "000 16/9"<br></pre>
+
+
+  </blockquote>
+
+<span style="font-size: 12pt; font-family: 宋体;">通过仔细设计</span><span style="font-size: 12pt; font-family: &quot;Times New Roman&quot;;" lang="EN-US">Rational</span><span style="font-size: 12pt; font-family: 宋体;">的</span><span style="font-size: 12pt; font-family: &quot;Times New Roman&quot;;" lang="EN-US">&lt;&lt;</span><span style="font-size: 12pt; font-family: 宋体;">操作来通过它自己传递流的宽度，对齐和</span><span style="font-size: 12pt; font-family: &quot;Times New Roman&quot;;" lang="EN-US">showpos</span><span style="font-size: 12pt; font-family: 宋体;">参数获取更好的行为是可能的。它在</span> <a href="../example/sample_userType.cpp">sample_userType.cpp</a> <span style="font-size: 12pt; font-family: 宋体;">中有举例说明。</span> <a name="manipulators" id="manipulators"></a>
+  
+<hr>
+
+  
+<h3>操纵子和流内部状态</h3>
+
+
+
+  
+<p><span style="font-size: 12pt; font-family: &quot;Times New Roman&quot;;" lang="EN-US">Format</span><span style="font-size: 12pt; font-family: 宋体;">的内部流状态被预先保存并在参数输出后复原；因此，修改量不持久且只应用于一个参数。流的默认状态，以标准状态，是：精度为</span><span style="font-size: 12pt; font-family: &quot;Times New Roman&quot;;" lang="EN-US">6</span><span style="font-size: 12pt; font-family: 宋体;">，宽度为</span><span style="font-size: 12pt; font-family: &quot;Times New Roman&quot;;" lang="EN-US">0</span><span style="font-size: 12pt; font-family: 宋体;">，并且</span><span style="font-size: 12pt; font-family: &quot;Times New Roman&quot;;" lang="EN-US">decimal</span><span style="font-size: 12pt; font-family: 宋体;">标志被设定。</span></p>
+
+
+
+  
+<p><span style="font-size: 12pt; font-family: 宋体;">通过参数</span><span style="font-size: 12pt; font-family: &quot;Times New Roman&quot;;" lang="EN-US">format</span><span style="font-size: 12pt; font-family: 宋体;">流内部状态能被操纵子所修改，通过</span><span style="font-size: 12pt; font-family: &quot;Times New Roman&quot;;" lang="EN-US">group</span><span style="font-size: 12pt; font-family: 宋体;">函数，像：</span></p>
+
+
+
+  
+<blockquote>
+    
+  
+  <pre>cout &lt;&lt; format("%1% %2% %1%\n") % group(hex, showbase, 40) % 50; // prints "0x28 50 0x28\n"<br></pre>
+
+
+  </blockquote>
+
+
+
+  
+<p><br>
+
+<span style="font-size: 12pt; font-family: 宋体;">当传递</span><span style="font-size: 12pt; font-family: &quot;Times New Roman&quot;;" lang="EN-US">&rsquo;group&rsquo;</span><span style="font-size: 12pt; font-family: 宋体;">中的</span><span style="font-size: 12pt; font-family: &quot;Times New Roman&quot;;" lang="EN-US">N</span><span style="font-size: 12pt; font-family: 宋体;">项，</span><span style="font-size: 12pt; font-family: &quot;Times New Roman&quot;;" lang="EN-US">Boost.format</span><span style="font-size: 12pt; font-family: 宋体;">需要执行从不同于正则表达式的参数操纵子，因此使用</span><span style="font-size: 12pt; font-family: &quot;Times New Roman&quot;;" lang="EN-US">group</span><span style="font-size: 12pt; font-family: 宋体;">受到下面的约束：</span></p>
+
+
+
+  
+<ol>
+
+
+    <li><span style="font-size: 12pt; font-family: 宋体;">要被打印的对象必须作为</span><span style="font-size: 12pt; font-family: &quot;Times New Roman&quot;;" lang="EN-US">group</span><span style="font-size: 12pt; font-family: 宋体;">中的最后一项</span></li>
+
+
+
+    <li><span style="font-size: 12pt; font-family: 宋体;">开始的</span><span style="font-size: 12pt; font-family: &quot;Times New Roman&quot;;" lang="EN-US">N-1</span><span style="font-size: 12pt; font-family: 宋体;">项作为操纵子来对待，如果它们确实产生输出，它被丢弃</span></li>
+
+
+  
+</ol>
+
+
+
+  
+<p><span style="font-size: 12pt; font-family: 宋体;">这样的操纵子每次在下面的参数前被传递给流。注意格式化选项通过以这种形式传入的重写了的流状态修改器被格式化字符串内部所解释。比如下例所说，格式化字符串中</span><span style="font-size: 12pt; font-family: &quot;Times New Roman&quot;;" lang="EN-US">hex</span><span style="font-size: 12pt; font-family: 宋体;">控制器拥有比</span><span style="font-size: 12pt; font-family: &quot;Times New Roman&quot;;" lang="EN-US">d</span><span style="font-size: 12pt; font-family: 宋体;">类型描述更高的优先级，它会设置小数输出</span>:</p>
+
+
+
+  
+<blockquote>
+    
+  
+  <pre>cout &lt;&lt; format("%1$d %2% %1%\n") % group(hex, showbase, 40) % 50; <br>// prints "0x28 50 0x28\n"<br></pre>
+
+
+  </blockquote>
+
+<a name="alternatives" id="alternatives"></a>
+
+  
+<h2>选择</h2>
+
+
+
+  
+<ul>
+
+
+    <li><b>printf</b> <span style="font-size: 12pt; font-family: 宋体;">是经典的选择，这不是类型安全的，对于用户自定义的类型也是无法扩展的</span></li>
+
+
+
+    <li><span style="font-size: 12pt; font-family: &quot;Times New Roman&quot;;" lang="EN-US">Karl Nelson</span><span style="font-size: 12pt; font-family: 宋体;">设计的</span><span style="font-size: 12pt; font-family: &quot;Times New Roman&quot;;" lang="EN-US">ofrstream.cc</span><span style="font-size: 12pt; font-family: 宋体;">对于本</span><span style="font-size: 12pt; font-family: &quot;Times New Roman&quot;;" lang="EN-US">format</span><span style="font-size: 12pt; font-family: 宋体;">类的设计是很大激励</span></li>
+
+
+
+    <li><span style="font-size: 12pt; font-family: &quot;Times New Roman&quot;;" lang="EN-US">James Kanze</span><span style="font-size: 12pt; font-family: 宋体;">的库有一个</span><span style="font-size: 12pt; font-family: &quot;Times New Roman&quot;;" lang="EN-US">format</span><span style="font-size: 12pt; font-family: 宋体;">类（在</span><span style="font-size: 12pt; font-family: &quot;Times New Roman&quot;;" lang="EN-US">srcode/Extended/format</span><span style="font-size: 12pt; font-family: 宋体;">中）它看起来很优美。它的设计同这个类使用内部的来执行实际的转换大致相同，都使用操作符来传递参数。（但是这个类，像</span><span style="font-size: 12pt; font-family: &quot;Times New Roman&quot;;" lang="EN-US">ofrstream</span><span style="font-size: 12pt; font-family: 宋体;">，使用操作符</span><span style="font-size: 12pt; font-family: &quot;Times New Roman&quot;;" lang="EN-US">&lt;&lt;</span><span style="font-size: 12pt; font-family: 宋体;">而非操作符</span><span style="font-size: 12pt; font-family: &quot;Times New Roman&quot;;" lang="EN-US">%</span><span style="font-size: 12pt; font-family: 宋体;">）</span></li>
+
+
+
+    <li><a href="http://groups.yahoo.com/group/boost/files/format3/">Karl
+    Nelson's library</a>&nbsp;<span style="font-size: 12pt; font-family: &quot;Times New Roman&quot;;" lang="EN-US"></span><span style="font-size: 12pt; font-family: 宋体;">在讨论</span><span style="font-size: 12pt; font-family: &quot;Times New Roman&quot;;" lang="EN-US">Boost</span><span style="font-size: 12pt; font-family: 宋体;">库设计</span><span style="font-size: 12pt; font-family: &quot;Times New Roman&quot;;" lang="EN-US">Boost.format</span><span style="font-size: 12pt; font-family: 宋体;">时作为参考解决方案。</span></li>
+
+
+  
+</ul>
+
+<a name="exceptions" id="exceptions"></a>
+  
+<hr>
+
+  
+<h2>异常</h2>
+
+
+
+  
+<p>Boost.format <span style="font-size: 12pt; font-family: 宋体;">遵循一套使用格式化对象的规则。格式化字符串遵守上面描述的语法，用户在最终输出目标前必须提供准确的参数数，如果使用</span><span style="font-size: 12pt; font-family: &quot;Times New Roman&quot;;" lang="EN-US">modify_item </span><span style="font-size: 12pt; font-family: 宋体;">或</span><span style="font-size: 12pt; font-family: &quot;Times New Roman&quot;;" lang="EN-US"> bind_arg</span><span style="font-size: 12pt; font-family: 宋体;">，选项和参数索引不能超出范围。</span><br>
+
+<span style="font-size: 12pt; font-family: 宋体;">当</span><span style="font-size: 12pt; font-family: &quot;Times New Roman&quot;;" lang="EN-US">format</span><span style="font-size: 12pt; font-family: 宋体;">发现下面中的一条规则不满足时，它会引出一个相关的异常，因此错误不会被忽略和不被处理。但是用户可以修改这个行为来满足他的需要，当异常发生时使用下面的函数来选择一个错误：</span></p>
+
+
+
+  
+<blockquote>
+    
+  
+  <pre>unsigned char exceptions(unsigned char newexcept); // query and set<br>unsigned char exceptions() const;                  // just query<br><br>  </pre>
+
+
+  </blockquote>
+
+
+
+  
+<p><span style="font-size: 12pt; font-family: 宋体;">用户可以通过使用布尔算术计算来合并下面项从而计算参数</span> <i>newexcept</i> :</p>
+
+
+
+  
+<ul>
+
+
+    <li><b>boost::io::bad_format_string_bit</b> <span style="font-size: 12pt; font-family: 宋体; color: black;">通过错误形式的格式化字符串来选择错误。</span></li>
+
+
+
+    <li><b>boost::io::too_few_args_bit</b> <span style="font-size: 12pt; font-family: 宋体; color: black;">在参数传递前通过查询字符串结果来选择错误。</span></li>
+
+
+
+    <li><b>boost::io::too_many_args_bit</b> <span style="font-size: 12pt; font-family: 宋体; color: black;">通过传递过多的参数来选择错误。</span></li>
+
+
+
+    <li><b>boost::io::out_of_range_bit</b> <span style="font-size: 12pt; font-family: 宋体; color: black;">通过当调用</span><i><span style="font-size: 12pt; font-family: &quot;Times New Roman&quot;;" lang="EN-US">modify_item</span></i><span style="font-size: 12pt; font-family: 宋体;">或其他使用一个索引项的函数而</span><span style="font-size: 12pt; font-family: 宋体; color: black;">超出用户提供的索引值范围</span><span style="font-size: 12pt; font-family: 宋体;">来选择错误。</span></li>
+
+
+
+    <li><b>boost::io::all_error_bits</b> <span style="font-size: 12pt; font-family: 宋体; color: black;">选择所有的错误。</span></li>
+
+
+
+    <li><b>boost::io::no_error_bits</b> <span style="font-size: 12pt; font-family: 宋体; color: black;">不选择错误。</span></li>
+
+
+  
+</ul>
+
+
+
+  
+<p><span style="font-size: 12pt; font-family: 宋体;">举例，如果你不想要</span><span style="font-size: 12pt; font-family: &quot;Times New Roman&quot;;" lang="EN-US">Boost.format</span><span style="font-size: 12pt; font-family: 宋体;">来弄清错误参数个数，你可以使用设定正确的异常来为创建格式化对象定义一个特殊的包装函数：、</span></p>
+
+
+
+  
+<blockquote>
+    
+  
+  <pre>boost::format  my_fmt(const std::string &amp; f_string) {<br>    using namespace boost::io;<br>    format fmter(f_string);<br>    fmter.exceptions( all_error_bits ^ ( too_many_args_bit | too_few_args_bit )  );<br>    return fmter;<br>}<br><br>  </pre>
+
+
+  </blockquote>
+
+<span style="font-size: 12pt; font-family: 宋体;">这样可以允许给出比需要的数量更多的参数（它们只是被忽略）：</span>
+
+  
+<blockquote>
+    
+  
+  <pre>cout &lt;&lt; my_fmt(" %1% %2% \n") % 1 % 2 % 3 % 4 % 5;<br><br>  </pre>
+
+
+  </blockquote>
+
+<span style="font-size: 12pt; font-family: 宋体;">如果我们在所有参数提供前请求结果，结果的相关部分简单的为空</span>
+
+  
+<blockquote>
+    
+  
+  <pre>cout &lt;&lt; my_fmt(" _%2%_ _%1%_ \n") % 1 ;<br>// prints      " __ _1_ \n"<br><br>  </pre>
+
+
+  </blockquote>
+
+<a name="performance" id="performance"></a>
+  
+<hr>
+
+  
+<h2>关于性能的注意点</h2>
+
+
+
+  
+<p><span style="font-size: 12pt; font-family: 宋体;">用伴随重排序的</span><span style="font-size: 12pt; font-family: &quot;Times New Roman&quot;;" lang="EN-US">boost.format</span><span style="font-size: 12pt; font-family: 宋体;">来格式化一些内建的类型的性能可以跟</span><span style="font-size: 12pt; font-family: &quot;Times New Roman&quot;;" lang="EN-US">Posix-printf</span><span style="font-size: 12pt; font-family: 宋体;">做比较，等价的流手工操作给出了对代价的测量。最终结果很大程度上取决于编译器，标准库实现以及格式化字符串和参数的精度选择。</span></p>
+
+
+
+  
+<p><span style="font-size: 12pt; font-family: 宋体;">由于普通流实现最终是要调用</span><span style="font-size: 12pt; font-family: &quot;Times New Roman&quot;;" lang="EN-US">printf</span><span style="font-size: 12pt; font-family: 宋体;">家族函数来实现格式化，大致上</span><span style="font-size: 12pt; font-family: &quot;Times New Roman&quot;;" lang="EN-US">printf</span><span style="font-size: 12pt; font-family: 宋体;">将会比直接流操作更快。这主要是由于在重排开销</span>(分配空间以保存字符串片段，每项格式化时的流初始化, ..)上，直接的流操作会比 boost::format 快(你可期望比例在 2 到 5 倍或更多)。</p>
+
+
+
+  
+<p><span style="font-size: 12pt; font-family: 宋体;">当迭代格式化成为性能瓶颈时，可以通过把格式化字符串分析为一个格式化对象和每次格式化时拷贝它来提高性能。如下所示。</span></p>
+
+
+
+  
+<blockquote>
+    
+  
+  <pre>    const boost::format fmter(fstring);<br>    dest &lt;&lt; boost::format(fmter) % arg1 % arg2 % arg3 ;<br></pre>
+
+
+  </blockquote>
+
+
+
+  
+<p><span style="font-size: 12pt; font-family: 宋体;">作为性能结果的例子，作者用四个方法测量了迭代个格式化的时间</span></p>
+
+
+
+  
+<ol>
+
+
+    <li>posix printf</li>
+
+
+
+    <li><span style="font-size: 12pt; font-family: 宋体;">手动流输出（到一个虚假的空流中，把传进去的字节忽略掉）</span></li>
+
+
+
+    <li>boost::format <span style="font-size: 12pt; font-family: 宋体;">从</span><span style="font-size: 12pt; font-family: &quot;Times New Roman&quot;;" lang="EN-US">const</span><span style="font-size: 12pt; font-family: 宋体;">对象拷贝，如上所示。</span></li>
+
+
+
+    <li><span style="font-size: 12pt; font-family: 宋体;">直接使用</span> boost::format</li>
+
+
+  
+</ol>
+
+
+
+  
+<p><span style="font-size: 12pt; font-family: 宋体;">这个测试使用</span><span style="font-size: 10.5pt; font-family: &quot;Times New Roman&quot;;" lang="EN-US">g++-<st1:chsdate isrocdate="False" islunardate="False" day="30" month="12" year="1899" w:st="on">3.3.3</st1:chsdate></span><span style="font-size: 10.5pt; font-family: 宋体;">编译下面是测试时间（以秒计，相同系数）</span>:</p>
+
+
+
+  
+<blockquote>
+    
+  
+  <pre>string     fstring="%3$0#6x %1$20.10E %2$g %3$0+5d \n";<br>double     arg1=45.23;<br>double     arg2=12.34;<br>int        arg3=23;<br><br>- release mode :<br>printf                 : 2.13<br>nullStream             : 3.43,  = 1.61033 * printf<br>boost::format copied   : 6.77,  = 3.1784  * printf ,  = 1.97376 * nullStream<br>boost::format straight :10.67,  = 5.00939 * printf ,  = 3.11079 * nullStream<br><br>- debug mode :<br>printf                 : 2.12<br>nullStream             : 3.69,  = 1.74057 * printf<br>boost::format copied   :10.02,  = 4.72642 * printf ,  = 2.71545 * nullStream<br>boost::format straight :17.03,  = 8.03302 * printf ,  = 4.61518 * nullStream<br></pre>
+
+
+  </blockquote>
+
+<a name="extract" id="extract"></a>
+  
+<hr>
+
+  
+<h2>类接口提取</h2>
+
+
+
+  
+<blockquote>
+    
+  
+  <pre>namespace boost {<br><br>template&lt;class charT, class Traits=std::char_traits&lt;charT&gt; &gt; <br>class basic_format <br>{<br>public:<br>  typedef std::basic_string&lt;charT, Traits&gt; string_t;<br>  typedef typename string_t::size_type     size_type;<br>  basic_format(const charT* str);<br>  basic_format(const charT* str, const std::locale &amp; loc);<br>  basic_format(const string_t&amp; s);<br>  basic_format(const string_t&amp; s, const std::locale &amp; loc);<br>  basic_format&amp; operator= (const basic_format&amp; x);<br><br>  void clear(); // reset buffers<br>  basic_format&amp; parse(const string_t&amp;); // clears and parse a new format string<br><br>  string_t str() const;<br>  size_type size() const;<br><br>  // pass arguments through those operators :<br>  template&lt;class T&gt;  basic_format&amp;   operator%(T&amp; x);  <br>  template&lt;class T&gt;  basic_format&amp;   operator%(const T&amp; x);<br><br>  // dump buffers to ostream :<br>  friend std::basic_ostream&lt;charT, Traits&gt;&amp; <br>  operator&lt;&lt; &lt;&gt; ( std::basic_ostream&lt;charT, Traits&gt;&amp; , basic_format&amp; ); <br><br>   // Choosing which errors will throw exceptions :<br>   unsigned char exceptions() const;<br>   unsigned char exceptions(unsigned char newexcept);<br><br>// ............  this is just an extract .......<br>}; // basic_format<br><br>typedef basic_format&lt;char &gt;          format;<br>typedef basic_format&lt;wchar_t &gt;      wformat;<br><br><br>// free function for ease of use :<br>template&lt;class charT, class Traits&gt; <br>std::basic_string&lt;charT,Traits&gt;  str(const basic_format&lt;charT,Traits&gt;&amp; f) {<br>      return f.str();<br>}<br><br><br>} // namespace boost<br></pre>
+
+
+  </blockquote>
+
+
+  
+<hr>
+  <a name="rationale" id="rationale"></a>
+
+  
+<h2>基本原理</h2>
+
+
+
+  
+<p><span style="font-size: 12pt; font-family: 宋体; color: black;">这个类的目标是引入一个更好的，<span lang="EN-US">c++</span>的，类型安全而且可扩展的等价于<span lang="EN-US">printf</span>而能为<span lang="EN-US">stream</span>所用的类。</span></p>
+<span style="font-size: 12pt; font-family: 宋体; color: black;">准确的说，<span lang="EN-US">format</span>被设计来提供以下的特性：</span>
+
+  
+<ul>
+
+
+    <li><span style="font-size: 12pt; font-family: 宋体; color: black;">支持定位的参数</span>(国际化的需要)</li>
+
+
+
+    <li><span style="font-size: 12pt; font-family: 宋体; color: black;">接受不限制个数的参数</span></li>
+
+
+
+    <li><span style="font-size: 12pt; font-family: 宋体; color: black;">使格式化命令看起来自然</span></li>
+
+
+
+    <li><span style="font-size: 12pt; font-family: 宋体; color: black;">支持操纵子的使用来修改显式参数。加入到格式化串语法</span></li>
+
+
+
+    <li><span style="font-size: 12pt; font-family: 宋体; color: black;">通过依赖于流上的实际传唤接受任何类型的变量。特别是用户自定义的类型，对这样的类型来说格式化选项作用会很直观自然</span></li>
+
+
+
+    <li><span style="font-size: 12pt; font-family: 宋体; color: black;">提供<span lang="EN-US">printf</span>兼容，尽可能的使它类型安全和类型可扩展</span></li>
+
+
+  
+</ul>
+
+
+
+  
+<p><span style="font-size: 12pt; font-family: 宋体; color: black;">在设计的过程中面对很多争议，作出了一些选择。这些未必是直观上很正确。但是任何一种情况它们被采用总是</span> <a href="choices.html">some reasons</a> <span style="font-size: 12pt; font-family: 宋体; color: black;">的。</span></p>
+
+
+  
+<hr>
+
+  
+<h2>Credits</h2>
+
+
+
+  
+<p>The author of Boost format is Samuel Krempp. &nbsp; He used ideas from
+  R&uuml;diger Loos' format.hpp and Karl Nelson's formatting classes.</p>
+
+
+  
+<hr>
+
+  
+<p><a href="http://validator.w3.org/check?uri=referer"><img src="http://www.w3.org/Icons/valid-html401" alt="Valid HTML 4.01 Transitional" border="0" height="31" width="88"></a></p>
+
+
+
+  
+<p>Revised 
+  <!--webbot bot="Timestamp" s-type="EDITED" s-format="%d %B, %Y" startspan -->02 December, 2006<!--webbot bot="Timestamp" endspan i-checksum="38510" --></p>
+
+
+
+  
+<p><i>Copyright &copy; 2002 Samuel Krempp</i></p>
+
+
+
+  
+<p><i>Distributed under the Boost Software License, Version 1.0. (See
+  accompanying file <a href="../../../LICENSE_1_0.txt">LICENSE_1_0.txt</a> or
+  copy at <a href="http://www.boost.org/LICENSE_1_0.txt">http://www.boost.org/LICENSE_1_0.txt</a>)</i></p>
+
+
+</body>
+</html>

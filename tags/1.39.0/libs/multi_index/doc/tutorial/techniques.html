@@ -1,0 +1,442 @@
+<!DOCTYPE HTML PUBLIC "-//W3C//DTD HTML 4.0.1 Transitional//EN">
+<html><head>
+
+  <meta http-equiv="Content-Type" content="text/html; charset=UTF-8">
+
+
+  
+  <title>Boost.MultiIndex Documentation - Tutorial - Techniques</title><link rel="stylesheet" href="../style.css" type="text/css">
+
+  <link rel="start" href="../index.html">
+
+  <link rel="prev" href="debug.html">
+
+  <link rel="up" href="index.html">
+
+  <link rel="next" href="../reference/index.html"></head>
+
+<body>
+
+<h1><img src="../../../../boost.png" alt="boost.png (6897 bytes)" align="middle" height="86" width="277">Boost.MultiIndex Tutorial: Techniques</h1>
+
+
+<div class="prev_link"><a href="debug.html"><img src="../prev.gif" alt="debugging support" border="0"><br>
+
+Debugging support测试的支持
+</a></div>
+
+<div class="up_link"><a href="index.html"><img src="../up.gif" alt="Boost.MultiIndex tutorial" border="0"><br>
+
+Boost.MultiIndex 指南
+</a></div>
+
+<div class="next_link"><a href="../reference/index.html"><img src="../next.gif" alt="Boost.MultiIndex reference" border="0"><br>
+
+Boost.MultiIndex 参考
+</a></div>
+<br style="" clear="all">
+
+
+<hr>
+
+<h2>Contents目录</h2>
+
+
+<ul>
+
+  <li><a href="#emulate_std_containers">用&nbsp;<code>multi_index_container 替代标准容器</code></a>
+    
+    <ul>
+
+      <li><a href="#emulate_assoc_containers">替代关联式容器</a></li>
+
+      <li><a href="#emulate_std_list">替代 <code>std::list</code></a></li>
+
+    
+    </ul>
+
+  </li>
+
+  <li><a href="#metaprogrammming">元编程与 <code>multi_index_container</code></a>
+    
+    <ul>
+
+      <li><a href="#mpl_analysis">MPL 分解</a></li>
+
+      <li><a href="#mpl_synthesis">MPL 合成</a></li>
+
+    
+    </ul>
+
+  </li>
+
+</ul>
+
+
+<h2><a name="emulate_std_containers">用&nbsp;<code>multi_index_container 替代标准容器</code></a></h2>
+
+
+<h3><a name="emulate_assoc_containers">替代关联式容器</a></h3>
+
+
+<p>先把理论放在一边，用<code>multi_index_container</code>替代标准的关联式容器有一个非常实际的原因，就是获得<code>multi_index_container</code>所提供的查找、范围查询和更新等扩展功能的优点。
+</p>
+
+
+<p>为了替代 <code>std::set</code>，要遵循以下替代规则：
+</p>
+
+
+<blockquote>
+  <pre><span class="identifier">std</span><span class="special">::</span><span class="identifier">set</span><span class="special">&lt;</span><span class="identifier">Key</span><span class="special">,</span><span class="identifier">Compare</span><span class="special">,</span><span class="identifier">Allocator</span><span class="special">&gt;</span> <span class="special">-&gt;</span>
+  <span class="identifier">multi_index_container</span><span class="special">&lt;</span>
+    <span class="identifier">Key</span><span class="special">,</span>
+    <span class="identifier">indexed_by</span><span class="special">&lt;</span><span class="identifier">ordered_unique</span><span class="special">&lt;</span><span class="identifier">identity</span><span class="special">&lt;</span><span class="identifier">Key</span><span class="special">&gt;,</span><span class="identifier">Compare</span><span class="special">&gt;</span> <span class="special">&gt;,</span>
+    <span class="identifier">Allocator</span>
+  <span class="special">&gt;</span>
+  </pre>
+</blockquote>
+
+
+<p>缺省情况下，<code>Compare=std::less&lt;Key&gt;</code>，且 
+<code>Allocator=std::allocator&lt;Key&gt;</code>，替代规则可以简化为：
+</p>
+
+
+<blockquote>
+  <pre><span class="identifier">std</span><span class="special">::</span><span class="identifier">set</span><span class="special">&lt;</span><span class="identifier">Key</span><span class="special">&gt;</span> <span class="special">-&gt;</span> <span class="identifier">multi_index_container</span><span class="special">&lt;</span><span class="identifier">Key</span><span class="special">&gt;</span>
+  </pre>
+</blockquote>
+
+
+<p>这种 <code>multi_index_container</code> 对 <code>std::set</code> 
+的替换，保留了<code>std::set</code>所提供的所有功能，因此原则上它是顺便而为，不需要什么调整。
+</p>
+
+
+<p>
+<code>std::multiset</code> 也同样可以被替换，规则如下：
+</p>
+
+
+<blockquote>
+  <pre><span class="identifier">std</span><span class="special">::</span><span class="identifier">multiset</span><span class="special">&lt;</span><span class="identifier">Key</span><span class="special">,</span><span class="identifier">Compare</span><span class="special">,</span><span class="identifier">Allocator</span><span class="special">&gt;</span> <span class="special">-&gt;</span>
+  <span class="identifier">multi_index_container</span><span class="special">&lt;</span>
+    <span class="identifier">Key</span><span class="special">,</span>
+    <span class="identifier">indexed_by</span><span class="special">&lt;</span><span class="identifier">ordered_non_unique</span><span class="special">&lt;</span><span class="identifier">identity</span><span class="special">&lt;</span><span class="identifier">Key</span><span class="special">&gt;,</span><span class="identifier">Compare</span><span class="special">&gt;</span> <span class="special">&gt;,</span>
+    <span class="identifier">Allocator</span>
+  <span class="special">&gt;</span>
+  </pre>
+</blockquote>
+
+
+<p>同样考虑到参数的缺省值，规则可以简化为：
+</p>
+
+
+<blockquote>
+  <pre><span class="identifier">std</span><span class="special">::</span><span class="identifier">multiset</span><span class="special">&lt;</span><span class="identifier">Key</span><span class="special">&gt;</span> <span class="special">-&gt;</span>
+  <span class="identifier">multi_index_container</span><span class="special">&lt;</span>
+    <span class="identifier">Key</span><span class="special">,</span>
+    <span class="identifier">indexed_by</span><span class="special">&lt;</span><span class="identifier">ordered_non_unique</span><span class="special">&lt;</span><span class="identifier">identity</span><span class="special">&lt;</span><span class="identifier">Key</span><span class="special">&gt;</span> <span class="special">&gt;</span> <span class="special">&gt;</span>
+  <span class="special">&gt;</span>
+  </pre>
+</blockquote>
+
+
+<p>用<code>multi_index_container</code>替代 <code>std::multiset</code> 
+其实在接口上是有那么一点点不同的：成员函数 <code>insert(const value_type&amp;)</code> 
+不再是返回<code>std::multiset</code>的一个<code>iterator</code>，而是象<code>std::set</code>那样的一个<code>std::pair&lt;iterator,bool&gt;</code>。不过在实际使用中，返回值的 
+<code>bool</code> 成员总为 <code>true</code>。
+</p>
+
+
+<p>直接用<code>multi_index_container</code>替代 <code>std::map</code> 和 
+<code>std::multimap</code> 
+却是不行的。主要问题是<code>multi_index_container</code>中的元素被视为常量，而 <code>std::map</code> 和 
+<code>std::multimap</code> 保存的对象类型则是 <code>std::pair&lt;const 
+Key,T&gt;</code>，其中的值部分是允许随意变动的。为了克服这个困难，我们需要创建一个 pair 类： 
+</p>
+
+
+<blockquote>
+  <pre><span class="keyword">template</span> <span class="special">&lt;</span><span class="keyword">typename</span> <span class="identifier">T1</span><span class="special">,</span><span class="keyword">typename</span> <span class="identifier">T2</span><span class="special">&gt;</span>
+<span class="keyword">struct</span> <span class="identifier">mutable_pair</span>
+<span class="special">{</span>
+  <span class="keyword">typedef</span> <span class="identifier">T1</span> <span class="identifier">first_type</span><span class="special">;</span>
+  <span class="keyword">typedef</span> <span class="identifier">T2</span> <span class="identifier">second_type</span><span class="special">;</span>
+
+  <span class="identifier">mutable_pair</span><span class="special">():</span><span class="identifier">first</span><span class="special">(</span><span class="identifier">T1</span><span class="special">()),</span><span class="identifier">second</span><span class="special">(</span><span class="identifier">T2</span><span class="special">()){}</span>
+  <span class="identifier">mutable_pair</span><span class="special">(</span><span class="keyword">const</span> <span class="identifier">T1</span><span class="special">&amp;</span> <span class="identifier">f</span><span class="special">,</span><span class="keyword">const</span> <span class="identifier">T2</span><span class="special">&amp;</span> <span class="identifier">s</span><span class="special">):</span><span class="identifier">first</span><span class="special">(</span><span class="identifier">f</span><span class="special">),</span><span class="identifier">second</span><span class="special">(</span><span class="identifier">s</span><span class="special">){}</span>
+  <span class="identifier">mutable_pair</span><span class="special">(</span><span class="keyword">const</span> <span class="identifier">std</span><span class="special">::</span><span class="identifier">pair</span><span class="special">&lt;</span><span class="identifier">T1</span><span class="special">,</span><span class="identifier">T2</span><span class="special">&gt;&amp;</span> <span class="identifier">p</span><span class="special">):</span><span class="identifier">first</span><span class="special">(</span><span class="identifier">p</span><span class="special">.</span><span class="identifier">first</span><span class="special">),</span><span class="identifier">second</span><span class="special">(</span><span class="identifier">p</span><span class="special">.</span><span class="identifier">second</span><span class="special">){}</span>
+
+  <span class="identifier">T1</span>         <span class="identifier">first</span><span class="special">;</span>
+  <span class="keyword">mutable</span> <span class="identifier">T2</span> <span class="identifier">second</span><span class="special">;</span>
+<span class="special">};</span>
+  </pre>
+</blockquote>
+
+
+<p>然后，替代规则如下：
+</p>
+
+
+<blockquote>
+  <pre><span class="identifier">std</span><span class="special">::</span><span class="identifier">map</span><span class="special">&lt;</span><span class="identifier">Key</span><span class="special">,</span><span class="identifier">T</span><span class="special">,</span><span class="identifier">Compare</span><span class="special">,</span><span class="identifier">Allocator</span><span class="special">&gt;</span> <span class="special">-&gt;</span>
+  <span class="identifier">multi_index_container</span><span class="special">&lt;</span>
+    <span class="identifier">Element</span><span class="special">,</span>
+    <span class="identifier">indexed_by</span><span class="special">&lt;</span>
+      <span class="identifier">ordered_unique</span><span class="special">&lt;</span><span class="identifier">member</span><span class="special">&lt;</span><span class="identifier">Element</span><span class="special">,</span><span class="identifier">Key</span><span class="special">,&amp;</span><span class="identifier">Element</span><span class="special">::</span><span class="identifier">first</span><span class="special">&gt;,</span><span class="identifier">Compare</span><span class="special">&gt;</span>
+    <span class="special">&gt;,</span>
+    <span class="keyword">typename</span> <span class="identifier">Allocator</span><span class="special">::</span><span class="keyword">template</span> <span class="identifier">rebind</span><span class="special">&lt;</span><span class="identifier">Element</span><span class="special">&gt;::</span><span class="identifier">other</span>
+  <span class="special">&gt;</span>
+
+<span class="identifier">std</span><span class="special">::</span><span class="identifier">multimap</span><span class="special">&lt;</span><span class="identifier">Key</span><span class="special">,</span><span class="identifier">T</span><span class="special">,</span><span class="identifier">Compare</span><span class="special">,</span><span class="identifier">Allocator</span><span class="special">&gt;</span> <span class="special">-&gt;</span>
+  <span class="identifier">multi_index_container</span><span class="special">&lt;</span>
+    <span class="identifier">Element</span><span class="special">,</span>
+    <span class="identifier">indexed_by</span><span class="special">&lt;</span>
+      <span class="identifier">ordered_non_unique</span><span class="special">&lt;</span><span class="identifier">member</span><span class="special">&lt;</span><span class="identifier">Element</span><span class="special">,</span><span class="identifier">Key</span><span class="special">,&amp;</span><span class="identifier">Element</span><span class="special">::</span><span class="identifier">first</span><span class="special">&gt;,</span><span class="identifier">Compare</span><span class="special">&gt;</span>
+    <span class="special">&gt;,</span>
+    <span class="keyword">typename</span> <span class="identifier">Allocator</span><span class="special">::</span><span class="keyword">template</span> <span class="identifier">rebind</span><span class="special">&lt;</span><span class="identifier">Element</span><span class="special">&gt;::</span><span class="identifier">other</span>
+  <span class="special">&gt;</span>
+
+(<span class="identifier">with</span> <span class="identifier">Element</span><span class="special">=</span><span class="identifier">mutable_pair</span><span class="special">&lt;</span><span class="identifier">Key</span><span class="special">,</span><span class="identifier">T</span><span class="special">&gt;</span>)<br></pre>
+</blockquote>
+
+
+<p>如果考虑参数的缺省值，规则可以简化为：
+</p>
+
+
+<blockquote>
+  <pre><span class="identifier">std</span><span class="special">::</span><span class="identifier">map</span><span class="special">&lt;</span><span class="identifier">Key</span><span class="special">,</span><span class="identifier">T</span><span class="special">&gt;</span> <span class="special">-&gt;</span>
+  <span class="identifier">multi_index_container</span><span class="special">&lt;</span>
+    <span class="identifier">Element</span><span class="special">,<br>    </span><span class="identifier">indexed_by</span><span class="special">&lt;</span><span class="identifier">ordered_unique</span><span class="special">&lt;</span><span class="identifier">member</span><span class="special">&lt;</span><span class="identifier">Element</span><span class="special">,</span><span class="identifier">Key</span><span class="special">,&amp;</span><span class="identifier">Element</span><span class="special">::</span><span class="identifier">first</span><span class="special">&gt;</span> <span class="special">&gt;</span> <span class="special">&gt;</span>
+  <span class="special">&gt;</span>
+
+<span class="identifier">std</span><span class="special">::</span><span class="identifier">multimap</span><span class="special">&lt;</span><span class="identifier">Key</span><span class="special">,</span><span class="identifier">T</span><span class="special">&gt;</span> <span class="special">-&gt;</span>
+  <span class="identifier">multi_index_container</span><span class="special">&lt;</span>
+    <span class="identifier">Element</span><span class="special">,<br>    </span><span class="identifier">indexed_by</span><span class="special">&lt;</span><span class="identifier">ordered_non_unique</span><span class="special">&lt;</span><span class="identifier">member</span><span class="special">&lt;</span><span class="identifier">Element</span><span class="special">,</span><span class="identifier">Key</span><span class="special">,&amp;</span><span class="identifier">Element</span><span class="special">::</span><span class="identifier">first</span><span class="special">&gt;</span> <span class="special">&gt;</span> <span class="special">&gt;</span>
+  <span class="special">&gt;</span>
+
+(<span class="identifier">with</span> <span class="identifier">Element</span><span class="special">=</span><span class="identifier">mutable_pair</span><span class="special">&lt;</span><span class="identifier">Key</span><span class="special">,</span><span class="identifier">T</span><span class="special">&gt;</span>)<br></pre>
+</blockquote>
+
+
+<p>与标准的set不同，这些 
+<code>multi_index_container</code>替代物的接口并不严格符合<code>std::map</code>和<span style="font-family: monospace;"></span><code>std::multimap</code>。最为明显的差别是没有了 
+<code>operator []</code>，无论是读或写模式；不过，可以用适当的 <code>find</code> 和 
+<code>insert</code> 来替代。
+</p>
+
+
+<p>这些以<code>multi_index_container</code>实现的关联式容器在空间和时间复杂度上都与标准的对照物相当。有关更为详细的讨论，请查阅<a href="../performance.html">“性能”</a>一节。
+</p>
+
+
+<h3><a name="emulate_std_list">替代 <code>std::list</code></a></h3>
+
+
+<p>与关联式容器不同，用Boost.MultiIndex替代 <code>std::list</code> 并没有增加任何有用的功能，所以以下讨论完全是出于兴趣。
+</p>
+
+
+<p>与标准的map相似，替代<code>std::list</code>的主要困难来自于<code>multi_index_container</code>中的元素是常量的。因此，这里又再需要某种适配的类，如下：
+</p>
+
+
+<blockquote>
+  <pre><span class="keyword">template</span> <span class="special">&lt;</span><span class="keyword">typename</span> <span class="identifier">T</span><span class="special">&gt;</span>
+<span class="keyword">struct</span> <span class="identifier">mutable_value</span>
+<span class="special">{</span>
+  <span class="identifier">mutable_value</span><span class="special">(</span><span class="keyword">const</span> <span class="identifier">T</span><span class="special">&amp;</span> <span class="identifier">t</span><span class="special">):</span><span class="identifier">t</span><span class="special">(</span><span class="identifier">t</span><span class="special">){}</span>
+  <span class="keyword">operator</span> <span class="identifier">T</span><span class="special">&amp;()</span><span class="keyword">const</span><span class="special">{</span><span class="keyword">return</span> <span class="identifier">t</span><span class="special">;}</span>
+
+<span class="keyword">private</span><span class="special">:</span>
+  <span class="keyword">mutable</span> <span class="identifier">T</span> <span class="identifier">t</span><span class="special">;</span>
+<span class="special">};</span>
+  </pre>
+</blockquote>
+
+
+<p>这样我们可以得到以下替代规则：
+</p>
+
+
+<blockquote>
+  <pre><span class="identifier">std</span><span class="special">::</span><span class="identifier">list</span><span class="special">&lt;</span><span class="identifier">T</span><span class="special">,</span><span class="identifier">Allocator</span><span class="special">&gt;</span> <span class="special">-&gt;</span>
+  <span class="identifier">multi_index_container</span><span class="special">&lt;</span>
+    <span class="identifier">Element</span><span class="special">,</span>
+    <span class="identifier">indexed_by</span><span class="special">&lt;</span><span class="identifier">sequenced</span><span class="special">&lt;&gt;</span> <span class="special">&gt;,</span>
+    <span class="keyword">typename</span> <span class="identifier">Allocator</span><span class="special">::</span><span class="keyword">template</span> <span class="identifier">rebind</span><span class="special">&lt;</span><span class="identifier">Element</span><span class="special">&gt;::</span><span class="identifier">other</span>
+  <span class="special">&gt;</span>
+
+(<span class="identifier">with</span> <span class="identifier">Element</span><span class="special">=</span><span class="identifier">mutable_value</span><span class="special">&lt;</span><span class="identifier">T</span><span class="special">&gt;</span>)<br></pre>
+</blockquote>
+
+
+<p>或者，如果缺省值 <code>Allocator=std::allocator&lt;T&gt;</code>，可以简化为：
+</p>
+
+
+<blockquote>
+  <pre><span class="identifier">std</span><span class="special">::</span><span class="identifier">list</span><span class="special">&lt;</span><span class="identifier">T</span><span class="special">&gt;</span> <span class="special">-&gt;</span>
+  <span class="identifier">multi_index_container</span><span class="special">&lt;</span><span class="identifier">mutable_value</span><span class="special">&lt;</span><span class="identifier">T</span><span class="special">&gt;,</span><span class="identifier">indexed_by</span><span class="special">&lt;</span><span class="identifier">sequenced</span><span class="special">&lt;&gt;</span> <span class="special">&gt;</span> <span class="special">&gt;</span>
+  </pre>
+</blockquote>
+
+
+<h2><a name="metaprogrammming">元编程与 <code>multi_index_container</code></a></h2>
+
+
+<p>
+Boost.MultiIndex 提供了大量工具，以通过<a href="../../../../libs/mpl/doc/index.html">MPL</a>元编程实现 
+<code>multi_index_container</code> 实例化的分解与合成。
+</p>
+
+
+<h3><a name="mpl_analysis">MPL 分解</a></h3>
+
+
+<p>给定一个 <code>multi_index_container</code> 
+实例化，在编译期可使用以下嵌套类型检视<code>multi_index_container</code>定义中的各种类型：
+</p>
+<ul>
+
+  <li><code>index_specifier_type_list</code>,</li>
+
+  <li><code>index_type_list</code>,</li>
+
+  <li><code>iterator_type_list</code>,</li>
+
+  <li><code>const_iterator_type_list</code>.</li>
+
+</ul>
+以上每一个类型都是一个MPL序列，包含了组成<code>multi_index_container</code>的多个索引，例如：<code>iterator_type_list</code> 
+的第n个元素就是 <code>nth_index_iterator&lt;n&gt;::type</code>。
+
+
+<p>在<code>index_specifier_type_list</code> 和 
+<code>index_type_list</code>之间有一个微妙而重要的差异：前者持有<code>multi_index_container</code>实例化所定义的各个索引<i>说明</i>，后者则用于访问每个索引说明所对应的实际类。举个例子可以有助于理解这个差异。给定如下实例化：
+</p>
+
+
+<blockquote>
+  <pre><span class="keyword">typedef</span> <span class="identifier">multi_index_container</span><span class="special">&lt;</span>
+  <span class="keyword">int</span><span class="special">,</span>
+  <span class="identifier">indexed_by</span><span class="special">&lt;</span>
+    <span class="identifier">ordered_unique</span><span class="special">&lt;</span><span class="identifier">identity</span><span class="special">&lt;</span><span class="keyword">int</span><span class="special">&gt;</span> <span class="special">&gt;,</span>
+    <span class="identifier">sequenced</span><span class="special">&lt;&gt;</span>
+  <span class="special">&gt;</span>
+<span class="special">&gt;</span> <span class="identifier">indexed_t</span><span class="special">;</span>
+  </pre>
+</blockquote>
+
+
+<p>
+<code>indexed_t::index_specifier_type_list</code> 类型列表中的元素如下：
+</p>
+
+
+<blockquote>
+  <pre><span class="identifier">ordered_unique</span><span class="special">&lt;</span><span class="identifier">identity</span><span class="special">&lt;</span><span class="keyword">int</span><span class="special">&gt;</span> <span class="special">&gt;</span>
+<span class="identifier">sequenced</span><span class="special">&lt;&gt;</span>
+  </pre>
+</blockquote>
+
+
+<p>而 <code>indexed_t::index_type_list</code> 的类型元素如下：
+</p>
+
+
+<blockquote>
+  <pre><span class="identifier">multi_index_container</span><span class="special">::</span><span class="identifier">nth_type</span><span class="special">&lt;</span><span class="number">0</span><span class="special">&gt;::</span><span class="identifier">type</span>
+<span class="identifier">multi_index_container</span><span class="special">::</span><span class="identifier">nth_type</span><span class="special">&lt;</span><span class="number">1</span><span class="special">&gt;::</span><span class="identifier">type</span>
+  </pre>
+</blockquote>
+
+
+<p>因此这两个类型列表是完全不同的。这些类型列表所相关的MPL序列概念，请查阅<a href="../reference/multi_index_container.html#types">参考</a>一节。
+</p>
+
+
+<h3><a name="mpl_synthesis">MPL 合成</a></h3>
+
+
+<p>虽然索引通常都是用<code>indexed_by</code>结构来指定，但实际上任何由索引说明组成的MPL序列都可以使用：
+</p>
+
+
+<blockquote>
+  <pre><span class="keyword">typedef</span> <span class="identifier">mpl</span><span class="special">::</span><span class="identifier">vector</span><span class="special">&lt;</span><span class="identifier">ordered_unique</span><span class="special">&lt;</span><span class="identifier">identity</span><span class="special">&lt;</span><span class="keyword">int</span><span class="special">&gt;</span> <span class="special">&gt;,</span><span class="identifier">sequenced</span><span class="special">&lt;&gt;</span> <span class="special">&gt;</span> <span class="identifier">index_list_t</span><span class="special">;</span>
+
+<span class="keyword">typedef</span> <span class="identifier">multi_index_container</span><span class="special">&lt;</span>
+  <span class="keyword">int</span><span class="special">,</span>
+  <span class="identifier">index_list_t</span>
+<span class="special">&gt;</span> <span class="identifier">indexed_t</span><span class="special">;</span>
+  </pre>
+</blockquote>
+
+
+<p>这样就可以通过MPL元编程来合成<code>multi_index_container</code> 的实例化，如下例所示：
+</p>
+
+
+<blockquote>
+  <pre><span class="comment">// </span><span class="comment">原先的 multi_index_container 实例化</span><span class="comment"></span>
+<span class="keyword">typedef</span> <span class="identifier">multi_index_container</span><span class="special">&lt;</span>
+  <span class="keyword">int</span><span class="special">,</span>
+  <span class="identifier">indexed_by</span><span class="special">&lt;</span>
+    <span class="identifier">ordered_unique</span><span class="special">&lt;</span><span class="identifier">identity</span><span class="special">&lt;</span><span class="keyword">int</span><span class="special">&gt;</span> <span class="special">&gt;</span>
+  <span class="special">&gt;</span>
+<span class="special">&gt;</span>                                <span class="identifier">indexed_t1</span><span class="special">;</span>
+
+<span class="comment">// </span><span class="comment">取出它的索引列表并增加一个索引</span><span class="comment"></span>
+<span class="keyword">typedef</span> <span class="identifier">boost</span><span class="special">::</span><span class="identifier">mpl</span><span class="special">::</span><span class="identifier">push_front</span><span class="special">&lt;</span>
+  <span class="identifier">indexed_t1</span><span class="special">::</span><span class="identifier">index_specifier_type_list</span><span class="special">,</span>
+  <span class="identifier">sequenced</span><span class="special">&lt;&gt;</span>
+<span class="special">&gt;::</span><span class="identifier">type</span>                          <span class="identifier">index_list_t</span><span class="special">;</span>
+
+<span class="comment">// </span><span class="comment">扩展后的 multi_index_container</span><span class="comment"></span>
+<span class="keyword">typedef</span> <span class="identifier">multi_index_container</span><span class="special">&lt;</span>
+  <span class="keyword">int</span><span class="special">,</span>
+  <span class="identifier">index_list_t</span>
+<span class="special">&gt;</span>                                <span class="identifier">indexed_t2</span><span class="special">;</span>
+  </pre>
+</blockquote>
+
+
+<hr>
+
+<div class="prev_link"><a href="debug.html"><img src="../prev.gif" alt="debugging support" border="0"><br>
+
+Debugging support测试的支持
+</a></div>
+
+<div class="up_link"><a href="index.html"><img src="../up.gif" alt="Boost.MultiIndex tutorial" border="0"><br>
+
+Boost.MultiIndex 指南
+</a></div>
+
+<div class="next_link"><a href="../reference/index.html"><img src="../next.gif" alt="Boost.MultiIndex reference" border="0"><br>
+
+Boost.MultiIndex 参考
+</a></div>
+<br style="" clear="all">
+
+
+<br>
+
+
+<p>Revised November 7th 2008</p>
+
+
+<p>© Copyright 2003-2008 Joaquín M López Muñoz.
+Distributed under the Boost Software 
+License, Version 1.0. (See accompanying file <a href="../../../../LICENSE_1_0.txt">
+LICENSE_1_0.txt</a> or copy at <a href="http://www.boost.org/LICENSE_1_0.txt">
+http://www.boost.org/LICENSE_1_0.txt</a>)
+</p>
+
+
+</body></html>

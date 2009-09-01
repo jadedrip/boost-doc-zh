@@ -1,0 +1,80 @@
+﻿<!DOCTYPE HTML PUBLIC "-//W3C//DTD HTML 4.01 Transitional//EN">
+<html>
+	<head>
+		<title>scoped_array</title>
+		<meta http-equiv="Content-Type" content="text/html; charset=UTF-8">
+	</head>
+	<body bgcolor="#ffffff" text="#000000">
+		<h1><A href="../../index.htm"><img src="../../boost.png" alt="boost.png (6897 bytes)" align="middle" width="277" height="86"
+					border="0"></A>scoped_array 类模板</h1>
+		<p><b>scoped_array</b> 类模板存储一个指向一个动态分配数组的指针（动态分配数组是用 C++ <b>new[]</b> 表达式分配的）。在 <b>scoped_array</b> 的析构过程中，或者经由一个显式的 <b>reset</b>，要保证它所指向的数组被删除。</p>
+		<p><b>scoped_array</b> 模板是解决简单需要的简单方案。它提供了一个基本的“资源获取就是初始化”的机制，不包括共享所有权或所有权转让语义。无论它的名字还是语义上的强制要求（作为一个 <a href="../utility/utility.htm#Class_noncopyable">noncopyable</a>），它的唯一目的就是在当前作用域内独自保留所有权。因为它是 <a href="../utility/utility.htm#Class_noncopyable">noncopyable（不可拷贝的）</a>，对于不可拷贝的指针来说，它比 <b>shared_array</b> 更加安全。</p>
+		<p>因为 <b>scoped_array</b> 很简单，在它的通常实现中，每一个操作都和内建数组指针有同样的速度，而且的它所占用的空间没有超过内建数组指针。</p>
+		<p>它不能用于 C++ 标准库中的容器中，如果 <b>scoped_array</b> 不能满足你的需要，请参考 <a href="shared_array.htm"><b>shared_array</b></a>。</p>
+		<p>它不能正确地持有指向单独对象的指针。关于那种用法请参见 <a href="scoped_ptr.htm"><b>scoped_ptr</b></a>。</p>
+		<p>一个 <b>std::vector</b> 是一种可以代替 <b>scoped_array</b> 的可选方案，只需要稍微一点的额外代价，可以得到更多的灵活性。一个 <b>boost::array</b> 是一种不使用动态分配时的可选方案。</p>
+		<p>这个类模板被 <b>T</b> 参数化，这个 <b>T</b> 是被指向的对象的类型。<b>T</b> 必须适合于智能指针的<a href="smart_ptr.htm#common_requirements">共通需求</a>。</p>
+		<h2>Synopsis 概要</h2>
+		<pre>namespace boost {
+
+  template&lt;class T&gt; class scoped_array : <a href="../utility/utility.htm#Class_noncopyable">noncopyable</a> {
+
+    public:
+      typedef T <a href="#element_type">element_type</a>;
+
+      explicit <a href="#ctor">scoped_array</a>(T * p = 0); // never throws
+      <a href="#destructor">~scoped_array</a>(); // never throws
+
+      void <a href="#reset">reset</a>(T * p = 0); // never throws
+
+      T &amp; <a href="#operator[]">operator[]</a>(std::ptrdiff_t i) const; // never throws
+      T * <a href="#get">get</a>() const; // never throws
+     
+      operator <A href="#conversions" ><i>unspecified-bool-type</i></A>() const; // never throws
+
+      void <a href="#swap">swap</a>(scoped_array &amp; b); // never throws
+  };
+
+  template&lt;class T&gt; void <a href="#free-swap">swap</a>(scoped_array&lt;T&gt; &amp; a, scoped_array&lt;T&gt; &amp; b); // never throws
+
+}</pre>
+		<h2>Members 成员</h2>
+		<h3>
+			<a name="element_type">element_type 元素类型</a></h3>
+		<pre>typedef T element_type;</pre>
+		<p>提供所存储的指针的类型。</p>
+		<h3><a name="ctor">constructors 构造函数</a></h3>
+		<pre>explicit scoped_array(T * p = 0); // never throws</pre>
+		<p>构造一个 <b>scoped_array</b>，存储一个 <b>p</b> 的拷贝，<b>p</b> 必须是经由 C++ 的 <b>new[]</b> 表达式动态分配的或者是 0。这里并不需要 <b>T</b> 是一个完整类型。参见智能指针的<a href="smart_ptr.htm#common_requirements">共通需求</a>。</p>
+		<h3><a name="destructor">destructor 析构函数</a></h3>
+		<pre>~scoped_array(); // never throws</pre>
+		<p>删除所存储的指针所指向的数组，注意，<b>delete[]</b> 用在一个值为 0 的指针上是无害的。为了保证这里不会抛出异常，要求被删除数组的对象的析构函数不能抛出异常。参见智能指针的<a href="smart_ptr.htm#common_requirements">共通需求</a>。</p>
+		<h3><a name="reset">reset 重置</a></h3>
+		<pre>void reset(T * p = 0); // never throws</pre>
+		<p>删除所存储的指针所指向的数组，然后存储一个 p 的拷贝，p 必须是经由一个 C++ 的 <b>new[]</b> 表达式动态分配的或者是 0。为了保证这里不会抛出异常，要求被删除数组的对象的析构函数不能抛出异常。参见智能指针的<a href="smart_ptr.htm#common_requirements">共通需求</a>。</p>
+		<h3><a name="operator[]">subscripting 下标</a></h3>
+		<pre>T &amp; operator[](std::ptrdiff_t i) const; // never throws</pre>
+		<p>返回一个引向所存储的指针所指向的数组的元素 <b>i</b> 的引用。如果所存储指针为 0，或者 <b>i</b> 比 0 小，或者大于或等于数组中元素的数量，则行为是未定义的，而且几乎一定让你当场晕倒。</p>
+		<h3><a name="get">get 取得</a></h3>
+		<pre>T * get() const; // never throws</pre>
+		<p>返回所存储的指针。这里并不需要 T</b> 是一个完整类型。参见智能指针的<a href="smart_ptr.htm#common_requirements">共通需求</a>。</p>
+		<h3><a name="conversions">conversions 转换</a></h3>
+		<pre>operator <i>unspecified-bool-type</i> () const; // never throws</pre>
+		<p>返回一个未确定的值，在需要布尔值的上下文中，它等价于 <code>get() != 0</code>。</p>
+		<h3><a name="swap">swap 交换</a></h3>
+		<pre>void swap(scoped_array &amp; b); // never throws</pre>
+		<p>交换两个智能指针中的内容。这里并不需要 T</b> 是一个完整类型。参见智能指针的<a href="smart_ptr.htm#common_requirements">共通需求</a>。</p>
+		<h2><a name="functions">Free Functions 自由函数</a></h2>
+		<h3><a name="free-swap">swap 交换</a></h3>
+		<pre>template&lt;class T&gt; void swap(scoped_array&lt;T&gt; &amp; a, scoped_array&lt;T&gt; &amp; b); // never throws</pre>
+		<p>等价于 <b>a.swap(b)</b>。与 <b>std::swap</b> 的接口匹配。为泛型编程提供帮助。</p>
+		<hr>
+		<p>Revised <!--webbot bot="Timestamp" S-Type="EDITED" S-Format="%d %B %Y" startspan--> 
+			09 January 2003<!--webbot bot="Timestamp" endspan i-checksum="32310"--></p>
+		<p>Copyright 1999 Greg Colvin and Beman Dawes. Copyright 2002 Darin Adler. 
+			Copyright 2002-2005 Peter Dimov. Permission to copy, use, modify, sell and 
+			distribute this document is granted provided this copyright notice appears in 
+			all copies. This document is provided "as is" without express or implied 
+			warranty, and with no claim as to its suitability for any purpose.</p>
+	</body>
+</html>

@@ -1,0 +1,265 @@
+<!DOCTYPE HTML PUBLIC "-//W3C//DTD HTML 4.01 Transitional//EN">
+<html><head>
+
+		
+		
+  
+  <title>Smart Pointers 智能指针</title><meta http-equiv="Content-Type" content="text/html; charset=UTF-8"></head>
+
+<body bgcolor="#ffffff" text="#000000">
+
+		
+<h1><a href="../../index.htm"><img src="../../boost.png" alt="boost.png (6897 bytes)" align="middle" border="0" height="86" width="277"></a>Smart Pointers 智能指针</h1>
+
+		
+<p><a href="#Introduction">Introduction 简介</a><br>
+
+			<a href="#common_requirements">Common Requirements 共同需求</a><br>
+
+			<a href="#Exception_Safety">Exception Safety 异常安全</a><br>
+
+			<a href="#Exception-specifications">Exception-specifications 异常规范</a><br>
+
+			<a href="#History">History and Acknowledgements 历史和感谢</a><br>
+
+			<a href="#References">References 参考资料</a></p>
+
+		
+<h2><a name="Introduction">Introduction 简介</a></h2>
+
+		
+<p>smart pointers（智能指针）是存储“指向动态分配（在堆上）的对象的指针”的对象。他们的行为很像
+C++
+的内建指针，只是它们可以在适当的时候自动删除它们所指向的对象。智能指针在面对异常时有非常显著的作用，它们可以确保动态分配对象的完全析构。它们还可
+以用于跟踪多主人共享的动态分配对象。</p>
+
+		
+<p>在概念上，智能指针可以看作拥有它所指向的对象，并因此在对象不再需要时负责将它删除。</p>
+
+		
+<p>智能指针库提供了六个智能指针类模板：</p>
+
+		
+<div align="left">
+			
+<table border="1" cellpadding="4" cellspacing="0">
+
+				<tbody>
+    <tr>
+
+					<td><a href="scoped_ptr.htm"><b>scoped_ptr</b></a></td>
+
+					<td><a href="../../boost/scoped_ptr.hpp">&lt;boost/scoped_ptr.hpp&gt;</a></td>
+
+					<td>简单的单一对象的唯一所有权。不可拷贝。</td>
+
+				</tr>
+
+				<tr>
+
+					<td><a href="scoped_array.htm"><b>scoped_array</b></a></td>
+
+					<td><a href="../../boost/scoped_array.hpp">&lt;boost/scoped_array.hpp&gt;</a></td>
+
+					<td>简单的数组的唯一所有权。不可拷贝。</td>
+
+				</tr>
+
+				<tr>
+
+					<td><a href="shared_ptr.htm"><b>shared_ptr</b></a></td>
+
+					<td><a href="../../boost/shared_ptr.hpp">&lt;boost/shared_ptr.hpp&gt;</a></td>
+
+					<td>在多个指针间共享的对象所有权。</td>
+
+				</tr>
+
+				<tr>
+
+					<td><a href="shared_array.htm"><b>shared_array</b></a></td>
+
+					<td><a href="../../boost/shared_array.hpp">&lt;boost/shared_array.hpp&gt;</a></td>
+
+					<td>在多个指针间共享的数组所有权。</td>
+
+				</tr>
+
+				<tr>
+
+					<td><a href="weak_ptr.htm"><b>weak_ptr</b></a></td>
+
+					<td><a href="../../boost/weak_ptr.hpp">&lt;boost/weak_ptr.hpp&gt;</a></td>
+
+					<td>一个属于 <b>shared_ptr</b> 的对象的无所有权的观察者。</td>
+
+				</tr>
+
+				<tr>
+
+					<td><a href="intrusive_ptr.html"><b>intrusive_ptr</b></a></td>
+
+					<td><a href="../../boost/intrusive_ptr.hpp">&lt;boost/intrusive_ptr.hpp&gt;</a></td>
+
+					<td>带有一个侵入式引用计数的对象的共享所有权。</td>
+
+				</tr>
+
+			
+  </tbody>
+</table>
+
+		</div>
+
+		
+<p>这些模板被设计用来补充 <b>std::auto_ptr</b> 模板的不足。</p>
+
+		
+<p>它们是在 Bjarne Stroustrup 的 "The C++ Programming Language"
+第三版，14.4，资源管理部分描述的 "resource acquisition is
+initialization"（“获得资源就是初始化”，《C++
+程序设计语言》中文版中译为“资源申请即初始化”，个人认为不太确切——译者注）惯用法的实例。</p>
+
+		
+<p>此外，智能指针库提供了高效的工厂函数来创建 <code>shared_ptr</code> 对象：</p>
+<div align="left">
+<table border="1" cellpadding="4" cellspacing="0">
+<tbody>
+<tr>
+<td><a href="make_shared.html"><b>make_shared and allocate_shared</b></a></td>
+<td><a href="../../boost/make_shared.hpp">&lt;boost/make_shared.hpp&gt;</a></td>
+<td>高效创建 <code>shared_ptr</code> 对象。</td></tr></tbody></table></div><p>测试程序 <a href="test/smart_ptr_test.cpp">smart_ptr_test.cpp</a>，用来检验正确的操作。</p>
+
+		
+<p>网页 <a href="compatibility.htm">compatibility（兼容性）</a>结合 Boost 智能指针库的老版本记述了智能指针实现的早期版本以来的一些变化。</p>
+
+		
+<p>网页 <a href="smarttests.htm">smart pointer timings（智能指针测时）</a>专注于那些犄角旮旯的性能问题。</p>
+
+		
+<p>网页 <a href="sp_techniques.html">smart pointer programming techniques（智能指针编程技术）</a>列举了 <code>shared_ptr</code> 和 <code>weak_ptr</code> 的一些高级应用。</p>
+
+		
+<h2><a name="common_requirements">Common Requirements 共通需求</a></h2>
+
+		
+<p>这些智能指针类模板有一个模板参数 <b>T</b>，它指定这个智能指针所指向的对象的类型。如果类型为 <b>T</b> 的对象的析构函数或 <b>operator delete</b> 抛出异常，则智能指针模板的行为是未定义的。</p>
+
+		
+<p>在智能指针声明的时候，<b>T</b> 可以是一个不完整的类型。除非另外指定，在智能指针实例化的时候，它要求 <b>T</b> 是一个完整的类型。实现体需要诊断出（视为错误）所有对这一需求的违例，包括不完整类型的缺失部分。参见 <a href="../utility/utility.htm#checked_delete"><b>checked_delete</b></a> 函数模板的描述。</p>
+
+		
+<p>注意，<strong>shared_ptr</strong> 没有这个限制，它的大部分成员函数都不要求 <strong>T</strong> 是一个完整的类型。</p>
+
+		
+<h3>Rationale 基本原理</h3>
+
+		
+<p><b>T</b> 的需求是要小心谨慎地构造最大化的安全，而且还要允许 handle-body（也可叫做 pimpl（pimpl 全称为
+"pointer to implementation"，可参考 Effective C++, 3rd Edition Item 25 29 和
+31——译者注））和其它类似惯用法。在这些惯用法中，一个智能指针可以出现在 <b>T</b> 是一个不完整类型的编译单元中。这样就从实现中分离出接口，并对仅仅使用接口的编译单元中隐藏实现。在特定智能指针文档中记述的示例阐明了智能指针在这些惯用法中的应用。</p>
+
+		
+<p>注意，在析构的时候，<b>scoped_ptr</b> 要求 <b>T</b> 是一个完整类型，而 <b>shared_ptr</b> 并不要求。</p>
+
+		
+<h2><a name="Exception_Safety">Exception Safety 异常安全</a></h2>
+
+		
+<p>这些智能指针类中的几个函数被指定为在抛出异常时“没有影响”或“除了如此这般之外没有影响”。
+这就意味着当这些类中的某个对象抛出异常时，整个程序保持在那个引发异常的函数被调用之前的状态。这等同于保证没有可发觉的副作用。另一些函数从不抛出异
+常。那些抛出异常的函数能够抛出的异常（假设 <b>T</b> 符合<a href="#common_requirements">共通需求</a>）也仅限于 <b>std::bad_alloc</b>，而且也仅限于那些在文档中明确记述可能抛出 <b>std::bad_alloc</b> 的那些函数。</p>
+
+		
+<h2><a name="Exception-specifications">Exception-specifications 异常规范</a></h2>
+
+		
+<p>没有使用异常规范，参见 <a href="../../more/lib_guide.htm#Exception-specification">exception-specification rationale</a>。</p>
+
+		
+<p>所有的智能指针模板都包含从不抛出异常的成员函数，因为他们不仅自己从不抛出异常，而且他们调用的其它函数也不会抛出异常。这样的函数被标示为这样的注释：<code>// never throws</code>。</p>
+
+		
+<p>摧毁所指向对象的类型的函数被<a href="#common_requirements">共同需求</a>禁止抛出异常。</p>
+
+		
+<h2><a name="History">History</a> and Acknowledgements 历史和感谢</h2>
+
+		
+<p>2002 年 1 月。Peter Dimov 重写了所有四个类，增加特性，修改 bug，而且将它们分开到四个单独的头文件中，并增加了 <b>weak_ptr</b>。关于这些更改的概要参见 <a href="compatibility.htm">compatibility</a> 网页。</p>
+
+		
+<p>2001 年 5 月。Vladimir Prus 建议在析构时需要一个完整类型。讨论了一些优雅的改进，包括 Dave Abrahams,
+Greg Colvin, Beman Dawes, Rainer Deyke, Peter Dimov, John Maddock,
+Vladimir Prus, Shankar Sai，还有其他人。</p>
+
+		
+<p>1999 年 11 月。Darin Adler 提供了 <b>operator ==</b>, <b>operator !=</b>, and <b>std::swap</b>
+			和 <b>std::less</b> 的针对 shared 类型的特化。</p>
+
+		
+<p>1999 年 9 月。Luis Coelho 提供了 <b>shared_ptr::swap</b> 和 <b>shared_array::swap</b>。</p>
+
+		
+<p>1999 年 5 月。在 1999 年 4 月和 5 月，Valentin Bonnard 和 David Abrahams 提出大量建议而导致重大改进。</p>
+
+		
+<p>1998 年 10 月。Beman Dawes 提议复原 <b>safe_ptr</b> 和 <b>counted_ptr</b>
+名字之下的原有语义，参加会议的有 Per Andersson, Matt Austern, Greg Colvin, Sean
+Corfield, Pete Becker, Nico Josuttis, Dietmar Kühl, Nathan Myers,
+Chichiang Wan 和 Judy Ward。经过讨论，四个新的类名称尘埃落定，并决定不需要严格遵循 <b>std::auto_ptr</b> 的接口，并最终敲定了各个不同函数的标识和语义。</p>
+
+		
+<p>接下来的三个月中，<b>shared_ptr</b> 的几个实现被提出来，并在 <a href="http://www.boost.org">boost.org</a> 邮件列表中进行讨论。实现的争论点始终围绕着必须被坚持的引用计数，究竟是将它附加到所指向的对象上，还是分离到别处。这些不同本身又各自包含两种较大的变化：
+			</p>
+<ul>
+
+				<li>
+				直接分离：shared_ptr 包含一个指向对象的指针和一个指向数量的指针。
+				</li>
+  <li>
+				间接分离：shared_ptr 包含一个指向辅助对象的指针，那个对象再依次包含一个指向对象和数量的指针。
+				</li>
+  <li>
+				嵌入式附加：数量是所指向对象的一个成员。
+				</li>
+  <li>
+				放置式附加：数量的附加经由 operator new 进行控制。</li>
+
+			
+</ul>
+
+		
+<p>每一种实现技术都有优势和劣势。我们测量了直接和间接方法的不同的运行时间，发现至少在 Intel Pentium
+芯片上只有极微小的差别。Kevlin Henney 提供了一篇他写的论文 "Counted Body Techniques"。Dietmar
+Kühl 提出一个允许用户选择他们更喜欢的实现的优雅的模板偏特化技术，并进行了实验。</p>
+
+		
+<p>但是 Greg Colvin 和 Jerry Schwarz 认为“参数化会阻碍用户”，而最终我们选择仅仅提供直接的实现。</p>
+
+		
+<p>1994 年夏天。Greg Colvin 向 C++ 标准委员会提议名为 <b>auto_ptr</b> 和 <b>counted_ptr</b> 的类，它们和我们现在所说的 <b>scoped_ptr</b> 和 <b>shared_ptr</b> 非常相似。<a href="#Col-94">[Col-94]</a> 在极少的几次全体委员会没有接受库工作组的建议的案例之一中，<b>counted_ptr</b> 被否决了，并出人意外地将所有权转让语义加入到 <b>auto_ptr</b> 中。</p>
+
+		
+<h2><a name="References">References 参考资料</a></h2>
+
+		
+<p>[<a name="Col-94">Col-94</a>] Gregory Colvin, <a href="http://std.dkuug.dk/jtc1/sc22/wg21/docs/papers/1994/N0555.pdf">
+				Exception Safe Smart Pointers</a>, C++ committee document 94-168/N0555, 
+			July, 1994.</p>
+
+		
+<p>[<a name="E&amp;D-94">E&amp;D-94</a>] John R. Ellis &amp; David L. Detlefs, <a href="http://www.usenix.org/publications/library/proceedings/c++94/full_papers/ellis.a">
+				Safe, Efficient Garbage Collection for C++</a>, Usenix Proceedings, 
+			February, 1994. This paper includes an extensive discussion of weak pointers 
+			and an extensive bibliography.</p>
+
+		
+<hr>
+<p>$Date: 2008-02-10 11:39:38 -0500 (Sun, 10 Feb 2008) $</p>
+
+<p><small>Copyright 1999 Greg Colvin and Beman Dawes. Copyright 2002 Darin 
+Adler. Distributed under the Boost Software License, Version 1.0. See 
+accompanying file <a href="../../LICENSE_1_0.txt">LICENSE_1_0.txt</a> or copy at 
+<a href="http://www.boost.org/LICENSE_1_0.txt">http://www.boost.org/LICENSE_1_0.txt</a>.</small></p>
+</body></html>

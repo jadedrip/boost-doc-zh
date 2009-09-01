@@ -1,0 +1,345 @@
+<!DOCTYPE HTML PUBLIC "-//W3C//DTD HTML 4.01 Transitional//EN">
+<html><head>
+<meta http-equiv="Content-Type" content="text/html; charset=UTF-8"><title>Design Overview</title>
+
+<link rel="stylesheet" href="../boostbook.css" type="text/css">
+<meta name="generator" content="DocBook XSL Stylesheets V1.73.2">
+<link rel="start" href="../index.html" title="The Boost C++ Libraries BoostBook Documentation Subset">
+<link rel="up" href="../signals.html" title="Chapter 14. Boost.Signals">
+<link rel="prev" href="../boost/last_value_void__id550974.html" title="Class last_value&lt;void&gt;">
+<link rel="next" href="s05.html" title="Design Rationale"></head>
+<body style="color: black; background-color: white;" alink="#0000ff" link="#0000ff" vlink="#840084">
+<table cellpadding="2" width="100%">
+<tbody>
+<tr>
+<td valign="top"><img alt="Boost C++ Libraries" src="../../../boost.png" height="86" width="277"></td>
+<td align="center"><a href="../../../index.html">Home</a></td>
+<td align="center"><a href="../../../libs/libraries.htm">Libraries</a></td>
+<td align="center"><a href="http://www.boost.org/people/people.htm">People</a></td>
+<td align="center"><a href="http://www.boost.org/more/faq.htm">FAQ</a></td>
+<td align="center"><a href="../../../more/index.htm">More</a></td>
+</tr>
+</tbody>
+</table>
+<hr>
+<div class="spirit-nav"><a accesskey="p" href="s04.html"><img style="border: 0px solid ; width: 19px; height: 19px;" src="../../../doc/html/images/prev.png" alt="Prev"></a><a accesskey="u" href="../signals.html"><img src="../../../doc/html/images/up.png" alt="Up"></a><a accesskey="h" href="../index.html"><img src="../../../doc/html/images/home.png" alt="Home"></a><a accesskey="n" href="s06.html"><img style="border: 0px solid ; width: 19px; height: 19px;" src="../../../doc/html/images/next.png" alt="Next"></a></div>
+<div class="section" lang="en">
+<div class="titlepage">
+<div>
+<div>
+<h2 class="title" style="clear: both;"><a name="id1285220"></a>Design Overview</h2>
+<h2 class="title" style="clear: both;">
+<a name="id1285220"></a>设计概览</h2>
+</div>
+</div>
+</div>
+<div class="toc">
+<dl>
+<dt><span class="section"><a href="s04.html#id1285230">Type Erasure</a></span></dt>
+<dt><span class="section"><a href="s04.html#id1285305"><code class="computeroutput">connection</code>
+class</a></span></dt>
+<dt><span class="section"><a href="s04.html#id1285438">Slot Call Iterator</a></span></dt>
+<dt><span class="section"><a href="s04.html#id1285660"><code class="computeroutput">visit_each</code>
+function template</a></span></dt>
+</dl>
+</div>
+<div class="toc">
+<dl>
+<dt><span class="section"><a href="s04.html#id1285230">类型删除</a></span></dt>
+<dt><span class="section"><a href="s04.html#id1285305"><code class="computeroutput">connection</code>
+类</a></span></dt>
+<dt><span class="section"><a href="s04.html#id1285438">插槽调用迭代器</a></span></dt>
+<dt><span class="section"><a href="s04.html#id1285660"><code class="computeroutput">visit_each</code>
+函数模板</a></span></dt>
+</dl>
+</div>
+<div class="section" lang="en">
+<div class="titlepage">
+<div>
+<div>
+<h3 class="title"><a name="id1285230"></a>Type
+Erasure</h3>
+<h3 class="title">
+<a name="id1285230"></a>类型删除</h3>
+</div>
+</div>
+</div>
+<p>"Type erasure", where static type information is eliminated by
+the use of dynamically dispatched interfaces, is used extensively
+within the Boost.Signals library to reduce the amount of code generated
+by template instantiation. Each signal must manage a list of slots and
+their associated connections, along with a <code class="computeroutput">std::map</code> to map from
+group identifiers to their associated connections. However,
+instantiating this map for every token type, and perhaps within each
+translation unit (for some popular template instantiation strategies)
+increase compile time overhead and space overhead.</p>
+<p>“类型删除（type erasure）”是通过动态分派的接口消除静态类型信息， 它在 Boost.Signals
+库中广泛使用， 以减少模板实例化所产生的代码总数。 每个信号必须管理一序列插槽及其相关的连接， 还有一个 <code class="computeroutput">std::map</code>，
+从编组标识符映射到它们相关的连接。 然而，为每个标记类型实例化该映射， 并且可能在每个翻译单元中都要实例化 （因为某些流行的模板实例化策略），
+增加了编译的时间开销和空间开销。 </p>
+<p> To combat this so-called "template bloat", we use
+Boost.Function and Boost.Any to store unknown types and operations.
+Then, all of the code for handling the list of slots and the mapping
+from slot identifiers to connections is factored into the class <code class="computeroutput">signal_base</code> that deals
+exclusively with the <code class="computeroutput">any</code>
+and <code class="computeroutput"><a class="link" href="../boost/function.html" title="Class template function">function</a></code>
+objects, hiding the actual implementations using the well-known pimpl
+idiom. The actual <code class="computeroutput"><a class="link" href="../boost/signalN.html" title="Class template signalN">signalN</a></code>
+class templates deal only with code that will change depending on the
+number of arguments or which is inherently template-dependent (such as
+connection).</p>
+<p> 为了防止这种所谓的“模板膨胀”， 我们使用了 Boost.Function 和 Boost.Any
+来保存未知的类型和操作。 然后，处理插槽链表和插槽标识符到连接的映射的所有代码都移到了 <code class="computeroutput">signal_base</code> 类中， 它专门处理 <code class="computeroutput">any</code> 和 <code class="computeroutput"><a class="link" href="../boost/function.html" title="Class template function">function</a></code>
+对象，使用著名的 pimpl 惯用法隐藏了实际的实现。 实际的 <code class="computeroutput"><a class="link" href="../boost/signalN.html" title="Class template signalN">signalN</a></code>
+类模板仅处理根据参数个数而变化的代码， 或本来就是模板相关的代码（如连接）。 </p>
+</div>
+<div class="section" lang="en">
+<div class="titlepage">
+<div>
+<div>
+<h3 class="title"><a name="id1285305"></a><code class="computeroutput">connection</code> class</h3>
+<h3 class="title">
+<a name="id1285305"></a><code class="computeroutput">connection</code> 类</h3>
+</div>
+</div>
+</div>
+<p> The <code class="computeroutput"><a class="link" href="../boost/signals/connection.html" title="Class connection">connection</a></code>
+class is central to the behavior of the Boost.Signals library. It is
+the only entity within the Boost.Signals system that has knowledge of
+all objects that are associated by a given connection. To be specific,
+the <code class="computeroutput"><a class="link" href="../boost/signals/connection.html" title="Class connection">connection</a></code>
+class itself is merely a thin wrapper over a <code class="computeroutput">shared_ptr</code> to a <code class="computeroutput">basic_connection</code> object.</p>
+<p> <code class="computeroutput"><a class="link" href="../boost/signals/connection.html" title="Class connection">connection</a></code>
+类是 Boost.Signals 库行为的中心。 它是 Boost.Signals 系统中的唯一的实体， 知道与特定连接相关联的所有对象。
+确切地说， <code class="computeroutput"><a class="link" href="../boost/signals/connection.html" title="Class connection">connection</a></code>
+类本身只是指向 <code class="computeroutput">basic_connection</code>
+对象的 <code class="computeroutput">shared_ptr</code>
+之上的薄封装。 </p>
+<p> <code class="computeroutput"><a class="link" href="../boost/signals/connection.html" title="Class connection">connection</a></code>
+objects are stored by all participants in the Signals system: each <code class="computeroutput"><a class="link" href="../boost/signals/trackable.html" title="Class trackable">trackable</a></code>
+object contains a list of <code class="computeroutput"><a class="link" href="../boost/signals/connection.html" title="Class connection">connection</a></code>
+objects describing all connections it is a part of; similarly, all
+signals contain a set of pairs that define a slot. The pairs consist of
+a slot function object (generally a Boost.Function object) and a <code class="computeroutput"><a class="link" href="../boost/signals/connection.html" title="Class connection">connection</a></code>
+object (that will disconnect on destruction). Finally, the mapping from
+slot groups to slots is based on the key value in a <code class="computeroutput">std::multimap</code> (the
+stored data in the <code class="computeroutput">std::multimap</code>
+is the slot pair).</p>
+<p> <code class="computeroutput"><a class="link" href="../boost/signals/connection.html" title="Class connection">connection</a></code>
+对象被信号系统中所有参与者保存： 每个 <code class="computeroutput"><a class="link" href="../boost/signals/trackable.html" title="Class trackable">trackable</a></code>
+对象包含一个 <code class="computeroutput"><a class="link" href="../boost/signals/connection.html" title="Class connection">connection</a></code>
+对象链表， 该链表描述了包含这个可跟踪对象的所有连接； 同样，所有信号包含一组定义插槽的配对（pair）。 该配对由插槽函数对象（一般是
+Boost.Function 对象）和 <code class="computeroutput"><a class="link" href="../boost/signals/connection.html" title="Class connection">connection</a></code>
+对象（析构时会断开）所组成。 最后，从插槽组到插槽的映射是基于 <code class="computeroutput">std::multimap</code>
+中的键值（保存于 <code class="computeroutput">std::multimap</code>
+中的数据即插槽配对）。 </p>
+</div>
+<div class="section" lang="en">
+<div class="titlepage">
+<div>
+<div>
+<h3 class="title"><a name="id1285438"></a>Slot
+Call Iterator</h3>
+<h3 class="title">
+<a name="id1285438"></a>插槽调用迭代器</h3>
+</div>
+</div>
+</div>
+<p> The slot call iterator is conceptually a stack of iterator
+adaptors that modify the behavior of the underlying iterator through
+the list of slots. The following table describes the type and behavior
+of each iterator adaptor required. Note that this is only a conceptual
+model: the implementation collapses all these layers into a single
+iterator adaptor because several popular compilers failed to compile
+the implementation of the conceptual model.</p>
+<p> 插槽调用迭代器概念上是一堆迭代器适配器， 它们会更改底层插槽链表迭代器的行为。 下表描述了每个迭代器所要求的类型和行为。
+注意这仅仅是个概念模型： 实现时所有这些层次合并为单个迭代器适配器， 因为有些流行的编译器无法编译概念模型的实现。 </p>
+<div class="informaltable">
+<table class="table">
+<colgroup><col><col></colgroup>
+<thead><tr>
+<th align="left">Iterator Adaptor
+<p>迭代器适配器</p>
+</th>
+<th align="left">Purpose
+<p>目的</p>
+</th>
+</tr>
+</thead><tbody>
+<tr>
+<td align="left">
+<p>Slot List Iterator</p>
+<p>插槽链表迭代器</p>
+</td>
+<td align="left">
+<p>An iterator through the list of slots connected to a
+signal. The <code class="computeroutput">value_type</code>
+of this iterator will be <code class="computeroutput">std::pair&lt;any,
+connection&gt;</code>, where the <code class="computeroutput"><a class="link" href="../boost/any.html" title="Class any">any</a></code>
+contains an instance of the slot function type.</p>
+<p>连接到信号的插槽链表的迭代器。 该迭代器的 <code class="computeroutput">value_type</code>
+是 <code class="computeroutput">std::pair&lt;any,
+connection&gt;</code>， 其中 <code class="computeroutput"><a class="link" href="../boost/any.html" title="Class any">any</a></code>
+包含插槽函数类型的一个实例。 </p>
+</td>
+</tr>
+<tr>
+<td align="left">
+<p>Filter Iterator Adaptor</p>
+<p>过滤迭代器适配器</p>
+</td>
+<td align="left">
+<p>This filtering iterator adaptor filters out slots that
+have been disconnected, so we never see a disconnected slot in later
+stages.</p>
+<p>这个过滤迭代器适配器过滤掉已断开的插槽， 因此我们在后面的阶段不会见到已断开的插槽。 </p>
+</td>
+</tr>
+<tr>
+<td align="left">
+<p>Projection Iterator Adaptor</p>
+<p>投影迭代器适配器</p>
+</td>
+<td align="left">
+<p>The projection iterator adaptor returns a reference to
+the first member of the pair that constitutes a connected slot (e.g.,
+just the <code class="computeroutput"><a class="link" href="../boost/any.html" title="Class any">boost::any</a></code>
+object that holds the slot function).</p>
+<p> 投影迭代器适配器返回一个引用， 指向构成一个已连接插槽的 pair 的第一个成员 （例如保存插槽函数的 <code class="computeroutput"><a class="link" href="../boost/any.html" title="Class any">boost::any</a></code>
+对象）。 </p>
+</td>
+</tr>
+<tr>
+<td align="left">
+<p>Transform Iterator Adaptor</p>
+<p>转换迭代器适配器</p>
+</td>
+<td align="left">
+<p>This transform iterator adaptor performs an <code class="computeroutput"><a class="link" href="../boost/any_cast.html" title="Function any_cast">any_cast</a></code>
+to extract a reference to the slot function with the appropriate slot
+function type.</p>
+<p>这个转换迭代器适配器执行 <code class="computeroutput"><a class="link" href="../boost/any_cast.html" title="Function any_cast">any_cast</a></code>，
+以提取一个插槽函数的引用， 并具有适当的插槽函数类型。 </p>
+</td>
+</tr>
+<tr>
+<td align="left">
+<p>Transform Iterator Adaptor</p>
+<p>转换迭代器适配器</p>
+</td>
+<td align="left">
+<p>This transform iterator adaptor calls the function
+object returned by dereferencing the underlying iterator with the set
+of arguments given to the signal itself, and returns the result of that
+slot call.</p>
+<p>这个转换迭代器适配器调用底层迭代器解引用所返回的函数对象， 参数为输入信号本身的那组参数，
+并返回那个插槽调用的结果。 </p>
+</td>
+</tr>
+<tr>
+<td align="left">
+<p>Input Caching Iterator Adaptor</p>
+<p>输入缓存迭代器适配器</p>
+</td>
+<td align="left">
+<p>This iterator adaptor caches the result of dereferencing
+the underlying iterator. Therefore, dereferencing this iterator
+multiple times will only result in the underlying iterator being
+dereferenced once; thus, a slot can only be called once but its result
+can be used multiple times.</p>
+<p>这个迭代器适配器缓存底层迭代器解引用的结果。 因此，该迭代器多次解引用将只会引起底层迭代器的一次解引用；
+这样，插槽可以一次调用但其结果可多次使用。 </p>
+</td>
+</tr>
+<tr>
+<td align="left">
+<p>Slot Call Iterator</p>
+<p>插槽调用迭代器</p>
+</td>
+<td align="left">
+<p>Iterates over calls to each slot.</p>
+<p>迭代调用每个插槽。</p>
+</td>
+</tr>
+</tbody>
+</table>
+</div>
+</div>
+<div class="section" lang="en">
+<div class="titlepage">
+<div>
+<div>
+<h3 class="title"><a name="id1285660"></a><code class="computeroutput">visit_each</code> function
+template</h3>
+<h3 class="title">
+<a name="id1285660"></a><code class="computeroutput">visit_each</code> 函数模板</h3>
+</div>
+</div>
+</div>
+<p> The <code class="computeroutput"><a class="link" href="../boost/visit_each.html" title="Function template visit_each">visit_each</a></code>
+function template is a mechanism for discovering objects that are
+stored within another object. Function template <code class="computeroutput"><a class="link" href="../boost/visit_each.html" title="Function template visit_each">visit_each</a></code>
+takes three arguments: an object to explore, a visitor function object
+that is invoked with each subobject, and the <code class="computeroutput">int</code> 0. </p>
+<p> <code class="computeroutput"><a class="link" href="../boost/visit_each.html" title="Function template visit_each">visit_each</a></code>
+函数模板是一种机制，用于发现保存于另一个对象中的对象。 <code class="computeroutput"><a class="link" href="../boost/visit_each.html" title="Function template visit_each">visit_each</a></code>
+有三个参数：待探测的对象、对每个子对象进行调用的访问者函数， 和 <code class="computeroutput">int</code>
+0。</p>
+<p> The third parameter is merely a temporary solution to the
+widespread lack of proper function template partial ordering. The
+primary <code class="computeroutput"><a class="link" href="../boost/visit_each.html" title="Function template visit_each">visit_each</a></code>
+function template specifies this third parameter type to be <code class="computeroutput">long</code>, whereas any user
+specializations must specify their third parameter to be of type <code class="computeroutput">int</code>. Thus, even though a
+broken compiler cannot tell the ordering between, e.g., a match against
+a parameter <code class="computeroutput">T</code>
+and a parameter <code class="computeroutput">A&lt;T&gt;</code>,
+it can determine that the conversion from the integer 0 to <code class="computeroutput">int</code> is better than the
+conversion to <code class="computeroutput">long</code>.
+The ordering determined by this conversion thus achieves partial
+ordering of the function templates in a limited, but successful, way.
+The following example illustrates the use of this technique:</p>
+<p> 第三个参数仅仅是个临时的解决方案， 针对普遍缺乏正确的函数模板特化次序这一问题。 <code class="computeroutput"><a class="link" href="../boost/visit_each.html" title="Function template visit_each">visit_each</a></code>
+函数主模板指定这个第三个参数类型为 <code class="computeroutput">long</code>，
+而任何用户特化必须指定他们的第三个参数类型为 <code class="computeroutput">int</code>。
+这样，即使不合标准的编译器不能例如在匹配参数 <code class="computeroutput">T</code>
+和参数 <code class="computeroutput">A&lt;T&gt;</code>
+之间判断次序， 它也可以决定从整数 0 到 <code class="computeroutput">int</code>
+的转换比到 <code class="computeroutput">long</code>
+的转换更好。 这个转换所决定的次序就这样做到了函数模板特化的次序化， 以一种有限的但是成功的方式。 下面的例子显示了该技术的使用： </p>
+<pre class="programlisting">template&lt;typename&gt; class A {};<br>template&lt;typename T&gt; void foo(T, long);<br>template&lt;typename T&gt; void foo(A&lt;T&gt;, int);<br>A&lt;T&gt; at;<br>foo(at, 0);<br></pre>
+<p> In this example, we assume that our compiler can not tell
+that <code class="computeroutput">A&lt;T&gt;</code>
+is a better match than <code class="computeroutput">T</code>,
+and therefore assume that the function templates cannot be ordered
+based on that parameter. Then the conversion from 0 to <code class="computeroutput">int</code> is better than the
+conversion from 0 to <code class="computeroutput">long</code>,
+and the second function template is chosen. </p>
+<p> 在本例中，我们假定我们的编译器不能判断 <code class="computeroutput">A&lt;T&gt;</code>
+比 <code class="computeroutput">T</code>
+更匹配，并因此假定函数模板不能基于那个参数排序。 于是从 0 到 <code class="computeroutput">int</code>
+的转换比从 0 到 <code class="computeroutput">long</code>
+的转换更好，并且第二个函数模板被选中。 </p>
+</div>
+</div>
+<table xmlns:rev="http://www.cs.rpi.edu/~gregod/boost/tools/doc/revision" width="100%">
+<tbody>
+<tr>
+<td align="left">
+<p><small>Last revised: November 25, 2007 at 13:38:02
+-0500</small></p>
+</td>
+<td align="right">
+<div class="copyright-footer">Copyright © 2001-2004
+Douglas Gregor
+<p>翻译：<a href="http://blog.csdn.net/jq0123">金庆</a></p>
+<p>译文更新：2008.7.10</p>
+<p>Use, modification and distribution is subject to the
+Boost Software License, Version 1.0. (See accompanying file <code class="filename">LICENSE_1_0.txt</code> or copy at <a href="http://www.boost.org/LICENSE_1_0.txt" target="_top">http://www.boost.org/LICENSE_1_0.txt</a>)</p>
+</div>
+</td>
+</tr>
+</tbody>
+</table>
+<hr>
+<div class="spirit-nav"><a accesskey="p" href="s04.html"><img style="border: 0px solid ; width: 19px; height: 19px;" src="../../../doc/html/images/prev.png" alt="Prev"></a><a accesskey="u" href="../signals.html"><img src="../../../doc/html/images/up.png" alt="Up"></a><a accesskey="h" href="../index.html"><img src="../../../doc/html/images/home.png" alt="Home"></a><a accesskey="n" href="s06.html"><img src="../../../doc/html/images/next.png" alt="Next"></a></div>
+</body></html>

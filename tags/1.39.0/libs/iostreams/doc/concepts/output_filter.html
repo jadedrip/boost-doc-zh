@@ -1,0 +1,346 @@
+<!DOCTYPE HTML PUBLIC "-//W3C//DTD HTML 4.01 Transitional//EN">
+<html>
+<head>
+  <meta content="text/html; charset=UTF-8" http-equiv="content-type">
+
+    
+    
+  <title>OutputFilter</title>
+  <link rel="stylesheet" href="../../../../boost.css">
+
+    
+  <link rel="stylesheet" href="../theme/iostreams.css">
+</head>
+
+
+<body>
+
+
+<!-- Begin Banner -->
+
+    
+<h1 class="title">OutputFilter输出过滤器</h1>
+
+    
+<hr class="banner">
+
+<!-- End Banner -->
+
+<dl class="page-index" style="margin-top: 0pt;">
+
+    <dt><a href="#definition">定义</a>
+    </dt>
+  <dt><a href="#description">描述</a>
+    </dt>
+  <dt><a href="#examples">例子</a>
+    </dt>
+  <dt><a href="#detailed_specification">详细规格</a>
+  </dt>
+</dl>
+
+
+<a name="definition"></a>
+<h2>定义</h2>
+
+
+<p>OutputFilter 是一个 <a href="filter.html">Filter</a>，其 <a href="../guide/modes.html">mode</a> 强化自 <a href="../guide/modes.html#output">output</a>. 
+</p>
+
+
+<a name="description"></a>
+<h2>描述</h2>
+
+
+<p>输出过滤器操作于一个 <a href="sink.html">Sink</a> 控制的字符序列之上，提供对具有相同字符类型的被过滤序列的访问。它有两种方法处理被过滤序列：
+    </p>
+<ol>
+
+        <li style="list-style-type: lower-roman;">
+            定义成员函数 <code>put</code>
+        </li>
+
+        <li style="list-style-type: lower-roman;">
+            定义成员函数&nbsp;<code>write</code>
+    </li>
+</ol>
+第二种方法用于提高性能。实现该方法的输出过滤器被称为 <i>多字符的</i> (<span style="font-style: italic;">见</span><i></i> <a href="multi_character.html">Multi-Character Filter</a>.)
+<p></p>
+
+
+<a name="examples"></a>
+<h2>例子</h2>
+
+
+<h4>I. 普通输出过滤器</h4>
+
+
+<p>以下例子示范了一个输出过滤器，它将序列中的字符转换为大写。
+</p>
+
+
+<pre class="broken_ie">    <span class="preprocessor">#include</span> <span class="literal">&lt;ctype.h&gt;</span>                        <span class="comment">// toupper</span>
+    <span class="preprocessor">#include</span> <a class="header" href="../../../../boost/iostreams/categories.hpp"><span class="literal">&lt;boost/iostreams/categories.hpp&gt;</span></a> <span class="comment">// output_filter_tag</span>
+    <span class="preprocessor">#include</span> <a class="header" href="../../../../boost/iostreams/operations.hpp"><span class="literal">&lt;boost/iostreams/operations.hpp&gt;</span></a> <span class="comment">// put</span>
+
+    <span class="keyword">using</span> <span class="keyword">namespace</span> std;<br>    <span class="keyword">namespace</span> io = boost::iostreams;<br><br>    <span class="keyword">struct</span> toupper_output_filter {<br>        <span class="keyword">typedef</span> <span class="keyword">char</span>                   char_type;<br>        <span class="keyword">typedef</span> io::output_filter_tag  category;<br><br>        <span class="keyword">template</span>&lt;<span class="keyword">typename</span> Sink&gt;<br>        <span class="keyword">bool</span> put(Sink&amp; snk, <span class="keyword">char</span> c) <br>        { <br>            <span class="keyword">return</span> io:put(snk, toupper((<span class="keyword">unsigned</span> <span class="keyword">char</span>) c)); <br>        }<br>    };</pre>
+
+
+<p>这里的 <code>char_type</code> 是过滤器的 <a href="../guide/traits.html#char_type">character type</a>,&nbsp;<code>out</code><code>put_filter_tag</code> 则是一个 <a href="../guide/traits.html#category_tags">category tag</a>，表示该过滤器是输出过滤器的 model, 函数&nbsp;<a href="../functions/put.html"><code>io::put</code></a> 则向任意接收器写出一个字符<a class="footnote_ref" name="note_1_ref" href="output_filter.html#note_1"><sup>[1]</sup></a>
+</p>
+
+
+
+<p>Iostreams 库定义两个方便使用的类，<a href="../classes/filter.html#synopsis"><code>output_filter</code></a> 和 <a href="../classes/filter.html#synopsis"><code>output_wfilter</code></a>, 分别提供了成员 <code>typedef</code>s <code>char_type</code> 和 <code>category</code> 以及几个成员函数的缺省实现。定义一个新的输出过滤器 model 时，通常只需从 <code>output_filter</code> 或 <code>output_wfilter</code> 派生并定义成员函数 <code>put</code> 就可以了。</p>
+<h4>II. 多字符输出过滤器</h4>
+
+
+<p>以下例子示范了一个多字符输出过滤器，它执行与例子I相同的过滤操作。
+</p>
+
+
+<pre class="broken_ie">    <span class="preprocessor">#include</span> <span class="literal">&lt;ctype.h&gt;</span>                        <span class="comment">// toupper</span>
+    <span class="preprocessor">#include</span> <a class="header" href="../../../../boost/iostreams/categories.hpp"><span class="literal">&lt;boost/iostreams/categories.hpp&gt;</span></a> <span class="comment">// output_filter_tag</span>
+    <span class="preprocessor">#include</span> <a class="header" href="../../../../boost/iostreams/operations.hpp"><span class="literal">&lt;boost/iostreams/operations.hpp&gt;</span></a> <span class="comment">// put</span>
+
+    <span class="keyword">using</span> <span class="keyword">namespace</span> std;<br>    <span class="keyword">namespace</span> io = boost::iostreams;<br><br>    <span class="keyword">struct</span> toupper_filter {<br>        <span class="keyword">typedef</span> <span class="keyword">char</span>                             char_type;<br>        <span class="keyword">typedef</span> io::multichar_output_filter_tag  category;<br><br>        <span class="keyword">template</span>&lt;<span class="keyword">typename</span> Sink&gt;<br>        <span class="keyword">std::streamsize</span> write(Sink&amp; snk, <span class="keyword">const</span> <span class="keyword">char</span>* s, streamsize n) <br>        { <br>            std::streamsize rest = n;<br>            <span class="keyword">while</span> (rest != 0 &amp;&amp; io::put(snk, toupper((<span class="keyword">unsigned</span> <span class="keyword">char</span>) *s++))<br>                --rest;<br>            <span class="keyword">return</span> n - rest;<br>        }<br>    };</pre>
+
+
+<p>这里的 <code>multichar_input_filter_tag</code> 是一个 <a href="../guide/traits.html#category">category tag</a>，表示该过滤器是一个多字符输出过滤器。
+</p>
+
+
+<p>Iostreams 库定义了两个方便使用的类，<a href="../classes/filter.html#synopsis"><code>multichar_output_filter</code></a> 和 <a href="../classes/filter.html#synopsis"><code>multichar_output_wfilter</code></a><a href="../classes/filter.html#synopsis"><code></code></a>, 分别提供了成员 <code>typedef</code>s <code>char_type</code> 和 <code>category</code> 以及几个成员函数的缺省实现。定义一个新的多字符输入过滤器时，通常只需从&nbsp;<code>multichar_output_filter</code> 或 <code>multichar_output_wfilter</code><code></code> 派生并定义成员函数&nbsp;<code>write</code> 就可以了。</p>
+<a name="detailed_specification"></a>
+<h2>强化自</h2>
+
+
+<p><a href="filter.html">Filter</a>.</p>
+
+
+<h2>关联类型</h2>
+
+
+<table border="1" cellpadding="5">
+
+    <tbody>
+    <tr>
+      <td>Character type</td>
+      <td>被过滤序列中的字符类型</td>
+    </tr>
+
+    <tr>
+
+        <td>Category</td>
+
+        <td>一个类型，可转换为&nbsp;<a href="../guide/traits.html#category_tags"><code>filter_tag</code></a> 和 <a href="../guide/modes.html#output"><code>output</code></a>
+        </td>
+
+    </tr>
+
+    <tr>
+
+        <td>Mode</td>
+
+        <td>Category 可转换为的，唯一的，<i>位于派生最深层的</i> <a href="../guide/modes.html#mode_tags">mode tag</a>
+        </td>
+
+    </tr>
+
+  </tbody>
+</table>
+
+
+<h2>符号</h2>
+
+
+<table cellpadding="2">
+
+    <tbody>
+    <tr>
+      <td><code>F</code></td>
+      <td>-&nbsp;一个类型，是 OutputFilter 的 model</td>
+    </tr>
+
+    <tr>
+      <td><code>D</code></td>
+      <td>- 一个类型，是 <a href="device.html">Device</a> 的 model, 具有与 <code>F</code> 相同的字符类型，且其模式为 <code>F</code> 模式的强化<code></code></td>
+    </tr>
+
+    <tr>
+      <td><code>Ch</code></td>
+      <td>-&nbsp;<code>F</code>&nbsp;的字符类型<code></code></td>
+    </tr>
+
+    <tr>
+      <td><code>Tr</code></td>
+      <td>- <a href="../classes/char_traits.html"><code>boost::iostreams::char_traits&lt;Ch&gt;</code></a></td>
+    </tr>
+
+    <tr>
+      <td><code>f</code></td>
+      <td>-&nbsp;类型 <code>F</code><code></code> 的对象<code></code></td>
+    </tr>
+
+    <tr>
+      <td><code>d</code></td>
+      <td>-&nbsp;类型 <code>D</code> 的对象<code></code></td>
+    </tr>
+
+    <tr>
+      <td><code>c</code></td>
+      <td>-&nbsp;类型 <code>Ch</code> 的对象<code></code></td>
+    </tr>
+
+    <tr>
+      <td><code>s</code></td>
+      <td>- 类型 <code>const</code> <code>Ch*</code><code></code> 的对象<code></code></td>
+    </tr>
+
+    <tr>
+      <td><code>n</code></td>
+      <td>-&nbsp;类型 <code>std::streamsize</code><code></code> 的对象<code></code></td>
+    </tr>
+
+    <tr>
+      <td><code>io</code></td>
+      <td>-&nbsp;名字空间 <code>boost::iostreams</code> 的别名<code></code></td>
+    </tr>
+
+  </tbody>
+</table>
+
+
+<a name="semantics"></a>
+<h2>有效表达式 / 语义</h2>
+
+
+<table border="1" cellpadding="5">
+
+    <tbody>
+    <tr>
+      <th>表达式</th>
+      <th>表达式类型</th>
+      <th>Category 前提条件</th>
+      <th>语义</th>
+    </tr>
+
+    <tr>
+
+        <td>
+            
+      <pre class="plain_code"><code>typename <a href="../guide/traits.html#char_type_of_ref">char_type_of</a>&lt;F&gt;::type</code></pre>
+
+        </td>
+
+        <td><code>typename</code> of the character type</td>
+
+        <td align="center">-</td>
+      <td align="center">-</td>
+
+    </tr>
+
+    <tr>
+
+        <td>
+            
+      <pre class="plain_code"><code>typename <a href="../guide/traits.html#category_ref">category_of</a>&lt;F&gt;::type</code></pre>
+
+        </td>
+
+        <td><code>typename</code> of the category</td>
+
+        <td align="center">-</td>
+      <td align="center">-</td>
+
+    </tr>
+
+    <tr>
+
+        <td>
+      <pre class="plain_code"><code>f.put(d, c)</code></pre>
+      </td>
+
+        <td><code>bool</code></td>
+
+        <td>
+            可转换为 <a href="../guide/modes.html#mode_tags"><code>output</code></a> 但不可转换为 <a href="../guide/traits.html#category_tags"><code>multichar_tag</code></a>
+        </td>
+
+        <td>尝试将字符 <code>c</code> 写出到由 <code>f</code> 控制的输出序列，如果由于对 <code>d</code> 的调用未能消耗所有请求字符而导致 <code>c</code> 未能被消耗则返回 <code>false</code>. 可以通过 <a href="../functions/put.html"><code>io::put</code></a> 和 <a href="../functions/write.html"><code>io::write</code></a><a href="../functions/putback.html"><code></code></a> 访问 <code>d</code> 所控制的输出序列。
+        </td>
+
+    </tr>
+
+    <tr>
+
+        <td>
+      <pre class="plain_code"><code>f.write(d, s, n)</code></pre>
+      </td>
+
+        <td>
+      <pre class="plain_code"><code>std::streamsize</code></pre>
+      </td>
+
+        <td>可转换为 <a href="../guide/modes.html#mode_tags"><code>output</code></a> 和 <a href="../guide/traits.html#category_tags"><code>multichar_tag</code></a>
+        </td>
+
+        <td>从缓冲区 <code>s</code> 写出最多 <code>n</code> 个字符到由 <code>f</code> 控制的输出序列，返回写出的字符数。只有在对 <code>d</code> 的调用未能消耗所有请求字符时方可返回小于 <code>n</code> 的值。可以通过 <a href="../functions/put.html"><code>io::put</code></a> 和 <a href="../functions/write.html"><code>io::write</code></a><a href="../functions/putback.html"><code></code></a> 访问 <code>d</code> 所控制的输出序列。
+        </td>
+
+    </tr>
+
+  </tbody>
+</table>
+
+
+<h2>异常</h2>
+
+
+<p>在&nbsp;<code></code><code>put</code><code></code> 或 <code>write</code> <code></code>的执行过程中发生的错误将通过抛出异常来表示。试图向超过输出序列末尾的地方写入是一种错误。
+</p>
+
+
+
+
+<p>抛出异常后，输出过滤器必须处于一致的状态；后续的 i/o 操作可以抛出异常但必须具有良好定义的行为。此外，除非过滤器是 <a href="closable.html">Closable</a>, 否则它必须准备好处理新的字符序列。</p>
+<h2>模型</h2>
+
+
+<h2>感谢</h2>
+
+
+<p>概念 OutputFilter 来自于 <i>inserters</i> of <a class="footnote_ref" href="../bibliography.html#kanze">[Kanze]</a>.
+</p>
+
+
+<!-- Begin Footnotes -->
+
+<hr>
+
+<p>
+    <a class="footnote_ref" name="note_1" href="#note_1_ref"><sup>[1]</sup></a>技术上，<code>boost::iostreams::put</code> 要求接收器必须是 <a href="../concepts/direct.html"><i>indirect</i></a>.
+</p>
+
+
+<!-- End Footnotes -->
+<!-- Begin Footer -->
+
+<hr>
+<p class="copyright">Revised
+<!--webbot bot="Timestamp" S-Type="EDITED" S-Format="%d %B, %Y" startspan -->
+20 May, 2004
+<!--webbot bot="Timestamp" endspan i-checksum="38504" -->
+</p>
+
+
+<p class="copyright">&copy; Copyright <a href="http://www.kangaroologic.com" target="_top">Jonathan Turkanis</a>, 2004</p>
+
+<p class="copyright"> 
+    Distributed under the Boost Software License, Version 1.0. (See accompanying file LICENSE_1_0.txt or copy at <a href="http://www.boost.org/LICENSE_1_0.txt">http://www.boost.org/LICENSE_1_0.txt</a>)
+</p>
+
+
+<!-- End Footer -->
+
+</body>
+</html>

@@ -1,0 +1,427 @@
+﻿<!DOCTYPE html PUBLIC "-//W3C//DTD HTML 4.01 Transitional//EN"
+"http://www.w3.org/TR/html4/loose.dtd">
+
+<html>
+<head>
+  <meta http-equiv="Content-Language" content="en-us">
+  <meta http-equiv="Content-Type" content="text/html; charset=UTF-8">
+  <link rel="stylesheet" type="text/css" href="../../../../boost.css">
+
+  <title>Rounding Policies</title>
+</head>
+
+<body lang="en">
+  <h1>舍入策略</h1>
+
+  <p>为了尽可能的通用, 这个库使用一个类来完成函数所需要的向上舍入和向下舍入功能. 这个类是策略类<code>policies</code>的第一个参数, 它同样也是区间类<code>interval</code>的策略定义中名为<code>rounding</code>的类型.</p>
+
+  <p>默认情况下,这个舍入策略是<code>interval_lib::rounded_math&lt;T&gt;</code>. <code>interval_lib::rounded_math</code>已经针对标准的浮点类型 (<code>float</code> , <code>double</code> 和
+  <code>long double</code>)进行了特化. 所以，如果你的区间模板类的类型不是这三种之一，一种好的解决方案是提供一个该类的特化类. 但是如果 默认的针对 <code>float</code>,
+  <code>double</code>, 或 <code>long double</code> 的特化不是你想要的, 或者你不想提供一个<code>interval_lib::rounded_math&lt;T&gt;</code>特化类(比如说你想在自己的名字空间中进行工作)，你同样可以定义你自己的舍入策略并将其直接传递给   <code>interval_lib::policies</code>.</p>
+
+  <h2>要求</h2>
+
+  <p>下面是这个库所提供的内容，参数范围在对应的函数后面(如同你所看到的，这些函数不用担心非法的参数，但是它们必须处理参数是无限的情况).</p>
+  <pre>/*舍入要求*/
+struct rounding {
+  // 缺省构造函数, 析构函数
+  rounding();
+  ~rounding();
+  // 数学操作
+  T add_down(T, T); // [-&infin;;+&infin;][-&infin;;+&infin;]
+  T add_up  (T, T); // [-&infin;;+&infin;][-&infin;;+&infin;]
+  T sub_down(T, T); // [-&infin;;+&infin;][-&infin;;+&infin;]
+  T sub_up  (T, T); // [-&infin;;+&infin;][-&infin;;+&infin;]
+  T mul_down(T, T); // [-&infin;;+&infin;][-&infin;;+&infin;]
+  T mul_up  (T, T); // [-&infin;;+&infin;][-&infin;;+&infin;]
+  T div_down(T, T); // [-&infin;;+&infin;]([-&infin;;+&infin;]-{0})
+  T div_up  (T, T); // [-&infin;;+&infin;]([-&infin;;+&infin;]-{0})
+  T sqrt_down(T);   // ]0;+&infin;]
+  T sqrt_up  (T);   // ]0;+&infin;]
+  T exp_down(T);    // [-&infin;;+&infin;]
+  T exp_up  (T);    // [-&infin;;+&infin;]
+  T log_down(T);    // ]0;+&infin;]
+  T log_up  (T);    // ]0;+&infin;]
+  T cos_down(T);    // [0;2&pi;]
+  T cos_up  (T);    // [0;2&pi;]
+  T tan_down(T);    // ]-&pi;/2;&pi;/2[
+  T tan_up  (T);    // ]-&pi;/2;&pi;/2[
+  T asin_down(T);   // [-1;1]
+  T asin_up  (T);   // [-1;1]
+  T acos_down(T);   // [-1;1]
+  T acos_up  (T);   // [-1;1]
+  T atan_down(T);   // [-&infin;;+&infin;]
+  T atan_up  (T);   // [-&infin;;+&infin;]
+  T sinh_down(T);   // [-&infin;;+&infin;]
+  T sinh_up  (T);   // [-&infin;;+&infin;]
+  T cosh_down(T);   // [-&infin;;+&infin;]
+  T cosh_up  (T);   // [-&infin;;+&infin;]
+  T tanh_down(T);   // [-&infin;;+&infin;]
+  T tanh_up  (T);   // [-&infin;;+&infin;]
+  T asinh_down(T);  // [-&infin;;+&infin;]
+  T asinh_up  (T);  // [-&infin;;+&infin;]
+  T acosh_down(T);  // [1;+&infin;]
+  T acosh_up  (T);  // [1;+&infin;]
+  T atanh_down(T);  // [-1;1]
+  T atanh_up  (T);  // [-1;1] 
+  T median(T, T);   // [-&infin;;+&infin;][-&infin;;+&infin;]
+  T int_down(T);    // [-&infin;;+&infin;]
+  T int_up  (T);    // [-&infin;;+&infin;]
+  // 转换函数
+  T conv_down(U);
+  T conv_up  (U);
+  // 不受保护的舍入类
+  typedef ... unprotected_rounding;
+};
+</pre>
+
+  <p>舍入类的构造函数和析构函数有非常重要的语义要求: 它们负责设置和重置在T类型上运算的舍入方式. 例如，如果T是一个标准的浮点类型，并且浮点运算是依照   IEEE 754标准,构造函数可以保存当前的舍入状态, each <code>_up</code> (<code>_down</code>) 函数将会向上舍入(向下舍入),析构函数将会 重置已保存的舍入状态.实际上这是默认的舍入策略。</p>
+
+  <p>所有的数学函数的意义都是很清楚的直到函数<code>atanh_up</code>:每个函数返回在类型T中可以表示的相应数学函数运算结果真值的下边界的值(对于 <code>_down</code>)
+  或者上边界值(对于 <code>_up</code>).函数<code>median</code> 计算两个参数的平均值，并将结果舍入到最邻近的可以表示的数值.
+  函数<code>int_down</code> 和 <code>int_up</code> 计算小于或者大于其参数的最小或最大整数. 最后,
+  <code>conv_down</code> 和 <code>conv_up</code> 负责将其它类型的数值转换到基类型数值: 第一个函数将数值向下舍入，第二个函数将数值向上舍入.</p>
+
+  <p><code>unprotected_rounding</code> 允许去掉所有的舍入保护. 至于为什么有人会这么做, 参看下面<a href=
+  "#Protection">保护</a>章节<br>
+  .</p>
+
+  <h2>已提供的类概览</h2>
+
+  <p>提供了许多类. 这此类依据层次来组织.底部是<code>rounding_control</code>类. 接下来是 <code>rounded_arith_exact</code>, <code>rounded_arith_std</code> 和 <code>rounded_arith_opp</code>类. 然后是<code>rounded_transc_dummy</code>, <code>rounded_transc_exact</code>,
+  <code>rounded_transc_std</code> 和 <code>rounded_transc_opp</code>类. 最后是<code>save_state</code> 和 <code>save_state_nothing</code>类.每一个类都提供了该类所在层次的下一个层次中的类所要求的函数. 例如 , 一个<code>rounded_transc_...</code>
+  类需一个<code>rounded_arith_...</code>类的成员.</p>
+
+  <p>已提供的舍入策略类有<code>_std</code>和<code>_opp</code>两种版本,第一个版本每次都会调整舍入方式, 而第二种版本试图保持向正无穷舍入. <code>_opp</code> 的主要目的是通过使用"取反技巧"(opposite trick)来加速计算(参见<a href="#perf">性能提示 </a>). 这一版本要求在进入类的任何运算函数之前舍入方式应当是向上舍入，它保证在函数退出时，舍入方式仍然是向上舍入。</p>
+
+  <p>请注意：混合使用<code>_opp</code>和<code>_std</code>是一个非常坏的主意，因为它们没有兼容的性质.</p>
+
+  <p>第三个版本称作<code>_exact</code>，在计算时不会改变舍入方式. 它是一个精确的版本，因为它针对于产生精确结果的基类型.</p>
+
+  <p>最后一个版本是<code>_dummy</code> . 它不进行任何的计算，但仍旧产生可兼容的结果</p>
+
+  <p>请注意：可以对一个不精确的基类型使用“精确”版本的舍入策略，例如 . <code>float</code> 或 <code>double</code>. 在这种情况下, 包含性质不再得到保证, 
+  当包含性质没有受到严格要求的时候，这种方式可以用来加速计算.例如，在计算机图形学中，由于浮点舍入而产生小的计算误差是可以接受的.</p>
+
+  <p>下面是每个类所定义的内容，稍后，将会有更全面的描述，这些成员不会被重复，请转到这里来参看这些定义，继承也被用来避免重复。</p>
+  <pre>
+template &lt;class T&gt;
+struct rounding_control
+{
+  typedef ... rounding_mode;
+  void set_rounding_mode(rounding_mode);
+  void get_rounding_mode(rounding_mode&amp;);
+  void downward ();
+  void upward   ();
+  void to_nearest();
+  T to_int(T);
+  T force_rounding(T);
+};
+
+template &lt;class T, class Rounding&gt;
+struct rounded_arith_... : Rounding
+{
+  void init();
+  T add_down(T, T);
+  T add_up  (T, T);
+  T sub_down(T, T);
+  T sub_up  (T, T);
+  T mul_down(T, T);
+  T mul_up  (T, T);
+  T div_down(T, T);
+  T div_up  (T, T);
+  T sqrt_down(T);
+  T sqrt_up  (T);
+  T median(T, T);
+  T int_down(T);
+  T int_up  (T);
+};
+
+template &lt;class T, class Rounding&gt;
+struct rounded_transc_... : Rounding
+{
+  T exp_down(T);
+  T exp_up  (T);
+  T log_down(T);
+  T log_up  (T);
+  T cos_down(T);
+  T cos_up  (T);
+  T tan_down(T);
+  T tan_up  (T);
+  T asin_down(T);
+  T asin_up  (T);
+  T acos_down(T);
+  T acos_up  (T);
+  T atan_down(T);
+  T atan_up  (T);
+  T sinh_down(T);
+  T sinh_up  (T);
+  T cosh_down(T);
+  T cosh_up  (T);
+  T tanh_down(T);
+  T tanh_up  (T);
+  T asinh_down(T);
+  T asinh_up  (T);
+  T acosh_down(T);
+  T acosh_up  (T);
+  T atanh_down(T);
+  T atanh_up  (T);
+};
+
+template &lt;class Rounding&gt;
+struct save_state_... : Rounding
+{
+  save_state_...();
+  ~save_state_...();
+  typedef ... unprotected_rounding;
+};
+</pre>
+
+  <h2>概要</h2>
+  <pre>
+namespace boost {
+namespace numeric {
+namespace interval_lib {
+/*基本的舍入控制*/
+template &lt;class T&gt;  struct rounding_control;
+
+/* 算术函数舍入 */
+template &lt;class T, class Rounding = rounding_control&lt;T&gt; &gt; struct rounded_arith_exact;
+template &lt;class T, class Rounding = rounding_control&lt;T&gt; &gt; struct rounded_arith_std;
+template &lt;class T, class Rounding = rounding_control&lt;T&gt; &gt; struct rounded_arith_opp;
+
+/* 超越函数舍入 */
+template &lt;class T, class Rounding&gt; struct rounded_transc_dummy;
+template &lt;class T, class Rounding = rounded_arith_exact&lt;T&gt; &gt; struct rounded_transc_exact;
+template &lt;class T, class Rounding = rounded_arith_std&lt;T&gt; &gt; struct rounded_transc_std;
+template &lt;class T, class Rounding = rounded_arith_opp&lt;T&gt; &gt; struct rounded_transc_opp;
+
+/* 舍入状态保存类 */
+template &lt;class Rounding&gt; struct save_state;
+template &lt;class Rounding&gt; struct save_state_nothing;
+
+/* 针对于类型T的缺省策略 */
+template &lt;class T&gt;  struct rounded_math;
+template &lt;&gt;  struct rounded_math&lt;float&gt;;
+template &lt;&gt;  struct rounded_math&lt;double&gt;;
+
+/* 一些用于从未保护方式到保护方式转换的元编程代码 */
+template &lt;class I&gt; struct unprotect;
+
+} // namespace interval_lib
+} // namespace numeric
+} // namespace boost
+</pre>
+
+  <h2>已提供的类的描述</h2>
+
+  <p>现在我们以它们出现在舍入策略定义中的顺序来描述每一个类 (从最外到最内的顺序是概要中顺序的反序).</p>
+
+  <h3 id="Protection">保护控制</h3>
+
+  <p>保护基于这样一个事实：区间操作将被舍入方式控制所包围. 对一个类去保护意味着去掉所有的舍入控制，每一种舍入策略都提供了 <code>unprotected_rounding</code>类型. 当嵌套在另一个舍入类中的时候，要求的
+  <code>unprotected_rounding</code>类型使得另一个舍入类可以工作.  例如，下面最开始的三行将产生同样的结果 (因为第一个操作是舍入构造函数，而最后一个是析构函数，确保设置舍入方式); 并且最后一行允许有未定义的行为(因为没有调用构造函数或析构函数).</p>
+  <pre>
+T c; { rounding rnd; c = rnd.add_down(a, b); }
+T c; { rounding rnd1; { rounding rnd2; c = rnd2.add_down(a, b); } }
+T c; { rounding rnd1; { rounding::unprotected_rounding rnd2; c = rnd2.add_down(a, b); } }
+T d; { rounding::unprotected_rounding rnd; d = rnd.add_down(a, b); }
+</pre>
+
+  <p>自然地， <code>rounding::unprotected_rounding</code> 可以仅仅是
+  <code>rounding</code> 本身.但是如果它是一个构造函数和析构函数为空的简化版本，它就可以提高性能. 为了避免未定义的行为,在这个库中, 仅当一个<code>rounding</code>类型的对象已经存在时，<code>rounding::unprotected_rounding</code> 类型的对象才会被创建，参见  <a href="#perf">性能提示</a>了解其它的信息.</p>
+
+  <p>支持库定义了带有一个模板参数为区间类型<code>I</code>的元编程类模板<code>unprotect</code>，它返回一个已经去保护的区间类型<code>unprotect &lt;I&gt;::type</code>.关于类型的一些信息:
+  <code>interval&lt;T, interval_lib::policies&lt;Rounding, _&gt;
+  &gt;::traits_type::rounding</code>与<code>Rounding</code>是同样的类型, <code>unprotect&lt;interval&lt;T,
+  interval_lib::policies&lt;Rounding, _&gt; &gt; &gt;::type</code> 与<code>interval&lt;T,
+  interval_lib::policies&lt;Rounding::unprotected, _&gt; &gt;</code>是同样的类型.</p>
+
+  <h3>状态保存</h3>
+
+  <p>首先是<code>save_state</code>类. 这个类负责保存当前的舍入方式并在构造函数中调用函数<code>init</code>,在析构函数中重置已保存的舍入方式. 这个类也定义了<code>unprotected_rounding</code> 类型
+  .</p>
+
+  <p>如果舍入方式不需要任何的状态保存或者初始化, <code>save_state_nothing</code> 可以用来代替<code>save_state</code>.</p>
+
+  <h3>超越函数</h3>
+
+  <p><code>rounded_transc_exact</code>,
+  <code>rounded_transc_std</code> 和 <code>rounded_transc_opp</code> 期望名字空间<code>std</code>提供函数exp log cos tan acos asin atan
+  cosh sinh tanh acosh asinh atanh. 对于<code>_std</code>和<code>_opp</code>版本, 所有的这些函数应当对调用函数downward或upward所改变的当前舍入方式作出反应
+  .</p>
+
+  <p><strong>请注意:</strong> 不幸的是, 后者(<code>_opp</code>)极少是这种情况. 这就是为什么提供了一个不依赖于名字空间<code>std</code>中函数的类<code>rounded_transc_dummy</code> .
+  当然，这是没有什么神奇的地方. <code>rounded_transc_dummy</code> 类的成员函数并不进行任何的计算. 它们仅返回合法的数值. 例如, <code>cos_down</code> 永远返回-1，在这种情况下，我们为默认实现确保包含性质,
+  即使这些函数完全没有可以返回用户的返回值.为了获得有用的值，应当明确地另一个策略, 它极有可能导致违反包含性质.在这种情况下,我们确保向用户清楚地指明这些违例，用户也就知道了他违反了什么， 这个类或许应当被用作默认的超越舍入类, 但是我们决定由于缺少声明而编译失败将会比那些合法的但是无用的函数更有意义一些。</p>
+
+  <h3>基本的算术函数</h3>
+
+  <p><code>rounded_arith_std</code>类和<code>rounded_arith_opp</code>类期望运算符 + - * /和函数<code>std::sqrt</code>顾及当前的舍入方式.</p>
+
+  <p><code>rounded_arith_exact</code>类要求定义函数<code>std::floor</code> 和 <code>std::ceil</code>，因为它不能依赖于<code>to_int</code><br>
+  </p>
+
+  <h3>舍入控制</h3>
+
+  <p>前面的每个类所定义的函数不需要作任何的解释.例如, <code>add_down</code> 的作用是计算两个数的和并将结果向下舍入. 对于  <code>rounding_control</code>, 情况稍有点复杂.</p>
+
+  <p>基础函数是<code>force_rounding</code>，如果它的参数不是依据于当前的舍入方式进行舍入，那么它返回依据于当前舍入方式进行正确舍入的函数参数.这个函数必须处理延迟舍入，实际上， 依赖于计算所完成的方式, 运算的中间结果可能在内部被保存为更精确的形式，并且可能导致错误的舍入.
+  <a href="#extreg">这里</a> 是一个当舍入没有强制实施时所发生的情况的例子。</p>
+
+  <p>函数<code>get_rounding_mode</code>返回当前的舍入方式 , 函数<code>set_rounding_mode</code>将舍入方式设置为由函数<code>get_rounding_mode</code>返回的舍入方式.
+  函数<code>downward</code>, <code>upward</code> 和<code>to_nearest</code>将舍入方式设置为三种舍入方向中的一种. 这种舍入方式对于所有的使用类型T的函数应当是全局的，例如 ,在调用函数<code>downward</code>之后,
+  函数<code>force_rounding(x+y)</code>返回的和是向 -&infin;舍入的.</p>
+
+  <p>函数<code>to_int</code>依据当前的舍入方式来计算最邻近的整数值.</p>
+
+  <p>非特化版本的<code>rounding_control</code> 不做任何事情. 对应的函数实现是空的，并且函数<code>to_int</code>和函数<code>force_rounding</code> 是鉴定函数 .
+  函数<code>pi_</code> constant返回合适的整数(例如, <code>pi_up</code>返回<code>T(4)</code>).</p>
+
+  <p>类模板<code>rounding_control</code>针对于 <code>float</code>, <code>double</code> 和 <code>long double</code>进行了特化，为的是更好的使用计算机浮点运算单元.</p>
+
+  <h2>模板类<tt>rounded_math</tt></h2>
+
+  <p>默认的策略(也称作 <code>rounded_math&lt;T&gt;</code>)简单地定义如下:</p>
+  <pre>
+template &lt;class T&gt; struct rounded_math&lt;T&gt; : save_state_nothing&lt;rounded_arith_exact&lt;T&gt; &gt; {};
+</pre>
+
+  <p>并且针对于<code>float</code>, <code>double</code> 和
+  <code>long double</code>进行了特化，使用<code>rounded_arith_opp</code>如下:</p>
+  <pre>
+template &lt;&gt; struct rounded_math&lt;float&gt;       : save_state&lt;rounded_arith_opp&lt;float&gt; &gt;       {};
+template &lt;&gt; struct rounded_math&lt;double&gt;      : save_state&lt;rounded_arith_opp&lt;double&gt; &gt;      {};
+template &lt;&gt; struct rounded_math&lt;long double&gt; : save_state&lt;rounded_arith_opp&lt;long double&gt; &gt; {};
+</pre>
+
+  <h2 id="perf">性能事项</h2>
+
+  <p>这一章主要处理使用计算机的浮点运算单元时类库的性能，让我们将[<i>a</i>,<i>b</i>] 与 [<i>c</i>,<i>d</i>]  的和作为一例子，结果是 [<code>down</code>(<i>a</i>+<i>c</i>),
+  <code>up</code>(<i>b</i>+<i>d</i>)], 其中 <code>down</code> 和<code>up</code> 表明需要使用舍入方方式
+  .</p>
+
+  <h3>舍入方式转换</h3>
+
+  <p>如果FPU(计算机浮点运算单元)可以针对每一个操作使用不同的舍入方式，这里就不会有什么问题了，例如，对于Alpha处理器是这种情况:
+  每一个浮点指令可以指定一个不同的舍入方式，然而，IEEE-754 标准并没有要求这种行为，所以，大多数的FPU仅仅提供一些指令用于设置接下来的所有的浮点运算的舍入方式，通常情况下，这些指令需要刷新FPU的指令流水线</p>
+
+  <p>在这种情况下，计算 [<i>a</i>,<i>b</i>] 与
+  [<i>c</i>,<i>d</i>]之和的时间远比计算<i>a</i>+<i>b</i> 和 <i>c</i>+<i>d</i> 的时间要多。因为这两个加法不能并行执行，因此，客观的方法是减少舍入方式调整的数量。</p>
+
+  <p>如果这个库不是用来提供精确的计算，而仅仅是针对成对算术( pair arithmetic)，那么解决方案就相当简单:不使用舍入，在这各情况下，计算[<i>a</i>,<i>b</i>]与[<i>c</i>,<i>d</i>]的和将会与计算<i>a</i>+<i>b</i>和<i>c</i>+<i>d</i>一样快 . 这样，每一件事都很完美。</p>
+
+  <p>然而，如果要求精确的计算，这样一种解决方案是完全不予考虑的，难道我们无计可施(penniless)了吗，不，这里仍然有一个技巧，实际上，如果一元取负运算是一种精确的运算，那么<code>down(a+c) = -up(-a-c)</code>， 现在就可以使用同样的舍入方式来计算整个和，通常，舍入方式改变的代价远比符号改变的代价要大。</p>
+
+  <h4>加速连续运算</h4>
+
+  <p>区间加法并不是唯一的运算，大多数的区间运算可以只设置一次FPU的舍入方式而得以完成，因此，浮点舍入策略的操作假定舍入方向被正确的设置，在一个程序中这种假设通常是不成立的 (用户和标准库期望舍入方式是向最近的值舍入), 所以，这些操作应当被包含在一个用于设置浮点运算环境的外壳中，这种保护由舍入策略的构造函数和析构函数来完成，</p>
+  <p>现在让我们考虑两个连续的区间加法的情况<code>[a,b] + [c,d] + [e,f]</code>， 生成的代码应当是这样的:</p>
+
+  <pre>
+init_rounding_mode();    // 在第一次加法中构造舍入对象
+t1 = -(-a - c);
+t2 = b + d;
+restore_rounding_mode(); // 舍入对象析构
+init_rounding_mode();    // 在第二次加法中构造舍入对象
+x = -(-t1 - e);
+y = t2 + f;
+restore_rounding_mode(); // 舍入对象析构
+// 结果为区间 [x,y]
+</pre>
+
+  <p>在两步操作之间，舍入方式被重置了，然后再一次被初始化，理想情况下，编译器应当可以优化掉这些无用的代码，但不幸的是，它们无法做到这一点，并且这会减慢代码的执行速度 . 为了避免这些瓶颈， 用户可以告诉区间运算他们不再需要舍入保护，然后就会由用户来保护区间运算，编译器将能够生成下面的代码
+  :</p>
+  <pre>
+init_rounding_mode();    // 用户完成
+x = -(-a - c - e);
+y = b + d + f;
+restore_rounding_mode(); // 用户完成</pre>
+
+  <p>用户需要生成一个舍入对象 ，只要这个舍入对象依然存在，就可以继续使用区间运算未受保护的版本，通过使用特定舍入策略的区间类型来选定，如果初始的区间类型是<code>I</code>，那么，<code>I::traits_type::rounding</code>就是舍入对象的类型，并且<code>interval_lib::unprotect&lt;I&gt;::type</code>是未受保护的区间类型.</p>
+
+  <p>因为FPU的舍入方式在舍入对象的生存期内被改变，任何不涉及这个区间库的算术浮点运算将会导致不可预期的结果，相应的，当没有舍入对象存在而使用未受保护的区间运算将不保证产生真正的结果区间。</p>
+
+  <h4 id="perfexp">例子</h4>
+
+  <p>下面是一个使用霍纳法则(Horner's scheme)来计算多项式值的例子.
+  在整个计算过程中舍入方式的改变都被禁止</p>
+  <pre>
+// I 是一个区间类， 多项式是一个简单的数组<br>
+template&lt;class I&gt;
+I horner(const I&amp; x, const I p[], int n) {
+
+  // 保存和初始化舍入方式
+  typename I::traits_type::rounding rnd;
+
+  // 定义区间类型的未受保护版本
+  typedef typename boost::numeric::interval_lib::unprotect&lt;I&gt;::type R;
+
+  const R&amp; a = x;
+  R y = p[n - 1];
+  for(int i = n - 2; i &gt;= 0; i--) {
+    y = y * a + (const R&amp;)(p[i]);
+  }
+  return y;
+
+  // 由 rnd 的析构函数来重置舍入方式 
+}
+</pre>
+
+  <p>请注意：为了保护所有的区间计算，一个舍入对象被特地构造出来。在任何操作之前，每一个<code>I</code>类型的区间在一个<code>R</code>类型的区间中被转化， 如果这种转化没有完成，结果仍然是正确的，但整个性能优化上的获益都没有了，尽可能的情况下，转换为<code>const R&amp;</code>而不是<code>R</code>会更好一些。实际上，这个函数可能已经在一个未保护的代码块中被调用，那么类型<code>R</code>和<code>I</code>将会是相同的区间,因而也就没有转换的必要了。</p>
+
+  <h4>不那么有趣的备注(Uninteresting remark)</h4>
+
+  <p>在最开始的时候提到过，Alpha处理器可以针对每个操作使用不同的舍入方式， 然而，由于指令的形式，向正无穷的舍入是不可用的，只有向负无穷的舍入是可用的，所以，最基本的技巧是改变符号，但是没有必要在一个操作的两个方面保存和恢复舍入方式。<br>
+  </p>
+
+  <h4>扩展寄存器</h4>
+
+  <p>除了舍入方式切换的开销之外，还有另外一个问题,一些FPU使用扩展的寄存器(例如 , 浮点运算(float computations)将会使用双精度浮点寄存器(double registers), 或者双精度浮点运算(double computations)使用长双精度浮点寄存器(long double
+  registers)来完成). 这必然会产生很多的问题。</p>
+
+<p>第一个问题是由于尾数的扩充精度，舍入同样在这个扩充精度上完成，必然地， 在扩展寄存器中我们仍然可以得到:down(<i>a</i>+<i>b</i>) = -up(-<i>a</i>-<i>b</i>)，但回到标准精度，现在我们得到:
+  down(<i>a</i>+<i>b</i>) &lt; -up(-<i>a</i>-<i>b</i>)而不是相等. 一种解决方案是不要使用这种方法，但仍然还有其它的问题，例如，数字之间的比较.</p>
+
+  <p>自然的，对于指数的扩展精度仍然有一个问题，为了举例说明这个问题，假定 m 为<code>+inf</code>之前最大的数，如果我们计算  2*[<i>m</i>,<i>m</i>], 结果将会是  [<i>m</i>,<i>inf</i>].  但是由于扩展寄存器，FPU将会首先存储 [<i>2m</i>,<i>2m</i>]，然后在运算的最后将[<i>2m</i>,<i>2m</i>]转化为
+  [<i>inf</i>,<i>inf</i>](当舍入方式向正无穷舍入时). 所以，结果不再是精确的.</p>
+
+  <p>这里仅有一个解决方案迫使FPU在每个计算之后将扩展精度值转换为标准精度值，一些FPU提供了一个指令来完成这种转化(例如PowerPC处理器). 但是对于没有提供这种指令的处理器 (x86 处理器),
+  唯一的方法就是将这些值先写入内存中，然后再将它们从内存中取回来，很明显，这种操作的开销很大。</p>
+
+  <h2>例子</h2>
+
+  <p>下面列举了一些情况：</p>
+
+  <ul>
+    <li>如果你需要进行<code>float</code>或<code>double</code>类型的精确运算，使用默认的 <code>rounded_math&lt;T&gt;</code>;</li>
+
+    <li>对于快速而广泛的且不需要任何舍入和精度的区间运算使用 <code>save_state_nothing&lt;rounded_transc_exact&lt;T&gt;
+    &gt;</code>;</li>
+
+    <li>对于不支持超越函数的精确类型(像<code>int</code>或是对无限(infinite )和NaN提供处理方法的有理数)
+    解决方案为 <code>save_state_nothing&lt;rounded_transc_dummy&lt;T,
+    rounded_arith_exact&lt;T&gt; &gt; &gt;</code> 或都直接使用 <code>save_state_nothing&lt;rounded_arith_exact&lt;T&gt;
+    &gt;</code>;</li>
+
+    <li>如果比前面的情况更复杂，最好的方法或许是直接定义你自己的策略类.</li>
+  </ul>
+  <hr>
+
+  <p><a href="http://validator.w3.org/check?uri=referer"><img border="0" src=
+  "http://www.w3.org/Icons/valid-html401" alt="Valid HTML 4.01 Transitional"
+  height="31" width="88"></a></p>
+
+  <p>Revised 
+  <!--webbot bot="Timestamp" s-type="EDITED" s-format="%Y-%m-%d" startspan -->2006-12-24<!--webbot bot="Timestamp" endspan i-checksum="12172" --></p>
+
+  <p><i>Copyright &copy; 2002 Guillaume Melquiond, Sylvain Pion, Herv&eacute;
+  Br&ouml;nnimann, Polytechnic University<br>
+  Copyright &copy; 2004-2005 Guillaume Melquiond, ENS Lyon</i></p>
+
+  <p><i>Distributed under the Boost Software License, Version 1.0. (See
+  accompanying file <a href="../../../../LICENSE_1_0.txt">LICENSE_1_0.txt</a>
+  or copy at <a href=
+  "http://www.boost.org/LICENSE_1_0.txt">http://www.boost.org/LICENSE_1_0.txt</a>)</i></p>
+</body>
+</html>

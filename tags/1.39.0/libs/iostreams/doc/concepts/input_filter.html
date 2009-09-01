@@ -1,0 +1,355 @@
+<!DOCTYPE HTML PUBLIC "-//W3C//DTD HTML 4.01 Transitional//EN">
+<html>
+<head>
+  <meta content="text/html; charset=UTF-8" http-equiv="content-type">
+
+    
+    
+  <title>InputFilter</title>
+  <link rel="stylesheet" href="../../../../boost.css">
+
+    
+  <link rel="stylesheet" href="../theme/iostreams.css">
+</head>
+
+
+<body>
+
+
+<!-- Begin Banner -->
+
+    
+<h1 class="title">InputFilter输入过滤器</h1>
+
+    
+<hr class="banner">
+
+<!-- End Banner -->
+
+<dl class="page-index" style="margin-top: 0pt;">
+
+    <dt><a href="#definition">定义</a>
+    </dt>
+  <dt><a href="#description">描述</a>
+    </dt>
+  <dt><a href="#examples">例子</a>
+    </dt>
+  <dt><a href="#detailed_specification">详细规格</a>
+  </dt>
+</dl>
+
+
+<a name="definition"></a>
+<h2>定义</h2>
+
+
+<p>输入过滤器是一个 <a href="filter.html">Filter</a>，其 <a href="../guide/modes.html">mode</a> 强化自 <a href="../guide/modes.html#input">input</a>. 
+</p>
+
+
+<a name="description"></a>
+<h2>描述</h2>
+
+
+<p>输入过滤器操作于由 <a href="source.html">Source</a> 所控制的字符序列之上，提供对具有相同字符类型的被过滤序列的访问。它有两种处理被过滤序列的方法：
+    </p>
+<ol>
+
+        <li style="list-style-type: lower-roman;">定义成员函数 <code>get</code>
+        </li>
+
+        <li style="list-style-type: lower-roman;">定义成员函数 <code>read</code> 
+    </li>
+</ol>
+第二种方法用于提高性能。实现了该方法的输入过滤器被称为 <i>多字符的</i>. (<span style="font-style: italic;">见</span><i></i> <a href="multi_character.html">Multi-Character Filter</a>.)
+<p></p>
+
+
+<a name="examples"></a>
+<h2>例子</h2>
+
+
+<h4>I. 普通输入过滤器</h4>
+
+
+<p>以下例子示范了一个输入过滤器，它从一个序列中删掉所有非字母字符。
+</p>
+
+
+<pre class="broken_ie">    <span class="preprocessor">#include</span> <span class="literal">&lt;ctype.h&gt;</span>                 <span class="comment">// isalpha</span>
+    <span class="preprocessor">#include</span> <span class="literal">&lt;cstdio.h&gt;</span>                <span class="comment">// EOF</span>
+    <span class="preprocessor">#include</span> <a class="header" href="../../../../boost/iostreams/categories.hpp"><span class="literal">&lt;boost/iostreams/categories.hpp&gt;</span></a> <span class="comment">// input_filter_tag</span>
+    <span class="preprocessor">#include</span> <a class="header" href="../../../../boost/iostreams/operations.hpp"><span class="literal">&lt;boost/iostreams/operations.hpp&gt;</span></a> <span class="comment">// get, WOULD_BLOCK</span>
+
+    <span class="keyword">using</span> <span class="keyword">namespace</span> std;<br>    <span class="keyword">using</span> <span class="keyword">namespace</span> boost::iostreams;<br><br>    <span class="keyword">struct</span> alphabetic_input_filter {<br>        <span class="keyword">typedef</span> <span class="keyword">char</span>              char_type;<br>        <span class="keyword">typedef</span> input_filter_tag  category;<br><br>        <span class="keyword">template</span>&lt;<span class="keyword">typename</span> Source&gt;<br>        <span class="keyword">int</span> get(Source&amp; src)<br>        {<br>            <span class="keyword">int</span> c;<br>            <span class="keyword">while</span> ( (c = boost::iostreams::get(src)) != EOF &amp;&amp;<br>                     c != WOULD_BLOCK &amp;&amp;<br>                    !isalpha((<span class="keyword">unsigned</span> <span class="keyword">char</span>) c) )<br>                ;<br>            <span class="keyword">return</span> c;<br>        }<br>    };</pre>
+
+
+<p>这里的 <code>char_type</code> 是过滤器的 <a href="../guide/traits.html#char_type">character type</a>, <code>input_filter_tag</code> 则是一个 <a href="../guide/traits.html#category_tags">category tag</a>，表示该过滤器是输入过滤器的 model, 函数 <a href="../functions/get.html"><code>boost::iostreams::get</code></a> 则从任意来源读入一个字符。<a class="footnote_ref" name="note_1_ref" href="#note_1"><sup>[1]</sup></a> 常量 <a href="../classes/char_traits.html#WOULD_BLOCK"><code>WOULD_BLOCK</code></a>, 定义于头文件 <a href="../../../../boost/iostreams/char_traits.hpp"><code>&lt;boost/iostreams/char_traits.hpp&gt;</code></a>, 用于表示输入暂时不可用。
+</p>
+
+
+<p>Iostreams 库定义两个方便使用的类，<a href="../classes/filter.html#synopsis"><code>input_filter</code></a> 和 <a href="../classes/filter.html#synopsis"><code>input_wfilter</code></a>, 分别提供了成员 <code>typedef</code>s <code>char_type</code> 和 <code>category</code> 以及几个成员函数的缺省实现。定义一个新的输入过滤器 model 时，通常只需从 <code>input_filter</code> 或 <code>input_wfilter</code> 派生并定义成员函数 <code>get</code> 就可以了。
+</p>
+
+
+<h4>II. 多字符输入过滤器</h4>
+
+
+<p>以下例子示范了一个多字符输入过滤器，它执行与例子I相同的过滤操作。
+</p>
+
+
+<pre class="broken_ie">    <span class="preprocessor">#include</span> <span class="literal">&lt;ctype.h&gt;</span>                 <span class="comment">// isalpha</span>
+    <span class="preprocessor">#include</span> <span class="literal">&lt;cstdio.h&gt;</span>                <span class="comment">// EOF</span>
+    <span class="preprocessor">#include</span> <a class="header" href="../../../../boost/iostreams/categories.hpp"><span class="literal">&lt;boost/iostreams/categories.hpp&gt;</span></a> <span class="comment">// input_filter_tag</span>
+    <span class="preprocessor">#include</span> <a class="header" href="../../../../boost/iostreams/concepts.hpp"><span class="literal">&lt;boost/iostreams/operations.hpp&gt;</span></a> <span class="comment">// get</span>
+
+    <span class="keyword">using</span> <span class="keyword">namespace</span> std;<br>    <span class="keyword">using</span> <span class="keyword">namespace</span> boost::io;<br><br>    <span class="keyword">struct</span> alphabetic_input_filter {<br>        <span class="keyword">typedef</span> <span class="keyword">char</span>                       char_type;<br>        <span class="keyword">typedef</span> multichar_input_filter_tag  category;<br><br>        <span class="keyword">template</span>&lt;<span class="keyword">typename</span> Source&gt;<br>        streamsize read(Source&amp; src, <span class="keyword">char</span>* s, streamsize n)<br>            {<br>                <span class="keyword">int</span>   c;<br>                <span class="keyword">char</span>* first = s;<br>                <span class="keyword">char</span>* last  = s + n;<br>                <span class="keyword">while</span> ( first != last &amp;&amp;<br>                        (c = boost::iostreams::get(src)) != EOF &amp;&amp;<br>                         c != WOULD_BLOCK &amp;&amp;<br>                        isalpha((<span class="keyword">unsigned</span> <span class="keyword">char</span>) c) )<br>                {<br>                    *first++ = c;<br>                }<br>                streamsize result = <span class="keyword">static_cast</span>&lt;streamsize&gt;(first - s);<br>                <span class="keyword">return</span> result == <span class="numeric_literal">0</span> &amp;&amp; c != WOULD_BLOCK ?<br>                    <span class="numeric_literal">-1</span> :<br>                    result;<br>            }<br>    };</pre>
+
+
+<p>这里的 <code>multichar_input_filter_tag</code> 是一个 <a href="../guide/traits.html#category">category tag</a>，表示该过滤器是一个多字符输入过滤器。
+</p>
+
+<p>Iostreams 库定义了两个方便使用的类，<a href="../classes/filter.html#synopsis"><code>multichar_input_filter</code></a> 和 <a href="../classes/filter.html#synopsis"><code>multichar_input_wfilter</code></a>, 分别提供了成员 <code>typedef</code>s <code>char_type</code> 和 <code>category</code> 以及几个成员函数的缺省实现。定义一个新的多字符输入过滤器时，通常只需从&nbsp;<code>multichar_input_filter</code> 或 <code>multichar_input_wfilter</code><code></code> 派生并定义成员函数 <code>read</code> 就可以了。
+</p>
+
+
+<a name="detailed_specification"></a>
+<h2>强化自</h2>
+
+
+<p><a href="filter.html">Filter</a>.</p>
+
+
+<h2>关联类型</h2>
+
+
+<table border="1" cellpadding="5">
+
+    <tbody>
+    <tr>
+      <td>Character type</td>
+      <td>被过滤序列中的字符类型</td>
+    </tr>
+
+    <tr>
+
+        <td>Category</td>
+
+        <td>一个类型，可转换为&nbsp;<a href="../guide/traits.html#category_tags"><code>filter_tag</code></a> 和 <a href="../guide/modes.html#input"><code>input</code></a>
+        </td>
+
+    </tr>
+
+    <tr>
+
+        <td>Mode</td>
+
+        <td>Category 可转换为的，唯一的，<i>位于派生最深层的</i> <a href="../guide/modes.html#mode_tags">mode tag</a>
+        </td>
+
+    </tr>
+
+  </tbody>
+</table>
+
+
+<h2>符号</h2>
+
+
+<table cellpadding="2">
+
+    <tbody>
+    <tr>
+      <td><code>F</code></td>
+      <td>-&nbsp;一个类型，是 InputFilter 的 model</td>
+    </tr>
+
+    <tr>
+      <td><code>D</code></td>
+      <td>-&nbsp;一个类型，是 <a href="device.html">Device</a> 的 model, 具有与 <code>F</code> 相同的字符类型，且其模式为 <code>F</code> 模式的强化<code></code></td>
+    </tr>
+
+    <tr>
+      <td><code>Ch</code></td>
+      <td>-&nbsp;<code>F</code>&nbsp;的字符类型<code></code></td>
+    </tr>
+
+    <tr>
+      <td><code>Tr</code></td>
+      <td>- <a href="../classes/char_traits.html"><code>boost::iostreams::char_traits&lt;Ch&gt;</code></a></td>
+    </tr>
+
+    <tr>
+      <td><code>f</code></td>
+      <td>-&nbsp;类型 <code>F</code><code></code> 的对象<code></code></td>
+    </tr>
+
+    <tr>
+      <td><code>d</code></td>
+      <td>-&nbsp;类型 <code>D</code> 的对象<code></code></td>
+    </tr>
+
+    <tr>
+      <td><code>s</code></td>
+      <td>-&nbsp;类型 <code>Ch*</code><code></code> 的对象<code></code></td>
+    </tr>
+
+    <tr>
+      <td><code>n</code></td>
+      <td>-&nbsp;类型 <code>std::streamsize</code><code></code> 的对象<code></code></td>
+    </tr>
+
+    <tr>
+      <td><code>io</code></td>
+      <td>-&nbsp;名字空间 <code>boost::iostreams</code> 的别名<code></code></td>
+    </tr>
+
+  </tbody>
+</table>
+
+
+<a name="semantics"></a>
+<h2>有效表达式 / 语义</h2>
+
+
+<table border="1" cellpadding="5">
+
+    <tbody>
+    <tr>
+      <th>表达式</th>
+      <th>表达式类型</th>
+      <th>Category 前提条件</th>
+      <th>语义</th>
+    </tr>
+
+    <tr>
+
+        <td>
+            
+      <pre class="plain_code"><code>typename <a href="../guide/traits.html#char_type_of_ref">char_type_of</a>&lt;F&gt;::type</code></pre>
+
+        </td>
+
+        <td><code>typename</code> of the character type</td>
+
+        <td align="center">-</td>
+      <td align="center">-</td>
+
+    </tr>
+
+    <tr>
+
+        <td>
+            
+      <pre class="plain_code"><code>typename <a href="../guide/traits.html#category_ref">category_of</a>&lt;F&gt;::type</code></pre>
+
+        </td>
+
+        <td><code>typename</code> of the category</td>
+
+        <td align="center">-</td>
+      <td align="center">-</td>
+
+    </tr>
+
+    <tr>
+
+        <td>
+      <pre class="plain_code"><code>f.get(d)</code></pre>
+      </td>
+
+        <td><code>Tr::int_type</code></td>
+
+        <td>可转换为 <a href="../guide/modes.html#mode_tags"><code>input</code></a> 但不可转换为 <a href="../guide/traits.html#category_tags"><code>multichar_tag</code></a>
+        </td>
+
+        <td>返回由 <code>f</code> 控制的输入序列的下一个字符，如果到达序列末尾则返回 <code>Tr::eof()</code>，如果由于对 <code>d</code> 的调用产生了少于请求数量的字符而导致输入暂时不可用则返回 <code>Tr::would_block()</code>。可以通过 <a href="../functions/get.html"><code>io::get</code></a>, <a href="../functions/read.html"><code>io::read</code></a> 和 <a href="../functions/putback.html"><code>io::putback</code></a> 访问 <code>d</code> 所控制的输入序列。
+        </td>
+
+    </tr>
+
+    <tr>
+
+        <td>
+      <pre class="plain_code"><code>f.read(d, s, n)</code></pre>
+      </td>
+
+        <td>
+      <pre class="plain_code"><code>std::streamsize</code></pre>
+      </td>
+
+        <td>可转换为 <a href="../guide/modes.html#mode_tags"><code>input</code></a> 和 <a href="../guide/traits.html#category_tags"><code>multichar_tag</code></a>
+        </td>
+
+        <td>从由 <code>f</code> 控制的输入序列读入最多 <code>n</code> 个字符到缓冲区 <code>s</code>, 返回读入的字符数，返回 <code>-1</code> 则表示序列结束。只有在序列结束或由于对 <code>d</code> 的调用产生了少于请求数量的字符而导致输入暂时不可用时方可返回小于 <code>n</code> 的值。可以通过 <a href="../functions/get.html"><code>io::get</code></a>, <a href="../functions/read.html"><code>io::read</code></a> 和 <a href="../functions/putback.html"><code>io::putback</code></a> 访问 <code>d</code> 所控制的输入序列。
+        </td>
+
+    </tr>
+
+  </tbody>
+</table>
+
+
+<h2>异常</h2>
+
+
+<p>在&nbsp;<code>get</code> 和 <code>read</code>
+的执行过程中发生的错误将通过抛出异常来表示。到达输入序列的末尾并不是错误。
+</p>
+
+
+
+
+<p>抛出异常后，输入过滤器必须处于一致的状态；后续的 i/o 操作可以抛出异常但必须具有良好定义的行为。此外，除非过滤器是 <a href="closable.html">Closable</a>, 否则它必须准备好处理新的字符序列。</p>
+<h2>模型</h2>
+
+
+<ul>
+
+    <li><a href="../guide/text_processing.html">文本处理过滤器</a>
+    </li>
+  <li>压缩和解压过滤器
+  </li>
+</ul>
+
+
+<h2>感谢</h2>
+
+
+<p>概念 InputFilter 来自于 <i>extractors</i> of <a class="footnote_ref" href="../bibliography.html#kanze">[Kanze]</a>.
+</p>
+
+
+<!-- Begin Footnotes -->
+
+<hr>
+
+<p>
+    <a class="footnote_ref" name="note_1" href="#note_1_ref"><sup>[1]</sup></a>技术上，<code>boost::iostreams::get</code> 要求来源必须是 <a href="../concepts/direct.html"><i>indirect</i></a>.
+</p>
+
+
+<!-- End Footnotes -->
+
+<!-- Begin Footer -->
+
+<hr>
+<p class="copyright">Revised
+<!--webbot bot="Timestamp" S-Type="EDITED" S-Format="%d %B, %Y" startspan -->
+20 May, 2004
+<!--webbot bot="Timestamp" endspan i-checksum="38504" -->
+</p>
+
+
+<p class="copyright">&copy; Copyright <a href="http://www.kangaroologic.com" target="_top">Jonathan Turkanis</a>, 2004</p>
+
+<p class="copyright"> 
+    Distributed under the Boost Software License, Version 1.0. (See accompanying file LICENSE_1_0.txt or copy at <a href="http://www.boost.org/LICENSE_1_0.txt">http://www.boost.org/LICENSE_1_0.txt</a>)
+</p>
+
+
+<!-- End Footer -->
+
+</body>
+</html>

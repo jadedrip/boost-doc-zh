@@ -1,0 +1,360 @@
+<!DOCTYPE HTML PUBLIC "-//W3C//DTD HTML 4.01 Transitional//EN" "http://www.w3.org/TR/html4/loose.dtd">
+<html><head>
+  <meta http-equiv="Content-Language" content="en-us">
+  <meta http-equiv="Content-Type" content="text/html; charset=UTF-8">
+  <link href="../pool.css" rel="stylesheet" type="text/css">
+
+  <title>Pool</title></head>
+<body>
+  <img src="../../../../boost.png" alt="C++ Boost" height="86" width="276">
+
+  <h1 align="center">Pool 内存池</h1>
+
+  <h2>Introduction 简介</h2>
+
+  <p><span class="code">pool</span> is a fast memory allocator, and
+  guarantees proper alignment of all allocated chunks.<br><span class="code">pool</span> 是一个快速的内存分配器，并保证所有分配区块的正确对齐。</p>
+
+  <p>pool.hpp provides two <a href="user_allocator.html">UserAllocator</a>
+  classes and a template class <span class="code">pool</span>, which extends
+  and generalizes the framework provided by the <a href="simple_segregated_storage.html">simple segregated storage</a> solution.
+  For information on other pool-based interfaces, see <a href="../interfaces.html">the other pool interfaces</a>.<br>pool.hpp 提供了两个 <a href="user_allocator.html">UserAllocator</a>
+  类和一个模板类 <span class="code">pool</span>，它扩展并泛化了由 <a href="simple_segregated_storage.html">simple segregated storage</a> 提供的框架。有关其它基于内存池的接口信息，请见 <a href="../interfaces.html">其它内存池接口</a>。</p>
+
+  <h2>Synopsis 摘要</h2>
+  <pre class="code">struct default_user_allocator_new_delete; // see <a href="user_allocator.html">User Allocators</a>
+struct default_user_allocator_malloc_free; // see <a href="user_allocator.html">User Allocators</a>
+
+template &lt;typename UserAllocator = default_user_allocator_new_delete&gt;
+class pool
+{
+  private:
+    pool(const pool &amp;);
+    void operator=(const pool &amp;);
+
+  public:
+    typedef UserAllocator user_allocator;
+    typedef typename UserAllocator::size_type size_type;
+    typedef typename UserAllocator::difference_type difference_type;
+
+    explicit pool(size_type requested_size);
+    ~pool();
+
+    bool release_memory();
+    bool purge_memory();
+
+    bool is_from(void * chunk) const;
+    size_type get_requested_size() const;
+
+    void * malloc();
+    void * ordered_malloc();
+    void * ordered_malloc(size_type n);
+
+    void free(void * chunk);
+    void ordered_free(void * chunk);
+    void free(void * chunks, size_type n);
+    void ordered_free(void * chunks, size_type n);
+};
+</pre>
+
+  <h2>Template Parameters 模板参数</h2>
+
+  <h3>UserAllocator</h3>
+
+  <p>Defines the method that the Pool will use to allocate memory from the
+  system. See <a href="user_allocator.html">User Allocators</a> for
+  details.<br>定义 Pool 将用于从系统分配内存的方法。详情请见 <a href="user_allocator.html">用法分配器</a>。</p>
+
+  <h2>Semantics 语义</h2>
+
+  <table summary="" align="center" border="1">
+    <caption>
+      <em>Symbol Table</em>
+    </caption>
+
+    <tbody><tr>
+      <th>Symbol</th>
+
+      <th>Meaning</th>
+    </tr>
+
+    <tr>
+      <td class="code">Pool</td>
+
+      <td class="code">pool&lt;UserAllocator&gt;</td>
+    </tr>
+
+    <tr>
+      <td class="code">t</td>
+
+      <td>value of type <span class="code">Pool</span></td>
+    </tr>
+
+    <tr>
+      <td class="code">u</td>
+
+      <td>value of type <span class="code">const Pool</span></td>
+    </tr>
+
+    <tr>
+      <td class="code">chunk</td>
+
+      <td>value of type <span class="code">void *</span></td>
+    </tr>
+
+    <tr>
+      <td class="code">n</td>
+
+      <td>value of type <span class="code">size_type</span></td>
+    </tr>
+
+    <tr>
+      <td class="code">RequestedSize</td>
+
+      <td>value of type <span class="code">Pool::size_type</span>; must be
+      greater than 0</td>
+    </tr>
+  </tbody></table><br>
+
+  <table summary="" align="center" border="1">
+    <caption>
+      <em>Typedefs</em>
+    </caption>
+
+    <tbody><tr>
+      <th>Expression</th>
+
+      <th>Type</th>
+    </tr>
+
+    <tr>
+      <td class="code">Pool::user_allocator</td>
+
+      <td class="code">UserAllocator</td>
+    </tr>
+
+    <tr>
+      <td class="code">Pool::size_type</td>
+
+      <td class="code">UserAllocator::size_type</td>
+    </tr>
+
+    <tr>
+      <td class="code">Pool::difference_type</td>
+
+      <td class="code">UserAllocator::difference_type</td>
+    </tr>
+  </tbody></table><br>
+
+  <table summary="" align="center" border="1">
+    <caption>
+      <em>Constructors, Destructors, and Testing</em>
+    </caption>
+
+    <tbody><tr>
+      <th>Expression</th>
+
+      <th>Return Type</th>
+
+      <th>Notes</th>
+    </tr>
+
+    <tr>
+      <td class="code">Pool(RequestedSize)</td>
+
+      <td>not used</td>
+
+      <td>Constructs a new empty <span class="code">Pool</span> that can be
+      used to allocate chunks of size <span class="code">RequestedSize<br></span>构造一个新的空 <span class="code">Pool</span>，可用于分配大小为 <span class="code">RequestedSize</span> 的区块<span class="code"></span></td>
+    </tr>
+
+    <tr>
+      <td class="code">(&amp;t)-&gt;~Pool()</td>
+
+      <td>not used</td>
+
+      <td>Destructs the <span class="code">Pool</span>, freeing its list of
+      memory blocks<br>析构该 <span class="code">Pool</span>，释放它的内存块列表</td>
+    </tr>
+
+    <tr>
+      <td class="code">u.is_from(chunk)</td>
+
+      <td class="code">bool</td>
+
+      <td>Returns <span class="code">true</span> if <span class="code">chunk</span> was allocated from <span class="code">u</span> or
+      may be returned as the result of a future allocation from <span class="code">u</span>. Returns <span class="code">false</span> if
+      <span class="code">chunk</span> was allocated from some other pool or
+      may be returned as the result of a future allocation from some other
+      pool. Otherwise, the return value is meaningless; note that this
+      function may <strong>not</strong> be used to reliably test random
+      pointer values.<br>如果 <span class="code">chunk</span> 已从 <span class="code">u</span> 分配，或者可能以后作为从 <span class="code">u</span> 分配的返回结果时，返回 <span class="code">true</span>。如果 <span class="code">chunk</span> 是从其它 pool 分配的，或者可能以后作为从其它
+      pool 分配的返回结果时，返回 <span class="code">false</span>。否则，返回值无意义；注意，该函数不能用于对随机指针值的确定性测试。</td>
+    </tr>
+
+    <tr>
+      <td class="code">u.get_requested_size()</td>
+
+      <td class="code">size_type</td>
+
+      <td>Returns the value passed into the constructor. This value will not
+      change during the lifetime of a <span class="code">Pool</span>
+      object.<br>返回传入构造函数的值。该值在一个 <span class="code">Pool</span> 对象的生命周期中不得更改。</td>
+    </tr>
+  </tbody></table><br>
+
+  <table summary="" align="center" border="1">
+    <caption>
+      <em>Allocation and Deallocation</em>
+    </caption>
+
+    <tbody><tr>
+      <th>Expression</th>
+
+      <th>Return Type</th>
+
+      <th>Pre-Condition</th>
+
+      <th>Notes</th>
+    </tr>
+
+    <tr>
+      <td class="code">t.malloc()</td>
+
+      <td class="code">void *</td>
+
+      <td></td>
+
+      <td>Allocates a chunk of memory. Searches in the list of memory blocks
+      for a block that has a free chunk, and returns that free chunk if
+      found. Otherwise, creates a new memory block, adds its free list to
+      <span class="code">t</span>'s free list, and returns a free chunk from
+      that block. If a new memory block cannot be allocated, returns
+      <span class="code">0</span>. Amortized O(1).<br>分配一个内存区块。在内存块链表中搜索一个有空闲区块的内存块，并返回找到的空闲区块。否则，创建一个新的内存块，将其空闲列表增加至
+      <span class="code">t</span> 的空闲列表中，并从该内存块中返回一个空闲区块。如果新内存块分配失败，则返回
+      <span class="code">0</span>。分摊的O(1).</td>
+    </tr>
+
+    <tr>
+      <td class="code">t.ordered_malloc()</td>
+
+      <td class="code">void *</td>
+
+      <td></td>
+
+      <td>Same as above, only merges the free lists, to preserve order.
+      Amortized O(1).<br>同上，只是合并空闲列表以保持原序。分摊的O(1).</td>
+    </tr>
+
+    <tr>
+      <td class="code">t.ordered_malloc(n)</td>
+
+      <td class="code">void *</td>
+
+      <td></td>
+
+      <td>Same as above, only allocates enough contiguous chunks to cover
+      <span class="code">n * requested_size</span> bytes. Amortized
+      O(n).<br>同上，不过是分配足够的连续区块以满足 <span class="code">n * requested_size</span> 个字节。分摊的O(n).</td>
+    </tr>
+
+    <tr>
+      <td class="code">t.free(chunk)</td>
+
+      <td class="code">void</td>
+
+      <td><span class="code">chunk</span> must have been previously returned
+      by <span class="code">t.malloc()</span> or <span class="code">t.ordered_malloc()</span>.<br><span class="code">chunk</span> 必须是由 <span class="code">t.malloc()</span> 或 <span class="code">t.ordered_malloc()</span> 返回的。</td>
+
+      <td>Deallocates a chunk of memory. Note that <span class="code">chunk</span> may not be <span class="code">0</span>. O(1).<br>释放一个区块。注意 <span class="code">chunk</span> 可能非 <span class="code">0</span>. O(1).</td>
+    </tr>
+
+    <tr>
+      <td class="code">t.ordered_free(chunk)</td>
+
+      <td class="code">void</td>
+
+      <td>Same as above<br>同上</td>
+
+      <td>Same as above, but is order-preserving. Note that <span class="code">chunk</span> may not be <span class="code">0</span>. O(N) with
+      respect to the size of the free list<br>同上，不过保持原序。注意 <span class="code">chunk</span> 可能非 <span class="code">0</span>. O(N)，视乎空闲列表的大小。</td>
+    </tr>
+
+    <tr>
+      <td class="code">t.free(chunk, n)</td>
+
+      <td class="code">void</td>
+
+      <td><span class="code">chunk</span> must have been previously returned
+      by <span class="code">t.ordered_malloc(n)</span>.<br><span class="code">chunk</span> 必须是由 <span class="code">t.ordered_malloc(n)</span> 返回的。</td>
+
+      <td>Assumes that <span class="code">chunk</span> actually refers to a
+      block of chunks spanning <span class="code">n * partition_sz</span>
+      bytes; deallocates each chunk in that block. Note that <span class="code">chunk</span> may not be <span class="code">0</span>. O(n).<br>假定 <span class="code">chunk</span> 确实指向一个占 <span class="code">n * partition_sz</span> 个字节的区块组；释放该组中的各区块。注意 <span class="code">chunk</span> 可能非 <span class="code">0</span>. O(n).</td>
+    </tr>
+
+    <tr>
+      <td class="code">t.ordered_free(chunk, n)</td>
+
+      <td class="code">void</td>
+
+      <td><span class="code">chunk</span> must have been previously returned
+      by <span class="code">t.ordered_malloc(n)</span>.<br><span class="code">chunk</span> 必须是由 <span class="code">t.ordered_malloc(n)</span> 返回的。</td>
+
+      <td>Assumes that <span class="code">chunk</span> actually refers to a
+      block of chunks spanning <span class="code">n * partition_sz</span>
+      bytes; deallocates each chunk in that block. Note that <span class="code">chunk</span> may not be <span class="code">0</span>.
+      Order-preserving. O(N + n) where N is the size of the free list.<br>假定 <span class="code">chunk</span> 确实指向一个占 <span class="code">n * partition_sz</span> 个字节的区块组；释放该组中的各区块。注意 <span class="code">chunk</span> 可能非 <span class="code">0</span>. 保持原序。O(N + n)，其中 N 为空闲列表的大小。</td>
+    </tr>
+
+    <tr>
+      <td class="code">t.release_memory()</td>
+
+      <td class="code">bool</td>
+
+      <td><span class="code">t</span> must be ordered.<br><span class="code">t</span> 必须是有序的。</td>
+
+      <td>Frees every memory block that doesn't have any allocated chunks.
+      Returns <span class="code">true</span> if at least one memory block was
+      freed.<br>释放每一个没有分配区块的内存块。如果至少有一个内存块被释放，则返回 <span class="code">true</span>。</td>
+    </tr>
+
+    <tr>
+      <td class="code">t.purge_memory()</td>
+
+      <td class="code">bool</td>
+
+      <td></td>
+
+      <td>Frees every memory block. This function invalidates any pointers
+      previously returned by allocation functions of <span class="code">t</span>. Returns <span class="code">true</span> if at least one
+      memory block was freed.<br>释放所有内存块。该函数使得所有之前由 <span class="code">t</span> 的分配函数所返回的指针全部失效。如果至少有一个内存块被释放，则返回 <span class="code">true</span>。</td>
+    </tr>
+  </tbody></table>
+
+  <h2>Symbols 符号</h2>
+
+  <ul>
+    <li>boost::default_user_allocator_new_delete</li>
+
+    <li>boost::default_user_allocator_malloc_new</li>
+
+    <li>boost::pool</li>
+  </ul>
+
+  <h2><a href="../implementation/pool.html">Implementation Details 实现细节</a></h2>
+  <hr>
+
+  <p><a href="http://validator.w3.org/check?uri=referer"><img style="border: 0px solid ; width: 88px; height: 31px;" src="../../../../valid-html401.png" alt="Valid HTML 4.01 Transitional"></a></p>
+
+  <p>Revised 
+  <!--webbot bot="Timestamp" s-type="EDITED" s-format="%d %B, %Y" startspan -->05
+  December, 2006<!--webbot bot="Timestamp" endspan i-checksum="38516" --></p>
+
+  <p><i>Copyright © 2000, 2001 Stephen Cleary (scleary AT jerviswebb DOT
+  com)</i></p>
+
+  <p><i>Distributed under the Boost Software License, Version 1.0. (See
+  accompanying file <a href="../../../../LICENSE_1_0.txt">LICENSE_1_0.txt</a>
+  or copy at <a href="http://www.boost.org/LICENSE_1_0.txt">http://www.boost.org/LICENSE_1_0.txt</a>)</i></p>
+</body></html>
