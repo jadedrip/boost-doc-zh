@@ -1,0 +1,208 @@
+<!DOCTYPE HTML PUBLIC "-//W3C//DTD HTML 4.01 Transitional//EN">
+<html><head>
+  <meta content="text/html; charset=UTF-8" http-equiv="content-type"><!--
+  -- Copyright (c) Jeremy Siek, Lie-Quan Lee, and Andrew Lumsdaine 2000
+  --
+  -- Permission to use, copy, modify, distribute and sell this software
+  -- and its documentation for any purpose is hereby granted without fee,
+  -- provided that the above copyright notice appears in all copies and
+  -- that both that copyright notice and this permission notice appear
+  -- in supporting documentation.  We make no
+  -- representations about the suitability of this software for any
+  -- purpose.  It is provided "as is" without express or implied warranty.
+  -->
+
+  <title>Vector Property Map</title></head>
+
+<body alink="#ff0000" bgcolor="#ffffff" link="#0000ee" text="#000000" vlink="#551a8b">
+ 
+<img style="width: 277px; height: 86px;" src="../../../boost.png" alt="C++ Boost"> 
+
+<br clear="">
+
+
+
+<h2><a name="sec:vector-property-map"></a>
+</h2>
+
+<pre>template&lt;typename T, typename IndexMap = identity_property_map&gt;<br>class vector_property_map;<br></pre>
+
+
+<p>该 property map 用于高效地保存具有可变数量元素的属性。它处于 <a href="associative_property_map.html">associative_property_map</a> 和 
+<a href="iterator_property_map.html">iterator_property_map</a> 之间。后者的速度更快，但要求在创建 property map 时就知道要保存的元素的数量。前者没有这个要求，但会慢一些，且要求保存的元素是可比较的。
+
+</p>
+<p><tt>vector_property_map</tt> 使用从键对索引的映射，并允许添加新元素。它将值保存在可以按需调整大小的 vector 中。 
+
+</p>
+<p>注意，<tt>vector_property_map</tt> 不提供所存值的引用/指针稳定性。
+
+</p>
+<h3>例子</h3>
+
+
+<a href="../example/example3.cpp">example3.cpp</a>:
+
+<p>
+</p>
+<pre>#include &lt;boost/property_map/vector_property_map.hpp&gt;<br>#include &lt;string&gt;<br>#include &lt;iostream&gt;<br><br>int main()<br>{<br>    boost::vector_property_map&lt;std::string&gt; m;<br>    <br>    // 赋一个字符串给 '4'. <br>    m[4] = "e";<br>    std::cout &lt;&lt; "'" &lt;&lt; m[4] &lt;&lt; "'\n";<br>    <br>    // 从 '10' 中读取字符串。由于没有这样的关联，将会返回 ""<br>    std::cout &lt;&lt; "'" &lt;&lt; m[10] &lt;&lt; "'\n";<br>}<br></pre>
+
+
+<h3>定义于</h3>
+
+
+<p><a href="../../../boost/property_map/vector_property_map.hpp"><tt>boost/property_map/vector_property_map.hpp</tt></a></p><p>
+</p>
+<h3>Model Of</h3>
+
+
+<a href="./LvaluePropertyMap.html">左值 Property Map</a>
+
+<p>
+
+</p>
+<h3>模板参数</h3>
+
+
+<p>
+
+<table border="1">
+
+  <tbody>
+    <tr>
+
+      <th>参数</th>
+      <th>描述</th>
+      <th>缺省值</th>
+
+    </tr>
+
+
+
+    <tr>
+
+      <td><tt>T</tt></td>
+ 
+      <td>属性值的类型。必须同时符合 <a href="http://www.sgi.com/tech/stl/Assignable.html">可赋值</a>
+和 <a href="http://www.sgi.com/tech/stl/DefaultConstructible.html">可缺省构造</a>
+      </td>
+
+      <td>&nbsp;</td>
+
+    </tr>
+
+
+    <tr>
+
+      <td><tt>IndexMap</tt></td>
+ <td>必须符合 <a href="./ReadablePropertyMap.html">可读 Property Map</a>
+且值类型必须可转换为
+      <tt>std::vector&lt;T&gt;::size_type</tt>.</td>
+ 
+      <td><a href="identity_property_map.html">identity_property_map</a></td>
+
+    </tr>
+
+
+  </tbody>
+</table>
+
+</p>
+<p>
+
+</p>
+<h3>成员</h3>
+
+
+<p>除了 <a href="./LvaluePropertyMap.html">左值 Property Map</a> 
+中要求的方法和函数以外，该类还有以下成员。</p>
+<hr>
+
+<pre>vector_property_map(const IndexMap&amp; index = IndexMap())<br></pre>
+接受一个索引 map 的构造函数。
+
+<hr>
+
+<pre>vector_property_map(unsigned initial_size, const IndexMap&amp; index = IndexMap())<br></pre>
+这个版本的构造函数允许指定要保存的元素的最大索引。正确的数量可以提高性能，不过语义是一样的。
+
+<hr>
+
+<pre>vector_property_map(const vector_property_map&amp;)<br></pre>
+复制构造函数。拷贝将共享同一份数据，对它的修改会影响到原来的 property map.
+
+<hr>
+
+<pre>vector_property_map&amp; operator=(const vector_property_map&amp;)<br></pre>
+赋值操作符。语义与复制构造函数相同。
+
+<hr>
+
+<pre>reference operator[](const key_type&amp; v) const<br></pre>
+[]操作符提供属性访问。
+
+<hr>
+
+<pre>std::vector&lt;T&gt;::iterator storage_begin()<br>std::vector&lt;T&gt;::iterator storage_end()<br>std::vector&lt;T&gt;::const_iterator storage_begin()<br>std::vector&lt;T&gt;::const_iterator storage_end()<br></pre>
+
+
+<p>这组方法用于访问底层 vector 的 begin 和 end 迭代器。</p>
+
+
+<p><b>基本原理：</b>这些方法是易用的，例如当你需要为一个刚创建的 property map 中的所有元素指定单个值时。这些方法没有被命名为简单的 "begin" 和 "end" 的原因是，<tt>vector_property_map</tt> 是一个无界 map, 没有 end
+迭代器。不提供直接访问底层的方法，由于这样会出降低封装度和带来以后的性能调整的危险。
+
+</p>
+<p><b>鸣谢：</b>Matthias Troyer 建议增加这些函数。
+
+</p>
+<hr>
+
+<pre>void reserve(unsigned size)<br></pre>
+保留空间以保存最大数量为 'size' 的元素。除非以更大的索引来访问元素，否则所有访问都是 O(1) 时间的。
+
+
+<hr>
+
+<h3>非成员函数</h3>
+
+
+<hr>
+
+<pre>template<typename t="" typename="" indexmap="">
+vector_property_map<t ,="" indexmap="">
+make_vector_property_map(IndexMap index)
+{
+  return vector_property_map<t ,="" indexmap="">(index);<br>} <br></t></t></typename></pre>
+用于创建一个 vector property map 的工具函数。<br>
+
+<hr>
+<table>
+
+  <tbody>
+    <tr valign="top">
+
+      <td nowrap="nowrap">Copyright © 2002</td>
+      <td>
+      <a href="../../people/jeremy_siek.htm">Jeremy Siek</a>,
+Indiana University (<a href="mailto:jsiek@osl.iu.edu">jsiek@osl.iu.edu</a>)<br>
+
+      <a href="http://www.boost.org/people/liequan_lee.htm">Lie-Quan Lee</a>, Indiana University (<a href="mailto:llee1@osl.iu.edu">llee1@osl.iu.edu</a>)<br>
+
+      <a href="http://www.osl.iu.edu/%7Elums">Andrew Lumsdaine</a>,
+Indiana University (<a href="mailto:lums@osl.iu.edu">lums@osl.iu.edu</a>)
+      </td>
+    </tr>
+
+    <tr>
+
+      <td nowrap="nowrap">Copyright © 2003</td>
+      <td>Vladimir Prus</td>
+
+    </tr>
+
+  </tbody>
+</table>
+
+
+</body></html>

@@ -1,0 +1,201 @@
+<!DOCTYPE HTML PUBLIC "-//W3C//DTD HTML 4.01 Transitional//EN">
+<html><head>
+  <meta content="text/html; charset=UTF-8" http-equiv="content-type"><!--
+  -- Copyright (c) Jeremy Siek, Lie-Quan Lee, and Andrew Lumsdaine 2000
+  --
+  -- Permission to use, copy, modify, distribute and sell this software
+  -- and its documentation for any purpose is hereby granted without fee,
+  -- provided that the above copyright notice appears in all copies and
+  -- that both that copyright notice and this permission notice appear
+  -- in supporting documentation.  We make no
+  -- representations about the suitability of this software for any
+  -- purpose.  It is provided "as is" without express or implied warranty.
+  -->
+
+  <title>Iterator Property Map Adaptor</title></head>
+
+<body alink="#ff0000" bgcolor="#ffffff" link="#0000ee" text="#000000" vlink="#551a8b">
+ 
+<img style="width: 277px; height: 86px;" src="../../../boost.png" alt="C++ Boost"> 
+
+<br clear="">
+
+
+
+<h2><a name="sec:iterator-property-map"></a>
+</h2>
+
+<pre>iterator_property_map&lt;<a href="http://www.sgi.com/tech/stl/RandomAccessIterator.html">RandomAccessIterator</a>, OffsetMap, T, R&gt;<br></pre>
+
+
+<p>该 property map 是一个适配器，将任意随机访问迭代器转换为一个 <a href="./LvaluePropertyMap.html">左值 Property Map</a>.
+The <tt>OffsetMap</tt> 类型负责将键对象转换为整数，以用作随机访问迭代器的偏移量。
+
+</p>
+<p>
+
+</p>
+<h3>例子</h3>
+
+
+<pre>// 打印出图中各边的容量和流量<br>template &lt;class Graph, class CapacityPMap, class FlowPMap&gt;<br>void print_network(Graph&amp; G, CapacityPMap capacity, FlowPMap flow)<br>{<br>  typedef typename boost::graph_traits&lt;Graph&gt;::vertex_iterator    Viter;<br>  typedef typename boost::graph_traits&lt;Graph&gt;::out_edge_iterator OutEdgeIter;<br>  typedef typename boost::graph_traits&lt;Graph&gt;::in_edge_iterator InEdgeIter;<br><br>  Viter ui, uiend;<br>  for (boost::tie(ui, uiend) = vertices(G); ui != uiend; ++ui) {<br>    OutEdgeIter out, out_end;<br>    std::cout &lt;&lt; *ui &lt;&lt; "\t";<br><br>    for(boost::tie(out, out_end) = out_edges(*ui, G); out != out_end; ++out)<br>      std::cout &lt;&lt; "--(" &lt;&lt; get(capacity, *out) &lt;&lt; ", " <br>	   &lt;&lt; get(flow, *out) &lt;&lt; ")--&gt; " &lt;&lt; target(*out,G) &lt;&lt; "\t";<br>    std::cout &lt;&lt; std::endl &lt;&lt; "\t";<br><br>    InEdgeIter in, in_end;    <br>    for(boost::tie(in, in_end) = in_edges(*ui, G); in != in_end; ++in)<br>      std::cout &lt;&lt; "&lt;--(" &lt;&lt; get(capacity, *in) &lt;&lt; "," &lt;&lt; get(flow, *in) &lt;&lt; ")-- "<br>           &lt;&lt; source(*in,G) &lt;&lt; "\t";<br>    std::cout &lt;&lt; std::endl;<br>  }<br>}<br><br>int main(int, char*[])<br>{<br>  typedef boost::adjacency_list&lt;boost::vecS, boost::vecS, <br>    boost::bidirectionalS, boost::no_plugin, <br>    boost::plugin&lt;boost::id_tag, std::size_t&gt; &gt; Graph;<br><br>  const int num_vertices = 9;<br>  Graph G(num_vertices);<br><br>  int capacity[] = { 10, 20, 20, 20, 40, 40, 20, 20, 20, 10 };<br>  int flow[] = { 8, 12, 12, 12, 12, 12, 16, 16, 16, 8 };<br><br>  // 添加边到图中，并为每条边赋一个ID数，用于在属性数组中的索引<br>  add_edge(G, 0, 1, 0);<br>  // ...<br><br>  typedef boost::graph_traits&lt;Graph&gt;::edge_descriptor Edge;<br>  typedef boost::property_map&lt;Graph, boost::id_tag&gt;::type EdgeID_PMap;<br>  EdgeID_PMap edge_id = get(boost::edge_index(), G);<br><br>  boost::iterator_property_map&lt;int*, EdgeID_PMap, int, int&amp;&gt;<br>     capacity_pa(capacity, edge_id),<br>     flow_pa(flow, edge_id);<br><br>  print_network(G, capacity_pa, flow_pa);<br>          <br>  return 0;<br>}<br></pre>
+
+
+<h3>定义于</h3>
+
+
+<p>
+<a href="../../../boost/property_map/property_map.hpp"><tt>boost/property_map/property_map.hpp</tt></a><a href="../../boost/property_map.hpp"><tt></tt></a>
+
+</p>
+<p>
+</p>
+<h3>Model Of</h3>
+
+
+<a href="./LvaluePropertyMap.html">左值 Property Map</a>
+
+<p>
+
+</p>
+<h3>模板参数</h3>
+
+
+<p>
+
+<table border="1">
+
+  <tbody>
+    <tr>
+
+      <th>参数</th>
+      <th>描述</th>
+      <th>缺省</th>
+
+    </tr>
+
+
+
+    <tr>
+
+      <td><tt>Iterator</tt></td>
+ 
+      <td>必须符合 <a href="http://www.sgi.com/tech/stl/RandomAccessIterator.html">随机访问迭代器</a></td>
+
+      <td>&nbsp;</td>
+
+    </tr>
+
+
+    <tr>
+
+      <td><tt>OffsetMap</tt></td>
+ <td>必须符合 <a href="./ReadablePropertyMap.html">可读 Property Map</a> 且值类型必须可转换为迭代器的距离类型</td>
+ <td>&nbsp;</td>
+
+    </tr>
+
+
+    <tr>
+
+      <td><tt>T</tt></td>
+
+      <td>迭代器的值类型</td>
+
+      <td><tt>std::iterator_traits&lt;RandomAccessIterator&gt;::value_type</tt></td>
+
+    </tr>
+
+
+
+    <tr>
+
+      <td><tt>R</tt></td>
+
+      <td>迭代器的引用类型</td>
+
+      <td><tt>std::iterator_traits&lt;RandomAccessIterator&gt;::reference</tt></td>
+
+    </tr>
+
+
+  </tbody>
+</table>
+
+</p>
+<p>
+
+</p>
+<h3>成员</h3>
+
+
+<p>除了 <a href="./LvaluePropertyMap.html">左值 Property Map</a> 中要求的方法和函数以外，该类还有以下成员。
+
+</p>
+<hr>
+
+<pre>property_traits&lt;iterator_property_map&gt;::value_type<br></pre>
+与
+<tt>std::iterator_traits&lt;Iterator&gt;::value_type</tt> 相同的类型。
+
+<hr>
+
+<pre>iterator_property_map(Iterator i)<br></pre>
+构造函数。OffsetMap 为缺省构造。
+
+<hr>
+
+<pre>iterator_property_map(Iterator i, OffsetMap m)<br></pre>
+构造函数。
+
+<hr>
+
+<pre>reference operator[](difference_type v) const<br></pre>
+[]操作符用于访问属性。<tt>reference</tt> 和
+<tt>difference_type</tt> 类型均来自于  
+<tt>std::iterator_traits&lt;Iterator&gt;</tt>.
+
+<hr>
+
+<h3>非成员函数</h3>
+
+
+<hr>
+
+<pre>  template &lt;class RAIter, class OffsetMap&gt;<br>  iterator_property_map&lt;RAIter, OffsetMap,<br>    typename std::iterator_traits&lt;RAIter&gt;::value_type,<br>    typename std::iterator_traits&lt;RAIter&gt;::reference<br>    &gt;<br>  make_iterator_property_map(RAIter iter, OffsetMap omap)<br></pre>
+用于创建一个 iterator map 的工具函数。
+
+
+<hr>
+
+<pre>  template &lt;class RAIter, class OffsetMap, class ValueType&gt;<br>  iterator_property_map&lt;RAIter, OffsetMap,<br>    typename std::iterator_traits&lt;RAIter&gt;::value_type,<br>    typename std::iterator_traits&lt;RAIter&gt;::reference<br>    &gt;<br>  make_iterator_property_map(RAIter iter, OffsetMap omap, ValueType dummy_arg)<br></pre>
+如果你的编译器不支持偏特化(如 Visual C++)，请用这个函数替代2-参数的版本。
+
+
+<hr>
+
+
+<br>
+
+<hr>
+<table>
+
+  <tbody>
+    <tr valign="top">
+
+      <td nowrap="nowrap">Copyright © 2000-2002</td>
+      <td>
+      <a href="../../people/jeremy_siek.htm">Jeremy Siek</a>,
+Univ.of Notre Dame (<a href="mailto:jsiek@osl.iu.edu">jsiek@osl.iu.edu</a>)<br>
+
+      <a href="http://www.boost.org/people/liequan_lee.htm">Lie-Quan Lee</a>, Univ.of Notre Dame (<a href="mailto:llee1@osl.iu.edu">llee1@osl.iu.edu</a>)<br>
+
+      <a href="http://www.osl.iu.edu/%7Elums">Andrew Lumsdaine</a>,
+Univ.of Notre Dame (<a href="mailto:lums@osl.iu.edu">lums@osl.iu.edu</a>)
+      </td>
+    </tr>
+  </tbody>
+</table>
+
+
+</body></html>
