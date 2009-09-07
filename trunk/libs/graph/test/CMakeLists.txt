@@ -1,3 +1,9 @@
+# Copyright (C) 2008 Michael Jackson
+#
+# Use, modification and distribution is subject to the Boost Software
+# License, Version 1.0. (See accompanying file LICENSE_1_0.txt or copy at
+# http://www.boost.org/LICENSE_1_0.txt)
+
 boost_additional_test_dependencies(graph BOOST_DEPENDS test assign)
 
 boost_test_run(transitive_closure_test)
@@ -18,6 +24,7 @@ boost_test_run(dominator_tree_test)
 boost_test_run(relaxed_heap_test ARGS 5000 15000)
 boost_test_compile(edge_list_cc)
 boost_test_compile(filtered_graph_cc)
+boost_test_run(generator_test)
 boost_test_run(graph)
 boost_test_compile(graph_concepts)
 boost_test_run(graphviz_test 
@@ -40,6 +47,7 @@ boost_test_run(biconnected_components_test)
 boost_test_run(cuthill_mckee_ordering)
 boost_test_run(king_ordering)
 boost_test_run(matching_test)
+boost_test_run(mcgregor_subgraphs_test)
 # boost_test_run(max_flow_test)
 # boost_test_run(kolmogorov_max_flow_test) TODO: Boost 1.34.x only
 
