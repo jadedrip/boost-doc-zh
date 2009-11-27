@@ -1,0 +1,196 @@
+<!DOCTYPE HTML PUBLIC "-//W3C//DTD HTML 4.0 Transitional//EN">
+<html><head>
+		
+		<title>Boost: mem_fn.hpp 文档</title><meta http-equiv="Content-Type" content="text/html; charset=UTF-8"></head>
+
+	<body style="margin-left: 5%; margin-right: 5%;" bgcolor="white">
+		<table border="0" width="100%">
+			<tbody><tr>
+				<td width="277"><a href="../../index.htm"> <img src="../../boost.png" alt="boost.png (6897 bytes)" border="0" height="86" width="277"></a>
+				</td>
+				<td align="center">
+					<h1>mem_fn.hpp</h1>
+				</td>
+			</tr>
+			<tr>
+				<td colspan="2" height="64">&nbsp;</td>
+			</tr>
+		</tbody></table>
+		<h2>目录</h2>
+		<h3 style="margin-left: 20pt;"><a href="#Purpose">目的</a></h3>
+		<h3 style="margin-left: 20pt;"><a href="#FAQ">常见问题</a></h3>
+		<h4 style="margin-left: 40pt;"><a href="#Q1"><b>mem_fn</b> 可以用来替代标准 <b>std::mem_fun[_ref]</b> 适配器吗？</a></h4>
+		<h4 style="margin-left: 40pt;"><a href="#Q2">在已存在代码中，我应该用 <b>mem_fn</b> 替换 <b>std::mem_fun[_ref]</b> 的每一次出现吗？</a></h4>
+		<h4 style="margin-left: 40pt;"><a href="#Q3"><b>mem_fn</b> 可以和 COM 方法一起工作吗？</a></h4>
+		<h4 style="margin-left: 40pt;"><a href="#Q4">为什么 BOOST_MEM_FN_ENABLE_STDCALL 不被自动定义？</a></h4>
+		<h3 style="margin-left: 20pt;"><a href="#Interface">接口</a></h3>
+		<h4 style="margin-left: 40pt;"><a href="#Synopsis">概要</a></h4>
+		<h4 style="margin-left: 40pt;"><a href="#CommonRequirements">共通需求</a></h4>
+		<h4 style="margin-left: 40pt;"><a href="#get_pointer">get_pointer</a></h4>
+		<h4 style="margin-left: 40pt;"><a href="#mem_fn">mem_fn</a></h4>
+		<h3 style="margin-left: 20pt;"><a href="#Implementation">实现</a></h3>
+		<h4 style="margin-left: 40pt;"><a href="#Files">文件</a></h4>
+		<h4 style="margin-left: 40pt;"><a href="#Dependencies">相关内容</a></h4>
+		<h4 style="margin-left: 40pt;"><a href="#NumberOfArguments">参数数量</a></h4>
+		<h4 style="margin-left: 40pt;"><a href="#stdcall">"__stdcall", "__cdecl" 和 "__fastcall" 支持</a></h4>
+		<h3 style="margin-left: 20pt;"><a href="#Acknowledgements">感谢</a></h3>
+		<h2><a name="Purpose">Purpose（目的）</a></h2>
+		<p><b>boost::mem_fn</b> 是标准函数 <b>std::mem_fun</b> 和 <b>std::mem_fun_ref</b> 的泛化。它支持带有多个参数的成员函数指针，并且返回的函数对象可以持有一个对象实例的指针，引用或者智能指针作为它的第一个参数。<strong>mem_fn</strong> 也支持指向数据成员的指针，它把它们看作不持有参数且返回一个成员的（常）引用的函数。</p>
+		<p><b>mem_fn</b> 的目的分成两个部分。首先，它允许用户以熟悉的</p>
+		<pre>    std::for_each(v.begin(), v.end(), boost::mem_fn(&amp;Shape::draw));</pre>
+		<p>语法在一个容器上调用一个成员函数，即使这个容器存储的是智能指针。</p>
+		<p>第二，它可以被想要将一个成员函数指针看做一个函数对象的库开发者当做一个构件来使用。一个库可以通过以下这种形式的重载定义一个增强的 <b>for_each</b> 算法：</p>
+		<pre>template&lt;class It, class R, class T&gt; void for_each(It first, It last, R (T::*pmf) ())<br>{<br>    std::for_each(first, last, boost::mem_fn(pmf));<br>}<br></pre>
+		<p>它将接受很方便的语法：</p>
+		<pre>    for_each(v.begin(), v.end(), &amp;Shape::draw);<br></pre>
+		<p>如果要文档化这个特性，库作者只需要简单地记述：</p>
+		<h4 style="margin-left: 20pt;">template&lt;class It, class R, class T&gt; void for_each(It first, It last, R (T::*pmf) ());</h4>
+		<p style="margin-left: 20pt;"><b>效果：</b>等价于 std::for_each(first, last, boost::mem_fn(pmf));</p>
+		<p>而 <b>boost::mem_fn</b> 可以链接到本页。参见 <a href="bind.html"><b>bind</b> 文档</a>中的例子。</p>
+		<p><b>mem_fn</b> 持有一个参数，一个指向成员的指针，并返回一个适用于标准或用户定义算法的函数对象：</p>
+		<pre>struct X<br>{<br>    void f();<br>};<br><br>void g(std::vector&lt;X&gt; &amp; v)<br>{<br>    std::for_each(v.begin(), v.end(), boost::mem_fn(&amp;X::f));<br>};<br><br>void h(std::vector&lt;X *&gt; const &amp; v)<br>{<br>    std::for_each(v.begin(), v.end(), boost::mem_fn(&amp;X::f));<br>};<br><br>void k(std::vector&lt;boost::shared_ptr&lt;X&gt; &gt; const &amp; v)<br>{<br>    std::for_each(v.begin(), v.end(), boost::mem_fn(&amp;X::f));<br>};<br></pre>
+		<p>返回的函数对象和输入的成员函数持有同样的参数，外加一个代表对象实例的“固定”的第一个参数。</p>
+		<p>当函数对象以 <b>x</b> 为第一个参数被调用，这个 <b>x</b> 既不是一个指向适当类（上例中的 <b>X</b>）的指针，也不是引向适当类（上例中的 <b>X</b>）的引用，它用 <tt>get_pointer(x)</tt> 从 <b>x</b> 获得一个指针。库作者可以通过提供一个适当的 <b>get_pointer</b> 重载来“登记”他们的智能指针类，允许 <b>mem_fn</b> 识别并支持它们。</p>
+		<p>【注意：<b>get_pointer</b> 并没有被限制于返回一个指针。它可以返回能用于一个成员函数调用表达式 <tt>(x-&gt;*pmf)(...)</tt> 中的任何对象。】</p>
+		<p>【注意：这个库使用了一个 <b>get_pointer</b> 的未加限定的调用。因此，通过 argument-dependent lookup（参数依赖查找）它会发现除了一些 <b>boost::get_pointer</b> 重载之外，还有和对应的智能指针类定义在同一个名字空间中的 <b>get_pointer</b> 重载。】</p>
+		<p>所有由 <b>mem_fn</b> 返回的函数对象都会暴露一个 <b>result_type</b> typedef，它代表这个成员函数的返回类型。对于数据成员，<strong>result_type</strong> 定义为这个成员的类型。</p>
+<h2><a name="FAQ">Frequently Asked Questions（常见问题）</a></h2>
+<h3><a name="Q1">Can <b>mem_fn</b> be used instead of the standard 
+<b>std::mem_fun[_ref]</b> adaptors?（<b>mem_fn</b> 可以用来替代标准 
+<b>std::mem_fun[_ref]</b> 适配器吗？）</a></h3>
+<p>是的。对于简单应用，<b>mem_fn</b> 提供了标准适配器没有的额外功能。出标准适配器以外还使用了 
+<b>std::bind1st</b>，<b>std::bind2nd</b> 或 <a href="../compose/index.htm"><b>Boost.Compose</b></a> 的复杂表达式能够使用自动利用 
+<b>mem_fn</b> 的 <a href="bind.html"><b>boost::bind</b></a> 来重写。</p>
+<h3><a name="Q2">Should I replace every occurence of <b>std::mem_fun[_ref]</b> 
+with <b>mem_fn</b> in my existing code?（在已存在代码中，我应该用 <b>mem_fn</b> 替换 
+<b>std::mem_fun[_ref]</b> 的每一次出现吗？）</a></h3>
+<p>不。除非你有更好的理由这样做。<b>mem_fn</b> 并非 100% 兼容标准适配器，虽然它更加优美。特别是，<b>mem_fn</b> 不返回 
+<b>std::[const_]mem_fun[1][_ref]_t</b> 类型的对象，而标准适配器会，而且使用标准 <b>argument_type</b> 
+和 <b>first_argument_type</b> 内嵌的 typedefs 
+完全记述第一个参数的类型是不可能的。库需要可适配的函数对象是为了让函数可以不需要 <b>mem_fn</b>。</p>
+<h3><a name="Q3">Does <b>mem_fn</b> work with COM methods?（<b>mem_fn</b> 可以和 COM 
+方法一起工作吗？）</a></h3>
+<p>可以。只需要 <a href="#stdcall">#define BOOST_MEM_FN_ENABLE_STDCALL</a>。</p>
+<h3><a name="Q4">Why isn't BOOST_MEM_FN_ENABLE_STDCALL defined automatically?（为什么 
+BOOST_MEM_FN_ENABLE_STDCALL 不被自动定义？）</a></h3>
+<p>一般而言，不可移植扩展在默认状态下应该关闭，以防止厂家锁定。如果 BOOST_MEM_FN_ENABLE_STDCALL 
+被自动定义，你可能无意中使用了它而并不明确你的代码是否需要可移植。另外，缺省的调用约定就是 __stdcall 是有可能的，在这种情况下，启用 
+__stdcall 支持会导致重复定义。</p>
+<h2><a name="Interface">Interface（接口）</a></h2>
+<h3><a name="Synopsis">Synopsis（概要）</a></h3><pre>namespace boost<br>{<br><br>template&lt;class T&gt; T * <a href="#get_pointer_1">get_pointer</a>(T * p);<br><br>template&lt;class R, class T&gt; <i>unspecified-1</i> <a href="#mem_fn_1">mem_fn</a>(R (T::*pmf) ());<br><br>template&lt;class R, class T&gt; <i>unspecified-2</i> <a href="#mem_fn_2">mem_fn</a>(R (T::*pmf) () const);<br><br>template&lt;class R, class T&gt; <i>unspecified-2-1</i> <a href="#mem_fn_2_1">mem_fn</a>(R T::*pm);<br><br>template&lt;class R, class T, class A1&gt; <i>unspecified-3</i> <a href="#mem_fn_3">mem_fn</a>(R (T::*pmf) (A1));<br><br>template&lt;class R, class T, class A1&gt; <i>unspecified-4</i> <a href="#mem_fn_4">mem_fn</a>(R (T::*pmf) (A1) const);<br><br>template&lt;class R, class T, class A1, class A2&gt; <i>unspecified-5</i> <a href="#mem_fn_5">mem_fn</a>(R (T::*pmf) (A1, A2));<br><br>template&lt;class R, class T, class A1, class A2&gt; <i>unspecified-6</i> <a href="#mem_fn_6">mem_fn</a>(R (T::*pmf) (A1, A2) const);<br><br>// implementation defined number of additional overloads for more arguments<br><br>}<br></pre>
+<h3><a name="CommonRequirements">Common requirements（共通需求）</a></h3>
+<p>概要中涉及的所有 <tt><i>unspecified-N</i></tt> 类型都是 <b>CopyConstructible（可拷贝构造）</b>的和 
+<b>Assignable（可赋值）</b>的。它们的拷贝构造函数和赋值操作符不抛出异常。<tt><i>unspecified-N</i>::result_type</tt> 
+被定义为作为一个参数传递给 <b>mem_fn</b> 的成员函数指针的返回值（概要中的 
+<b>R</b>）。<tt><i>unspecified-2-1</i>::result_type</tt> 被定义为 <tt>R</tt>。</p>
+<h3><a name="get_pointer">get_pointer</a></h3>
+<h4><a name="get_pointer_1">template&lt;class T&gt; T * get_pointer(T * 
+p)</a></h4>
+<blockquote>
+<p><b>返回：</b><tt>p</tt>。</p>
+<p><b>抛出：</b>不抛出异常。</p></blockquote>
+<h3><a name="mem_fn">mem_fn</a></h3>
+<h4><a name="mem_fn_1">template&lt;class R, class T&gt; <i>unspecified-1</i> 
+mem_fn(R (T::*pmf) ())</a></h4>
+<blockquote>
+<p><b>返回：</b>一个函数对象 <i>f</i>，当 <i>t</i> 是一个类型 <strong>T</strong> 
+或其派生类型的左值时，使得表达式 <tt><i>f(t)</i></tt> 等价于 <tt>(t.*pmf)()</tt>，否则，等价于 
+<tt>(get_pointer(t)-&gt;*pmf)()</tt>。</p>
+<p><b>抛出：</b>不抛出异常。</p></blockquote>
+<h4><a name="mem_fn_2">template&lt;class R, class T&gt; <i>unspecified-2</i> 
+mem_fn(R (T::*pmf) () const)</a></h4>
+<blockquote>
+<p><b>返回：</b>一个函数对象 <i>f</i>，当 <i>t</i> 的类型是 <strong>T</strong> <em>[const]</em> 
+或其派生类型时，使得表达式 <tt><i>f(t)</i></tt> 等价于 <tt>(t.*pmf)()</tt>，否则，等价于 
+<tt>(get_pointer(t)-&gt;*pmf)()</tt>。</p>
+<p><b>抛出：</b>不抛出异常。</p></blockquote>
+<h4><a name="mem_fn_2_1">template&lt;class R, class T&gt; <i>unspecified-2-1</i> 
+mem_fn(R T::*pm)</a></h4>
+<blockquote>
+<p><b>返回：</b>一个函数对象 <i>f</i>，当 <i>t</i> 的类型是 <strong>T</strong> <em>[const]</em> 
+或其派生类型时，使得表达式 <tt><i>f(t)</i></tt> 等价于 <tt>t.*pm</tt>，否则，等价于 
+<tt>get_pointer(t)-&gt;*pm</tt>。</p>
+<p><b>抛出：</b>不抛出异常。</p></blockquote>
+<h4><a name="mem_fn_3">template&lt;class R, class T, class A1&gt; 
+<i>unspecified-3</i> mem_fn(R (T::*pmf) (A1))</a></h4>
+<blockquote>
+<p><b>返回：</b>一个函数对象 <b>f</b>，当 <i>t</i> 是一个类型 <strong>T</strong> 
+或其派生类型的左值时，使得表达式 <tt><i>f(t, a1)</i></tt> 等价于 <tt>(t.*pmf)(a1)</tt>，否则，等价于 
+<tt>(get_pointer(t)-&gt;*pmf)(a1)</tt>。</p>
+<p><b>抛出：</b>不抛出异常。</p></blockquote>
+<h4><a name="mem_fn_4">template&lt;class R, class T, class A1&gt; 
+<i>unspecified-4</i> mem_fn(R (T::*pmf) (A1) const)</a></h4>
+<blockquote>
+<p><b>返回：</b>一个函数对象 <i>f</i>，当 <i>t</i> 的类型是 <strong>T</strong> <em>[const]</em> 
+或其派生类型时，使得表达式 <tt><i>f(t, a1)</i></tt> 等价于 <tt>(t.*pmf)(a1)</tt>，否则，等价于 
+<tt>(get_pointer(t)-&gt;*pmf)(a1)</tt>。</p>
+<p><b>抛出：</b>不抛出异常。</p></blockquote>
+<h4><a name="mem_fn_5">template&lt;class R, class T, class A1, class A2&gt; 
+<i>unspecified-5</i> mem_fn(R (T::*pmf) (A1, A2))</a></h4>
+<blockquote>
+<p><b>返回：</b>一个函数对象 <i>f</i>，当 <i>t</i> 是一个类型 <strong>T</strong> 
+或其派生类型的左值时，使得表达式 <tt><i>f(t, a1, a2)</i></tt> 等价于 <tt>(t.*pmf)(a1, 
+a2)</tt>，否则，等价于 <tt>(get_pointer(t)-&gt;*pmf)(a1, a2)</tt>。</p>
+<p><b>抛出：</b>不抛出异常。</p></blockquote>
+<h4><a name="mem_fn_6">template&lt;class R, class T, class A1, class A2&gt; 
+<i>unspecified-6</i> mem_fn(R (T::*pmf) (A1, A2) const)</a></h4>
+<blockquote>
+<p><b>返回：</b>一个函数对象 <i>f</i>，当 <i>t</i> 的类型是 <strong>T</strong> <em>[const]</em> 
+或其派生类型时，使得表达式 <tt><i>f(t, a1, a2)</i></tt> 等价于 <tt>(t.*pmf)(a1, a2)</tt>，否则，等价于 
+<tt>(get_pointer(t)-&gt;*pmf)(a1, a2)</tt>。</p>
+<p><b>抛出：</b>不抛出异常。</p></blockquote>
+<h2><a name="Implementation">Implementation（实现）</a></h2>
+<h3><a name="Files">Files（文件）</a></h3>
+<ul><li><a href="../../boost/mem_fn.hpp">boost/mem_fn.hpp</a>（主头文件） 
+</li><li><a href="../../boost/bind/mem_fn_cc.hpp">boost/bind/mem_fn_cc.hpp</a>（供 
+mem_fn.hpp 使用，不直接包含） 
+</li><li><a href="../../boost/bind/mem_fn_vw.hpp">boost/bind/mem_fn_vw.hpp</a>（供 
+mem_fn.hpp 使用，不直接包含） 
+</li><li><a href="../../boost/bind/mem_fn_template.hpp">boost/bind/mem_fn_template.hpp</a>（供 
+mem_fn.hpp 使用，不直接包含） 
+</li><li><a href="test/mem_fn_test.cpp">libs/bind/test/mem_fn_test.cpp</a>（测试） 
+</li><li><a href="test/mem_fn_derived_test.cpp">libs/bind/test/mem_fn_derived_test.cpp</a>（带有派生对象的测试） 
+
+</li><li><a href="test/mem_fn_fastcall_test.cpp">libs/bind/test/mem_fn_fastcall_test.cpp</a>（对 
+__fastcall 的测试） 
+</li><li><a href="test/mem_fn_stdcall_test.cpp">libs/bind/test/mem_fn_stdcall_test.cpp</a>（对 
+__stdcall 的测试） 
+</li><li><a href="test/mem_fn_void_test.cpp">libs/bind/test/mem_fn_void_test.cpp</a>（对 void 
+returns 的测试） </li></ul>
+<h3><a name="Dependencies">Dependencies（相关内容）</a></h3>
+<ul><li><a href="../config/config.htm">Boost.Config</a> </li></ul>
+<h3><a name="NumberOfArguments">Number of Arguments（参数个数）</a></h3>
+<p>实现支持最多 8 个参数的函数对象。这不是设计的固有限制，只是一个实现细节。</p>
+<h3><a name="stdcall">"__stdcall", "__cdecl" and "__fastcall" Support</a></h3>
+<p>有些平台允许几种 <b>calling 
+convention</b>（调用约定——函数被调用时的规则：参数如何传递，返回值如何处理，谁来清理栈（如果有的话））分属不同类型的（成员）函数。</p>
+<p>例如，Windows API 函数和 COM 接口成员函数使用一种名为 <b>__stdcall</b> 的调用约定。Borland VCL 组件使用 
+<strong>__fastcall</strong>。UDK，OpenOffice.org 的组件模型，使用 
+<strong>__cdecl</strong>。</p>
+<p>为了和 <b>__stdcall</b> 成员函数一起使用 <b>mem_fn</b>，在直接或间接包含 
+<b>&lt;boost/mem_fn.hpp&gt;</b> 之前 <b>#define</b> 宏 
+<b>BOOST_MEM_FN_ENABLE_STDCALL</b>。</p>
+<p>为了和 <b>__fastcall</b> 成员函数一起使用 <b>mem_fn</b>，在直接或间接包含 
+<b>&lt;boost/mem_fn.hpp&gt;</b> 之前 <b>#define</b> 宏 
+<b>BOOST_MEM_FN_ENABLE_FASTCALL</b>。</p>
+<p>为了和 <b>__cdecl</b> 成员函数一起使用 <b>mem_fn</b>，在直接或间接包含 
+<b>&lt;boost/mem_fn.hpp&gt;</b> 之前 <b>#define</b> 宏 
+<b>BOOST_MEM_FN_ENABLE_CDECL</b>。</p>
+<p><strong>最好在项目选项中定义这些宏，在命令行上使用 –D，或作为使用了 mem_fn 的翻译单元（.cpp 
+文件）的第一行。</strong>不遵守这个规则，当一个包含 mem_fn.hpp 的头文件在这些宏定义之前，可能会导致隐蔽的错误。</p>
+<p>【注意：这是一个不可移植扩展。它不是接口的一部分。】</p>
+<p>【注意：有些编译器只对 <b>__stdcall</b> 关键字提供最小的支持。】</p>
+<h2><a name="Acknowledgements">Acknowledgements（感谢）</a></h2>
+<p>Rene Jager 的最初的关于用 traits 类使 <b>mem_fn</b> 适合用户定义智能指针的建议激发了基于 
+<b>get_pointer</b> 设计的灵感。</p>
+<p>正式 review 期间，Richard Crossley，Jens Maurer，Ed Brey 和其他人提出大量改进建议。review 主管者是 
+Darin Adler。</p>
+<p>Steve Anichini 指出 COM 接口使用 <b>__stdcall</b>。</p>
+<p>Dave Abrahams 改良了 <b>bind</b> 和 <b>mem_fn</b> 以支持在不完善编译器上的空返回。</p>
+<p>Daniel Boelzle 指出 UDK 使用 <strong>__cdecl</strong>。<br>
+			<br>
+			<small>Copyright © 2001, 2002 by Peter Dimov and Multi Media Ltd. Copyright 
+				2003-2005 Peter Dimov. Distributed under the Boost Software License, Version 
+				1.0. See accompanying file <a href="../../LICENSE_1_0.txt">LICENSE_1_0.txt</a> or 
+				copy at <a href="http://www.boost.org/LICENSE_1_0.txt">http://www.boost.org/LICENSE_1_0.txt</a>.</small></p>
+	</body></html>

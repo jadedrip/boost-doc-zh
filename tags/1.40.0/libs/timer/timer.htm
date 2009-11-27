@@ -1,0 +1,427 @@
+<!DOCTYPE HTML PUBLIC "-//W3C//DTD HTML 4.01 Transitional//EN">
+<html>
+<head>
+
+
+
+
+  
+  
+  
+  <meta http-equiv="Content-Language" content="en-us">
+
+
+
+
+  
+  
+  
+  <meta http-equiv="Content-Type" content="text/html; charset=UTF-8">
+
+
+
+
+  
+  
+  
+  <meta name="GENERATOR" content="Microsoft FrontPage 5.0">
+
+
+
+
+  
+  
+  
+  <meta name="ProgId" content="FrontPage.Editor.Document">
+
+
+
+
+  
+  
+  
+  <title>Boost Timer Documentation</title>
+</head>
+
+
+<body bgcolor="#ffffff" text="#000000">
+
+
+
+
+
+<h1>
+<img src="../../boost.png" alt="boost.png (6897 bytes)" align="middle" height="86" width="277">
+ Timer 库</h1>
+
+
+
+
+<p>Timer库提供了两个头文件和三个类： </p>
+
+
+
+
+
+<blockquote>
+  
+  
+  
+  
+  <table border="1" cellpadding="5">
+
+
+
+
+    <tbody>
+
+
+
+      <tr>
+
+
+
+
+      <td><span style="font-weight: bold;">头文件</span></td>
+
+
+
+
+      <td><b>类</b></td>
+
+
+
+
+      <td><b>功能</b></td>
+
+
+
+
+    </tr>
+
+
+
+
+    <tr>
+
+
+
+
+      <td><a href="../../boost/timer.hpp">timer.hpp</a></td>
+
+
+
+
+      <td><a href="#Class%20timer">timer</a></td>
+
+
+
+
+      <td>测量流逝的时间。</td>
+
+
+
+
+    </tr>
+
+
+
+
+    <tr>
+
+
+
+
+      <td><a href="../../boost/progress.hpp">progress.hpp</a></td>
+
+
+
+
+      <td><a href="#Class%20progress_timer">progress_timer</a></td>
+
+
+
+
+      <td>使用timer类测量流逝的时间，在析构的时候显示时间。</td>
+
+
+
+
+    </tr>
+
+
+
+
+    <tr>
+
+
+
+
+      <td><a href="../../boost/progress.hpp">progress.hpp</a></td>
+
+
+
+
+      <td><a href="#Class%20progress_display">progress_display</a></td>
+
+
+
+
+      <td>显示出当前的进度。</td>
+
+
+
+
+    </tr>
+
+
+
+
+  
+    
+    
+    
+    </tbody>
+  
+  
+  
+  </table>
+
+
+
+
+</blockquote>
+
+
+
+
+<p>设计这些类，仅仅出于这样的考虑&mdash;&mdash;它们的主要目的是用于计时和报告程序员们的测试程序或者批处理作业的进度。这些进度指示类的说明文档是以概括性的语言描述的，这样使得其他形式的实现（比如图形用户界面）可以融入进来。</p>
+
+
+
+<h2><a name="Class timer">timer类</a></h2>
+
+
+
+
+<p>Timer类用于测量流逝的时间。对于那些小型的计时任务，它通常都很方便。相比较依赖C标准库的clock()函数那未知的准确度和精密度，
+timer提供的实现具有适度的可移植性。在timer本身的实现里面，最大可测量的时间长度大概只有596.5小时（甚至更短）。由于这些限制，不能指望这个timer类非常的健壮(robust)，并且也不应该使用在有这方面考虑的任务上。</p>
+
+
+
+
+<h3>Synopsis 简要声明</h3>
+
+
+
+
+<pre>#include &lt;<a href="../../boost/timer.hpp">boost/timer.hpp</a>&gt;<br>namespace boost {<br>class timer {<br> public:<br>         timer();                        // 执行之后: elapsed()==0<br>  // compiler generated copy constructor, copy assignment, and dtor apply编译器生成的拷贝构造函数、拷贝赋值函数、和析构函数<br>  void   restart();                      // 执行之后: elapsed()==0<br>  double elapsed() const;                // 以秒为单位，返回流逝的时间<br><br>  double elapsed_max() const;  // 返回 elapsed() 的最大估计值<br>  // 关于可移植性的警告：在某些系统上面，std::clock_t类型溢出或者重置，这样elapsed_max()可能会返回一个非常大的值。<br><br>  double elapsed_min() const;            // 返回 elapsed() 的最小值<br>  }; // timer<br>} // namespace boost</pre>
+
+
+
+
+<h3>Exception safety 异常安全</h3>
+
+
+
+
+<p>构造函数可能会抛出 <code>std::bad_alloc</code> 异常。 其他的成员函数都不会抛出异常。&nbsp;</p>
+
+
+
+
+<h3>Future directions 今后的方向</h3>
+
+
+
+
+<p>Ed
+Brey需要一个函数来确定elapsed函数可能返回的最大值，但是却没有一种方式来让它具有可移植性。这个问题已经在致力于扩展的C语言时间函数功能
+的（extended time functionality）工作组里面提出。可能未来几年内会有解决方案。现在，elapsed_max()
+提供了一个近似的功能。</p>
+
+
+
+
+<h2><a name="Class progress_timer">progress_timer类</a></h2>
+
+
+
+
+<p>progress_timer类自动地测量流逝的时间，并且析构的时候在一个适当的地方以一种适当的形式，显示一个流逝了多少时间的消息。它所提供的实现默认是以字符的显示方式输出到 std::cout。</p>
+
+
+
+
+<p>progress_timer类通常用于对程序的执行计时。你可以像这样简单的使用它：</p>
+
+
+
+
+<blockquote>
+  
+  
+  
+  
+  <pre>#include &lt;<a href="../../boost/progress.hpp">boost/progress.hpp</a>&gt;<br>int main()<br>{<br>   progress_timer t;  // 开始计时<br>   // 做一些别的事情 ...<br>   return 0;<br>}</pre>
+
+
+
+
+</blockquote>
+
+
+
+
+<p>这段代码就会产生类似下面这样的输出：</p>
+
+
+
+
+<blockquote>
+  
+  
+  
+  
+  <pre>1.23 s</pre>
+
+
+
+
+</blockquote>
+
+
+
+
+<p>注意"s"是国际单位制（System International of Units）对秒的官方缩写。</p>
+
+
+
+
+<h3>Synopsis 简要声明</h3>
+
+
+
+
+<pre>#include &lt;<a href="../../boost/progress.hpp">boost/progress.hpp</a>&gt;<br>namespace boost {<br>class progress_timer : public <a href="#Class%20timer">timer</a>, <a href="../utility/utility.htm#Class_noncopyable">noncopyable</a>  {<br> public:<br>   progress_timer();<br>   progress_timer( std::ostream&amp; os ); // os只是一个提示；具体的实现可能会忽略掉<br>   ~progress_timer();<br>   }; // progress_display<br>} // namespace boost</pre>
+
+
+
+
+<h3>Exception safety 异常安全</h3>
+
+
+
+
+<p>构造函数可能会抛出&nbsp;<code>std::bad_alloc</code> 异常。其他的成员函数都不会抛出异常。&nbsp;</p>
+
+
+
+
+<h2><a name="Class progress_display">progress_display类</a></h2>
+
+
+
+
+<p>progress_display类在适当的地方以适当的形式显示出相对于预设目标的当前进度。这可以让用户知道一个程序是否正在进展之中。</p>
+
+
+
+
+<p>比如，如果要在叫一个做big_map的std::map&lt;&gt;容器上进行一个很耗时的计算，下面的代码就可以显示出当前的进度：</p>
+
+
+
+
+<pre>  progress_display show_progress( big_map.size() );<br>  for ( big_map_t::iterator itr = big_map:begin();<br>        itr != big_map.end(); ++itr )<br>  {<br>     // 进行计算<br>     ...<br>     ++show_progress;<br>  }</pre>
+
+
+
+
+<p>在70%的元素被处理完之后，显示出来的效果如下所示：</p>
+
+
+
+
+<blockquote>
+  
+  
+  
+  
+  <pre>0%   10   20   30   40   50   60   70   80   90   100%<br>|----|----|----|----|----|----|----|----|----|----|<br>************************************</pre>
+
+
+
+
+</blockquote>
+
+
+
+
+
+<h2>Synopsis 简要声明</h2>
+
+
+
+
+<pre>#include &lt;boost/progress.hpp&gt;<br>namespace boost {<br>class progress_display : <a href="../utility/utility.htm#Class_noncopyable">noncopyable</a> {<br> public:<br>   progress_display( unsigned long expected_count );<br>   // 效果: restart(expected_count)<br><br>   progress_display( unsigned long expected_count,<br>                     std::ostream&amp; os,  // os只是一个提示；具体的实现可能会忽略掉<br>                     const std::string &amp; s1 = "\n", // 行首字符串(leading strings)<br>                     const std::string &amp; s2 = "",<br>                     const std::string &amp; s3 = "" )<br>   // 效果: 保存行首字符串(leading strings)的一份拷贝，然后restart(expected_count)<br><br>   void           restart( unsigned long expected_count );<br>   //  效果: 用三行显示合适的比例，并且每行分别以从构造函数传入的本地拷贝的s1, s2, s3的开头。<br>   //  执行之后: count()==0, expected_count()==expected_count<br><br>   unsigned long  operator+=( unsigned long increment )<br>   //  效果: Display appropriate progress tic if needed.<br>   //  执行之后: count()== original count() + increment<br>   //  返回值: count().<br><br>   unsigned long  operator++()<br>   //  返回值: operator+=( 1 ).<br><br>   unsigned long  count() const<br>   //  返回值: The internal count.<br><br>   unsigned long  expected_count() const<br>   //  返回值: The expected_count from the constructor.<br><br>   }; // progress_display<br>} // namespace boost</pre>
+
+
+
+
+<h3>Exception safety 异常安全</h3>
+
+
+
+
+<p>除了count()和expected_count()之外的所有的成员函数都会有输出，因此理论上就有可能抛出异常。在实际使用中，异常被抛出的可能性非常小，当然异常的抛出也可能意味着问题的严重性。注意这里没有显示的析构函数，因此析构函数抛出异常是不可能的。</p>
+
+
+
+
+<h2>History 追本溯源</h2>
+
+
+
+
+<p>这些类派生自那些一直被程序员们认为是有用的旧的C++和C的功能。通过Boost的邮件列表，Reid
+Sweatman提议把具有更宽广使用范围的计时器类(timer)同更具有目的性的进度指示类(progess)分开。Sean
+Corfield提议允许输出到任意的流(ostream)。Dave Abrahams, Valentin Bonnard, Ed Brey,
+Andy Glew和Dietmar&nbsp;K&uuml;hl也提供了有用的注释。Ed
+Brey提议增加timer::elapsed_max()方法。John
+Maddock提议增加timer::elapsed_min()方法。Toon Knapen提议使用可选的行首字符串(leading
+strings)，来允许对进度的显示做标注。</p>
+
+
+
+
+<h2>Rationale 基本原理</h2>
+
+
+
+
+<p>早期timer类的版本将实现的文件（与头文件）分隔开来。对那些不愿意编译库的用户来说会产生问题，在编译动态链接库(DLL)的时候出现困难
+（由于使用了其他的库，这些库反过来又带来了明显的编译器缺陷），使得这些类即使是在明显适用的情况下也不能使用。因此所有的实现都被放到了内联
+(inline)代码里。</p>
+
+
+
+
+<p>也有人要求加入特定平台的实现，以便可以使用那些操作系统提供的按常理应该是高性能的计时器API。John
+Maddock提交了一份使用Win32
+API的实现。测试显示尽管这些计时器的精确度高，延时有时候却比std::clock()函数要大得多，而这是非常糟糕的。更进一步讲，使用Win32
+API的结果非常依赖于编译器（测试过Mircosoft和Borland的）和操作系统的版本（Windows NT、Windows
+95等等）。std::clock()函数更加可靠，因此保留在这个平台上作为它的计时器API。</p>
+
+
+
+
+<hr>
+<p>&copy; Copyright Beman Dawes 1999.<br>
+Distributed under the Boost Software 
+License, Version 1.0. See <a href="http://www.boost.org/LICENSE_1_0.txt">www.boost.org/LICENSE_1_0.txt</a></p>
+
+<p>Revised <!--webbot bot="Timestamp" S-Type="EDITED" S-Format="%B %d, %Y" startspan -->November 
+07, 2007<!--webbot bot="Timestamp" i-checksum="39599" endspan --> </p>
+</body>
+</html>

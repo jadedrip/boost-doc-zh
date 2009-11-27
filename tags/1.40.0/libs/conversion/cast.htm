@@ -1,0 +1,125 @@
+<!DOCTYPE HTML PUBLIC "-//W3C//DTD HTML 4.01 Transitional//EN">
+<html><head>
+
+    
+  <meta name="generator" content="Microsoft FrontPage 5.0">
+
+    
+  <meta http-equiv="Content-Type" content="text/html; charset=UTF-8">
+
+    
+  <meta name="GENERATOR" content="Microsoft FrontPage 4.0">
+
+    
+  <meta name="ProgId" content="FrontPage.Editor.Document">
+
+
+    
+  <title>Header boost/cast.hpp Documentation</title></head>
+
+<body bgcolor="#ffffff" text="#000000">
+
+    
+<h1><img src="../../boost.png" alt="boost.png (6897 bytes)" align="middle" height="86" width="277">Header <a href="../../boost/cast.hpp">boost/cast.hpp</a></h1>
+
+
+    
+<h2><a name="Cast Functions">Cast 函数</a></h2>
+
+
+    
+<p>头文件 <a href="../../boost/cast.hpp">boost/cast.hpp</a> 提供了 <code>
+    <a href="#Polymorphic_cast">polymorphic_cast</a> 和</code> <a href="#Polymorphic_cast"><code>polymorphic_downcast</code></a> 函数模板，用于完成C++内建的转型。</p>
+
+
+    
+<p>程序 <a href="cast_test.cpp">cast_test.cpp</a> 可用于检验这些函数模板是否正常工作。</p>
+
+
+    
+<h3><a name="Polymorphic_cast">多态转型</a></h3>
+
+
+    
+<p>指向多态对象(即定义了至少一个虚拟函数的类的对象)的指针有时需要向下转型或交叉转型。向下转型是指从基类转为派生类。交叉转型则是指在继承层次图中交叉转型，如在一个Y型层次图中从一个基类转为另一个基类。</p>
+
+
+    
+<p>这些转型也可以用旧式的转型来完成，但这种方式是不被推荐的。旧式转型严重缺少类型安全，可读性差，且难以用查找工具定们。</p>
+
+
+    
+<p>C++ 内建的 <code>static_cast</code> 可以用于高效地对多态对象指针进行向下转型，但不提供错误检测，无法检测指针是否被转型为错误的派生类。<code>polymorphic_downcast</code> 模板则在非调试编译时保留了 <code>static_cast</code> 的效率，而在调试编译时则通过 assert() 增加了 <code>dynamic_cast 的</code>安全性。</p>
+
+
+    
+<p>C++ 内建的 <code>dynamic_cast</code> 可用于多态对象指针的向下转型和交叉转型，但是以返回0值作为错误通告的方式使得测试不够方便，更糟糕的是，很容易忘了测试。而 <code>dynamic_cast 有另一种抛出异常的方式，是在使用引用时工作</code>，在使用指针时也可通过一个难看的表达式
+    &amp;<code>dynamic_cast&lt;T&amp;&gt;(*p) 来使用它，但是如果 p 为 0 则会导致未定义行为。</code><code>polymorphic_cast</code>
+    模板可以对指针执行 <code>dynamic_cast</code>，并在 <code>dynamic_cast</code> 返回 0 时抛出异常。</p>
+
+
+    
+<p><code>polymorphic_downcast</code> 可在你确保成功时用于向下转型。错误的检测仅在编译单元没有定义 NDEBUG 时执行：
+</p>
+<pre>  assert( dynamic_cast&lt;Derived&gt;(x) == x )<br></pre>
+其中 <code>x</code> 为源指针。这种方法不仅保证了返回非0指针，而且在多重继承时也是正确的。试图用 <code>polymorphic_downcast</code> 进行交叉转型会编译失败。<b>警告:</b> 因为 <code>polymorphic_downcast</code> 使用了 assert(), 如果NDEBUG在编译单元间的定义不一致，将会违犯 One Definition Rule (ODR)。 [请见 ISO Std 3.2]
+<p></p>
+<p>对于交叉转型，或者转型是否成功只能在运行期才知道，或者效率不是重要的，应该首选 <code>polymorphic_cast</code>&nbsp;. </p>
+
+
+    
+<p>C++ 内建的 <code>dynamic_cast</code> 必须用于对引用转型而不是指针。它也是唯一一个可用于检查是否支持给定接口的转型；这时返回0并不是错误的条件。</p>
+
+
+    
+<h3>polymorphic_cast 和 polymorphic_downcast 摘要</h3>
+
+
+    
+<blockquote>
+  <pre>namespace boost {<br><br>template &lt;class Derived, class Base&gt;<br>inline Derived polymorphic_cast(Base* x);<br>// 抛出: std::bad_cast 如果 ( dynamic_cast&lt;Derived&gt;(x) == 0 )<br>// 返回: dynamic_cast&lt;Derived&gt;(x)<br><br>template &lt;class Derived, class Base&gt;<br>inline Derived polymorphic_downcast(Base* x);<br>// 效果: assert( dynamic_cast&lt;Derived&gt;(x) == x );<br>// 返回: static_cast&lt;Derived&gt;(x)<br><br>}<br></pre>
+
+    </blockquote>
+
+
+    
+<h3>polymorphic_downcast 示例</h3>
+
+
+    
+<blockquote>
+  <pre>#include &lt;boost/cast.hpp&gt;<br>...<br>class Fruit { public: virtual ~Fruit(){}; ... };<br>class Banana : public Fruit { ... };<br>...<br>void f( Fruit * fruit ) {<br>// ... 我们确信 fruit 是一个 Banana<br>  Banana * banana = boost::polymorphic_downcast&lt;Banana*&gt;(fruit);<br>  ...<br></pre>
+
+    </blockquote>
+
+
+    
+<h3>History历史</h3>
+
+
+    
+<p><code>polymorphic_cast</code> 由 Bjarne Stroustrup 在 "The C++
+    Programming Language" 中建议。<br>
+
+     <code>polymorphic_downcast</code> 由 <a href="../../people/dave_abrahams.htm">Dave Abrahams</a> 贡献。<code><br>
+旧版的 numeric_cast</code> 由 <a href="../../people/kevlin_henney.htm">Kevlin Henney</a> 贡献，现已被 <a href="../numeric/conversion/doc/html/index.html">Boost Numeric Conversion Library</a> 取代。</p>
+
+    
+<hr>
+
+    
+<p>Revised
+    <!--webbot bot="Timestamp" s-type="EDITED" s-format="%d %B, %Y" startspan
+                    -->June 23, 2005<!--webbot bot="Timestamp" endspan i-checksum="30348"
+                    --></p>
+
+
+    
+<p>© Copyright boost.org 1999. Permission to copy, use, modify, sell
+    and distribute this document is granted provided this copyright notice
+    appears in all copies. This document is provided "as is" without express
+    or implied warranty, and with no claim as to its suitability for any
+    purpose.</p>
+
+  
+</body></html>

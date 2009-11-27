@@ -1,0 +1,176 @@
+<!DOCTYPE HTML PUBLIC "-//W3C//DTD HTML 4.01 Transitional//EN">
+<html><head><meta content="text/html; charset=UTF-8" http-equiv="content-type"><!--
+  -- Copyright (c) 2004 Kris Beevers
+  --
+  -- Distributed under the Boost Software License, Version 1.0.
+  -- (See accompanying file LICENSE_1_0.txt or copy at
+  -- http://www.boost.org/LICENSE_1_0.txt)
+  -->
+<title>Boost Graph Library: AStarVisitor</title></head>
+<body alink="#ff0000" bgcolor="#ffffff" link="#0000ee" text="#000000" vlink="#551a8b"> 
+<img src="../../../boost.png" alt="C++ Boost" height="86" width="277"> 
+
+<br clear="">
+
+<h1>AStar Visitor Concept A星遍历器概念</h1>
+
+这个概念定义了用于 <a href="./astar_search.html"><tt>astar_search()</tt></a> 的遍历器接口。用户可以定义一个具有AStar遍历器接口的类，将传递一个该类的对象给 <tt>astar_search()</tt>，从而在图搜索的期间增加动作。
+
+<h3>Refinement of 精化自</h3>
+
+<a href="../../utility/CopyConstructible.html">可复制构造 Copy Constructible</a>
+(遍历器的复制应该是一个轻量级的操作)。&nbsp;
+
+
+<h3>Notation 记号</h3>
+
+<table>
+<tbody><tr>
+<td><tt>V</tt></td>
+<td>一个以 AStar 遍历器为模的类型。</td>
+</tr>
+
+<tr>
+<td><tt>vis</tt></td>
+<td>一个类型为 <tt>V</tt> 的对象。</td>
+</tr>
+
+<tr>
+<td><tt>G</tt></td>
+<td>一个以 Graph 为模的类型。</td>
+</tr>
+
+<tr>
+<td><tt>g</tt></td>
+<td>一个类型为 <tt>G</tt> 的对象。</td>
+</tr>
+
+<tr>
+<td><tt>e</tt></td>
+<td>一个类型为&nbsp;<tt>boost::graph_traits&lt;G&gt;::edge_descriptor</tt> 的对象。</td>
+</tr>
+
+<tr>
+<td><tt>s,u,v</tt></td>
+<td>一个类型为&nbsp;<tt>boost::graph_traits&lt;G&gt;::vertex_descriptor</tt> 的对象。</td>
+</tr>
+
+<tr>
+<td><tt>d</tt></td>
+<td>一个类型为 <tt>DistanceMap</tt> 的对象。</td>
+</tr>
+
+<tr>
+<td><tt>WeightMap</tt></td>
+<td>一个以 <a href="../../property_map/doc/ReadablePropertyMap.html">可读属性映射Readable Property
+Map</a> 为模的类型。</td>
+</tr>
+
+<tr>
+<td><tt>w</tt></td>
+<td>一个类型为&nbsp;<tt>WeightMap</tt> 的对象。</td>
+</tr>
+
+</tbody></table>
+
+<h3>Associated Types 关联类型</h3>无
+<h3>Valid Expressions 有效表达式</h3>
+
+<table border="1">
+<tbody><tr>
+<th>Name</th><th>Expression</th><th>Return Type</th><th>Description</th>
+</tr>
+
+<tr>
+<td>顶点初始化</td>
+<td><tt>vis.initialize_vertex(u, g)</tt></td>
+<td><tt>void</tt></td>
+<td>在首次初始化时(即初始化属性映射时)对图中每个顶点调用。
+</td>
+</tr>
+
+<tr>
+<td>顶点发现</td>
+<td><tt>vis.discover_vertex(u, g)</tt></td>
+<td><tt>void</tt></td>
+<td>当某个顶点被首次发现并增加至
+OPEN 列表时对其调用。
+</td>
+</tr>
+
+<tr>
+<td>顶点检查</td>
+<td><tt>vis.examine_vertex(u, g)</tt></td>
+<td><tt>void</tt></td>
+<td>当某个顶点从队列中弹出时(即它具有 OPEN 列表中的最小代价)对其调用。在对顶点 <tt>u</tt> 的每条出边调用 <tt>examine_edge()</tt> 前发生。
+</td>
+</tr>
+
+<tr>
+<td>边检查</td>
+<td><tt>vis.examine_edge(e, g)</tt></td>
+<td><tt>void</tt></td>
+<td>在每个顶点被检查后，对其每条出边调用。
+</td>
+</tr>
+
+
+<tr>
+<td>边松驰</td>
+<td><tt>vis.edge_relaxed(e, g)</tt></td>
+<td><tt>void</tt></td>
+<td>在检查的时候，如果满足以下条件，则该边被松驰(其目标顶点的距离被减少)，且调用该方法：
+<blockquote>
+<pre>tie(u, s) = incident(e, g);<br>D d_u = get(d, u), d_v = get(d, s);<br>W w_e = get(w, e);<br>assert(compare(combine(d_u, w_e), d_s));<br></pre>
+</blockquote>
+</td>
+</tr>
+
+<tr>
+<td>边未松驰</td>
+<td><tt>vis.edge_not_relaxed(e, g)</tt></td>
+<td><tt>void</tt></td>
+<td>在检查的时候，如果一条边不被松驰(见上)，则调用该方法。
+</td>
+</tr>
+
+<tr>
+<td>黑色目标</td>
+<td><tt>vis.black_target(e, g)</tt></td>
+<td><tt>void</tt></td>
+<td>当一个位于 CLOSED 列表中的顶点被更高效的路径"重新发现"并重新加入到
+OPEN 列表中时调用。
+</td>
+</tr>
+
+<tr>
+<td>顶点结束</td>
+<td><tt>vis.finish_vertex(u, g)</tt></td>
+<td><tt>void</tt></td>
+<td>当一个顶点被加至 CLOSED 列表时调用，在其所有出边都检查完毕时发生。
+</td>
+</tr>
+
+</tbody></table>
+
+<h3>Models 模型</h3>
+
+<ul>
+ <li><a href="./astar_visitor.html"><tt>astar_visitor</tt></a>
+</li></ul>
+
+
+<h3>See also 参见</h3>
+
+<a href="./visitor_concepts.html">遍历器概念 Visitor concepts</a>
+
+<br>
+<hr>
+<table>
+<tbody><tr valign="top">
+<td nowrap="nowrap">Copyright © 2004</td><td>
+<a href="http://www.cs.rpi.edu/%7Ebeevek/">Kristopher Beevers</a>,
+Rensselaer Polytechnic Institute (<a href="mailto:beevek@cs.rpi.edu">beevek@cs.rpi.edu</a>)
+</td></tr></tbody></table>
+
+</body></html>

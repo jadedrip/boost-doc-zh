@@ -1,0 +1,226 @@
+<html>
+<head>
+<meta http-equiv="Content-Type" content="text/html; charset=utf-8">
+<title>Unary function based test case</title>
+<link rel="stylesheet" href="../../../../style/style.css" type="text/css">
+<meta name="generator" content="DocBook XSL Stylesheets V1.74.0">
+<link rel="home" href="../../../index.html" title="Boost Test Library">
+<link rel="up" href="../test-organization.html" title="Test organization or the house that Jack built">
+<link rel="prev" href="auto-nullary-test-case.html" title="Nullary function based test case with automated registration">
+<link rel="next" href="test-case-template.html" title="Test case template">
+<script language="JavaScript1.2" src="../../../../js/boost-test.js"></script>
+</head>
+<body bgcolor="white" text="black" link="#0000FF" vlink="#840084" alink="#0000FF">
+<table width="100%"><tr>
+<td width="10%"><a href="../../../index.html"><img alt="Home" width="229" height="61" border="0" src="../../../../../../../libs/test/docbook/img/boost.test.logo.png"></a></td>
+<td valign="middle" align="left"> &gt; <a href="../../../utf.html">The Unit Test Framework</a> &gt; <a href="../../user-guide.html">User's guide</a><a href="../../testing-tools.html">
+      &gt;
+      </a><a href="../test-organization.html">Test organization</a><a href="../fixture.html">
+      &gt;
+      </a><b>Unary function based test case</b>
+</td>
+<td><div class="spirit-nav">
+<a href="auto-nullary-test-case.html"><img src="../../../../../../../doc/html/images/prev.png" alt="Prev"></a><a href="test-case-template.html"><img src="../../../../../../../doc/html/images/next.png" alt="Next"></a>
+</div></td>
+</tr></table>
+<hr>
+<div class="section" lang="en">
+<div class="titlepage"><div><div><h5 class="title">
+<a name="utf.user-guide.test-organization.unary-test-case"></a>Unary function based test case</h5></div></div></div>
+<p class="first-line-indented">
+   Some tests are required to be repeated for a series of different input parameters. One way to achieve this is
+   manually register a test case for each parameter as in example above. You can also invoke a test function with
+   all parameters manually from within your test case, like this:
+   <br />
+   有些测试需要对一系列不同的输入参数进行重复。
+   一种方法是像之前例子对每个参数手动注册一个测试用例。
+   或者像这样手动在一个测试函数中手动处理所有的参数：
+  </p>
+<pre class="programlisting">void single_test( int i )
+{
+    BOOST_CHECK( /* test assertion */ );
+}
+
+void combined_test()
+{
+    int params[] = { 1, 2, 3, 4, 5 };
+
+    std::for_each( params, params+5, &amp;single_test );
+}
+</pre>
+<p class="first-line-indented">
+   The <acronym class="acronym">UTF</acronym> presents a better solution for this problem: the unary function based test case, also referred as
+   parameterized test case. The unary test function can be a free function, unary functor (for example created
+   with boost::bind) or unary method of a class with bound test class instance). The test function is converted
+   into test case using the macro BOOST_PARAM_TEST_CASE. The macro expects a collection of parameters (passed as
+   two input iterators) and an unary test function:
+   <br />
+   <acronym class="acronym">UTF</acronym> 为这个问题提供了更好的解决方案：基于单参函数的测试用例，也被称为参数化测试用例。
+   参单测试用例可以是自由函数，单参函数对象 (如由 boost::bind 创建) 或者绑定于测试类实例的单参类方法。
+   测试函数使用宏 BOOST_PARAM_TEST_CASE 转换为测试用例。
+   这个宏需要参数集合 (以两个输入迭代器形式输入) 和单参测试函数：
+  </p>
+<pre class="inline-synopsis">
+<a name="BOOST_PARAM_TEST_CASE"></a>BOOST_PARAM_TEST_CASE(<span class="emphasis"><em>test_function</em></span>, <span class="emphasis"><em>params_begin</em></span>, <span class="emphasis"><em>params_end</em></span>)</pre>
+<p class="first-line-indented">
+   BOOST_PARAM_TEST_CASE creates an instance of the test case generator. When passed to the method test_suite::add,
+   the generator produces a separate sub test case for each parameter in the parameters collection and registers
+   it immediately in a test suite. Each test case is based on a test function with the parameter bound by value,
+   even if the test function expects a parameter by reference. The fact that parameter value is stored along with
+   bound test function releases you from necessity to manage parameters lifetime. For example, they can be defined
+   in the test module initialization function scope.
+   <br />
+   BOOST_PARAM_TEST_CASE 创建了一个测试类生成器的实例。
+   当传递到 test_suite::add 方法中时，生成器为参数集合中每个参数生成独立的子测试用例并直接注册到测试套件中。
+   每个测试用例都是基于测试函数和按值绑定的参数，即使测试函数需要引用的参数。
+   参数值和被绑定的测试函数一起存储使你不必管理参数的生命周期。
+   例如，它们可以被定义在测试模块初始化函数范围内。
+  </p>
+<p class="first-line-indented">
+   All sub test case names are deduced from the macro argument test_function. If you prefer to assign different
+   names, you have to use the underlying make_test_case interface instead. Both test cases creation and
+   registration are performed in the test module initialization function.
+   <br />
+   所有子测试用例的名称都是通过宏参数 test_function 推断的。
+   如果你想要指定不同的名称，你需要使用下层的 make_test_case 接口。
+   测试用例的创建和注册都是在测试模块初始化函数中进行的。
+  </p>
+<p class="first-line-indented">
+   The parameterized test case facility is preferable to the approach in the example above, since execution of
+   each sub test case is guarded and counted independently. It produces a better test log/results report (in
+   example above in case of failure you can't say which parameter is at fault) and allows you to test against
+   all parameters even if one of them causes termination a particular sub test case.
+   <br />
+   参数化测试用例工具优于上面的例子，因为每个子测试用例都是独立临近和计数的。
+   它可以产生更好的测试日志 / 结果报告 (上面例子中如果失败没有办法知道在哪个参数时失败的)，并且即使在某个子测试用例中断时也可以测试所有的参数。
+  </p>
+<p class="first-line-indented">
+   In comparison with a manual test case registration for each parameter approach the parameterized test case
+   facility is more concise and easily extendible.
+   <br />
+   与为每个参数手动注册测试用例相比，参数化测试用例工具更简练和易于扩展。
+  </p>
+<p class="first-line-indented">
+   In following simple example the same test, implemented in <code class="computeroutput">free_test_function</code>, is
+   performed for 5 different parameters. The parameters are defined in the test module initialization function
+   scope. The master test suite contains 5 independent test cases.
+   <br />
+   在下面的示例中，<code class="computeroutput">free_test_function</code> 实现的同样的测试应用于 5 个不同参数。
+   参数定义在测试模块初始化函数范围内。主测试套件包含 5 个相互独立的测试用例。
+  </p>
+<div class="example">
+<a name="utf.user-guide.test-organization.unary-test-case.example07"></a><p class="title"><b>Example 11. Unary free function based test case</b></p>
+<div class="example-contents">
+<pre class="programlisting">#include &lt;boost/test/included/unit_test.hpp&gt;
+#include &lt;boost/test/parameterized_test.hpp&gt;
+using namespace boost::unit_test;
+
+//____________________________________________________________________________//
+
+void free_test_function( int i )
+{
+    BOOST_CHECK( i &lt; 4 /* test assertion */ );
+}
+
+//____________________________________________________________________________//
+
+test_suite*
+init_unit_test_suite( int argc, char* argv[] )
+{
+    int params[] = { 1, 2, 3, 4, 5 };
+
+    framework::master_test_suite().
+        add( BOOST_PARAM_TEST_CASE( &amp;free_test_function, params, params+5 ) );
+
+    return 0;
+}
+
+//____________________________________________________________________________//
+</pre>
+<table class="simplelist" border="0" summary="Simple list"><tr>
+<td><code class="literal"><a href="../../../../src/examples/example07.cpp" target="_top">Source code</a></code></td>
+<td> | </td>
+<td><code class="literal"><a href="#" target="_top" id="id650067" onclick="toggle_element( 'example07-output', 'id650067', 'Show output', 'Hide output' ); return false;">Show output</a></code></td>
+</tr></table>
+<pre class="example-output" id="example07-output">&gt; example
+Running 5 test cases...
+test.cpp(9): error in "free_test_function": check i &lt; 4 failed
+test.cpp(9): error in "free_test_function": check i &lt; 4 failed
+
+*** 2 failures detected in test suite "Master Test Suite"
+</pre>
+</div>
+</div>
+<br class="example-break"><p class="first-line-indented">
+   Next example is similar, but instead of a free function it uses a method of a class. Even though parameters are
+   passed into test method by reference you can still define them in the test module initialization  function scope.
+   This example employs the alternative test module initialization function specification.
+   <br />
+   下面的例子类似，只是用类方法代替了自由函数。
+   即使参数是通过引用传入测试方法中的，你也可以将它们定义在测试模块初始化函数范围中。
+   这个例子使用了备选的测试模块初始化函数签名。
+  </p>
+<div class="example">
+<a name="utf.user-guide.test-organization.unary-test-case.example08"></a><p class="title"><b>Example 12. Unary class method based test case</b></p>
+<div class="example-contents">
+<pre class="programlisting">#define BOOST_TEST_ALTERNATIVE_INIT_API
+#include &lt;boost/test/included/unit_test.hpp&gt;
+#include &lt;boost/test/floating_point_comparison.hpp&gt;
+#include &lt;boost/test/parameterized_test.hpp&gt;
+#include &lt;boost/bind.hpp&gt;
+using namespace boost::unit_test;
+using namespace boost;
+
+//____________________________________________________________________________//
+
+class test_class {
+public:
+    void test_method( double const&amp; d )
+    {
+        BOOST_CHECK_CLOSE( d * 100, (double)(int)(d*100), 0.01 );
+    }
+} tester;
+
+//____________________________________________________________________________//
+
+bool init_unit_test()
+{
+    double params[] = { 1., 1.1, 1.01, 1.001, 1.0001 };
+
+    callback1&lt;double&gt; tm = bind( &amp;test_class::test_method, &amp;tester, _1);
+
+    framework::master_test_suite().
+        add( BOOST_PARAM_TEST_CASE( tm, params, params+5 ) );
+
+    return true;
+}
+
+//____________________________________________________________________________//
+
+</pre>
+<table class="simplelist" border="0" summary="Simple list"><tr>
+<td><code class="literal"><a href="../../../../src/examples/example08.cpp" target="_top">Source code</a></code></td>
+<td> | </td>
+<td><code class="literal"><a href="#" target="_top" id="id650162" onclick="toggle_element( 'example08-output', 'id650162', 'Show output', 'Hide output' ); return false;">Show output</a></code></td>
+</tr></table>
+<pre class="example-output" id="example08-output">&gt; example
+Running 5 test cases...
+test.cpp(14): error in "tm": difference between d * 100{100.1} and (double)(int)(d*100){100} exceeds 0.01%
+test.cpp(14): error in "tm": difference between d * 100{100.01} and (double)(int)(d*100){100} exceeds 0.01%
+
+*** 2 failures detected in test suite "Master Test Suite"
+</pre>
+</div>
+</div>
+<br class="example-break">
+</div>
+<table xmlns:rev="http://www.cs.rpi.edu/~gregod/boost/tools/doc/revision" width="100%"><tr>
+<td align="left"></td>
+<td align="right"><div class="copyright-footer">Copyright © 2001-2007 Gennadiy Rozental</div></td>
+</tr></table>
+<hr>
+<div class="spirit-nav">
+<a accesskey="p" href="auto-nullary-test-case.html"><img src="../../../../../../../doc/html/images/prev.png" alt="Prev"></a><a accesskey="u" href="../test-organization.html"><img src="../../../../../../../doc/html/images/up.png" alt="Up"></a><a accesskey="h" href="../../../index.html"><img src="../../../../../../../doc/html/images/home.png" alt="Home"></a><a accesskey="n" href="test-case-template.html"><img src="../../../../../../../doc/html/images/next.png" alt="Next"></a>
+</div>
+</body>
+</html>

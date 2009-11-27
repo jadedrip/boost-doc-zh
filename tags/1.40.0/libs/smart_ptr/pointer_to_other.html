@@ -1,0 +1,101 @@
+﻿<!DOCTYPE HTML PUBLIC "-//W3C//DTD HTML 4.01 Transitional//EN">
+<html>
+	<head>
+		<title>pointer_to_other.hpp</title>
+		<meta http-equiv="Content-Type" content="text/html; charset=UTF-8">
+	</head>
+	<body bgcolor="#ffffff" text="#000000">
+		<h1><img src="../../boost.png" alt="boost.png (6897 bytes)" align="middle" WIDTH="277" HEIGHT="86">Header
+			<a href="../../boost/pointer_to_other.hpp">boost/pointer_to_other.hpp</a></h1>
+		<p>
+			pointer to other 工具提供一种方法，给定一个源指针类型，可以获得一个指向另一个 pointee 类型的相同式样的指针。这个工具定义在 <cite><a href="../../boost/pointer_to_other.hpp">boost/pointer_to_other.hpp</a> 中。</cite></p>
+		<p>在 <cite><a href="test/pointer_to_other_test.cpp">pointer_to_other_test.cpp</a></cite> 中有测试／示例代码。</p>
+		<h2><a name="contents">Contents 目录</a></h2>
+		<ul>
+			<li>
+				<a href="#rationale">Rationale 基本原理</a>
+			<li>
+				<a href="#synopsis">Synopsis 概要</a>
+			<li>
+				<a href="#example">Example 示例</a></li>
+		</ul>
+		<h2><a name="rationale">Rationale 基本原理</a></h2>
+		<p>创建指针无关类（比如内存管理器，分配器，或容器）时，经常需要定义通用指针，因此，如果一个模板参数代表了一个指针（比如一个指向 int 的裸指针或智能指针），我们可以定义指向另一个 pointee 的相同式样的指针（一个指向 float 的裸指针或智能指针）。</p>
+		<pre>template &lt;class IntPtr&gt;
+class FloatPointerHolder
+{   
+   <em>// Let's define a pointer to a float</em>
+   typedef typename boost::pointer_to_other
+      &lt;IntPtr, float&gt;::type float_ptr_t;
+   float_ptr_t float_ptr;
+};</pre>
+		<h2><a name="synopsis">Synopsis 概要</a></h2>
+		<pre>
+namespace boost {
+
+template&lt;class T, class U&gt;
+   struct pointer_to_other;
+
+template&lt;class T, class U, template &lt;class&gt; class Sp&gt;
+   struct pointer_to_other&lt; Sp&lt;T&gt;, U &gt;
+{
+   typedef Sp&lt;U&gt; type;
+};
+
+template&lt;class T, class T2, class U,
+        template &lt;class, class&gt; class Sp&gt;
+   struct pointer_to_other&lt; Sp&lt;T, T2&gt;, U &gt;
+{
+   typedef Sp&lt;U, T2&gt; type;
+};
+
+template&lt;class T, class T2, class T3, class U,
+        template &lt;class, class, class&gt; class Sp&gt;
+struct pointer_to_other&lt; Sp&lt;T, T2, T3&gt;, U &gt;
+{
+   typedef Sp&lt;U, T2, T3&gt; type;
+};
+
+template&lt;class T, class U&gt;
+struct pointer_to_other&lt; T*, U &gt; 
+{
+   typedef U* type;
+};
+
+} <em>// namespace boost</em></pre>
+		<p>如果这些定义对于一个特定的智能指针不合适，我们可以定义一个 pointer_to_other 的特化版本。</p>
+		<h2><a name="example">Example 示例</a></h2>
+		<pre><em>// Let's define a memory allocator that can
+// work with raw and smart pointers</em>
+
+#include &lt;boost/pointer_to_other.hpp&gt;
+
+template &lt;class VoidPtr&gt;
+class memory_allocator
+{<em>
+   // Predefine a memory_block </em>
+   struct block;<em>
+
+   // Define a pointer to a memory_block from a void pointer
+   // If VoidPtr is void *, block_ptr_t is block*
+   // If VoidPtr is smart_ptr&lt;void&gt;, block_ptr_t is smart_ptr&lt;block&gt;</em>
+   typedef typename boost::pointer_to_other      
+            &lt;VoidPtr, block&gt;::type block_ptr_t;
+            
+   struct block
+   {
+      std::size_t size;
+      block_ptr_t next_block;
+   };
+
+   block_ptr_t free_blocks;
+};</pre>
+		<p>就像我们看到的，我们可以用 pointer_to_other 创建指针无关代码。</p>
+		<hr>
+		<p>Last revised: $Date: 2006/03/18 14:58:20 $</p>
+		<p><small>Copyright 2005, 2006 Ion Gaztaaga and Peter Dimov. Use, modification, 
+				and distribution are subject to the Boost Software License, Version 1.0.<br>
+				(See accompanying file <a href="../../LICENSE_1_0.txt">LICENSE_1_0.txt</a> or a 
+				copy at &lt; <a href="http://www.boost.org/LICENSE_1_0.txt">http://www.boost.org/LICENSE_1_0.txt</a>&gt;.)</small></p>
+	</body>
+</html>

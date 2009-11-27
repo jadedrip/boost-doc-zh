@@ -1,0 +1,104 @@
+<!DOCTYPE HTML PUBLIC "-//W3C//DTD HTML 4.01 Transitional//EN">
+<html><head>
+
+<title>The Macro Expansion Process</title><meta http-equiv="Content-Type" content="text/html; charset=UTF-8">
+<link href="theme/style.css" rel="stylesheet" type="text/css"></head>
+
+<body>
+<table background="theme/bkd2.gif" border="0" cellspacing="2" width="100%">
+  <tbody><tr> 
+    <td width="21"> <h1></h1></td>
+    <td width="885"> <font face="Verdana, Arial, Helvetica, sans-serif"><b><font size="6">The 
+      Macro Expansion Process 宏展开过程</font></b></font></td>
+    <td width="96"><a href="http://www.boost.org"><img src="theme/wave.gif" align="right" border="0" height="68" width="93"></a></td>
+  </tr>
+</tbody></table>
+<br>
+<table border="0">
+  <tbody><tr> 
+    <td width="10"></td>
+    <td width="30"><a href="../index.html"><img src="theme/u_arr.gif" border="0"></a></td>
+    <td width="30"><a href="predefined_macros.html"><img src="theme/l_arr.gif" border="0"></a></td>
+    <td width="30"><a href="compiletime_config.html"><img src="theme/r_arr.gif" border="0"></a></td>
+  </tr>
+</tbody></table>
+<p>The macro expansion process described here was initially developed by <a href="mailto:pmenso57@attbi.com">Paul 
+  Mensonides</a> and is implemented in <tt>Wave</tt>. It is much more understandable 
+  as the description of the desired macro expansion algorithm provided in the 
+  C++ Standard <a href="references.html#iso_cpp">[1]</a>.<br>这里所描述的宏展开过程，起初是由 <a href="mailto:pmenso57@attbi.com">Paul 
+  Mensonides</a> 开发的，并在 <tt>Wave</tt> 中实现。它比在C++标准<a href="references.html#iso_cpp">[1]</a>中提供的宏展开算法说明更容易理解。</p>
+<p>Macro replacement proceeds left-to-right.<br>宏替换是从左到右进行处理的。 </p>
+<p>If, during scanning (or rescanning) an identifier is found, it is looked up 
+  in the symbol table. If the identifier is not found in the symbol table, it 
+  is not a macro and scanning continues.<br>如果在扫描(或重扫描)期间，发现一个标识符，则在符号表中对其进行查找。如果该标识符未能在符号表中找到，则它不是一个宏，且继续扫描。</p>
+<p>If the identifier is found, the value of a flag associated with the identifier 
+  is used to determine if the identifier is available for expansion. If it is 
+  not, the specific token (i.e. the specific instance of the identifier) is marked 
+  as disabled and is not expanded. If the identifier is available for expansion, 
+  the value of a different flag associated with the identifier in the symbol table 
+  is used to determine if the identifier is an object-like or function-like macro. 
+  If it is an object-like macro, it is expanded. If it is a function-like macro, 
+  it is only expanded if the next token is an left parenthesis.<br>如
+果该标识符被找到，则使用一个与该标识符相关联的标志的值来决定这个标识符是否可以展开。如果不可以，则特定的单词(即这个标识符的特定实例)被标记为禁
+用且不展开。如果该标识符可以展开，则使用符号表中的另一个与该标识符相关联的标志的值来决定这个标识符是类似于对象的宏还是类似于函数的宏。如果它是一
+个类似于对象的宏，则展开它。如果它是一个类似于函数的宏，则仅当下一个单词为左括号时对其进行展开。</p><p>
+  An identifier is available for expansion if it is not marked as disabled and 
+  if the the value of the flag associated with the identifier is not set, which 
+  is used to determine if the identifier is available for expansion.<br>一个标识符如果没有被标记为禁用，且与该标识符相关联的标志值(该标志用于判断标识符是否可以展开)未设置时，就可以展开。</p>
+<p>(If a macro is an object-like macro, skip past the next two paragraphs.)<br>(如果一个宏是类似于对象的，则跳过以下两段。)</p>
+<p>If a macro to be expanded is a function-like macro, it must have the exact 
+  number of actual arguments as the number of formal parameters required by the 
+  definition of the macro. Each argument is recursively scanned and expanded. 
+  Each parameter name found in the replacement list is replaced by the expanded 
+  actual argument after leading and trailing whitespace and all placeholder tokens 
+  are removed unless the parameter name immediately follows the stringizing operator 
+  (<tt>'#'</tt>) or is adjacent to the token-pasting operator (<tt>'##'</tt>).<br>如果被展开的宏是类似于函数的，那么它必须具有和这个宏的定义中所要求的形参数量正好相同数量的实参。每个参数都被递归扫描和展开。在替换列表中发现的每一个参数名都在前后加上空白然后替换为展开后的实参，且所有占位符单词都被删除，除非参数名紧跟在字符串化操作符(<tt>'#'</tt>)后或在单词联接操作符(<tt>'##'</tt>)前后。</p>
+<p>If the parameter name immediately follows the stringizing operator (<tt>'#'</tt>), 
+  a stringized version of the unexpanded actual argument is inserted. If the parameter 
+  name is adjacent to the token-pasting operator (<tt>'##'</tt>), the unexpanded 
+  actual argument is inserted after all placeholder tokens are removed.<br>如果参数名紧跟在字符串化操作符(<tt>'#'</tt>)之后，那么就插入一个未展开实参的字符串版本。如果参数名在单词联接操作符(<tt>'##'</tt>)前后，则在去除所有占位符单词后插入未展开的实参。</p>
+<p>All concatenation takes place in the replacement list. (If a single concatenation 
+  yields multiple tokens, the behavior is undefined. Moreover, <tt>Wave</tt> in 
+  normal C++98 and C99 modes issues an error, if more then one token is produced 
+  as the result of the concatenation. In C++0x mode <tt>Wave</tt> treats token-pasting 
+  of unrelated tokens as well defined and inserts the reparsed string representation 
+  of the concatenated tokens into the replacement list.).<br>所有串接都发生在替换列表中。(如果一次串接产生多个单词，那么行为是未定义的。此外，如果串接的结果产生一个以上的单词，<tt>Wave</tt> 在普通C++98和C99模式下会引发一个错误。在C++0x模式下 <tt>Wave</tt> 则会对无关的单词进行单词联接，并将串接后的单词的字符串表示插入到替换列表中)。</p>
+<p>The flag in the symbol table entry associated with the name of the macro being 
+  expanded is set to indicate the that the macro is not available for expansion.<br>在符号表项中，与被展开宏的名字相关联的标志被设置，以表示该宏不可展开。</p>
+<p>The replacement list is rescanned for further macro expansion. All leading 
+  and trailing whitespace tokens in the replacement list are removed (the placeholder 
+  tokens are left intact).<br>对替换列表重新扫描，进行下一步宏展开。在替换列表中的所有前导和后置空白单词被删除(占位符单词则被原封不动地保留)。 </p>
+<p>After rescanning completes, the flag in the symbol table entry associated with 
+  the name of macro being expanded is cleared to indicate that the macro is again 
+  available for expansion, and the sequence of tokens that constitutes the rescanned 
+  replacement list is returned to the point of invocation of the macro.<br>在完成重扫描后，符号表项中与被展开宏的名字相关联的标志被清除，以表示该宏可以再次展开，且组成重扫描后的替换列表的单词序列被返回至该宏的调用点。</p>
+<p>If this sequence of tokens is empty, it is replaced by a placeholder token. 
+  If a placeholder is found during scanning (or rescanning) it is ignored. (Also, 
+  if the only thing separating a parameter from the stringizing operator or token-pasting 
+  operator is placeholder, it is also ignored in that context.)<br>如果这个单词序列为空，则替换为占位符单词。如果在扫描(或重扫描)时发现占位符，则忽略它。(还有，如果参数与字符串化操作符或单词联接操作符之间只用了占位符来分隔，则在这个上下文中也会忽略该占位符)。</p>
+<p>This sequence of tokens is inserted at the original point that the macro was 
+  invoked, and scanning continues starting with the last token of the newly inserted 
+  sequence of tokens. I.e. scanning looks back a single token (possibly a placeholder 
+  token) and continues.<br>这个单词序列将被插入到该宏被调用的原始点，然后从刚插入的单词序列的最后一个单词开始继续扫描。即，扫描动作会回读一个单词(可能是占位符单词)并继续。<br>
+</p>
+<table border="0">
+  <tbody><tr> 
+    <td width="10"></td>
+    <td width="30"><a href="../index.html"><img src="theme/u_arr.gif" border="0"></a></td>
+    <td width="30"><a href="predefined_macros.html"><img src="theme/l_arr.gif" border="0"></a></td>
+    <td width="30"><a href="compiletime_config.html"><img src="theme/r_arr.gif" border="0"></a></td>
+  </tr>
+</tbody></table>
+<hr size="1">
+<p class="copyright">Copyright © 2003-2008 Hartmut Kaiser<br>
+  <br>
+<font size="2">Distributed under the Boost Software License, Version
+1.0. (See accompanying file LICENSE_1_0.txt or copy at
+http://www.boost.org/LICENSE_1_0.txt) </font> </p>
+<span class="updated"></span>
+<p class="copyright"><span class="updated">Last updated: 
+  <!-- #BeginDate format:fcAm1m -->Sunday, May 15, 2005  12:23<!-- #EndDate -->
+  </span>
+</p>
+<p>&nbsp; </p>
+<!-- #BeginDate format:fcAm1m -->Saturday, February 25, 2006  15:46<!-- #EndDate --></body></html>

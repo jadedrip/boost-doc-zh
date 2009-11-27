@@ -1,0 +1,282 @@
+<!DOCTYPE HTML PUBLIC "-//W3C//DTD HTML 4.01 Transitional//EN">
+<html><head><meta content="text/html; charset=UTF-8" http-equiv="content-type"><!--
+  Copyright (C) 2001, Andreas Scherer, Jeremy Siek, Lie-Quan Lee,
+  and Andrew Lumsdaine
+
+  -- Distributed under the Boost Software License, Version 1.0.
+  -- (See accompanying file LICENSE_1_0.txt or copy at
+  -- http://www.boost.org/LICENSE_1_0.txt)
+  -->
+<title>Boost Graph Library: Stanford Graph Interface</title></head>
+<body alink="#ff0000" bgcolor="#ffffff" link="#0000ee" text="#000000" vlink="#551a8b"> 
+<img src="../../../boost.png" alt="C++ Boost" height="86" width="277"> 
+
+<br clear="">
+
+<h1>
+Using SGB Graphs in BGL&nbsp;在BGL中使用 SGB 图</h1>BGL头文件 <a href="../../../boost/graph/stanford_graph.hpp"><tt>&lt;boost/graph/stanford_graph.hpp&gt;</tt></a> 将一个
+Stanford GraphBase (SGB) <tt>图指针适配到一个</tt>BGL-兼容的
+<a href="./VertexListGraph.html">点列表图VertexListGraph</a>。注意，这里没有使用一个图适配器类，SGB的 <tt>Graph*</tt>
+本身变成 点列表图VertexListGraph 的模型。通过为 <tt>Graph*</tt> 定义适当的非成员函数，以符合 点列表图VertexListGraph
+概念。
+
+<h2><a name="sec:SGB"></a>
+The Stanford GraphBase
+</h2>
+
+<p>
+"<a href="http://www-cs-staff.stanford.edu/%7Eknuth/sgb.html">Stanford
+GraphBase</a> (SGB) 是一组数据集和计算机程序，它们生成并检查各种各样的图和网络。"&nbsp;SGB 是由
+<a href="http://www-cs-staff.stanford.edu/%7Eknuth">Donald E. Knuth</a>
+在1993年开发并发布的。完整的带文档的源码可以从 <a href="ftp://labrea.stanford.edu/pub/sgb/sgb.tar.gz">Stanford
+University</a> 的匿名FTP获得，也可以在由 ACM Press 和 Addison-Wesley
+Publishing Company 在1993年出版的 "The Stanford GraphBase, A Platform for
+Combinatorial Computing," 一书中找到(该书中有几章内容是电子版中没有的)。
+
+</p><h3><a name="sec:CWEB"></a>
+Prerequisites 先决条件
+</h3>SGB的源码是按照
+<a href="http://www-cs-staff.stanford.edu/%7Eknuth/lp.html">文字编程Literate
+Programming</a> 的范式编写的，所以你需要确认你的计算机支持 <a href="http://www-cs-staff.stanford.edu/%7Eknuth/cweb.html">CWEB</a>
+系统。CWEB源码可以从
+<a href="ftp://labrea.stanford.edu/pub/cweb/cweb.tar.gz">Stanford
+University</a> 匿名FTP。在Unix系统上的CWEB自举很容易，并且在CWEB分发包中有文档记录；Win32系统上的CWEB工具的二进制可执行文件的预编译可在
+<a href="http://www.literateprogramming.com">www.literateprogramming.com</a> 上找到。
+
+<h3><a name="sec:SGB:Installation"></a>
+Installing the SGB 安装SGB
+</h3>在获得 <a href="#sec:SGB">SGB 源码</a> 并已安装了一个可用的 <a href="#sec:CWEB">CWEB 系统</a>
+(至少要求
+"ctangle"
+处理器)后，你就基本完成编译SGB源码的设置了。SGB是以"旧的C风格"来编写的，而BGL要的是"现代的C"和C++。幸好，SGB发布包配备了一
+套适当的修补程序来将所有源码从"KR-C"转换为"ANSI-C"，从而顺利地将SGB整合到BGL中。
+<ul>
+<li>
+<b>Unix</b>:&nbsp;解压了 SGB 文件之后，在执行
+"<tt>make tests</tt>" 和 "<tt>make install</tt>" 之前，你要在解压 SGB 文件的根目录中执行
+"<tt>ln -s PROTOTYPES/*.ch .</tt>" (或者你可以只将有修改的文件复制到正确的源文件处)。随SGB一起的 Unix <tt>Makefile</tt> 会查找与SGB源文件相匹配的"change files"并自动将它们应用于"ctangle"处理器。所得的 C 文件将顺利通过编译。
+</li>
+<li>
+<b>Win32</b>: SGB分发包中的 "MSVC" 子目录包含了完整的一组 "Developer Studio Projects" (和单个 "Workspace")，适用于 Microsoft Developer Studio 6。安装过程在所附文件 <tt>README.MSVC</tt> 中说明。"MSVC"
+的贡献已经被更新，以同时利用 "PROTOTYPES"，因此你不必担心。
+</li>
+</ul>
+
+<h3><a name="sec:UsingSGB"></a>
+Using the SGB 使用SGB
+</h3>在运行了SGB的 <a href="#sec:SGB:Installation">安装过程</a> 之后，你就可以使用
+SGB <tt>Graph*</tt> 的BGL接口，<a href="../../../boost/graph/stanford_graph.hpp"><tt>&lt;boost/graph/stanford_graph.hpp&gt;</tt></a>，具体说明 <a href="#sec:BGL:Interface">见后</a>。你所要做的就是，告诉C++编译器去何处寻找SGB头文件(缺省是在Unix的 <tt>/usr/local/sgb/include</tt> 目录或Win32的SGB安装目录下的 "MSVC"
+子目录)，以及告诉链接器去何处寻找SGB静态库文件(Unix上是 <tt>libgb.a</tt>，Win32上是
+<tt>libgb.lib</tt>)；至于在你的特定编译器上要如何做，请参考相关文档。
+
+<h3><a name="sec:SGB:Problems"></a>
+Technicalities 技术性
+</h3>
+
+<ul>
+<li>
+<b>头文件选择：</b>有两个SGB模块，<tt>gb_graph</tt> 和
+<tt>gb_io</tt>，使用了预处理器开关 <tt>SYSV</tt> 来选择头文件 <tt>&lt;string.h&gt;</tt> (若 <tt>SYSV</tt> 被 <tt>#define</tt>d)
+或头文件 <tt>&lt;strings.h&gt;</tt> (若 <tt>SYSV</tt> 未
+<tt>#define</tt>d)。有些编译器，如 <tt>gcc</tt>/<tt>g++</tt>，并不关心这一点(<tt>gcc</tt>无需  <tt>&lt;string.h&gt;</tt> 也"知道" "string" 函数<tt></tt>)，但是其它编译器，如Win32的 MSVC，则在乎(因此
+<a href="stanford_graph.html#sec:SGB">SGB 发布包</a> 的"MVSC"子目录下的所有 "Developer Studio Projects" 都正确地定义了<a href="#sec:SGB"></a> <tt>SYSV</tt>)。你应当小心地根据编译器的需要来设定(或不设定) <tt>SYSV</tt>。
+</li>
+<li>
+<b>没有包含防护：</b>SGB头文件都没有使用 "内部包含防护" 来防止自己被多次包含。为了避免麻烦，你必须不要在一个编译器单元中的&nbsp;<a href="#sec:Wrapper">BGL 包围</a> 的之前或之后&nbsp;<tt>#include</tt> 任何的SGB头文件；这样就可充分地使用BGL接口。
+</li>
+<li>
+<b>预处理器宏：</b>SGB头文件非常随意地使用预处理器，没有某种特定的约定(如全大写的名字或特定的前缀)。在编写本文之时，已有三个预处理宏与 C++, g++, 或 BGL 的约定相冲突，并已在&nbsp;<a href="#sec:Wrapper">BGL
+包围</a> 中修正。我们不能保证没有其它的预处理器相关问题发生(不过我们愿意了解任何此类的冲突)。
+</li>
+</ul>
+
+<h2><a name="sec:BGL:Interface"></a>
+The BGL Interface for the SGB 用于SGB的BGL接口
+</h2>
+
+<h3><a name="sec:Wrapper"></a>
+Where Defined 定义于
+</h3>
+
+<a href="../../../boost/graph/stanford_graph.hpp"><tt>&lt;boost/graph/stanford_graph.hpp&gt;</tt></a>
+
+<p>这个BGL头文件的主要目的是，<tt>#include</tt> 用于
+<a href="#sec:SGB">Stanford GraphBase</a> (SGB)通用内容及其各种图生成器函数的所有全局定义，通过象 "<tt>test_sample</tt>" 程序的第2节中那样读入所有 <a href="stanford_graph.html#sec:SGB:Problems">SGB 头文件</a>。
+
+</p><p>在 SGB&nbsp;的顶层，BGL的 <tt>stanford_graph.hpp</tt>
+头文件增加并定义了适当的类型和函数，以便在BGL框架中使用
+SGB 图。除了改进的接口，<a href="#sec:UsingSGB">SGB (静态)库</a> 就象在BGL上下文中一样被使用。
+
+</p><h3>
+Model Of 以...为模型
+</h3>
+
+<a href="./VertexListGraph.html">点列表图Vertex List Graph</a> 和 <a href="./PropertyGraph.html">属性图Property Graph</a>。可以用于SGB图的属性标签集在后面的&nbsp; <a href="#properties">顶点属性与边属性</a> 一节中介绍。
+
+
+<h3><a name="sec:Example"></a>
+Example 示例
+</h3>示例程序 <a href="../example/miles_span.cpp">
+<tt>&lt;example/miles_span.cpp&gt;</tt></a> 是将BGL泛型框架用于SGB图的第一个应用。它使用 Prim's 算法来解决"最小生成树"问题。此外，程序 <a href="../../../libs/graph/example/girth.cpp">
+<tt>&lt;example/girth.cpp&gt;</tt></a> 和 <a href="../example/roget_components.cpp">
+<tt>&lt;example/roget_components.cpp&gt;</tt></a> 也是从SGB移植过来的。我们打算将更多来自SGB的算法实现为泛型风格，并为BGL框架提供其余的SGB例程。如果你愿意帮助我们，请随时提交你的贡献！
+
+<h3>
+Associated Types 关联类型
+</h3>
+
+<hr>
+
+<tt>graph_traits&lt;Graph*&gt;::vertex_descriptor</tt><br><br>与 <tt>Graph*</tt> 相关联的顶点描述符类型。我们以类型 <tt>Vertex*</tt> 作为顶点描述符。
+
+<hr>
+
+<tt>graph_traits&lt;Graph*&gt;::edge_descriptor</tt><br><br>与 <tt>Graph*</tt> 相关联的边描述符类型。即类型 <tt>boost::sgb_edge</tt>。除了支持BGL边描述符所要求的所有操作之外，<tt>boost::sgb_edge</tt> 类还有以下构造函数。
+<pre>   sgb_edge::sgb_edge(Arc* arc, Vertex* source)<br></pre>
+
+<hr>
+
+<tt>graph_traits&lt;Graph*&gt;::vertex_iterator</tt><br><br>由 <tt>vertices()</tt> 返回的迭代器类型。
+
+<hr>
+
+<tt>graph_traits&lt;Graph*&gt;::out_edge_iterator</tt><br><br>由&nbsp;<tt>out_edges()</tt> 返回的迭代器类型。
+
+<hr>
+
+<tt>graph_traits&lt;Graph*&gt;::adjacency_iterator</tt><br><br>由&nbsp;<tt>adjacent_vertices()</tt> 返回的迭代器类型。
+
+<hr>
+
+<tt>graph_traits&lt;Graph*&gt;::vertices_size_type</tt><br><br>用于处理图中顶点数量的类型。&nbsp;
+
+<hr>
+
+<tt>graph_traits&lt;Graph*&gt;::edge_size_type</tt><br><br>用于处理图中边数量的类型。
+
+
+
+
+
+<hr>
+
+<tt>graph_traits&lt;Graph*&gt;::degree_size_type</tt><br><br>用于处理单个顶点的出边数量的类型。&nbsp;
+
+<hr>
+
+<tt>graph_traits&lt;Graph*&gt;::directed_category</tt><br><br>提供关于该图是有向图还是无向图的信息。SGB <tt>Graph*</tt> 是有向的，因此该类型为
+<tt>directed_tag</tt>。
+
+<hr>
+
+<tt>graph_traits&lt;Graph*&gt;::traversal_category</tt><br><br>
+SGB <tt>Graph*</tt> 提供了顶点集、出边和邻接顶点的遍历。因此遍历类别标签定义如下：
+<pre>struct sgb_traversal_tag :<br>  public virtual vertex_list_graph_tag,<br>  public virtual incidence_graph_tag,<br>  public virtual adjacency_graph_tag { };<br></pre>
+
+<hr>
+
+<tt>graph_traits&lt;Graph*&gt;::edge_parallel_category</tt><br><br>用于说明该图类是否允许插入平行边(具有相同源及目标的边)。SGB <tt>Graph*</tt>
+不阻止加入平行边，因此该类型为 <tt>allow_parallel_edge_tag</tt>。
+
+<hr>
+
+<h3>
+Non-Member Functions 非成员函数
+</h3>
+
+<hr>
+
+<pre>std::pair&lt;vertex_iterator,&nbsp;vertex_iterator&gt;<br>vertices(Graph*&nbsp;g)<br></pre>返回一个迭代器区间，提供对图&nbsp;<tt>g</tt> 的顶点集的访问。&nbsp;
+
+<hr>
+
+<pre>std::pair&lt;out_edge_iterator,&nbsp;out_edge_iterator&gt;<br>out_edges(vertex_descriptor&nbsp;v, Graph*&nbsp;g)<br></pre>返回一个迭代器区间，提供对图&nbsp;<tt>g</tt> 的顶点&nbsp;<tt>v</tt> 的出边的访问。<br>没有相对应的 <tt>in_edges</tt> 函数。
+
+<hr>
+
+<pre>std::pair&lt;adjacency_iterator,&nbsp;adjacency_iterator&gt;<br>adjacent_vertices(vertex_descriptor&nbsp;v, Graph*&nbsp;g)<br></pre>返回一个迭代器区间，提供对图&nbsp;<tt>g</tt> 中顶点&nbsp;<tt>v</tt> 的邻接顶点的访问。
+
+<hr>
+
+<pre>vertex_descriptor<br>source(edge_descriptor&nbsp;e, Graph*&nbsp;g)<br></pre>返回边&nbsp;<tt>e</tt> 的源顶点。&nbsp;
+
+<hr>
+
+<pre>vertex_descriptor<br>target(edge_descriptor&nbsp;e, Graph*&nbsp;g)<br></pre>返回边&nbsp;<tt>e</tt> 的目标顶点。&nbsp;
+
+<hr>
+
+<pre>degree_size_type<br>out_degree(vertex_descriptor&nbsp;v, Graph*&nbsp;g)<br></pre>返回顶点 <tt>v</tt> 的出边数量。&nbsp;<br>没有相对应的 <tt>in_degree</tt> 函数。
+
+<hr>
+
+<pre>vertices_size_type<br>num_vertices(Graph*&nbsp;g)<br></pre>返回在图 <tt>g</tt> 中的顶点数量。
+
+<hr>
+
+<pre>edge_size_type<br>num_edges(Graph*&nbsp;g)<br></pre>返回在图 <tt>g</tt> 中的边数量。
+
+<hr>
+
+<pre>vertex_descriptor<br>vertex(vertices_size_type&nbsp;n, Graph*&nbsp;g)<br></pre>返回该图顶点列表中第 n 个顶点(从0起计)。
+
+<hr>
+
+<pre>template &lt;class <a href="./PropertyTag.html">PropertyTag</a>&gt;<br>property_map&lt;Graph*, PropertyTag&gt;::type<br>get(PropertyTag, Graph*&amp; g)<br><br>template &lt;class <a href="./PropertyTag.html">PropertyTag</a>&gt;<br>property_map&lt;Graph*, Tag&gt;::const_type<br>get(PropertyTag, const Graph*&amp; g)<br></pre>返回由
+<tt>PropertyTag</tt> 指定的顶点属性的属性映射对象。<tt>PropertyTag</tt> 必须是以下所描述的之一。
+
+<hr>
+
+<h3><a name="properties">Vertex and Edge Properties 顶点属性和边属性</a></h3>SGB的 <tt>Vertex</tt> 和 <tt>Arc</tt> 结构提供了
+"utility" 域来存储额外的信息。我们提供了
+BGL 包装，以通过 <a href="../../property_map/doc/property_map.html">属性映射</a> 提供对这些域的访问。此外，还提供了顶点索引和边长度的映射。可以使用在 <a href="./PropertyGraph.html">属性图Property Graph</a> 概念中描述的
+<tt>get()</tt> 函数从一个 SGB <tt>Graph*</tt> 获取属性映射对象。
+
+<p>以下所列属性标签可用于指定你想以属性映射方式访问哪个
+utility 域。
+</p>
+
+<pre><i>// 顶点属性</i>
+template &lt;class T&gt; u_property;
+template &lt;class T&gt; v_property;
+template &lt;class T&gt; w_property;
+template &lt;class T&gt; x_property;
+template &lt;class T&gt; y_property;
+template &lt;class T&gt; z_property;
+
+<i>// 边属性</i>
+template &lt;class T&gt; a_property;
+template &lt;class T&gt; b_property;
+</pre>
+
+<p>这些标签中的模板参数 <tt>T</tt> 必须是在SGB头文件
+<tt>gb_graph.h</tt>&nbsp;的 <tt>util</tt> union 中所声明的类型<tt></tt>，即 <tt>Vertex*</tt>, <tt>Arc*</tt>,
+<tt>Graph*</tt>, <tt>char*</tt>, 和 <tt>long</tt>。用于 utility 域的属性映射为 <a href="../../property_map/doc/LvaluePropertyMap.html">左值属性映射Lvalue Property
+Map</a>。
+</p>
+
+<p>顶点索引的属性映射可以用
+<tt>vertex_index_t</tt> 标签获取，该属性映射为 <a href="../../property_map/doc/ReadablePropertyMap.html">可读属性映射Readable Property
+Map</a>。边长度的属性映射则可以用
+<tt>edge_length_t</tt> 标签获取，它是 <a href="../../property_map/doc/LvaluePropertyMap.html">左值属性映射Lvalue Property
+Map</a> 且其值类型为 <tt>long</tt>。
+</p>
+
+<p>属性映射对象可以通过属性图概念的 <tt>get()</tt> 函数获得。属性映射的类型由 <a href="./property_map.html"><tt>property_map</tt></a> traits 类给出。</p>
+
+
+<hr>
+<table>
+<tbody><tr valign="top">
+<td nowrap="nowrap">Copyright © 2001</td><td>
+<a href="http://people.freenet.de/andreas.scherer">Andreas Scherer</a>,
+Aachen (<a href="mailto:andreas_freenet@freenet.de">andreas_freenet@freenet.de</a>)<br>
+<a href="http://www.boost.org/people/jeremy_siek.htm">Jeremy Siek</a>,
+Indiana University (<a href="mailto:jsiek@osl.iu.edu">jsiek@osl.iu.edu</a>)<br>
+<a href="http://www.boost.org/people/liequan_lee.htm">Lie-Quan Lee</a>,
+Indiana University (<a href="mailto:llee@cs.indiana.edu">llee@cs.indiana.edu</a>)<br>
+<a href="http://www.osl.iu.edu/%7Elums">Andrew Lumsdaine</a>,
+Indiana University (<a href="mailto:lums@osl.iu.edu">lums@osl.iu.edu</a>)
+</td></tr></tbody></table>
+
+</body></html>

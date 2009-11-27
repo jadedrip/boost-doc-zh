@@ -1,0 +1,202 @@
+<!DOCTYPE HTML PUBLIC "-//W3C//DTD HTML 4.01 Transitional//EN">
+<html><head><meta content="text/html; charset=UTF-8" http-equiv="content-type"><!--
+  -- Copyright (c) Jeremy Siek, Lie-Quan Lee, and Andrew Lumsdaine 2002
+  --
+  -- Distributed under the Boost Software License, Version 1.0.
+  -- (See accompanying file LICENSE_1_0.txt or copy at
+  -- http://www.boost.org/LICENSE_1_0.txt)
+  -->
+<title>Boost Graph Library: Depth-First Search</title></head>
+<body alink="#ff0000" bgcolor="#ffffff" link="#0000ee" text="#000000" vlink="#551a8b"> 
+<img src="../../../boost.png" alt="C++ Boost" height="86" width="277"> 
+
+<br clear="">
+
+<h1><a name="sec:depth-first-search"></a>
+<img src="figs/python.gif" alt="(Python)">
+<tt>undirected_dfs</tt>
+</h1>
+
+<p>
+</p><pre><i>// named parameter version</i>
+template &lt;typename Graph, typename P, typename T, typename R&gt;
+void undirected_dfs(Graph&amp; G, const bgl_named_params&lt;P, T, R&gt;&amp; params);
+
+<i>// non-named parameter version</i>
+template &lt;typename Graph, typename <a href="DFSVisitor.html">DFSVisitor</a>, typename VertexColorMap, typename EdgeColorMap&gt;<br>void undirected_dfs(const Graph&amp; g, DFSVisitor vis, VertexColorMap vertex_color, EdgeColorMap edge_color)<br><br>template &lt;typename Graph, typename <a href="DFSVisitor.html">DFSVisitor</a>, typename VertexColorMap, typename EdgeColorMap&gt;<br>void undirected_dfs(const Graph&amp; g, DFSVisitor vis,<br>                    VertexColorMap vertex_color, EdgeColorMap edge_color,<br>                    typename graph_traits&lt;Graph&gt;::vertex_descriptor start)<br><br></pre>
+
+<p>函数 <tt>undirected_dfs()</tt> 对一个无向图执行深度优先遍历。在可能的时候，深度优先遍历选择邻接于当前顶点的一个顶点来作为下一个顶点访问。如果所有邻接顶点均已被发现，或者没有
+邻接顶点，则该算法回溯至带有未被发现的邻接顶点的最后一个顶点。一旦所有可到达顶点均被访问，该算法就选择剩下的任一个未发现顶点来继续遍历。当所有顶
+点都被访问，该算法结束。深度优先搜索可用于对图中的边进行分类，并对顶点施加一个顺序。<a href="graph_theory_review.html#sec:dfs-algorithm">深度优先搜索</a> 一节描述了DFS的各种特性并举了一个例子。
+</p>
+
+<p>类似于 BFS，颜色着色器用于跟踪哪些顶点已被发现。白色表示顶点尚未被发现，灰色表示顶点已被发现但有邻接顶点未被发现。黑色表示已被发现的顶点且没有白色的邻接顶点。</p>在搜索过程中，边也会被着色，以区分树边与反向边。
+
+
+<p>函数&nbsp;<tt>undirected_dfs()</tt> 可以在算法内部的特定事件点调用用户自定义的动作。这提供了一种机制，将普通的DFS算法适配至多种可以使用它的情形。在以下伪代码中，DFS的事件点在右侧标出。用户自定义的动作必须以遍历器对象的形式提供，即一个其类型符合 <a href="DFSVisitor.html">DFS 遍历器</a> 要求的对象。在以下伪代码中，我们示范了这个算法，计算出前趋 <i>p</i>, 发现时间
+<i>d</i> 和结束 时间 <i>t</i>。缺省情况下，函数 <tt>undirected_dfs()</tt> 不计算这三项属性，但是我们提供了预定义的遍历器 <a href="predecessor_recorder.html"><tt>predecessor_recorder</tt></a> 和 <a href="time_stamper.html"><tt>time_stamper</tt></a>，它们可用于实现这些功能。
+</p>
+
+<table>
+<tbody><tr>
+<td valign="top">
+<pre>DFS(<i>G</i>)<br>  <b>for</b> each vertex <i>u in V</i> <br>    <i>vcolor[u] :=</i> WHITE<br>    <i>p[u] := u</i> <br>  <b>end for</b>
+  <b>for</b> each edge <i>e in E</i> <br>    <i>ecolor[u] :=</i> WHITE<br>  <b>end for</b>
+  <i>time := 0</i>
+  <b>if</b> there is a starting vertex <i>s</i>
+    <b>call</b> DFS-VISIT(<i>G</i>, <i>s</i>)<br>  <b>for</b> each vertex <i>u in V</i> <br>    <b>if</b> <i>vcolor[u] =</i> WHITE<br>      <b>call</b> DFS-VISIT(<i>G</i>, <i>u</i>)<br>  <b>end for</b>
+  <b>return</b> (<i>p</i>,<i>d_time</i>,<i>f_time</i>) <br>
+DFS-VISIT(<i>G</i>, <i>u</i>) <br>  <i>vcolor[u] :=</i> GRAY<br>  <i>d_time[u] := time := time + 1</i> <br>  <b>for</b> each <i>e in Out[u]</i> <br>    <b>var</b> <i>ec := ecolor[e]</i>
+    <i>ecolor[e] :=</i> BLACK<br>    <b>if</b> (<i>vcolor[v] =</i> WHITE)<br>      <i>p[v] := u</i> <br>      <b>call</b> DFS-VISIT(<i>G</i>, <i>v</i>)<br>    <b>else if</b> (<i>vcolor[v] =</i> GRAY and <i>ec =</i> WHITE)<br>      <i>...</i>
+  <b>end for</b>
+  <i>vcolor[u] :=</i> BLACK<br>  <i>f_time[u] := time := time + 1</i> <br><pre></pre></pre></td>
+<td valign="top">
+<pre>-<br>-<br>初始化顶点 <i>u</i>
+-
+-
+-
+-
+-
+-
+-
+开始顶点 <i>s</i>
+-
+-
+开始顶点 <i>u</i>
+-
+-
+-
+-
+发现顶点 <i>u</i>
+-
+检查边 <i>(u,v)</i>
+-
+-
+<i>(u,v)</i> 为树边<br>-<br>-<br><i>(u,v)</i> 为反向边<br>-<br>-<br>结束顶点 <i>u</i>
+-
+</pre>
+</td>
+</tr>
+</tbody></table>
+
+
+
+<h3>Where Defined 定义于</h3>
+
+<p>
+<a href="../../../boost/graph/undirected_dfs.hpp"><tt>boost/graph/undirected_dfs.hpp</tt></a>
+
+</p><h3>Parameters 参数</h3>
+
+IN: <tt>Graph&amp; g</tt>
+<blockquote>一个有向图。图的类型必须符合 <a href="./IncidenceGraph.html">关联图Incidence Graph</a>, <a href="./VertexListGraph.html">点列表图Vertex List Graph</a>, 和 <a href="./EdgeListGraph.html">边列表图Edge List Graph</a>。<br>
+
+  
+
+  <b>Python</b>:&nbsp;该参数被命名为 <tt>graph</tt>.&nbsp;  
+</blockquote>
+
+
+<h3>Named Parameters 命名参数</h3>
+
+IN: <tt>visitor(DFSVisitor vis)</tt>
+<blockquote>一个遍历器对象，在算法内部某些由 <a href="DFSVisitor.html">DFS
+  遍历器</a> 概念所指定的事件点被调用。这个遍历器对象是以值方式传递的<a href="undirected_dfs.html#1">[1]</a>。<br> <b>缺省值：</b><tt>dfs_visitor&lt;null_visitor&gt;</tt><br>
+
+  <b>Python</b>: 该参数应为派生自该图的&nbsp;<a href="DFSVisitor.html#python"><tt>DFSVisitor</tt></a> 类型的一个对象。
+</blockquote>
+
+UTIL/OUT: <tt>vertex_color_map(VertexColorMap vertex_color)</tt>
+<blockquote>被该算法用于跟踪对图的处理过程。类型 <tt>ColorMap</tt> 必须符合 <a href="../../property_map/doc/ReadWritePropertyMap.html">读/写属性映射</a> 并且其键类型必须为图的顶点描述符类型，值类型必须符合
+  <a href="ColorValue.html">颜色值ColorValue</a>。<br>
+  
+  <b>缺省值：</b>一个 <a href="../../property_map/doc/iterator_property_map.html">
+  iterator_property_map</a>，创建自一个大小为
+  <tt>num_vertices(g)</tt>，值为 <tt>default_color_type</tt> 的
+  <tt>std::vector</tt>，且使用 <tt>i_map</tt> 作为索引映射。<br>
+
+   
+
+  <b>Python</b>: 这个颜色映射必须是图的一个 <tt>vertex_color_map</tt>。&nbsp;
+</blockquote>
+
+UTIL: <tt>edge_color_map(EdgeColorMap edge_color)</tt>
+<blockquote>被算法用于跟踪哪些边已被访问。类型 <tt>EdgeColorMap</tt> 必须符合 <a href="../../property_map/doc/ReadWritePropertyMap.html">读/写属性映射</a> 且其键类型必须是图的边描述符，颜色映射的值类型必须符合
+  <a href="./ColorValue.html">颜色值ColorValue</a>。<br>
+  <b>缺省值：</b>无。<br>
+
+  <b>Python</b>:&nbsp;这个颜色映射必须是图的一个 <tt>edge_color_map</tt>。
+</blockquote>
+
+IN: <tt>root_vertex(typename
+graph_traits&lt;VertexListGraph&gt;::vertex_descriptor start)</tt>
+<blockquote>指定深度优先搜索开始的顶点。类型为给定图的顶点描述符类型。<br>
+  <b>缺省值：</b><tt>*vertices(g).first</tt>
+</blockquote>
+
+IN: <tt>vertex_index_map(VertexIndexMap i_map)</tt>
+<blockquote>它将每个顶点映射至位于区间 <tt>[0,
+  num_vertices(g))</tt> 中的一个整数。仅当缺省颜色属性映射被使用时，需要这个参数。类型 <tt>VertexIndexMap</tt>
+  必须符合 <a href="../../property_map/doc/ReadablePropertyMap.html">可读属性映射</a>。该映射的值类型必须是一个整数类型。图的顶点描述符类型需要可以被用作该映射的键类型。<br>
+
+  
+
+  <b>缺省值：</b><tt>get(vertex_index, g)</tt>.
+    注意：如果你使用该缺省值，请确认你的图具有一个内部的 <tt>vertex_index</tt> 属性。例如，带 <tt>VertexList=listS</tt> 的
+    <tt>adjacenty_list</tt> 并不具有内部的 <tt>vertex_index</tt> 属性。<br>
+
+  
+
+  <b>Python</b>: 不支持该参数。&nbsp;&nbsp;
+</blockquote>
+
+<p>
+
+</p><h3><a name="SECTION001340300000000000000">
+Complexity 复杂度</a>
+</h3>
+
+<p>时间复杂度为 <i>O(E + V)</i>。
+
+</p><p>
+
+</p><h3>Visitor Event Points 遍历器事件点</h3>
+
+<ul>
+
+<li><b><tt>vis.initialize_vertex(</tt></b><b><tt>s</tt></b><b><tt>, g)</tt></b> 在图搜索开始前对每个顶点调用。 
+
+</li><li><b><tt>vis.start_vertex(s, g)</tt></b> 在开始搜索前对源顶点调用一次。
+  
+</li><li><b><tt>vis.discover_vertex(u, g)</tt></b> 在某个顶点第一次被遇到时调用。</li><li><b><tt>vis.examine_edge(e, g)</tt></b> 在某顶点被发现后，对其每条出边调用。 
+
+</li><li><b><tt>vis.tree_edge(e, g)</tt></b> 当某边成为形成搜索树的一条树边时被调用。如果你想记录前趋，在此事件点上进行。
+
+</li><li><b><tt>vis.back_edge(e, g)</tt></b> 对图中的反向边调用。</li><li><b><tt>vis.finish_vertex(u, g)</tt></b> 当某个顶点的所有出边都被增加至搜索树中且所有邻接顶点都被发现后(但在它们的出边被检查之前)，对该顶点调用。</li></ul>
+
+
+<h3>Example 示例</h3>
+
+<p>例子位于 <a href="../example/undirected_dfs.cpp">
+<tt>examples/undirected_dfs.cpp</tt></a>.
+
+</p><h3>See Also 参见</h3>
+
+<a href="./depth_first_search.html"><tt>depth_first_search</tt></a>
+
+<h3>Notes 备注</h3>
+
+<p><a name="1">[1]</a> 
+  由于 visitor 参数是以值方式传递的，所以如果你的遍历器含有状态，则在算法中对该状态的所有修改都是针对该遍历器对象的一个拷贝，而不对传入的遍历器对象进行的。因此你应该让该遍历器以指针或引用的方式保存该状态。<br>
+</p><hr>
+<table>
+<tbody><tr valign="top">
+<td nowrap="nowrap">Copyright © 2000-2001</td><td>
+<a href="http://www.boost.org/people/jeremy_siek.htm">Jeremy Siek</a>,
+Indiana University (<a href="mailto:jsiek@osl.iu.edu">jsiek@osl.iu.edu</a>)<br>
+<a href="http://www.boost.org/people/liequan_lee.htm">Lie-Quan Lee</a>, Indiana University (<a href="mailto:llee@cs.indiana.edu">llee@cs.indiana.edu</a>)<br>
+<a href="http://www.osl.iu.edu/%7Elums">Andrew Lumsdaine</a>,
+Indiana University (<a href="mailto:lums@osl.iu.edu">lums@osl.iu.edu</a>)
+</td></tr></tbody></table>
+
+</body></html>

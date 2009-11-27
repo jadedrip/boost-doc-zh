@@ -1,0 +1,237 @@
+<!DOCTYPE html PUBLIC "-//W3C//DTD HTML Transitional 4.0//EN">
+<html><head>
+  <meta content="text/html; charset=UTF-8" http-equiv="content-type"><!-- saved from url=(0022)http://internet.e-mail -->
+
+		
+		
+  
+  <title>lexical_cast</title><meta name="author" content="Kevlin Henney, mailto:kevlin@curbralan.com">
+
+		
+  <meta name="generator" content="Microsoft FrontPage 5.0"></head>
+
+<body bgcolor="#ffffff" text="#000000">
+
+		
+<h1><img src="../../boost.png" alt="boost.png (6897 bytes)" align="middle" height="86" width="277">头文件
+			<a href="../../boost/lexical_cast.hpp">boost/lexical_cast.hpp</a></h1>
+
+		
+<ul type="square">
+
+			<li>
+				<a href="#motivation">Motivation 动机</a></li>
+
+			<li>
+				<a href="#examples">Examples 例子</a></li>
+
+			<li>
+				<a href="#synopsis">Synopsis 概要</a></li>
+
+			<li>
+				<a href="#lexical_cast"><code>lexical_cast</code></a></li>
+
+			<li>
+				<a href="#bad_lexical_cast"><code>bad_lexical_cast</code></a></li>
+
+			<li>
+				<a href="#faq">Frequently Asked Questions 常见问题</a></li>
+
+			<li>
+				<a href="#references">References 参考</a></li>
+
+			<li>
+				<a href="#changes">Changes 变更</a></li>
+
+		
+</ul>
+
+		
+<hr>
+		
+<h2><a name="motivation">Motivation 动机</a></h2>
+<span style="font-size: 12pt; color: black; font-family: 宋体;">有时一个数值需要被转换成为文本字符形式， 
+比如说把一个<span lang="EN-US">int</span>值变成一个字符串，反之亦然，有时把一个字符串解释成一个<span lang="EN-US">int</span>值。这样的例子在程序内的数据类型和程序外部的描述之间的转换是很常见的，比如说窗口和配置文件。</span> 
+<p><span style="font-size: 12pt; color: black; font-family: 宋体;">标准<span lang="EN-US">c</span>和<span lang="EN-US">c++</span>库提供了一些易用的实现来做这样的转换。但是，它们因其易使用程度而变化，另外因其安全性而差异。</span> </p>
+
+<p><span style="font-size: 12pt; color: black; font-family: 宋体;">举个例子，对于在标准<span lang="EN-US">c</span>家族中的函数，它们有一系列的限制。以<span lang="EN-US">atoi</span>为代表：</span> 
+</p>
+
+<ul type="square">
+  <li><span style="font-size: 12pt; color: black; font-family: 宋体;">转换是单向的：从字符到内置类型。用<span lang="EN-US">c</span>库函数转换其他的方式需要不易使用和牺牲安全性的<span lang="EN-US">sprintf</span>函数，或者使用牺牲可移植性的非标准函数，比如<span lang="EN-US">itoa</span>。</span> 
+  </li>
+  <li><span style="font-size: 12pt; color: black; font-family: 宋体;">受支持的类型仅是内置数据类型的一个子集，比如一<span lang="EN-US">int</span>，<span lang="EN-US">long</span>和<span lang="EN-US">double</span>。</span> 
+  </li>
+  <li><span style="font-size: 12pt; color: black; font-family: 宋体;">类型的不能以一致的方式扩展。比如，从<span lang="EN-US">string</span>到<span lang="EN-US">complex</span>或<span lang="EN-US">rational</span>的转换。</span> </li>
+</ul>
+<span style="font-size: 12pt; color: black; font-family: 宋体;">标准<span lang="EN-US">c</span>函数以<span lang="EN-US">strtol</span>为代表有同样的限制，但是在转换过程上提供更好的支持。尽管如此，大体上来说这样的控制函数经常要么不怎么需要要么没有用。<span lang="EN-US">Scanf</span>系列函数提供更强的控制，但是同样缺少安全性和易使用性。</span> 
+<p><span style="font-size: 12pt; color: black; font-family: 宋体;">标准<span lang="EN-US">C++</span>库为正要讨论的内置格式转换提供了<span lang="EN-US">stringstream</span>。它对从格式化和<span lang="EN-US">I/O</span>转换以及任意类型和字符类型的转换提供了强有力的控制。但是，使用<span lang="EN-US">stringstream</span>进行直接的转换会是拙劣的（含有对额外的本地变量的说明和缺少中缀表达式便利性）或者晦涩的（<span lang="EN-US">stringstream</span>对象在表达式中以临时对象的形式被创建）。<span lang="EN-US">facet</span>为控制文本表达提供了更充分的概念和灵活性，但是它们的高度复杂性和高起点需要（对<span lang="EN-US">stringstream</span>）相当高程度的熟悉度―――即使是为了简单的转换，从而把大多数程序员排除在外了。</span></p>
+<p><span style="font-size: 12pt; color: black; font-family: 宋体;" lang="EN-US">Lexical_cast</span><span style="font-size: 12pt; color: black; font-family: 宋体;">函数模版为以文本表示的任意的类型之间的转换提供了方便和一致的形式。它提供的简化形式是在表达式级别上的简单性易用性。对于更多相关的转换，比如比<span lang="EN-US">lexical_cast</span>提供的默认行为更为精确的或者需要更严密的格式转换控制，这时推荐传统的<span lang="EN-US">stringstream</span>。当在<span lang="EN-US">numeric</span>和<span lang="EN-US">numeric</span>之间转换的时候，<span lang="EN-US"></span></span><code><a href="../numeric/conversion/doc/html/boost_numericconversion/improved_numeric_cast__.html">numeric_cast</a></code> <span style="font-size: 12pt; color: black; font-family: 宋体;"><span lang="EN-US"></span>可能提供了比<span lang="EN-US">lexical_cast</span>更好的行为。</span></p>
+<p>关于基于字符串格式化的相关选项和问题的更多讨论，包括 <code>stringstream</code>, 
+<code>lexical_cast</code>, 和其它的对照，请见 Herb Sutter 的论文, <a href="http://www.gotw.ca/publications/mill19.htm"><i>The String Formatters of 
+Manor Farm</i></a>.</p>
+<hr>
+			
+<h2><a name="examples">Examples 例子</a></h2>
+<span style="font-size: 12pt; color: black; font-family: 宋体;">下面的例子把一系列数字作为命令行参数：</span> 
+<blockquote>
+				
+  <pre>int main(int argc, char * argv[])<br>{<br>    using boost::lexical_cast;<br>    using boost::bad_lexical_cast;<br><br>    std::vector&lt;short&gt; args;<br><br>    while(*++argv)<br>    {<br>        try<br>        {<br>            args.push_back(lexical_cast&lt;short&gt;(*argv));<br>        }<br>        catch(bad_lexical_cast &amp;)<br>        {<br>            args.push_back(0);<br>        }<br>    }<br>    ...<br>}<br></pre>
+
+			</blockquote>
+下面的例子使用字符串表达式来表示数字： 
+<blockquote>
+				
+  <pre>void log_message(const std::string &amp;);<br><br>void log_errno(int yoko)<br>{<br>    log_message("Error " + boost::lexical_cast&lt;std::string&gt;(yoko) + ": " + strerror(yoko));<br>}<br></pre>
+
+			</blockquote>
+
+			
+<hr>
+			
+<h2><a name="synopsis">Synopsis 概要</a></h2>
+库的定义在 <a href="../../boost/lexical_cast.hpp"><code>"boost/lexical_cast.hpp"</code></a>:
+			
+<blockquote>
+				
+  <pre>namespace boost<br>{<br>    class <a href="#bad_lexical_cast">bad_lexical_cast</a>;<br>    template&lt;typename Target, typename Source&gt;<br>      Target <a href="#lexical_cast">lexical_cast</a>(const Source&amp; arg);<br>}<br></pre>
+
+			</blockquote>
+单元测试定义在 <a href="lexical_cast_test.cpp"><code>"lexical_cast_test.cpp"</code></a>.
+		
+<p>
+			</p>
+<hr>
+			
+<h2><a name="lexical_cast"><code>lexical_cast</code></a></h2>
+
+			
+<blockquote>
+				
+  <pre>template&lt;typename Target, typename Source&gt;<br>  Target lexical_cast(const Source&amp; arg);<br></pre>
+
+			</blockquote>
+将 arg&nbsp;输入到一个标准库的基于字符串的流，返回其结果并以 <code>Target</code> 对象输出。其中 <code>Target</code> 要么是 <code>std::string</code> 要么是 <code>std::wstring</code>, 对整个字符串的内容进行流提取，包括空格，而非依赖于默认的
+			<code>operator&gt;&gt;</code> 行为。如果转换不成功，则抛出一个 <a href="lexical_cast.htm#bad_lexical_cast">
+				<code>bad_lexical_cast</code></a> 异常。<span style="font-size: 10.5pt;"></span> 
+<p>对于参数和返回类型的要求有：<span style="font-size: 10.5pt; font-family: 宋体;"></span> </p>
+
+<ul type="square">
+  <li><span style="font-size: 12pt; color: black; font-family: 宋体;" lang="EN-US">Source</span><span style="font-size: 12pt; color: black; font-family: 宋体;">是<span style="font-style: italic;">可输出的</span>，它表示</span><code>operator</code><span style="font-size: 12pt; color: black; font-family: 宋体;"><span lang="EN-US">&lt;&lt;</span>被定义了－――在左边有一个 <span lang="EN-US">std::ostream</span> 或者 <span lang="EN-US">std::wostream</span> 对象并且在右边有一个参数类型的实例。</span> 
+  </li>
+  <li><span style="font-size: 12pt; color: black; font-family: 宋体;" lang="EN-US">Target</span><span style="font-size: 12pt; color: black; font-family: 宋体;">是<span style="font-style: italic;">可输入的</span>，它表示</span><code>operator</code><span style="font-size: 12pt; color: black; font-family: 宋体;"><span lang="EN-US">&gt;&gt;</span>被定义了―――在左边有一个<span lang="EN-US"> std::ostream</span> 或者<span lang="EN-US"> std::wostream</span> 对象并且在右边有一个返回结果类型的实例。</span> 
+  </li>
+  <li><span style="font-size: 12pt; color: black; font-family: 宋体;" lang="EN-US">Source</span><span style="font-size: 12pt; color: black; font-family: 宋体;">和<span lang="EN-US">target</span>都是<span style="font-style: italic;">可复制构造的</span>。</span><span style="font-size: 10.5pt; font-family: 'Times New Roman';" lang="EN-US">[<st1:chsdate w:st="on" isrocdate="False" islunardate="False" day="30" month="12" year="1899">20.1.3</st1:chsdate>]</span>. 
+  </li>
+  <li><span style="font-size: 12pt; color: black; font-family: 宋体;" lang="EN-US">Target </span><span style="font-size: 12pt; color: black; font-family: 宋体;">是<span style="font-style: italic;">可缺省构造的</span>，表示它可能被这种类型的对象<span style="font-style: italic;">缺省构造</span>的</span><span style="font-size: 10.5pt; font-family: 'Times New Roman';" lang="EN-US">[8.5, 
+    <st1:chsdate w:st="on" isrocdate="False" islunardate="False" day="30" month="12" year="1899">20.1.4</st1:chsdate>].</span> </li>
+</ul>
+<span style="font-size: 12pt; color: black; font-family: 宋体;">本文后面的<span lang="EN-US">stream</span>中的字符类型默认为<span lang="EN-US">char</span>除非<span lang="EN-US">Source</span>或者<span lang="EN-US">Target</span>需要长字符流，这种情况下本文后面的<span lang="EN-US">stream</span>使用<span lang="EN-US">wchar_t</span>。<span lang="EN-US">source</span>类型中需要的长字符流的是<span lang="EN-US">wchar_t</span>，<span lang="EN-US">wchar_t*</span>和<span lang="EN-US">std::wstring. </span>需要长字符的<span lang="EN-US">Target</span>类型为<span lang="EN-US">wchar_t</span>和<span lang="EN-US">std::wstring</span></span><code></code>. 
+<p><span style="font-size: 12pt; color: black; font-family: 宋体;">当转换需要更高级的控制时，<span lang="EN-US">std::stringstream</span>和<span lang="EN-US">std::wstringstream</span>提供了更合适的途径。当需要非基于流的转换时，<span lang="EN-US">lexical_cast</span>不是完成这项工作的合适工具，它不用在这类特殊的类型转换之列。</span></p>
+<hr>
+			
+<h2><a name="bad_lexical_cast"><code>bad_lexical_cast</code></a></h2>
+
+			
+<blockquote>
+				
+  <pre>class bad_lexical_cast : public std::bad_cast<br>{<br>public:<br>    ... // <i><span style="font-family: monospace;">与</span></i> std::exception <i>相同的成员函数接口</i><br>};<br></pre>
+
+			</blockquote>
+<span style="font-size: 12pt; color: black; font-family: 宋体;">用来表示<span lang="EN-US"></span></span> <a href="#lexical_cast"><code>lexical_cast</code></a> <span style="font-size: 12pt; color: black; font-family: 宋体;"><span lang="EN-US"></span>运行时出错的异常。</span>
+			
+<hr>
+		
+<h2><a name="faq">Frequently Asked Questions 常见问题</a></h2>
+
+<a name="faq">    </a>
+<p><a name="faq"> Q: 为什么 <code>lexical_cast&lt;int8_t&gt;("127")</code> 会抛出 <code>bad_lexical_cast</code>?
+    <br>
+ A: 类型 <code>int8_t</code> 是 char 或 signed char 的 typedef<code></code>.
+    字面转换为这些类型，只是从源读入一个字节，但由于源中有超过一个字节，所以会抛出异常。
+    </a></p>
+<p><a name="faq">请使用其它整数类型，如 <code>int</code> 或 <code>short int</code>. 如果边界检查是重要的，你也可以调用 </a><a href="../numeric/conversion/doc/html/boost_numericconversion/improved_numeric_cast__.html">numeric_cast</a>:
+
+</p>
+<pre><a href="../numeric/conversion/doc/html/boost_numericconversion/improved_numeric_cast__.html">numeric_cast</a>&lt;int8_t&gt;(lexical_cast&lt;int&gt;("127"));</pre>
+
+
+    
+<p> Q: 为什么一个 <code>int8_t</code> 或 <code>uint8_t</code> 的 <code>lexical_cast&lt;std::string&gt;</code> 不是象我想要那样?
+    <br>
+ A: 如上，注意 <code>int8_t</code> 和 <code>uint8_t</code> 其实就是 chars 且被按此格式化。为避免这样，应首先转型为一个整数类型：
+
+</p>
+<pre>lexical_cast&lt;std::string&gt;(static_cast&lt;int&gt;(n));</pre>
+
+
+    
+<p> Q: 该实现总是重置底层流对象的 <code>ios_base::skipws</code> 标志。它破坏了要使用这个标志的 <code>operator&gt;&gt;</code>. 你是否可以去掉重置该标志的代码?
+    <br>
+ A: 以后的版本有可能这样做。在 <a href="#n1973">[N1973]</a> 中并不要求重置该标志，但请记住，<a href="#n1973">[N1973]</a> 尚未被委员会所接受。顺便说一句，这是一个让你的 <code>operator&gt;&gt;</code> 符合标准的好机会。请阅读一本好的C++书，学习一下 <code>std::sentry</code> 和 <a href="../../libs/io/doc/ios_state.html">ios_state_saver</a>.
+
+</p>
+<h2><a name="references">References 参考</a></h2>
+
+<ul type="square">
+
+  <a name="references">    </a><a name="n1973"></a><li> [N1973] Kevlin Henney, Beman Dawes, Lexical Conversion Library Proposal for TR2,
+      <a href="http://www.open-std.org/jtc1/sc22/wg21/docs/papers/2006/n1973.html">N1973</a>.
+      <a name="tuning"></a></li>
+  <li> [Tuning] Alexander Nasonov, Fine Tuning for lexical_cast,
+      <a href="http://www.accu.org/var/uploads/journals/overload74.pdf">Overload #74</a>,
+      August 2006.</li>
+
+</ul>
+
+<h2><a name="changes">Changes 变更</a></h2>
+
+<h3>August, October 2006:</h3>
+
+<ul type="square">
+
+    <li>对多数 <code>Source</code> 和 <code>Target</code>
+    类型提供更好的性能。详情请参见 <a href="#tuning">[Tuning]</a>.
+  </li>
+
+</ul>
+
+<h3>June 2005:</h3>
+
+<ul type="square">
+
+  <li><span style="font-size: 12pt; font-family: 宋体;">以</span><span style="font-size: 12pt; font-family: 'Times New Roman';" lang="EN-US">const&amp;</span><span style="font-size: 12pt; font-family: 宋体;">形式传入的参数。这需要模版类的部分特化，所以它不能在</span><span style="font-size: 12pt; font-family: 'Times New Roman';" lang="EN-US">MSVC6</span><span style="font-size: 12pt; font-family: 宋体;">中工作，这里它使用原来的传值形式。</span><br>
+
+  </li>
+  <li><span style="font-size: 12pt; color: black; font-family: 宋体;">对<span lang="EN-US">MSVC6</span>的支持是遭到反对的，将在<span lang="EN-US">boost</span>以后的版本中移出。</span></li>
+</ul>
+
+<h3>更早期:</h3>
+
+	
+<ul type="square">
+
+  <li><span style="font-size: 12pt; color: black; font-family: 宋体;">之前的<span lang="EN-US">lexical_cast</span>版本使用默认的<span lang="EN-US">stream</span>精度读写小数数字。为了对特化的</span><code><span style="font-size: 12pt;" lang="EN-US">std::numeric_limits</span></code><span style="font-size: 10.5pt; font-family: 宋体;">保持一致，当前的版本选择一个精度来匹配。</span> <br>
+
+  </li>
+  <li><span style="font-size: 12pt; color: black; font-family: 宋体;">之前的<span lang="EN-US">lexical_cast</span>版本不支持转换成多字节类型以及从基于多字节类型转换。自从编译器支持多种语言以及库支持宽字符，<span lang="EN-US">lexical_cast</span>现在支持从<span lang="EN-US">wchar_t</span>，<span lang="EN-US">wchar_t*</span>和<span lang="EN-US">std::wstring</span>到<span lang="EN-US">wchar_t</span>和<span lang="EN-US">std::wstring</span>的转换。</span><br>
+
+  </li>
+  <li><span style="font-size: 12pt; color: black; font-family: 宋体;">之前的<span lang="EN-US">lexical_cast</span>版本默认为一般的流抽取器操作符足以读取值。但是，<span lang="EN-US">string 
+I/O</span>是不对称的，空格扮演<span lang="EN-US">I/O</span>的分隔器而非<span lang="EN-US">string</span>的内容。当前版本为<span lang="EN-US">std::string</span>修复了这个错误，同时支持</span><code><span style="font-size: 12pt;" lang="EN-US">std::wstring</span></code><span style="font-size: 10.5pt; font-family: 'Times New Roman';" lang="EN-US">:</span><span style="font-size: 10.5pt; font-family: 宋体;">。</span><code><span style="font-size: 12pt;" lang="EN-US">lexical_cast&lt;std::string&gt;("Hello, 
+World")</span><span style="font-size: 12pt;">成功返回取代了抛出一个<span lang="EN-US">bad_lexical_cast</span>异常。</span></code><br>
+
+  </li>
+  <li><span style="font-size: 12pt; color: black; font-family: 宋体;">之前的<span lang="EN-US">lexical_cast</span>版本允许转换到指针，这是不安全和无意义的转换。当前版本为这类转换抛出一个</span><code><span style="font-size: 12pt;" lang="EN-US">bad_lexical_cast</span><span style="font-size: 12pt;">异常：<span lang="EN-US">lexical_cast&lt;char *&gt;("Goodbye, 
+World")</span>现在会抛出一个异常来取代导致未定义的的行为。</span></code></li>
+</ul>
+
+	
+<p>
+			</p>
+<hr>
+			
+<div align="right"><small><i>© Copyright Kevlin Henney, 2000–2005</i></small></div>
+
+	
+</body></html>

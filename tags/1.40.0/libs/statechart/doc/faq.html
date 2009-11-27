@@ -1,0 +1,711 @@
+<!DOCTYPE html PUBLIC "-//W3C//DTD HTML 4.01 Transitional//EN">
+<html><head>
+
+  <meta http-equiv="Content-Language" content="en-us">
+
+  <meta http-equiv="Content-Type" content="text/html; charset=UTF-8">
+
+  <meta name="GENERATOR" content="Microsoft FrontPage 6.0">
+
+  <meta name="ProgId" content="FrontPage.Editor.Document">
+
+  <link rel="stylesheet" type="text/css" href="../../../boost.css">
+  <title>The Boost Statechart Library - FAQ</title></head>
+
+<body link="#0000ff" vlink="#800080">
+
+<table summary="header" border="0" cellpadding="7" cellspacing="0" width="100%">
+
+  <tbody>
+
+    <tr>
+
+      <td valign="top" width="300">
+      <h3><a href="../../../index.htm"><img alt="C++ Boost" src="../../../boost.png" border="0" height="86" width="277"></a></h3>
+
+      </td>
+
+      <td valign="top">
+      <h1 align="center">Boost Statechart 库</h1>
+
+      <h2 align="center">常见问题(FAQs)</h2>
+
+      </td>
+
+    </tr>
+
+  </tbody>
+</table>
+
+<hr>
+<dl class="page-index">
+
+  <dt><a href="#StateLocalStorage">What's so cool
+about state-local storage? 状态局部存储有什么好处？</a></dt>
+
+  <dt><a href="#HideInnerWorkings">How can I hide
+the inner workings of a state machine from its clients? 如何向客户隐藏状态机的内部工作？</a></dt>
+
+  <dt><a href="#MachineInheritance">Is it possible
+to inherit from a given state machine and modify its layout in the
+subclass? 有可能从给定状态机进行派生并修改子类的布局吗？</a></dt>
+
+  <dt><a href="#Uml2">What about UML2.0
+features?&nbsp;UML2.0的特性如何？</a></dt>
+
+  <dt><a href="#AssertInStateDestructor">Why do I get an assert when I access the 
+state machine from a state destructor? 为什么我从 state 的析构函数中访问状态机时会得到一个断言？</a></dt><dt><a href="#EmbeddedApplications">Is
+Boost.Statechart suitable for embedded applications? Boost.Statechart
+适合于嵌入式应用吗？</a></dt>
+
+  <dt><a href="#HardRealtime">Is your library
+suitable for applications with hard real-time requirements?
+你的库适合于有严格实时性要求的应用吗？</a></dt>
+
+  <dt><a href="#TemplatedStates">With templated
+states I get an error that 'inner_context_type' is not defined. What's
+wrong? 对于模板化状态，我得到一个'inner_context_type'未定义的错误，有什么问题？</a></dt>
+
+  <dt><a href="#CompilerError">My compiler reports
+an error in the library code. Is this a bug in Boost.Statechart?
+我的编译器对库代码报告了一个错误，是不是 Boost.Statechart 有缺陷？</a></dt>
+
+  <dt><a href="#DisableHistory">Is it possible to
+disable history for a state at runtime?&nbsp;可以在运行期关闭一个状态的历史吗？</a>
+  </dt>
+
+  <dt><a href="#Dll">How can I compile a state
+machine into a dynamic link library (DLL)? 如何将状态机编译为动态链接库(DLL)？</a></dt>
+
+  <dt><a href="#PolymorphicEvents">Does
+Boost.Statechart support polymorphic events? Boost.Statechart 是否支持多态事件？</a></dt>
+
+  <dt><a href="#WrongExitActionOrder">Why are
+exit-actions called in the wrong order when I use multiple inheritance?
+为什么在使用多重继承时，对退出动作的调用顺序有错？</a></dt>
+
+</dl>
+
+<h2><a name="StateLocalStorage" id="StateLocalStorage">What's
+so cool about state-local storage? 状态局部存储有什么好处？</a></h2>
+
+<p>This is best explained with an example:<br>
+
+以下例子是最好的解释：</p>
+
+<pre>struct Active;<br>struct Stopped;<br>struct Running;<br>struct StopWatch : sc::state_machine&lt; StopWatch, Active &gt;<br>{<br> // startTime_ remains uninitialized, because there is no reasonable default<br> // startTime_ 保留为未初始化，因为没有合理的缺省值<br> StopWatch() : elapsedTime_( 0.0 ) {}<br> ~StopWatch()<br> {<br> terminate();<br> }<br><br> double ElapsedTime() const<br> {<br> // Ugly switch over the current state. 一段难看的对当前状态的switch。<br> if ( state_cast&lt; const Stopped * &gt;() != 0 )<br> {<br> return elapsedTime_;<br> }<br> else if ( state_cast&lt; const Running * &gt;() != 0 )<br> {<br> return elapsedTime_ + std::difftime( std::time( 0 ), startTime_ );<br> }<br> else // we're terminated 我们已被终止了<br> {<br> throw std::bad_cast();<br> }<br> }<br><br> // elapsedTime_ is only meaningful when the machine is not terminated<br> // elapsedTime_ 仅当状态机未被终止时有意义<br> double elapsedTime_;<br> // startTime_ is only meaningful when the machine is in Running<br> // startTime_ 仅当状态机运行时有意义<br> std::time_t startTime_;<br>};<br><br>struct Active : sc::state&lt; Active, StopWatch, Stopped &gt;<br>{<br> typedef sc::transition&lt; EvReset, Active &gt; reactions;<br><br> Active( my_context ctx ) : my_base( ctx )<br> {<br> outermost_context().elapsedTime_ = 0.0;<br> }<br>};<br><br>struct Running : sc::state&lt; Running, Active &gt;<br>{<br> typedef sc::transition&lt; EvStartStop, Stopped &gt; reactions;<br><br> Running( my_context ctx ) : my_base( ctx )<br> {<br> outermost_context().startTime_ = std::time( 0 );<br> }<br><br> ~Running()<br> {<br> outermost_context().elapsedTime_ +=<br> std::difftime( std::time( 0 ), outermost_context().startTime_ );<br> }<br>};<br><br>struct Stopped : sc::simple_state&lt; Stopped, Active &gt;<br>{<br> typedef sc::transition&lt; EvStartStop, Running &gt; reactions;<br>};<br></pre>
+
+<p>This StopWatch does not make any use of state-local storage
+while implementing the same behavior as the <a href="tutorial.html#BasicTopicsAStopWatch">tutorial StopWatch</a>.
+Even though this code is probably easier to read for the untrained eye,
+it does have a few problems that are absent in the original:<br>
+
+这个 StopWatch 没有使用状态局部存储，实现了与 <a href="tutorial.html#BasicTopicsAStopWatch">"指南"中的 StopWatch</a>
+相同的行为。虽然这段代码可能对于未经训练的人而言更易读，但是它确实存在一些原来的例子没有的问题：</p>
+
+<ul>
+
+  <li>This StopWatch class has data members that have a
+meaningful value only if the state machine happens to be in a certain
+state. That is, the lifetimes of these variables are not identical with
+the one of the StopWatch object containing them. Since the lifetimes
+are managed by the entry and exit actions of states, we need to use an
+ugly switch over the current state (see <code>StopWatch::ElapsedTime()</code>)
+if we want to access them from a context where the current state is
+unclear. This essentially duplicates some of the state logic of the
+FSM. Therefore, whenever we need to change the layout of the state
+machine we will likely also need to change the ugly switch. Even worse,
+if we forget to change the switch, the code will probably still compile
+and maybe even silently do the wrong thing. Note that this is
+impossible with the version in the tutorial, which will at least throw
+an exception and often just refuse to compile. Moreover, for the
+tutorial StopWatch there's a much higher chance that a programmer will
+get a change correct the first time since the code that calculates the
+elapsed time is located close to the code that updates the variables<br>
+
+这个 StopWatch 类的数据成员仅当状态机恰好处于某个状态时才有意义。即这些变量的生存期与包含它们的
+StopWatch
+对象并不相同。由于生存期是由状态的进入动作和退出动作来管理的，所以如果我们想从不知道当前状态的上下文中来访问的话，就需要对当前状态使用一段很难看
+的switch(请见 <code>StopWatch::ElapsedTime()</code>)。本质上，这复制了
+FSM的一些状态逻辑。因此，无论何时我们需要修改这个状态机的布局，我们很可能也需要修改这个难看的switch。更坏的是，如果我们忘记了修改这个
+switch，这段代码仍然可以通过编译但却可能悄悄地做了错事。请注意，这一点在"指南"的那个版本中是不可能的，它至少会抛出一个异常，而且常常会编
+译失败。此外，对于"指南"中的 StopWatch，程序员有更多的机会在第一次就正确修改代码，因为计算所有时间的代码与更新变量的代码离得很近。</li>
+
+  <li>We need to change the StopWatch class whenever we want to
+introduce a new variable or change the type of an already existing
+variable. That is, many changes in the FSM will likely lead to a change
+in the StopWatch class. In all FSMs that do not employ state-local
+storage, the <code>state_machine&lt;&gt;</code>
+subtype will therefore be a change hotspot, which is a pretty sure
+indicator for a bad design<br>
+
+无论何时我们想引入新的变量或修改已有变量的类型，我们都需要修改 StopWatch 类。即对FSM的许多修改都很可能会导致对
+StopWatch 类的修改。因此，在所有不使用状态局部存储的FSM中，<code>state_machine&lt;&gt;</code>
+子类将成为修改的一个热点，这正是一个坏的设计的代表。</li>
+
+</ul>
+
+<p>Both points are not much of a problem in a small example like
+this, which can easily be implemented in a single translation unit by a
+single programmer. However, they quickly become a major problem for a
+big complex machine spread over multiple translation units, which are
+possibly even maintained by different programmers.<br>
+
+在一个象这个例子的小程序中，这两点都不是什么大问题，因为小程序可以很容易由单个程序员在单个编译单元中实现。但是，对于较大的，被分开多个编译单元的
+复杂状态机，它们很快就会成为大问题，因为程序可能要由不同的程序员来维护。</p>
+
+<h2><a name="HideInnerWorkings" id="HideInnerWorkings">How
+can I hide the inner workings of a state machine from its clients?
+如何向客户隐藏状态机的内部工作？</a></h2>
+
+<p>To see why and how this is possible it is important to recall
+the following facts:<br>
+
+先来看看为何以及如何这是可能的，我们重温一下以下两个事实：</p>
+
+<ul>
+
+  <li>Member functions of a C++ class template are instantiated
+at the point where they're actually called. If the function is never
+called, it will not be instantiated and not a single assembly
+instruction will ever be generated<br>
+
+C++类模板的成员函数是在被真正调用时才进行实例化的。如果该函数从未被调用，它就不会被实例化，而且不会生成哪怕一条指令</li>
+
+  <li>The <code>InitialState</code> template
+parameter of <code>sc::state_machine</code> can be an
+incomplete type (i.e. forward declared)<br>
+
+    <code>sc::state_machine</code> 的 <code>InitialState</code>
+模板参数可以是非完整类型(即前向声明的)</li>
+
+</ul>
+
+<p>The class template member function <code>state_machine&lt;&gt;::initiate()</code>
+creates an object of the initial state. So, the definition of this
+state must be known before the compiler reaches the point where <code>initiate()</code>
+is called. To be able to hide the initial state of a state machine in a
+.cpp file we must therefore no longer let clients call <code>initiate()</code>.
+Instead, we do so in the .cpp file, at a point where the full
+definition of the initial state is known.<br>
+
+类模板成员函数 <code>state_machine&lt;&gt;::initiate()</code>
+会创建一个初始状态的对象。因此，该状态的定义必须在编译器到达调用 <code>initiate()</code>
+的地方之前完成。为了能够将状态机的初始状态隐藏在一个 .cpp 文件中，我们必须不能让客户调用 <code>initiate()</code>.
+相反，我们在 .cpp 文件中来调用它，调用的位置应该在初始状态被完全定义的地方。</p>
+
+<p>Example:<br>
+
+例子：</p>
+
+<p>StopWatch.hpp:</p>
+
+<pre>// define events ... 定义各个事件 ...<br><br>struct Active; // the only visible forward 只是一个前向声明<br>struct StopWatch : sc::state_machine&lt; StopWatch, Active &gt;<br>{<br> StopWatch();<br>};<br></pre>
+
+<p>StopWatch.cpp:</p>
+
+<pre>struct Stopped;<br>struct Active : sc::simple_state&lt; Active, StopWatch, Stopped &gt;<br>{<br> typedef sc::transition&lt; EvReset, Active &gt; reactions;<br>};<br><br> struct Running : sc::simple_state&lt; Running, Active &gt;<br> {<br> typedef sc::transition&lt; EvStartStop, Stopped &gt; reactions;<br> };<br><br> struct Stopped : sc::simple_state&lt; Stopped, Active &gt;<br> {<br> typedef sc::transition&lt; EvStartStop, Running &gt; reactions;<br> };<br><br>StopWatch::StopWatch()<br>{<br> // For example, we might want to ensure that the state<br> // machine is already started after construction.<br> // Alternatively, we could add our own initiate() function<br> // to StopWatch and call the base class initiate() in the<br> // implementation. 例如，我们可能想要确保状态机在构造之后就开始运行。<br> // 另一方面，我们也可以为 StopWatch 增加我们自己的 initiate() 函数，<br> // 并在其中调用基类的 initiate()<br> <b>initiate();</b><br>}<br></pre>
+
+<p>The PingPong example demonstrates how the inner workings of an 
+asynchronous_state_machine&lt;&gt; subclass can be hidden.<br>例子 PingPong 示范了一个
+asynchronous_state_machine&lt;&gt; 子类的内部工作是如何被隐藏的。</p><h2><a name="MachineInheritance" id="MachineInheritance">Is
+it possible to inherit from a given state machine and modify its layout
+in the subclass? 有可能从给定状态机进行派生并修改子类的布局吗？</a></h2>
+
+<p>Yes, but contrary to what some FSM code generators allow,
+Boost.Statechart machines can do so only in a way that was foreseen by
+the designer of the base state machine:<br>
+
+是的，但是与一些FSM代码生成器所允许的相反，Boost.Statechart 状态机只允许按基类状态机的设计者所预见的方式来这样做：</p>
+
+<pre>struct EvStart : sc::event&lt; EvStart &gt; {};<br><br>struct Idle;<br>struct PumpBase : sc::state_machine&lt; PumpBase, Idle &gt;<br>{<br> <b>virtual sc::result react(<br></b> <b>Idle &amp; idle, const EvStart &amp; ) const;<br></b>};<br><br>struct Idle : sc::simple_state&lt; Idle, PumpBase &gt;<br>{<br> typedef sc::custom_reaction&lt; EvStart &gt; reactions;<br><br> sc::result react( const EvStart &amp; evt )<br> {<br> <b>return context&lt; PumpBase &gt;().react( *this, evt );</b><br> }<br>};<br>struct Running : sc::simple_state&lt; Running, PumpBase &gt; {};<br><br>sc::result PumpBase::react(<br>Idle &amp; idle, const EvStart &amp; ) const<br>{<br><b> return idle.transit&lt; Running &gt;();<br></b>}<br><br><br>struct MyRunning : sc::simple_state&lt; MyRunning, PumpBase &gt; {};<br><br>struct MyPump : PumpBase<br>{<br> virtual sc::result react(<br> Idle &amp; idle, const EvStart &amp; ) const<br> {<br> <b>return idle.transit&lt; MyRunning &gt;();<br></b> }<br>};<br></pre>
+
+<h2><a name="Uml2" id="Uml2">What about UML
+2.0 features? UML2.0的特性如何？</a></h2>
+
+<p>The library was designed before 2.0 came along. Therefore, if
+not explicitly noted otherwise, the library implements the behavior
+mandated by the UML1.5 standard. Here's an incomplete list of
+differences between the 2.0 semantics &amp; Boost.Statechart
+semantics:<br>
+
+这个库是在UML2.0出来之前设计的，如果没有明显的说明，本库是按照UML1.5的标准来实现的。以下是关于2.0语义与
+Boost.Statechart
+语义之间的区别的一个不完整的列表：</p>
+
+<ul>
+
+  <li>All transitions are always external. Local transitions are
+not supported at all. Unfortunately, the UML2.0 specifications are not
+entirely clear how local transitions are supposed to work, see <a href="http://thread.gmane.org/gmane.comp.lib.boost.user/18641">here</a>
+for more information<br>
+
+所有转换都是外部的。不支持局部转换。不幸的是，UML2.0规范对于局部转换应该如何工作说得并不清楚，更多信息请见 <a href="http://thread.gmane.org/gmane.comp.lib.boost.user/18641">这
+里</a></li>
+
+  <li>There is no direct support for the UML2.0 elements entry
+point and exit point. However, both can easily be simulated, the former
+with a typedef and the latter with a state that is a template (with the
+transition destination as a template parameter)<br>
+
+对于UML2.0元素进入点和退出点没有直接的支持。不过，它们都可以很容易地模拟，前者可以用一个 typedef
+来模拟，后者可以用模板状态(以转换目标作为模板参数)来模拟</li>
+
+</ul>
+
+<h2><a id="AssertInStateDestructor" name="AssertInStateDestructor">Why do I get an 
+assert when I access the state machine from a state destructor? 为什么我从 state 的析构函数中访问状态机时会得到一个断言？</a> </h2>
+<p>When compiled with <code>NDEBUG</code> undefined, running the following 
+program results in a failed assert:<br>如果编译时没有定义 <code>NDEBUG</code>，运行以下程序会得到一个失败断言：</p><pre>#include &lt;boost/statechart/state_machine.hpp&gt;<br>#include &lt;boost/statechart/simple_state.hpp&gt;<br>#include &lt;iostream&gt;<br><br>struct Initial;<br>struct Machine : boost::statechart::state_machine&lt; Machine, Initial &gt;<br>{<br>  Machine() { someMember_ = 42; }<br>  int someMember_;<br>};<br><br>struct Initial : boost::statechart::simple_state&lt; Initial, Machine &gt;<br>{<br>  ~Initial() { std::cout &lt;&lt; outermost_context().someMember_; }<br>};<br><br>int main()<br>{<br>  Machine().initiate();<br>  return 0;<br>}</pre>
+<p>The problem arises because <code>state_machine&lt;&gt;::~state_machine</code> 
+inevitably destructs all remaining active states. At this time, 
+<code>Machine::~Machine</code> has already been run, making it illegal to access 
+any of the <code>Machine</code> members. This problem can be avoided by defining 
+the following destructor:<br>这个问题是因为 <code>state_machine&lt;&gt;::~state_machine</code> 
+不可避免要析构所有剩下的活动状态。这时，<code>Machine::~Machine</code> 已经运行了，访问 <code>Machine</code> 的任何成员都是非法的。这个问题可以通过如下定义析构函数来避免：</p><pre>~Machine() { terminate(); }</pre><h2><a name="EmbeddedApplications" id="EmbeddedApplications">Is Boost.Statechart suitable for
+embedded applications? 适合于嵌入式应用吗？</a></h2>
+
+<p>It depends. As explained under <a href="performance.html#SpeedVersusScalabilityTradeoffs">Speed
+versus scalability tradeoffs</a> on the Performance page, the
+virtually limitless scalability offered by this library does have its
+price. Especially small and simple FSMs can easily be implemented so
+that they consume fewer cycles and less memory and occupy less code
+space in the executable. Here are some obviously <b>very rough</b>
+estimates:<br>
+
+这要视具体情况而定。正如"性能"一篇中的 <a href="performance.html#SpeedVersusScalabilityTradeoffs">速度与可扩
+展性的权衡</a>
+所解释的，本库所说的无限扩展性实际上是有代价的。较小的和简单的FSM可以很容易实现，所以它们只消耗较少的CPU周期和内存，在可执行代码中所占的代
+码空间也较少。以下显然是一些<span style="font-weight: bold;">很粗略</span>的
+估算：</p>
+
+<ul>
+
+  <li>For a state machine with at most one simultaneously active
+state (that is, the machine is flat and does not have orthogonal
+regions) with trivial actions, customized memory management and
+compiled with a good optimizing compiler, a Pentium 4 class CPU should
+not spend more than 1000 cycles inside <code>state_machine&lt;&gt;::process_event()</code>.
+This worst-case time to process one event scales more or less linearly
+with the number of simultaneously active states for more complex state
+machines, with the typical average being much lower than that. So, a
+fairly complex machine with at most 10 simultaneously active states
+running on a 100MHz CPU should be able to process more than 10'000
+events per second<br>
+
+对于同时最多只有一个活动状态且只带有简单动作的状态机(即状态机是平面的且没有正交区域)，对内存管理进行定制化并使用优化编译器进行编译，一个
+Pentium 4 级别的 CPU 在 <code>state_machine&lt;&gt;::process_event()</code>
+中不会消耗多于1000个周期。对于更为复杂的状态机，最差情况下，处理一个事件的时间与同时处于活动的状态数量或多或少地成正比，通常平均值要大大低于
+此。因此，一个最多有10个同时处于活动的状态的复杂状态机，运行在 100MHz CPU 上，每秒可以处理超过 10'000
+个事件</li>
+
+  <li>A single state machine object uses typically less than 1KB
+of memory, even if it implements a very complex machine<br>
+
+单个状态机对象通常只使用小于1KB的内存，即使它实现了一个非常复杂的状态机</li>
+
+  <li>For code size, it is difficult to give a concrete guideline
+but tests with the BitMachine example suggest that code size scales
+more or less linearly with the number of states (transitions seem to
+have only little impact). When compiled with MSVC7.1 on Windows, 32
+states and 224 transitions seem to fit in ~108KB executable code (with
+all optimizations turned on).<br>
+
+对于代码大小，很难给出一个具体的指标，不过对于 BitMachine
+例子的测试显示，代码的大小或多或少与状态的数量成正比(转换看起来只有很小的影响)。用 Windows 上的 MSVC7.1
+来编译，32个状态和224个转换的状态机大约为108KB的可执行代码(打开所有优化开关)。<br>
+
+Moreover, the library can be compiled with C++ RTTI and exception
+handling turned off, resulting in significant savings on most platforms
+    <br>
+
+此外，本库也可以在编译时关闭 C++ RTTI 和异常处理，在多数平台上这也可以显著减少代码的大小</li>
+
+</ul>
+
+<p>As mentioned above, these are very rough estimates derived
+from the use of the library on a desktop PC, so they should only be
+used to decide whether there is a point in making your own performance
+tests on your target platform.<br>
+
+以上描述只是从桌面PC上的使用所得到的粗略评估，所以它们只能用于决定是否有必要在你的目标平台上进行你自己的性能测试。</p>
+
+<h2><a name="HardRealtime" id="HardRealtime">Is
+your library suitable for applications with hard real-time
+requirements? 你的库适合于有严格实时性要求的应用吗？</a></h2>
+
+<p>Yes. Out of the box, the only operations taking potentially
+non-deterministic time that the library performs are calls to <code>std::allocator&lt;&gt;</code>
+member functions and <code>dynamic_cast</code>s. <code>std::allocator&lt;&gt;</code>
+member function calls can be avoided by passing a custom allocator to <code>event&lt;&gt;</code>,
+<code>state_machine&lt;&gt;</code>, <code>asynchronous_state_machine&lt;&gt;</code>,
+<code>fifo_scheduler&lt;&gt;</code> and <code>fifo_worker&lt;&gt;</code>.
+<code>dynamic_cast</code>s can be avoided by not calling
+the <code>state_cast&lt;&gt;</code> member
+functions of <code>state_machine&lt;&gt;</code>, <code>simple_state&lt;&gt;</code>
+and <code>state&lt;&gt;</code> but using the
+deterministic variant <code>state_downcast&lt;&gt;</code>
+instead.<br>
+
+是的。在交付时，本库中唯一不能确定执行时间的操作只有对 <code>std::allocator&lt;&gt;</code>
+成员函数和 <code>dynamic_cast</code>s 的调用。对 <code>std::allocator&lt;&gt;</code>
+成员函数的调用可以通过向 <code>event&lt;&gt;</code>,
+<code>state_machine&lt;&gt;</code>, <code>asynchronous_state_machine&lt;&gt;</code>,
+<code>fifo_scheduler&lt;&gt;</code> 和 <code>fifo_worker&lt;&gt;</code>
+传入一个定制的分配器来避免。而
+<code>dynamic_cast</code>s 则可以通过不要调用 <code>state_machine&lt;&gt;</code>,
+<code>simple_state&lt;&gt;</code> 和 <code>state&lt;&gt;</code>
+的 <code>state_cast&lt;&gt;</code>
+成员函数来避免，可以使用更具确定性的 <code>state_downcast&lt;&gt;</code>
+来代替。</p>
+
+<h2><a name="TemplatedStates" id="TemplatedStates">With
+templated states I get an error that 'inner_context_type' is not
+defined. What's wrong? 对于模板化状态，我得到一个'inner_context_type'未定义的错误，有什么问题？</a></h2>
+
+<p>The following code generates such an error:<br>
+
+以下代码会就会生成这个错误：</p>
+
+<pre>#include &lt;boost/statechart/state_machine.hpp&gt;<br>#include &lt;boost/statechart/simple_state.hpp&gt;<br><br>namespace sc = boost::statechart;<br><br>template&lt; typename X &gt; struct A;<br>struct Machine : sc::state_machine&lt; Machine, A&lt; int &gt; &gt; {};<br><br>template&lt; typename X &gt; struct B;<br>template&lt; typename X &gt;<br>struct A : sc::simple_state&lt; A&lt; X &gt;, Machine, B&lt; X &gt; &gt; {};<br><br> template&lt; typename X &gt;<br> struct B : sc::simple_state&lt; B&lt; X &gt;, A&lt; X &gt; &gt; {};<br><br>int main()<br>{<br> Machine machine;<br> machine.initiate();<br> return 0;<br>}<br></pre>
+
+<p>If the templates <code>A</code> and <code>B</code>
+are replaced with normal types, the above code compiles without errors.
+This is rooted in the fact that C++ treats forward-declared templates
+differently than forward-declared types. Namely, the compiler tries to
+access member typedefs of <code>B&lt; X &gt;</code>
+at a point where the template has not yet been defined. Luckily, this
+can easily be avoided by putting all inner initial state arguments in
+an <code>mpl::list&lt;&gt;</code>, as follows:<br>
+
+如果用普通的类型来替代模板 <code>A</code> 和 <code>B</code>，
+以上代码可以通过编译。其根源是，C++将前向声明的模板与前向声明的类型视为不同。即，编译器会在模板尚未定义之时就试图访问 <code>B&lt;
+X &gt;</code>
+的成员 typedef。幸好，这很容易避免，只要将所有内层初始状态参数放入一个 <code>mpl::list&lt;&gt;</code>
+即可，如下：</p>
+
+<pre>struct A : sc::simple_state&lt;<br> A&lt; X &gt;, Machine, mpl::list&lt; B&lt; X &gt; &gt; &gt; {};<br></pre>
+
+<p>See <a href="http://article.gmane.org/gmane.comp.lib.boost.devel/128741">this
+post</a> for technical details.<br>
+
+有关技术细节请见 <a href="http://article.gmane.org/gmane.comp.lib.boost.devel/128741">这
+张帖子</a>。</p>
+
+<h2><a name="CompilerError" id="CompilerError">My
+compiler reports an error in the library code. Is this a bug in
+Boost.Statechart? 我的编译器对库代码报告了一个错误，是不是 Boost.Statechart 有缺陷？</a></h2>
+
+<p>Probably not. There are several possible reasons for such
+compile-time errors:<br>
+
+可能不是。对于这类编译期错误有以下几个可能的原因：</p>
+
+<ol>
+
+  <li>Your compiler is too buggy to compile the library, see <a href="index.html#SupportedPlatforms">here</a> for
+information on the status of your compiler. If you absolutely must use
+such a compiler for your project, I'm afraid Boost.Statechart is not
+for you.<br>
+
+你的编译器对于编译本库而言具有太多缺陷，有关你的编译器的状态信息请见 <a href="index.html#SupportedPlatforms">这里</a>。如果你绝对必须在你的项
+目中使用这个编译器，我恐怕 Boost.Statechart 就不能适合你了。</li>
+
+  <li>The error is reported on a line similar to the
+following:<br>
+
+错误报告类似于下面这行信息：
+    <pre>BOOST_STATIC_ASSERT( ( mpl::less&lt;<br> orthogonal_position,<br> typename context_type::no_of_orthogonal_regions &gt;::value ) );<br></pre>
+
+Most probably, there is an error in your code. The library has many
+such compile-time assertions to ensure that invalid state machines
+cannot be
+compiled (for an idea what kinds of errors are reported at compile
+time, see
+the compile-fail tests). Above each of these assertions there is a
+comment
+explaining the problem. On almost all current compilers an error in
+template
+code is accompanied by the current "instantiation stack". Very much
+like the
+call stack you see in the debugger, this "instantiation stack" allows
+you to
+trace the error back through instantiations of library code until you
+hit the
+line of your code that causes the problem. As an example, here's the
+MSVC7.1
+error message for the code in InconsistentHistoryTest1.cpp: <br>
+
+很可能是你的代码有错误。本库中有许多这样的编译期断言来确保无效的状态机不能通过编译(要了解哪些类型的错误会在编译期报告，请见"编译失败"的测
+试)。以上这些断言每个都带有注释以解释有什么问题。当前差不多所有编译器对于模板代码的错误都是以这种"实例化栈"的方式显示的。它们非常类似于你在调
+试器中见到的调用栈，"实例化栈"让你可以通过库代码的实例化来跟踪错误，直到你找到引起问题的代码行。例如，以下是
+InconsistentHistoryTest1.cpp 的代码在
+MSVC7.1 下的错误信息：
+    <pre>...\boost\statechart\shallow_history.hpp(34) : error C2027: use of undefined type 'boost::STATIC_ASSERTION_FAILURE&lt;x&gt;'<br> with<br> [<br> x=false<br> ]<br> ...\boost\statechart\shallow_history.hpp(34) : see reference to class template instantiation 'boost::STATIC_ASSERTION_FAILURE&lt;x&gt;' being compiled<br> with<br> [<br> x=false<br> ]<br> ...\boost\statechart\simple_state.hpp(861) : see reference to class template instantiation 'boost::statechart::shallow_history&lt;DefaultState&gt;' being compiled<br> with<br> [<br> DefaultState=B<br> ]<br> ...\boost\statechart\simple_state.hpp(599) : see reference to function template instantiation 'void boost::statechart::simple_state&lt;MostDerived,Context,InnerInitial&gt;::deep_construct_inner_impl_non_empty::deep_construct_inner_impl&lt;InnerList&gt;(const boost::statechart::simple_state&lt;MostDerived,Context,InnerInitial&gt;::inner_context_ptr_type &amp;,boost::statechart::simple_state&lt;MostDerived,Context,InnerInitial&gt;::outermost_context_base_type &amp;)' being compiled<br> with<br> [<br> MostDerived=A,<br> Context=InconsistentHistoryTest,<br> InnerInitial=boost::mpl::list&lt;boost::statechart::shallow_history&lt;B&gt;&gt;,<br> InnerList=boost::statechart::simple_state&lt;A,InconsistentHistoryTest,boost::mpl::list&lt;boost::statechart::shallow_history&lt;B&gt;&gt;&gt;::inner_initial_list<br> ]<br> ...\boost\statechart\simple_state.hpp(567) : see reference to function template instantiation 'void boost::statechart::simple_state&lt;MostDerived,Context,InnerInitial&gt;::deep_construct_inner&lt;boost::statechart::simple_state&lt;MostDerived,Context,InnerInitial&gt;::inner_initial_list&gt;(const boost::statechart::simple_state&lt;MostDerived,Context,InnerInitial&gt;::inner_context_ptr_type &amp;,boost::statechart::simple_state&lt;MostDerived,Context,InnerInitial&gt;::outermost_context_base_type &amp;)' being compiled<br> with<br> [<br> MostDerived=A,<br> Context=InconsistentHistoryTest,<br> InnerInitial=boost::mpl::list&lt;boost::statechart::shallow_history&lt;B&gt;&gt;<br> ]<br> ...\boost\statechart\simple_state.hpp(563) : while compiling class-template member function 'void boost::statechart::simple_state&lt;MostDerived,Context,InnerInitial&gt;::deep_construct(const boost::statechart::simple_state&lt;MostDerived,Context,InnerInitial&gt;::context_ptr_type &amp; ,boost::statechart::simple_state&lt;MostDerived,Context,InnerInitial&gt;::outermost_context_base_type &amp;)'<br> with<br> [<br> MostDerived=A,<br> Context=InconsistentHistoryTest,<br> InnerInitial=boost::mpl::list&lt;boost::statechart::shallow_history&lt;B&gt;&gt;<br> ]<br> ...\libs\statechart\test\InconsistentHistoryTest1.cpp(29) : see reference to class template instantiation 'boost::statechart::simple_state&lt;MostDerived,Context,InnerInitial&gt;' being compiled<br> with<br> [<br> MostDerived=A,<br> Context=InconsistentHistoryTest,<br> InnerInitial=boost::mpl::list&lt;boost::statechart::shallow_history&lt;B&gt;&gt;<br> ]<br></pre>
+
+Depending on the IDE you use, it is possible that you need to switch to
+another window to see this full error message (e.g. for Visual Studio
+2003,
+you need to switch to the Output window). Starting at the top and going
+down
+the list of instantiations you see that each of them is accompanied by
+a file
+name and a line number. Ignoring all files belonging to the library, we
+find
+the culprit close to the bottom in file InconsistentHistoryTest1.cpp on
+line
+29. <br>
+
+取决于你使用的IDE，你可能需要切换到另一个窗口才能看到完整的错误信息(如，对于 Visual Studio
+2003,
+你需要切换到
+Output窗口)。从最上面开始，向下查看实例化列表，你可以看到每一个都是带有文件名和行号。忽略所有属于库的文件，我们在接近底部找到了问题所在，
+InconsistentHistoryTest1.cpp 第29行。 </li>
+
+  <li>The error is reported on a line nowhere near a
+BOOST_STATIC_ASSERT. Use the technique described under point 2 to see
+what line of your code causes the problem. If your code is correct then
+you've found a bug in either the compiler or Boost.Statechart. Please <a href="contact.html">send me</a> a small but complete
+program showing the problem. Thank you!<br>
+
+错误报告与
+BOOST_STATIC_ASSERT
+相差很远。请使用前面第2点所介绍的技术，找到你的代码中哪一行引发了问题。如果你的代码是正确的，那么你就是发现了编译器或
+Boost.Statechart 的一个缺陷。请 <a href="contact.html">发给我们</a>
+一个出现该问题的，短小但完整的程序。谢谢你！</li>
+
+</ol>
+
+<h2><a id="DisableHistory" name="DisableHistory">Is
+it possible to disable history for a state at runtime? 可以在运行期关闭一个状态的历史吗？</a></h2>
+
+<p>Yes, see <a href="reference.html#clear_shallow_history">simple_state::clear_shallow_history()</a>
+and <a href="reference.html#clear_deep_history">simple_state::clear_deep_history()</a>.
+Calling these functions is often preferable to introducting additional
+normal transitions when ...<br>
+
+可以，请见 <a href="reference.html#clear_shallow_history">simple_state::clear_shallow_history()</a>
+和 <a href="reference.html#clear_deep_history">simple_state::clear_deep_history()</a>.
+在以下情况下，调用这些函数通常比引入额外的普通转换更好： </p>
+
+<ul>
+
+  <li>a state with history is the target of many transitions, <b>and/or
+    </b><br>
+带有历史的状态是多个转换的目标，<span style="font-weight: bold;">且/
+或</span> </li>
+
+  <li>the decision to ignore history is made in a different place
+than the transition to a state with history<br>
+在转换到带历史的状态的地方之外决定忽略状态的历史 </li>
+
+</ul>
+
+<ol>
+
+</ol>
+
+<h2><a name="Dll" id="Dll">How can I compile
+a state machine into a dynamic link library (DLL)? 如何将状态机编译为动态链接库(DLL)？</a></h2>
+
+<p>Invisible to the user, the library uses static data members to
+implement its own speed-optimized RTTI-mechanism for <code>event&lt;&gt;</code>
+and <code>simple_state&lt;&gt;</code> subtypes.
+Whenever such a subtype is defined in a header file and then included
+in multiple TUs, the linker later needs to eliminate the duplicate
+definitions of static data members. This usually works flawlessly as
+long as all these TUs are <b>statically</b> linked into
+the same binary. It is a lot more complex when DLLs are involved. The
+TuTest*.?pp files illustrate this:<br>
+
+本库使用了静态数据成员来为 <code>event&lt;&gt;</code> 和 <code>simple_state&lt;&gt;</code>
+的子类型实现了自己的速度优化的RTTI机制，这一点对于用户是透明的。只要这样的子类型是定义在一个头文件中且被多个TUs所包含，链接器就需要消除这
+些静态数据成员的重复定义。只要所有TUs是<span style="font-weight: bold;">静态</span>链
+接到同一个二进制文件中，这是没有问题的。但如果引入了DLLs，就会有一点复杂。TuTest*.?pp 文件示范了这一情形：</p>
+
+<ul>
+
+  <li><a href="../test/TuTest.hpp">TuTest.hpp</a>:
+Instantiates a class template containing a static data member<br>
+
+    <a href="../test/TuTest.hpp">TuTest.hpp</a>:
+示例一个包含静态数据成员的类模板</li>
+
+  <li><a href="../test/TuTest.cpp">TuTest.cpp</a>:
+Includes TuTest.hpp and is compiled into a DLL<br>
+
+    <a href="../test/TuTest.cpp">TuTest.cpp</a>:
+包含 TuTest.hpp&nbsp;且编译为 DLL</li>
+
+  <li><a href="../test/TuTestMain.cpp">TuTestMain.cpp</a>:
+Includes TuTest.hpp and is compiled into an executable<br>
+
+    <a href="../test/TuTestMain.cpp">TuTestMain.cpp</a>:
+包含 TuTest.hpp 且编译为可执行文件</li>
+
+</ul>
+
+<p>Without any precautions (e.g. <code>__declspec(dllexport)</code>
+on MSVC compatible compilers), on most platforms both binaries (exe
+&amp; dll) now contain their own instance of the static data
+member. Since the RTTI mechanism assumes that there is exactly one
+object of that member at runtime, the mechanism fails spectacularly
+when the process running the exe also loads the dll. Different
+platforms deal differently with this problem:<br>
+
+没有任何预警(如，在MSVC兼容的编译器中的 <code>__declspec(dllexport)</code>)，
+在多数平台上，这两个二进制文件(exe
+&amp;
+dll)都各自包含了该静态数据成员的实例。由于RTTI机制假定在运行时该成员只有一个对象，所以在运行exe文件且装入dll文件时，这个机制显然会
+失效。不同的平台处理该问题的方法有所不同：</p>
+
+<ul>
+
+  <li>On some platforms (e.g. MinGW) there simply doesn't seem to
+be a way to enforce that such a member only exists once at runtime.
+Therefore, the internal RTTI mechanism cannot be used reliably in
+conjunction with DLLs. Disabling it by defining <a href="configuration.html#ApplicationDefinedMacros">BOOST_STATECHART_USE_NATIVE_RTTI</a>
+in all TUs will <b>usually</b> work around the problem<br>
+
+在有些平台上(如
+MinGW)，看起来无法强制这个数据成员在运行时只存在一个实例。所以，内部RTTI机制不能与DLLs一起使用。在所有TUs中定义 <a href="configuration.html#ApplicationDefinedMacros">BOOST_STATECHART_USE_NATIVE_RTTI</a>，<span style="font-weight: bold;">通常</span>可以避开这个问题</li>
+
+  <li>MSVC-compatible compilers support <code>__declspec(dllimport)</code>
+and <code>__declspec(dllexport)</code>, which allow to
+define exactly what needs to be loaded from a DLL (see TuTest for an
+example how to do this). Therefore, the internal RTTI mechanism can be
+used but care must be taken to correctly export and import all <code>event&lt;&gt;</code>
+and <code>simple_state&lt;&gt;</code> subtypes
+defined in headers that are compiled into more than one binary.
+Alternatively, of course <a href="configuration.html#ApplicationDefinedMacros">BOOST_STATECHART_USE_NATIVE_RTTI</a>
+can also be used to save the work of importing and exporting<br>
+
+MSVC兼容的编译器支持 <code>__declspec(dllimport)</code> 和 <code>__declspec(dllexport)</code>,
+它们允许精确地定义需要从DLL文件导入什么(如何实现这一点的例子请见 TuTest)。因此，内部RTTI机制可以使用，但必须要小心地正确
+export 和 import 所有在头文件中定义而被编译进一个以上二进制文件的 <code>event&lt;&gt;</code>
+和 <code>simple_state&lt;&gt;</code>
+子类型。另一方面，当然也可以使用 <a href="configuration.html#ApplicationDefinedMacros">BOOST_STATECHART_USE_NATIVE_RTTI</a>
+来减少对于 importing 和 exporting 的工作</li>
+
+</ul>
+
+<h2><a name="PolymorphicEvents" id="PolymorphicEvents">Does
+Boost.Statechart support polymorphic events? Boost.Statechart 是否支持多态事件？</a></h2>
+
+<p>No. Although events can be derived from each other to write
+common code only once, <a href="definitions.html#Reaction">reactions</a>
+can only be defined for most-derived events.<br>
+
+不。虽然事件可以相互派生，共同的代码只须编写一次，但是 <a href="definitions.html#Reaction">反
+应</a>
+只能为最底层的事件进行定义。</p>
+
+<p>Example:<br>
+
+例子：</p>
+
+<pre>template&lt; class MostDerived &gt;<br>struct EvButtonPressed : sc::event&lt; MostDerived &gt;<br>{<br> // common code 公共代码<br>};<br><br>struct EvPlayButtonPressed :<br> EvButtonPressed&lt; EvPlayButtonPressed &gt; {};<br>struct EvStopButtonPressed :<br> EvButtonPressed&lt; EvStopButtonPressed &gt; {};<br>struct EvForwardButtonPressed :<br> EvButtonPressed&lt; EvForwardButtonPressed &gt; {};<br><br>/* ... */<br><br>// We want to turn the player on, no matter what button we<br>// press in the Off state. Although we can write the reaction<br>// code only once, we must mention all most-derived events in<br>// the reaction list. 我们希望在 Off 状态下，无论按哪个键都可以打开播放器。 <br>// 虽然我们可以只写一次反应代码，但是我们必须在反应列表中提及所有最底层的事件。<br>struct Off : sc::simple_state&lt; Off, Mp3Player &gt;<br>{<br> typedef mpl::list&lt;<br> sc::custom_reaction&lt; EvPlayButtonPressed &gt;,<br> sc::custom_reaction&lt; EvStopButtonPressed &gt;,<br> sc::custom_reaction&lt; EvForwardButtonPressed &gt;<br> &gt; reactions;<br><br> template&lt; class MostDerived &gt;<br> sc::result react( const EvButtonPressed&lt; MostDerived &gt; &amp; )<br> {<br> // ...<br> }<br>};<br></pre>
+
+<h2><a name="WrongExitActionOrder" id="WrongExitActionOrder">Why are exit-actions called in the
+wrong order when I use multiple inheritance? 为什么在使用多重继承时，对退出动作的调用顺序有错？</a></h2>
+
+<p><b>Update</b>: The implementation has changed
+considerably in this area. It is still possible to get this behavior
+under rare circumstances (when an action propagates an exception in a
+state machine with orthogonal regions <b>and</b> if the
+statechart layout satisfies certain conditions), but it can no longer
+be demonstrated with the example program below. However, the described
+workaround is still valid and ensures that this behavior will never
+show up.<br>
+
+<b>更新：</b>在这一方面，库的实现已经有了相当大的变化。这一现象在极少数的情况下(在一个带有正交区域的状态机中，当
+一个动作抛出异常时，<span style="font-weight: bold;">且</span>如果
+状态图的布局满足特定的条件)仍然可能发生，但是已不再是以下例子所示范的那样。不过，下面所介绍的解决方法依然有效，可以确保这一行为不会出现。</p>
+
+<p>They definitely aren't for the <code>simple_state&lt;&gt;</code>
+and <code>state&lt;&gt;</code> subtypes, but the
+destructors of additional bases might be called in construction order
+(rather than the reverse construction order):<br>
+
+它们不是 <code>simple_state&lt;&gt;</code> 和 <code>state&lt;&gt;</code>
+的子类，但是这些额外基类的析构函数可能会以构造的顺序调用(而不是以与构造顺序相反的顺序)：</p>
+
+<pre>#include &lt;boost/statechart/state_machine.hpp&gt;<br>#include &lt;boost/statechart/simple_state.hpp&gt;<br><br>namespace sc = boost::statechart;<br><br>class EntryExitDisplayer<br>{<br> protected:<br> EntryExitDisplayer( const char * pName ) :<br> pName_( pName )<br> {<br> std::cout &lt;&lt; pName_ &lt;&lt; " entered\n";<br> }<br><br> ~EntryExitDisplayer()<br> {<br> std::cout &lt;&lt; pName_ &lt;&lt; " exited\n";<br> }<br><br> private:<br> const char * const pName_;<br>};<br><br>struct Outer;<br>struct Machine : sc::state_machine&lt; Machine, Outer &gt; {};<br>struct Inner;<br>struct Outer : EntryExitDisplayer, sc::simple_state&lt;<br> Outer, Machine, Inner &gt;<br>{<br> Outer() : EntryExitDisplayer( "Outer" ) {}<br>};<br><br>struct Inner : EntryExitDisplayer,<br> sc::simple_state&lt; Inner, Outer &gt;<br>{<br> Inner() : EntryExitDisplayer( "Inner" ) {}<br>};<br><br>int main()<br>{<br> Machine myMachine;<br> myMachine.initiate();<br> return 0;<br>}<br></pre>
+
+<p>This program will produce the following output:<br>
+
+这个程序将产生以下输出：</p>
+
+<pre>Outer entered<br>Inner entered<br>Outer exited<br>Inner exited<br></pre>
+
+<p>That is, the <b><code>EntryExitDisplayer</code>
+base class portion</b> of <code>Outer</code> is
+destructed before the one of <code>Inner</code> although <code>Inner::~Inner()</code>
+is called before <code>Outer::~Outer()</code>. This
+somewhat counter-intuitive behavior is caused by the following facts:<br>
+
+即，<code>Outer</code> 的 <b><code>EntryExitDisplayer</code>
+基类部分</b>在 <code>Inner</code> 的基类部分之前被析构，虽然 <code>Inner::~Inner()</code>
+在 <code>Outer::~Outer()</code> 之前被调用。这个有点违反直觉的行为是由以下事实引起的：</p>
+
+<ul>
+
+  <li>The <code>simple_state&lt;&gt;</code>
+base class portion of <code>Inner</code> is responsible to
+destruct <code>Outer</code><br>
+
+    <code>Inner</code> 的 <code>simple_state&lt;&gt;</code>
+基类部分要负责析构 <code>Outer</code></li>
+
+  <li>Destructors of base class portions are called in the
+reverse order of construction<br>
+
+基类部分的析构函数的调用顺序是与构造的顺序相反的</li>
+
+</ul>
+
+<p>So, when the <code>Outer</code> destructor is
+called the call stack looks as follows:<br>
+
+所以，在调用 <code>Outer</code> 析构函数时，调用栈应该是这样的：</p>
+
+<pre>Outer::~Outer()<br>simple_state&lt; Inner, ... &gt;::~simple_state()<br>Inner::~Inner()<br></pre>
+
+<p>Note that <code>Inner::~Inner()</code> did not
+yet have a chance to destroy its <code>EntryExitDisplayer</code>
+base class portion, as it first has to call the destructor of the <b>second</b>
+base class. Now <code>Outer::~Outer()</code> will first
+destruct its <code>simple_state&lt; Outer, ... &gt;</code>
+base class portion and then do the same with its <code>EntryExitDisplayer</code>
+base class portion. The stack then unwinds back to <code>Inner::~Inner()</code>,
+which can then finally finish by calling <code>EntryExitDisplayer::~EntryExitDisplayer()</code>.<br>
+
+注意，<code>Inner::~Inner()</code> 还没有机会销毁它的 <code>EntryExitDisplayer</code>
+基类部分，它必须首先调用<span style="font-weight: bold;">第二个</span>基
+类的析构函数。现在 <code>Outer::~Outer()</code> 将首先析构它的 <code>simple_state&lt;
+Outer, ... &gt;</code>
+基类部分，然后析构它的 <code>EntryExitDisplayer</code> 基类部分。然后调用栈展开回 <code>Inner::~Inner()</code>,
+它将调用&nbsp;<code>EntryExitDisplayer::~EntryExitDisplayer()</code>
+完成最后的任务。</p>
+
+<p>Luckily, there is an easy work-around: Always let <code>simple_state&lt;&gt;</code>
+and <code>state&lt;&gt;</code> be the first base
+class of a state. This ensures that destructors of additional bases are
+called before recursion employed by state base destructors can alter
+the order of destruction.<br>
+
+幸好，有一个很容易的解决方法：总是把 <code>simple_state&lt;&gt;</code>
+和 <code>state&lt;&gt;</code>
+作为一个状态的第一个基类。这样可以确保其它基类的析构函数在递归调用可能影响析构顺序的状态基类的析构函数之前被调用。</p>
+
+<hr>
+<p><a href="http://validator.w3.org/check?uri=referer"><img src="http://www.w3.org/Icons/valid-html401" alt="Valid HTML 4.01 Transitional" border="0" height="31" width="88"></a></p>
+<p>Revised 05 January, 2008<!--webbot bot="Timestamp" endspan i-checksum="38512" --></p>
+
+<p><i>Copyright © 2003-<!--webbot bot="Timestamp" s-type="EDITED" s-format="%Y" startspan -->2007<!--webbot bot="Timestamp" endspan i-checksum="770" --> 
+<a href="contact.html">Andreas Huber Dönni</a></i></p>
+
+<p><i>Distributed under the Boost Software License, Version 1.0. (See 
+accompanying file <a href="../../../LICENSE_1_0.txt">LICENSE_1_0.txt</a> or copy 
+at <a href="http://www.boost.org/LICENSE_1_0.txt">http://www.boost.org/LICENSE_1_0.txt</a>)</i></p>
+</body></html>

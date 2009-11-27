@@ -1,0 +1,1171 @@
+<!DOCTYPE HTML PUBLIC "-//W3C//DTD HTML 4.0.1 Transitional//EN">
+<html><head>
+
+
+
+  
+  
+  <meta http-equiv="Content-Type" content="text/html; charset=UTF-8">
+
+
+  
+
+
+  
+  
+  
+  
+  <title>Boost.Flyweight Documentation - Performance</title><link rel="stylesheet" href="style.css" type="text/css">
+
+
+
+  
+  
+  <link rel="start" href="index.html">
+
+
+
+  
+  
+  <link rel="prev" href="reference/tracking.html">
+
+
+
+  
+  
+  <link rel="up" href="index.html">
+
+
+
+  
+  
+  <link rel="next" href="examples.html"></head>
+<body>
+
+
+
+<h1><img src="../../../boost.png" alt="Boost logo" align="middle" height="86" width="277">Boost.Flyweight
+Performance</h1>
+
+
+
+<div class="prev_link"><a href="reference/tracking.html"><img src="prev.gif" alt="tracking policies" border="0"><br>
+
+
+
+Tracking policies
+</a></div>
+
+
+
+<div class="up_link"><a href="index.html"><img src="up.gif" alt="index" border="0"><br>
+
+
+
+Index
+</a></div>
+
+
+
+<div class="next_link"><a href="examples.html"><img src="next.gif" alt="examples" border="0"><br>
+
+
+
+Examples
+</a></div>
+
+
+
+<br style="" clear="all">
+
+
+
+<br style="" clear="all">
+
+
+
+<hr>
+<h2>Contents &nbsp;目录</h2>
+
+
+
+<ul>
+
+
+
+  <li><a href="#intro">Introduction &nbsp;简介</a></li>
+
+
+
+  <li><a href="#memory">Memory consumption
+&nbsp;内存消耗</a>
+    
+    
+    <ul>
+
+
+
+      <li><a href="#flyweight_size">Flyweight size
+&nbsp;Flyweight 大小</a></li>
+
+
+
+      <li><a href="#entry_size">Entry size
+&nbsp;Entry 大小</a></li>
+
+
+
+      <li><a href="#overall_memory">Overall memory
+consumption &nbsp;总的内存消耗</a></li>
+
+
+
+    
+    
+    </ul>
+
+
+
+  </li>
+
+
+
+  <li><a href="#time">Time efficiency &nbsp;时效</a>
+    
+    
+    <ul>
+
+
+
+      <li><a href="#initialization">Initialization
+&nbsp;初始化</a></li>
+
+
+
+      <li><a href="#assignment">Assignment
+&nbsp;赋值</a></li>
+
+
+
+      <li><a href="#equality_comparison">Equality
+comparison &nbsp;判等</a></li>
+
+
+
+      <li><a href="#value_access">Value access
+&nbsp;值存取</a></li>
+
+
+
+    
+    
+    </ul>
+
+
+
+  </li>
+
+
+
+  <li><a href="#results">Experimental results
+&nbsp;实验结果</a>
+    
+    
+    <ul>
+
+
+
+      <li><a href="#msvc_80">Microsoft Visual C++ 8.0</a>
+        
+        
+        <ul>
+
+
+
+          <li><a href="#msvc_80_memory">Memory
+&nbsp;内存</a></li>
+
+
+
+          <li><a href="#msvc_80_time">Execution time
+&nbsp;执行时间</a></li>
+
+
+
+        
+        
+        </ul>
+
+
+
+      </li>
+
+
+
+      <li><a href="#gcc_344">GCC 3.4.4</a>
+        
+        
+        <ul>
+
+
+
+          <li><a href="#gcc_344_memory">Memory
+&nbsp;内存</a></li>
+
+
+
+          <li><a href="#gcc_344_time">Execution time
+&nbsp;执行时间</a></li>
+
+
+
+        
+        
+        </ul>
+
+
+
+      </li>
+
+
+
+    
+    
+    </ul>
+
+
+
+  </li>
+
+
+
+  <li><a href="#conclusions">Conclusions &nbsp;结论</a></li>
+
+
+
+</ul>
+
+
+
+<h2><a name="intro">Introduction &nbsp;简介</a></h2>
+
+
+
+<p>
+We show how to estimate the memory reduction obtained by the usage of
+Boost.Flyweight in a particular scenario and study the impact on the
+execution
+time for the different functional areas of <code>flyweight</code>.
+Some experimental results are provided.</p>
+
+
+
+<p>我们演示了怎样评估在一个特定的情形下通过使用Boost.Flyweight可以减少的内存用量并且研究了<code>flyweight</code>各种使用情况下对执行时间的影响。最后给出了一些实验结果。</p>
+
+
+
+<h2><a name="memory">Memory consumption
+&nbsp;内存消耗</a></h2>
+
+
+
+<p>
+As we saw in the <a href="tutorial/index.html#rationale">tutorial
+rationale</a>,
+the flyweight pattern is based on two types of objects:</p>
+
+
+
+<p>正如我们已经在<a href="tutorial/index.html#rationale">教程 原理</a>中所看到的，flyweight模式基于2种类型的对象：
+</p>
+
+
+
+<ul>
+
+
+
+  <li>The flyweight objects proper, which have very small size,
+typically that of a pointer.</li>
+
+
+
+  
+</ul>
+&nbsp; &nbsp; &nbsp; &nbsp; &nbsp; flyweight对象本身，它们非常小，通常是一个指针的大小。
+<ul>
+
+
+
+  <li>The shared values, which are stored as internal <i>entries</i>
+into the flyweight factory.</li>
+</ul>
+&nbsp; &nbsp; &nbsp; &nbsp; &nbsp; 共享的值，它们作为内部的<i>entries</i>存储在flyweight工厂里<i></i>。
+<ul>
+
+
+
+</ul>
+
+
+
+The overall memory consumption is then a function of the size of the
+flyweight objects, the size of the entry objects and the degree of
+value redundancy.<br>
+<br>
+
+
+
+于是总的内存消耗就是一个关于flyweight对象的大小，entry对象的大小和值冗余度的函数。
+<h3><a name="flyweight_size">Flyweight size
+&nbsp;Flyweight 大小</a></h3>
+
+
+
+<p>
+The only data member of a <code>flyweight</code> object is
+a so-called
+<i>handle</i>, an opaque object of small size provided by
+the internal
+flyweight factory to refer to the entries it stores. For the default
+<a href="tutorial/configuration.html#hashed_factory"><code>hashed_factory</code></a>,
+this handle is merely a pointer, so <code>sizeof(flyweight&lt;T&gt;)=sizeof(void*)</code>,
+4 bytes in typical 32-bit architectures.
+For other types of factories, the handle is an iterator to an internal
+container used in the implementation of the factory: again, its size
+is typically that of a pointer.</p>
+
+
+
+<p><code>flyweight</code>对象唯一的数据成员是一个所谓的<span style="font-style: italic;">句柄</span>，这是由内部flyweight工厂所提供的一个小型的不透明的对象，用来引用到工厂里存储的entries。对默认的<a href="tutorial/configuration.html#hashed_factory">hashed_factory</a>，
+这个句柄仅仅是一个指针，因此<code>sizeof(flyweight&lt;T&gt;)=sizeof(void*)</code>， 通常在32位架构上是4个字节的大小。对其它类型的工厂，该句柄是一个用来实现这个工厂的内部容器的迭代器：同样，它的大小通常是一个指针的大小。
+</p>
+
+
+
+<h3><a name="entry_size">Entry size &nbsp;Entry
+大小</a></h3>
+
+
+
+<p>
+The entries stored in the factory associated to <code>flyweight&lt;T,...&gt;</code>
+need not only hold a value of <code>T</code>, but also
+contain additional
+information related to the internal implementation of
+<code>flyweight&lt;T,...&gt;</code>:</p>
+
+
+
+<p>与<code>flyweight&lt;T,...&gt;</code>相关联的entries，在工厂中存储时，不仅包含一个T类型的值，
+而且还包含与<code>flyweight&lt;T,...&gt;</code>的内部实现相关的额外信息。
+</p>
+
+
+
+<blockquote> <i>entry</i> = <code>sizeof(T)</code>
++ <i>overhead</i>.
+</blockquote>
+
+
+
+<p>
+For the current implementation of Boost.Flyweight, the following
+aspects
+contribute to <i>overhead</i>:</p>
+
+
+
+<p>就Boost.Flyweight目前的实现来说，以下几个方面会增加<span style="font-style: italic;">额外开销</span>：
+</p>
+
+
+
+<ul>
+
+
+
+  <li>Usage of <a href="tutorial/key_value.html">key-value
+flyweights</a>.</li>
+
+
+
+  
+</ul>
+&nbsp; &nbsp; &nbsp; &nbsp; &nbsp; 使用<a href="tutorial/key_value.html">键-值flyweight</a>。
+<ul>
+
+
+
+  <li>Internal overhead of the <a href="tutorial/configuration.html#factories">factory</a>
+container.</li>
+
+
+
+  
+</ul>
+&nbsp; &nbsp; &nbsp; &nbsp; &nbsp; <a href="tutorial/configuration.html#factories">工厂</a>容器的内部额外开销。
+<ul>
+
+
+
+  <li>Bookkeeping information associated to the <a href="tutorial/configuration.html#tracking">tracking
+mechanism</a>.</li>
+
+
+
+  
+
+
+</ul>
+&nbsp; &nbsp; &nbsp; &nbsp; &nbsp; <a href="tutorial/configuration.html#tracking">tracking机制</a>相关的薄记信息。<br>
+
+
+
+The table summarizes the separate contributions to <i>overhead</i>
+introduced
+by the different components taking part of the definition of
+a <code>flyweight</code> instantiation. Values are given
+in <i>words</i>,
+i.e. the size of a pointer, which is 4 bytes in a typical 32-bit
+architecture.
+Alignment may introduce additional overhead.<br>
+<br>
+
+
+
+这个表格总结了定义一个<code>flyweight</code>实例的各个组成部分各自引起的<span style="font-style: italic;">额外开销</span>。这些值的单位都是<span style="font-style: italic;">字</span>，
+换句话说，一个指针的大小，通常在32位架构上是4个字节。对齐可能导致额外的开销。
+<table cellspacing="0">
+
+
+
+  <caption><b>Entry overhead of the components of
+Boost.Flyweight.</b></caption> <tbody>
+
+
+
+    <tr>
+
+
+
+      <th colspan="2" align="center">component</th>
+
+
+
+      <th align="center">overhead (words)</th>
+
+
+
+    </tr>
+
+
+
+    <tr>
+
+
+
+      <td rowspan="2" align="center">&nbsp;&nbsp;<a href="tutorial/key_value.html#key_value"><code>key_value</code></a>&nbsp;&nbsp;</td>
+
+
+
+      <td align="center">&nbsp;&nbsp;with <a href="tutorial/key_value.html#key_extractor">key extractor</a>&nbsp;&nbsp;</td>
+
+
+
+      <td align="center">&nbsp;&nbsp;1<sup>(1)</sup>&nbsp;&nbsp;</td>
+
+
+
+    </tr>
+
+
+
+    <tr>
+
+
+
+      <td align="center">&nbsp;&nbsp;without <a href="tutorial/key_value.html#key_extractor">key extractor</a>&nbsp;&nbsp;</td>
+
+
+
+      <td align="center">&nbsp;&nbsp;1 + <code>sizeof(Key)&nbsp;&nbsp;</code></td>
+
+
+
+    </tr>
+
+
+
+    <tr class="odd_tr">
+
+
+
+      <td rowspan="3" align="center">&nbsp;&nbsp;factory&nbsp;&nbsp;</td>
+
+
+
+      <td align="center">&nbsp;&nbsp;<a href="tutorial/configuration.html#hashed_factory"><code>hashed_factory</code></a>&nbsp;&nbsp;</td>
+
+
+
+      <td align="center">&nbsp;&nbsp;~2.5&nbsp;&nbsp;</td>
+
+
+
+    </tr>
+
+
+
+    <tr class="odd_tr">
+
+
+
+      <td align="center">&nbsp;&nbsp;<a href="tutorial/configuration.html#set_factory"><code>set_factory</code></a>&nbsp;&nbsp;</td>
+
+
+
+      <td align="center">&nbsp;&nbsp;4<sup>(2)</sup>&nbsp;&nbsp;</td>
+
+
+
+    </tr>
+
+
+
+    <tr class="odd_tr">
+
+
+
+      <td align="center">&nbsp;&nbsp;<a href="tutorial/configuration.html#assoc_container_factory"><code>assoc_container_factory</code></a>&nbsp;&nbsp;</td>
+
+
+
+      <td align="center">&nbsp;&nbsp;depends on
+the container used&nbsp;&nbsp;</td>
+
+
+
+    </tr>
+
+
+
+    <tr>
+
+
+
+      <td rowspan="2" align="center">&nbsp;&nbsp;tracking
+mechanism&nbsp;&nbsp;</td>
+
+
+
+      <td align="center">&nbsp;&nbsp;<a href="tutorial/configuration.html#refcounted"><code>refcounted</code></a>&nbsp;&nbsp;</td>
+
+
+
+      <td align="center">&nbsp; 2<sup>(3)</sup>&nbsp;&nbsp;</td>
+
+
+
+    </tr>
+
+
+
+    <tr>
+
+
+
+      <td align="center">&nbsp;&nbsp;<a href="tutorial/configuration.html#no_tracking"><code>no_tracking</code></a>&nbsp;&nbsp;</td>
+
+
+
+      <td align="center">&nbsp;&nbsp;0&nbsp;&nbsp;</td>
+
+
+
+    </tr>
+
+
+
+  
+  
+  </tbody>
+</table>
+
+
+
+<sup>(1)</sup> <small>Assuming that <code>sizeof(Key)&lt;=sizeof(Value)</code>.</small>
+<small>&nbsp;假定<code>sizeof(Key)&lt;=sizeof(Value)。</code></small><br>
+
+
+
+<sup>(2)</sup> <small>For some implementations of <code>std::set</code>
+this overhead reduces to 3.</small><small> &nbsp;对某些<code>std::set的实现这个额外开销降到3。</code> </small><br>
+
+
+
+<sup>(3)</sup> <small>In some platforms this value
+can be 3. &nbsp;在某些平台上这个值可能是3。</small>
+<p>For instance, for the default configuration parameters of <code>flyweight</code>,
+<i>overhead</i> is typically 2.5(<code>hashed_factory</code>)
++ 2(<code>refcounted</code>)
+= 4.5 words.</p>
+
+
+<p>例如，就<code>flyweight</code>的默认配置参数而言，<span style="font-style: italic;">额外开销</span>通常是2.5(<code>hashed_factory</code>)
++ 2(<code>refcounted</code>)
+= 4.5个字。
+</p>
+
+
+
+<h3><a name="overall_memory">Overall memory
+consumption &nbsp;总的内存消耗</a></h3>
+
+
+
+<p>
+Consider a scenario where there are <i>N</i> different
+objects of type <code>T</code>
+jointly taking <i>M</i> different values. The objects
+consume then
+<i>S</i> = <i>N</i>·<i>T</i>
+bytes, where <i>T</i> is defined as the
+average size of <code>T</code> (<code>sizeof(T)</code>
+plus dynamic
+memory allocated by <code>T</code> objects).
+If we now replace <code>T</code> by some instantiation
+<code>flyweight&lt;T,...&gt;</code>, the resulting
+memory consumption
+will be</p>
+
+
+
+<p>考虑这样一个场景：<i>N</i>个不同的 <code>T</code>类型的对象总共占据了<i>M</i>个不同的值。那么这些对象消耗<i>S</i> = <i>N</i>·<i>T</i>字节，<i>T</i>是类型<code>T</code>的平均大小（<code>sizeof(T)</code>加上&nbsp;<code>T</code>对象动态分配的内存）。如果我们现在用某种<code>flyweight&lt;T,...&gt;</code>的实例来替换 <code>T</code>，内存消耗的结果将会是：
+</p>
+
+
+
+<blockquote> <i>S<sub>F</sub></i> = <i>N</i>·<i>P</i>
++ <i>M</i>·(<i>T</i> + <i>overhead</i>),
+</blockquote>
+
+
+
+<p>
+where <i>P</i> is <code>sizeof(flyweight&lt;T,...&gt;)</code>,
+typically
+equal to <code>sizeof(void*)</code>, as seen <a href="#flyweight_size">before</a>.
+The ratio <i>S<sub>F</sub></i> / <i>S</i>
+is then</p>
+
+
+
+<p>在这里P是<code>sizeof(flyweight&lt;T,...&gt;)</code>，就像<a href="#flyweight_size">之前</a>看到的，通常情况下等于<code>sizeof(void*)</code>。那么<i>S<sub>F</sub></i> / <i>S</i>的比值是
+</p>
+
+
+
+<blockquote> <i>S<sub>F</sub></i> / <i>S</i>
+=
+(<i>P</i> / <i>T</i>)+ (<i>M</i> /
+  <i>N</i>)(1 + <i>overhead</i> / <i>T</i>).
+</blockquote>
+
+
+
+<p>
+<i>S<sub>F</sub></i> / <i>S</i>
+tends to its minimum, <i>P</i> / <i>T</i>,
+as <i>M</i> / <i>N</i> tends to 0, i.e. when
+the degree of value redundancy
+among <code>T</code> objects grows higher. On the other
+hand, the worst possible case
+<i>S<sub>F</sub></i> / <i>S</i> =
+1 + (<i>P</i> + <i>overhead</i>) / <i>T</i>
+happens when <i>M</i> / <i>N</i> = 1, that
+is, if there is no value redundancy at all; in this situation there is
+no point in applying the flyweight pattern in the first place.</p>
+
+
+
+<p>当 <i>M</i> / <i>N</i>趋近于0，也就是说，当<code>T</code>对象的值的冗余度增加的时候，<i>S<sub>F</sub></i> / <i>S</i>趋近于它的最小值<i>P</i> / <i>T</i>。另一方面，当<i>M</i> / <i>N</i> = 1，就是说，
+根本就没有冗余的值时，出现最差的情形
+<i>S<sub>F</sub></i> / <i>S</i> =
+1 + (<i>P</i> + <i>overhead</i>) / <i>T</i>，这种情况下当初引入flyweight模式就是没意义的。
+</p>
+
+
+
+<p align="center">
+<img src="memory.png" alt="relative memory consumption of Boost.Flyweight as a function of value diversity" height="411" width="446"><br>
+
+
+
+<b>Fig. 1: Relative memory consumption of Boost.Flyweight as a
+function of value diversity.</b>
+</p>
+
+
+
+<h2>
+<a name="time">Time efficiency &nbsp;时效</a>
+</h2>
+
+
+
+<p>
+The introduction of the flyweight pattern involves an extra level of
+indirection
+that, in general, results in some execution overhead when accessing the
+values. On
+the other hand, manipulation of flyweight objects is considerably
+faster than
+moving around the heavy values they stand for. We analyze qualitatively
+the
+execution overheads or improvements associated to the different usage
+contexts
+of Boost.Flyweight.</p>
+
+
+
+<p>引入flyweight模式牵涉到一层额外的间接，通常这会导致在存取值的时候产生一些额外开销。另一方面，操纵flyweight对象要显著快于它们所代表的
+重型对象。我们定性地分析Boost.Flyweight在不同使用环境下运行时的额外开销或者改进。
+</p>
+
+
+
+<h3><a name="initialization">Initialization
+&nbsp;初始化</a></h3>
+
+
+
+<p>
+As compared with the initialization an object of type <code>T</code>,
+constructing
+a <code>flyweight&lt;T&gt;</code> performs
+important extra work like looking
+up the value in the flyweight factory and inserting it if it is not
+present.
+So, construction of flyweights (other than copy construction, which is
+cheap), is expected to be noticeably slower than the construction of
+the
+underlying type <code>T</code>. Much of the time spent at
+constructing
+the associated <code>T</code> value proper can be saved,
+however, by
+using <a href="tutorial/key_value.html">key-value
+flyweights</a>.</p>
+
+
+
+<p>与一个<code>T</code>类型<code></code>对象的初始化相比，构造一个<code>flyweight&lt;T&gt;</code>要执行重要的额外工作比如在
+flyweight工厂里查找值并且在它不存在的时候插入它。因此，flyweights的创建（并非拷贝构造，这要廉价得多），可以预计要显著慢于底层类型T的构造。然而，通过使用<a href="tutorial/key_value.html">键-值flyweight</a>，许多花费在构造<code>T</code>值本身的时间是可以避免的。
+</p>
+
+
+
+<h3><a name="assignment">Assignment &nbsp;赋值</a></h3>
+
+
+
+<p>
+Assignment of flyweight objects is extremely fast, as it only involves
+assigning an internal handle type used to refer to the shared value.
+Moreover,
+assignment of <code>flyweight</code> objects never throws.
+Assignment time
+is influenced by the type of <a href="tutorial/configuration.html#tracking">tracking
+policy</a> used; in this regard,
+<a href="tutorial/configuration.html#no_tracking"><code>no_tracking</code></a>
+is the fastest option.</p>
+
+
+
+<p>flyweight对象的赋值极快，因为这只涉及到赋值一个引用到共享值的句柄。此外，<code>flyweight</code>对象的赋值绝不会抛出异
+常。赋值的时间受到<a href="tutorial/configuration.html#tracking">tracking policy</a>类型的影响；就这一点而言，<a href="tutorial/configuration.html#no_tracking"><code>no_tracking</code></a>是最快的选项。
+</p>
+
+
+
+<h3><a name="equality_comparison">Equality
+comparison &nbsp;判等</a></h3>
+
+
+
+<p>
+Comparing two <code>flyweight</code> objects for equality
+reduces to
+checking that the <i>addresses</i> of the values they are
+associated to
+are equal; in general, this operation is much faster than comparing the
+underlying values. This aspect is of particular relevance when the
+flyweight
+objects stand for complex values like those arising in the application
+of
+the <a href="examples.html#example3"><i>composite
+pattern</i></a>.</p>
+
+
+
+<p>判断2个<code>flyweight</code>对象是否相等降为判断它们所关联的值的<span style="font-style: italic;">地址</span>是否相同；通常情况下，这个操作要远远快过比较底层的值。<span style="color: rgb(0, 0, 0);">当</span>flyweight<span style="color: rgb(255, 0, 0);"><span style="color: rgb(0, 0, 0);">对象
+代表的是那些出现在</span></span><a href="examples.html#example3"><i>组合模式</i></a><span style="color: rgb(255, 0, 0);"><span style="color: rgb(0, 0, 0);">的应用程序的复杂的值时</span></span><span style="color: rgb(0, 0, 0);">这个方面特别重要。</span>
+</p>
+
+
+
+<h3><a name="value_access">Value access &nbsp;值存取</a></h3>
+
+
+
+<p>
+The conversion from <code>flyweight&lt;T&gt;</code>
+to <code>const T&amp;</code>
+relies on a level of indirection relating the flyweight objects to the
+values they are associated to; so, value access is expected to be
+slower
+when using Boost.Flyweight as compared to using the associated values
+directly. This overhead, however, can be masked by an indirect
+improvement
+resulting from locality and cache effects: as the set of different <code>T</code>
+values handled by an instantiation of <code>flyweight&lt;T&gt;</code>
+is
+generally much smaller than the equivalent family of <code>T</code>
+objects
+when Boost.Flyweight is not used, active values can fit better
+into the processor cache.</p>
+
+
+
+<p><span style="color: rgb(0, 0, 0);">从</span><code style="color: rgb(255, 0, 0);"><span style="color: rgb(0, 0, 0);">flyweight&lt;T&gt;</span></code><span style="color: rgb(0, 0, 0);">到</span><code style="color: rgb(0, 0, 0);">const T&amp;</code><span style="color: rgb(0, 0, 0);">的转换依赖于一层间接——从flyweight对象找到它们所关联的值；因此可以预计，当使用</span>Boost.Flyweight时，<span style="color: rgb(0, 0, 0);">值的</span><span style="color: rgb(0, 0, 0);">存取会比直接使用相关的值要慢一些。然而，这种额外负担能够被由于集中和缓存效果带来的间接改进所掩盖：因为</span><span style="color: rgb(0, 0, 0);">一个</span><code>flyweight&lt;T&gt;</code><span style="color: rgb(0, 0, 0);">的</span><span style="color: rgb(0, 0, 0);">实例管理的</span><span style="color: rgb(0, 0, 0);">不同</span><code>T</code><span style="color: rgb(0, 0, 0);">值的集合</span>通常要比没有使用Boost.Flyweight 时等价的<code>T</code>对象的家族小得多，活动的值可以更好的适应处理器的缓存。<span style="color: rgb(0, 0, 0);"></span>
+</p>
+
+
+
+<h2><a name="results">Experimental results
+&nbsp;实验结果</a></h2>
+
+
+
+<p>
+A <a href="examples.html#example6">profiling program</a>
+was devised to test
+the space and time efficiency of different instantiations of <code>flyweight</code>
+against a base situation not using Boost.Flyweight. The profiled
+scenarios are:</p>
+
+
+
+<p>设计了一个<a href="examples.html#example6">分析程序</a>以不使用Boost.Flyweight的情况作为基数来对比测试不同<code>flyweight</code>实例的空间和时间效率。这些分析场景是：</p>
+
+
+
+<ol>
+
+
+
+  <li><code>std::string</code>.</li>
+
+
+
+  <li><code>flyweight&lt;std::string&gt;</code>
+with default configuration aspects (<a href="tutorial/configuration.html#hashed_factory"><code>hashed_factory</code></a>,
+    <a href="tutorial/configuration.html#refcounted"><code>refcounted</code></a>
+tracking, <a href="tutorial/configuration.html#simple_locking"><code>simple_locking</code></a>).
+  </li>
+
+
+
+  <li><code>flyweight&lt;std::string,<a href="tutorial/configuration.html#no_tracking"><code>no_tracking</code></a>&gt;</code>.</li>
+
+
+
+  <li><code>flyweight&lt;std::string,<a href="tutorial/configuration.html#set_factory"><code>set_factory</code></a>&gt;</code>.</li>
+
+
+
+  <li><code>flyweight&lt;std::string,<a href="tutorial/configuration.html#set_factory"><code>set_factory</code></a>,<a href="tutorial/configuration.html#no_tracking"><code>no_tracking</code></a>&gt;</code>.</li>
+
+
+
+</ol>
+
+
+
+<p>
+Actually the types tested are not exactly those listed above, but
+instrumented
+versions that keep track of the allocated memory for profiling
+purposes.
+The program parses a text file into an array of words and then perform
+various
+manipulations involving the different context usages of Boost.Flyweight
+discussed
+<a href="#time">previously</a>. As our text file we
+have used the
+<a href="http://www.gutenberg.org/dirs/etext99/2donq10.txt">plain
+text</a>
+version of Project Gutenberg edition of <a href="http://www.gutenberg.org/etext/2000"><i>Don
+Quijote</i></a> (2.04 MB).</p>
+<p>实际测试的类型和上面列出来的不完全一致，而是修改后的可以跟踪内存分配的版本用以分析。该程序分析一个文本文件并将结果保存在一个单词数组里然后进行各种操作，涉及到<a href="performance.html#time">前面</a>讨论的Boost.Flyweight的各种使用环境。我们使用<i><a href="http://www.gutenberg.org/etext/2000"><i>Don
+Quijote</i></a></i>的Project Gutenberg版本的<a href="http://www.gutenberg.org/dirs/etext99/2donq10.txt">纯文本</a>格式(2.04 MB)作为我们的文本文件。
+</p>
+
+
+
+<h3><a name="msvc_80">Microsoft Visual C++ 8.0</a></h3>
+
+
+
+<p>
+The program was built with default release settings and <code>_SECURE_SCL=0</code>.
+Tests were run under Windows XP in a machine equipped with an Intel
+Core 2 Duo T5500
+processor and 1 GB of RAM.</p>
+
+
+
+<p>程序使用默认的release设置编译，并且设置<code>_SECURE_SCL</code>选项为0。测试程序运行在一台配备了Intel
+Core 2 Duo T5500和1GB内存的Windwos&nbsp;XP机器上。
+</p>
+
+
+
+<h4><a name="msvc_80_memory">Memory &nbsp;内存</a></h4>
+
+
+
+<p align="center">
+<img src="memory_msvc_80.png" alt="memory consumption (MB), MSVC++ 8.0" height="322" width="798"><br>
+
+
+
+<b>Fig. 2: Memory consumption, MSVC++ 8.0. Values in MB.</b>
+</p>
+
+
+
+<p>
+The results show the memory consumption figures for the different
+profiled
+scenarios.
+The standard library implementation of MSVC++ 8.0 features the
+so-called
+small buffer optimization for strings, by which <code>std::string</code>
+objects hold a small buffer that can be used when the string is short,
+thus avoding dynamic allocations. This results in <code>sizeof(std::string)</code>
+being quite high, 28 bytes. In our particular test strings are almost
+always
+held in the small buffer, so the minimum <a href="#overall_memory"><i>S<sub>F</sub></i>
+/ <i>S</i></a>
+achievable is 4/28 = 14.3%, which is quite close to the experimental
+results, given that the memory devoted to storage of shared values
+is residual (around 3% of total memory) due to the high word redundancy
+of the text source.</p>
+
+
+
+<p>这个结果显示了不同的分析场景下内存消耗指标。MSVC++8.0的标准库实现了一个所谓的针对字符串的小缓冲区优化，当字符串较短的时候可以直接存储在<code>std::string</code>自带的这个小缓冲区里，于是避免了动态分配。这导致<code>sizeof(std::string)</code>相当高，有28个字节。在我们这个测试里字符串几乎总是存储在这个小的缓冲区里，因此<a href="performance.html#overall_memory"><i>S<sub>F</sub></i>
+/ <i>S</i></a>可以达因此到的最小值是4/28 = 14.3%，这跟实验结果相当接近了，由于原文中单词高度的冗余，用来存储共享值的内存不值一提（大概占总内存的3%）。
+</p>
+
+
+
+<h4><a name="msvc_80_time">Execution time
+&nbsp;执行时间</a></h4>
+
+
+
+<p align="center">
+<img src="time_msvc_80.png" alt="execution time (s), MSVC++ 8.0" height="324" width="820"><br>
+
+
+
+<b>Fig. 3: Execution time, MSVC++ 8.0. Values in seconds.</b>
+</p>
+
+
+
+<p>
+The figure displays execution times for the profiled scenarios in
+different
+usage contexts. In accordance with our previous
+<a href="#time">qualitative analysis</a>,
+initialization of <code>flyweight</code>s
+carries an important overhead with respect to the base case scenario
+(between 20% and 40%
+of additional execution time), while the other usage contexts
+(assignment, equality comparison and value access) have performance
+gains,
+with speedup factors of more than 10 in some cases. The use of a <a href="tutorial/configuration.html#refcounted"><code>refcounted</code></a>
+tracking policy introduces penalties with respect to
+<a href="tutorial/configuration.html#no_tracking"><code>no_tracking</code></a>
+in initialization and assignment, but has no effect in equality
+comparison
+and value access.</p>
+
+
+
+<p>这幅图显示了不同的分析场景在各种使用环境下的执行时间。与我们之前的<a href="#time">定性分析</a>一致，与比较基数相比<code>flyweight</code>s的初始化有一个明显的额外开销（20% 到 40%的额外执行时间不等 ），然而其它的使用环境下（赋值，判等和值存取）获得了性能的提升，在某些情况下加速系数高于10。与<a href="tutorial/configuration.html#no_tracking"><code>no_tracking</code></a>跟踪策略相比<a href="tutorial/configuration.html#refcounted"><code>refcounted</code></a>跟踪策略在初始化和赋值时性能有所下降，但是在判等和值存取方面没有什么区别。
+</p>
+
+
+
+<h3><a name="gcc_344">GNU GCC 3.4.4</a></h3>
+
+
+
+<p>
+The Cygwin/MinGW version of the compiler was used, with command options
+<code>-ftemplate-depth-128 -O3 -finline-functions -DNDEBUG</code>.
+Tests were run under a Cygwin terminal in the same machine as <a href="#msvc_80">before</a>.</p>
+<p>使用的是Cygwin/MinGW里的版本，带有<code>-ftemplate-depth-128 -O3 -finline-functions -DNDEBUG</code>选项<code>。</code>&nbsp;测试程序运行的Cygwin终端和<a href="#msvc_80">之前</a>的测试在同一台机器上。</p>
+
+
+
+<h4><a name="gcc_344_memory">Memory</a></h4>
+
+
+
+<p align="center">
+<img src="memory_gcc_344.png" alt="memory consumption (MB), GCC 3.4.4" height="322" width="798"><br>
+
+
+
+<b>Fig. 4: Memory consumption, GCC 3.4.4. Values in MB.</b>
+</p>
+
+
+
+<p>
+The standard library used by GCC 3.4.4 implements <code>std::string</code>
+using <a href="http://en.wikipedia.org/wiki/Copy-on-write">copy-on-write</a>
+optimization techniques, which leads to very small value redundancy for
+some usage patterns. This explains why the memory reduction achieved
+by Boost.Flyweight is so poor in this case. Other contexts where
+assignment
+is much less used than direct construction will favor Boost.Flyweight
+over plain copy-on-write <code>std::string</code>s.</p>
+
+<p>GCC 3.4.4使用的标准库实现<code>std::string</code>时使用了<a href="http://en.wikipedia.org/wiki/Copy-on-write">写拷贝</a>优化技术，导致在某些使用方式下冗余的值非常少。这解释了为什么在这种条件下使用Boost.Flyweight所减少的内存少的可怜。在那些更多的采用直接构造而非赋值的使用环境下，Boost.Flyweight的表现优于普通的写拷贝<code>std::string</code>s。
+</p>
+
+
+
+<h4><a name="gcc_344_time">Execution time &nbsp;执行时间</a></h4>
+
+
+
+<p align="center">
+<img src="time_gcc_344.png" alt="execution time (s), GCC 3.4.4" height="324" width="820"><br>
+
+
+
+<b>Fig. 5: Execution time, GCC 3.4.4. Values in seconds.</b>
+</p>
+
+
+
+<p>
+Relative performance figures are similar to those obtained for
+<a href="#msvc_80_time">MSVC++ 8.0</a>, although
+some of the
+speedups achieved by Boost.Flyweight are higher here (×25
+in equality comparison and up to ×100 in assignment when
+<a href="tutorial/configuration.html#no_tracking"><code>no_tracking</code></a>
+is in effect).</p>
+
+<p>相关的性能指标与<a href="performance.html#msvc_80_time">MSVC++ 8.0</a>的结果类似， 然而这次某些使用Boost.Flyweight获得的加速效果更高（判等时提高了25倍当使用<a href="tutorial/configuration.html#no_tracking"><code>no_tracking</code></a>时赋值提高了100倍）。
+</p>
+
+
+
+<h2><a name="conclusions">Conclusions &nbsp;结论</a></h2>
+
+
+
+<p>
+The introduction of Boost.Flyweight in application scenarios with very
+high value redundancy yields important reductions in memory
+consumption:
+this is especially relevant when data volume approaches the limits of
+physical memory in the machine, since Boost.Flyweight can avoid virtual
+memory thrashing thus making the application viable. We have shown
+how to estimate the achievable reduction in memory consumption from
+some basic value statistics and knowledge of the <code>flyweight</code>
+configuration aspects being used.</p>
+
+<p>在值冗余非常高的应用场合使用Boost.Flyweight可以显著减少内存用量：尤其是当数据量达到机器物理内存限制的时候，因为
+Boost.Flyweight可以避免虚拟内存震荡于是让应用程序可用性更强。我们已经演示了怎样评估可以减少的内存用量，通过一些基本的<span class="wbtr_mn">统计数字</span>和使用到配
+置的<code>flyweight</code>选项知识。
+</p>
+
+
+
+<p>
+Boost.Flyweight can also accelerate execution times in areas other than
+object initialization, due to the fastest manipulation of small
+flyweight objects and to locality and cache effects arising from the
+drastic reduction of the set of allocated values.</p>
+
+<p>
+Boost.Flyweight可以加速除了对象初始化以外的执行速度，因为操纵小型的flyweight对象很快，还有因为所分配的值的集合急剧减少带来的集中和缓存效果。
+</p>
+
+
+
+<hr>
+<div class="prev_link"><a href="reference/tracking.html"><img src="prev.gif" alt="tracking policies" border="0"><br>
+
+
+
+Tracking policies
+</a></div>
+
+
+
+<div class="up_link"><a href="index.html"><img src="up.gif" alt="index" border="0"><br>
+
+
+
+Index
+</a></div>
+
+
+
+<div class="next_link"><a href="examples.html"><img src="next.gif" alt="examples" border="0"><br>
+
+
+
+Examples
+</a></div>
+
+
+
+<br style="" clear="all">
+
+
+
+<br style="" clear="all">
+
+
+
+<br>
+
+
+
+<p>Revised June 22nd 2009</p>
+
+
+
+<p>© Copyright 2006-2009 Joaquín M
+López Muñoz.
+Distributed under the Boost Software License, Version 1.0. (See
+accompanying file <a href="../../../LICENSE_1_0.txt">
+LICENSE_1_0.txt</a> or copy at <a href="http://www.boost.org/LICENSE_1_0.txt">
+http://www.boost.org/LICENSE_1_0.txt</a>)
+</p>
+
+
+
+</body></html>

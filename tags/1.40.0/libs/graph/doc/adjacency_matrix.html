@@ -1,0 +1,312 @@
+<!DOCTYPE HTML PUBLIC "-//W3C//DTD HTML 4.01 Transitional//EN">
+<html><head><meta content="text/html; charset=UTF-8" http-equiv="content-type"><!--
+  -- Copyright (c) Jeremy Siek 2000
+  --
+  -- Distributed under the Boost Software License, Version 1.0.
+  -- (See accompanying file LICENSE_1_0.txt or copy at
+  -- http://www.boost.org/LICENSE_1_0.txt)
+  -->
+<title>Boost Graph Library: Adjacency Matrix</title></head>
+
+<body alink="#ff0000" bgcolor="#ffffff" link="#0000ee" text="#000000" vlink="#551a8b"> 
+<img src="../../../boost.png" alt="C++ Boost" height="86" width="277"> 
+
+<br clear="">
+
+<h1><a name="sec:adjacency-matrix-class"></a>
+<pre>adjacency_matrix&lt;Directed, VertexProperty, <br>                 EdgeProperty, GraphProperty,<br>                 Allocator&gt;<br></pre>
+</h1><tt>adjacency_matrix</tt> 类使用传统的邻接矩阵存储格式实现了BGL图的接口。对于一个具有 <i>V</i> 个顶点的图，使用一个 <i>V x V</i> 的矩阵，其中每个元素 <i>a<sub>ij</sub></i> 为一个布尔标志，表示是否存在一条从顶点 <i>i</i> 到顶点 <i>j</i> 的边。<a href="#fig:adj-matrix-graph">图 1</a> 示范了一个图的邻接矩阵表示法。
+
+
+<div align="center"><a name="fig:adj-matrix-graph"></a><a name="1509"></a>
+<table>
+<caption align="bottom"><strong>图 1:</strong> 一个有向图的邻接矩阵表示法。</caption>
+<tbody><tr><td><img src="./figs/adj-matrix-graph3.gif" height="284" width="386"></td>
+<td><img src="./figs/adj-matrix.gif" height="136" width="135"></td></tr>
+</tbody></table>
+</div>与邻接表相比，矩阵格式的优点在于，边的插入和删除是常量时间的。但是也有几个缺点。首先是内存的总量为
+<i>O(V<sup>2</sup>)</i> 而不是 <i>O(V + E)</i> (其中 <i>E</i> 为边数量)。其次是遍历各个顶点的所有出边(如广度优先搜索)需要
+<i>O(V<sup>2</sup>)</i> 时间，而邻接表只需要 <i>O(V + E)</i> 时间。简单地说，对于密集图(<i>E</i> 接近于
+<i>V<sup>2</sup></i>)而言，使用
+<tt>adjacency_matrix</tt> 较好，而对于稀疏图(<i>E</i> 远小于 <i>V<sup>2</sup></i>) 来说则使用 <a href="adjacency_list.html"><tt>adjacency_list</tt></a> 更好。<tt>adjacency_matrix</tt> 类扩展了传统的数据结构，允许用 <a href="adjacency_list.html"><tt>adjacency_list</tt></a> 所支持的同样的属性模板参数来将一些对象关联至顶点和边。可以是
+<a href="bundles.html">绑定属性bundled properties</a> 或标准的(后向兼容)
+<a href="using_adjacency_list.html#sec:adjacency-list-properties">内部属性interior
+properties</a>。所有属性值的类型必须是可复制构造、可赋值和可缺省构造的。对于无向图的情况，<tt>adjacency_matrix</tt> 类不使用完整的 <i>V x V</i>
+矩阵，而是使用一个下三角(对角线以下)，因为无向图的矩阵是对称的。这样存储可减少至 <i>(V<sup>2</sup>)/2</i>。<a href="#fig:undir-adj-matrix-graph">图 2</a> 示范了一个无向图的邻接矩阵表示法。
+
+
+<div align="center"><a name="fig:undir-adj-matrix-graph"></a><a name="1509"></a>
+<table>
+<caption align="bottom"><strong>图 2:</strong> 一个无向图的邻接矩阵表示法。</caption>
+<tbody><tr><td><img src="./figs/undir-adj-matrix-graph3.gif" height="240" width="260"></td>
+<td><img src="./figs/undir-adj-matrix2.gif" height="136" width="135"></td></tr>
+</tbody></table>
+</div>
+
+
+<h3>Example 示例</h3>创建 <a href="#fig:adj-matrix-graph">图 1</a> 所示范的图。 
+<pre>  enum { A, B, C, D, E, F, N };<br>  const char* name = "ABCDEF";<br>  <br>  typedef boost::adjacency_matrix&lt;boost::directedS&gt; Graph;<br>  Graph g(N);<br>  add_edge(B, C, g);<br>  add_edge(B, F, g);<br>  add_edge(C, A, g);<br>  add_edge(C, C, g);<br>  add_edge(D, E, g);<br>  add_edge(E, D, g);<br>  add_edge(F, A, g);<br><br>  std::cout &lt;&lt; "vertex set: ";<br>  boost::print_vertices(g, name);<br>  std::cout &lt;&lt; std::endl;<br><br>  std::cout &lt;&lt; "edge set: ";<br>  boost::print_edges(g, name);<br>  std::cout &lt;&lt; std::endl;<br><br>  std::cout &lt;&lt; "out-edges: " &lt;&lt; std::endl;<br>  boost::print_graph(g, name);<br>  std::cout &lt;&lt; std::endl;<br></pre>输出为：
+<pre>  vertex set: A B C D E F <br><br>  edge set: (B,C) (B,F) (C,A) (C,C) (D,E) (E,D) (F,A) <br><br>  out-edges: <br>  A --&gt; <br>  B --&gt; C F <br>  C --&gt; A C <br>  D --&gt; E <br>  E --&gt; D <br>  F --&gt; A <br></pre>创建 <a href="#fig:undir-adj-matrix-graph">图 2</a> 所示范的图。
+<pre>  enum { A, B, C, D, E, F, N };<br>  const char* name = "ABCDEF";<br><br>  typedef boost::adjacency_matrix&lt;boost::undirectedS&gt; UGraph;<br>  UGraph ug(N);<br>  add_edge(B, C, ug);<br>  add_edge(B, F, ug);<br>  add_edge(C, A, ug);<br>  add_edge(D, E, ug);<br>  add_edge(F, A, ug);<br><br>  std::cout &lt;&lt; "vertex set: ";<br>  boost::print_vertices(ug, name);<br>  std::cout &lt;&lt; std::endl;<br><br>  std::cout &lt;&lt; "edge set: ";<br>  boost::print_edges(ug, name);<br>  std::cout &lt;&lt; std::endl;<br><br>  std::cout &lt;&lt; "incident edges: " &lt;&lt; std::endl;<br>  boost::print_graph(ug, name);<br>  std::cout &lt;&lt; std::endl;<br></pre>输出为：
+<pre>  vertex set: A B C D E F <br><br>  edge set: (C,A) (C,B) (E,D) (F,A) (F,B) <br><br>  incident edges: <br>  A &lt;--&gt; C F <br>  B &lt;--&gt; C F <br>  C &lt;--&gt; A B <br>  D &lt;--&gt; E <br>  E &lt;--&gt; D <br>  F &lt;--&gt; A B <br></pre>
+
+
+<h3>Where Defined 定义于</h3>
+
+<a href="../../../boost/graph/adjacency_matrix.hpp"><tt>boost/graph/adjacency_matrix.hpp</tt></a>
+
+
+<h3>Template Parameters 模板参数</h3>
+
+<p>
+<table border="1">
+
+<tbody><tr>
+<th>Parameter</th><th>Description</th><th>Default</th>
+</tr>
+
+<tr>
+  <td><tt>Directed</tt></td>
+  <td>指定有向图或无向图的选择子。选项为 <tt>directedS</tt> 和 <tt>undirectedS</tt>.</td>
+  <td><tt>directedS</tt></td>
+</tr>
+<tr>
+  <td><tt>VertexProperty</tt></td>
+  <td>用于指定内部属性存储。</td>
+  <td><tt>no_property</tt></td>
+</tr>
+<tr>
+  <td><tt>EdgeProperty</tt></td>
+  <td>用于指定内部属性存储。</td>
+  <td><tt>no_property</tt></td>
+</tr>
+<tr>
+  <td><tt>GraphProperty</tt></td>
+  <td>用于指定图对象的属性存储。</td>
+  <td><tt>no_property</tt></td>
+</tr>
+
+</tbody></table>
+
+</p><h3>Model Of 以...为模型</h3>
+
+<a href="./VertexAndEdgeListGraph.html">点边列表图VertexAndEdgeListGraph</a>, 
+<a href="./IncidenceGraph.html">关联图Incidence Graph</a>,
+<a href="./BidirectionalGraph.html">双向图Bidirectional Graph</a>,
+<a href="./AdjacencyMatrix.html">邻接矩阵AdjacencyMatrix</a>, <a href="./MutablePropertyGraph.html">可变属性图MutablePropertyGraph</a>,
+<a href="../../utility/CopyConstructible.html">可复制构造CopyConstructible</a>, 和 <a href="../../utility/Assignable.html">可赋值Assignable</a>。
+
+
+<h3>Associates Types 关联类型</h3>
+
+<hr>
+
+<tt>graph_traits&lt;adjacency_matrix&gt;::vertex_descriptor</tt>
+<br><br>与
+<tt>adjacency_matrix</tt> 关联的顶点描述符类型。<br>
+(<a href="./Graph.html">图Graph</a> 的要求)
+
+<hr>
+
+<tt>graph_traits&lt;adjacency_matrix&gt;::edge_descriptor</tt>
+<br><br>与
+<tt>adjacency_matrix</tt> 关联的边描述符类型。<br>
+ (<a href="Graph.html">图Graph</a> 的要求)
+
+<hr>
+<tt>graph_traits&lt;adjacency_matrix&gt;::vertex_iterator</tt>
+<br><br>
+  由 <tt>vertices()</tt> 返回的迭代器类型。该顶点迭代器为 <a href="http://www.sgi.com/tech/stl/RandomAccessIterator.html">随机访问迭代器</a>。 <br>
+ (<a href="VertexListGraph.html">点边图VertexListGraph</a> 的要求)
+
+<hr>
+<tt>graph_traits&lt;adjacency_matrix&gt;::edge_iterator</tt>
+<br><br>
+  由 <tt>edges()</tt> 返回的迭代器类型。该迭代器为 <a href="../../utility/MultiPassInputIterator.html">多遍输入迭代器</a>。<br>
+ (<a href="EdgeListGraph.html">边列表图EdgeListGraph</a> 的要求)
+
+<hr>
+<tt>graph_traits&lt;adjacency_matrix&gt;::out_edge_iterator</tt>
+<br><br>由 <tt>out_edges()</tt> 返回的迭代器类型。该迭代器为 <a href="../../utility/MultiPassInputIterator.html">多遍输入迭代器</a>。 <br>
+  (<a href="IncidenceGraph.html">关联图IncidenceGraph</a> 的要求)
+
+<hr>
+<tt>graph_traits&lt;adjacency_matrix&gt;::in_edge_iterator</tt>
+<br><br>由 <tt>in_edges()</tt> 返回的迭代器类型。该迭代器为 <a href="../../utility/MultiPassInputIterator.html">多遍输入迭代器</a>。 <br>
+  (<a href="BidirectionalGraph.html">双向图BidirectionalGraph</a> 的要求)
+
+<hr>
+<tt>graph_traits&lt;adjacency_matrix&gt;::adjacency_iterator</tt>
+<br><br>由 <tt>adjacent_vertices()</tt> 返回的迭代器类型。该迭代器为与出边迭代器相同的概念。<br>
+  (<a href="AdjacencyGraph.html">关联图AdjacencyGraph</a> 的要求)
+
+<hr>
+<tt>graph_traits&lt;adjacency_matrix&gt;::directed_category</tt>
+<br><br>提供关于图是有向的(<tt>directed_tag</tt>)或是无向的(<tt>undirected_tag</tt>)的信息。<br>
+  (<a href="Graph.html">图Graph</a> 的要求)
+
+<hr>
+<tt>graph_traits&lt;adjacency_matrix&gt;::edge_parallel_category</tt>
+<br><br>邻接矩阵不允许插入平行边，所以该类型总为
+  <tt>disallow_parallel_edge_tag</tt>。<br>
+  (<a href="Graph.html">图Graph</a> 的要求)
+
+<hr>
+<tt>graph_traits&lt;adjacency_matrix&gt;::vertices_size_type</tt>
+<br><br>用于处理图中顶点数量的类型。<br>
+  (<a href="VertexListGraph.html">点列表图VertexListGraph</a> 的要求)
+
+<hr>
+<tt>graph_traits&lt;adjacency_matrix&gt;::edges_size_type</tt>
+<br><br>用于处理图中边数量的类型。<br>
+  (<a href="EdgeListGraph.html">边列表图EdgeListGraph</a> 的要求)
+
+<hr>
+<tt>graph_traits&lt;adjacency_matrix&gt;::degree_size_type</tt>
+<br><br>用于处理单个顶点的出边数量的类型。<br>
+  (<a href="IncidenceGraph.html">关联图IncidenceGraph</a> 的要求)
+
+<hr>
+<tt>property_map&lt;adjacency_matrix, PropertyTag&gt;::type</tt><br>
+<tt>property_map&lt;adjacency_matrix, PropertyTag&gt;::const_type</tt>
+<br><br>图中顶点属性或边属性所用的映射类型。特定属性由 <tt>PropertyTag</tt> 模板参数指定，且必须与该图的 <tt>VertexProperty</tt> 或 <tt>EdgeProperty</tt> 中所指定的某个属性相匹配。<br>
+  (<a href="PropertyGraph.html">属性图PropertyGraph</a> 的要求)
+
+<hr>
+
+<h3>Member Functions 成员函数</h3>
+
+<hr>
+<pre>adjacency_matrix(vertices_size_type n,<br>                 const GraphProperty&amp; p = GraphProperty())<br></pre>创建一个具有 <tt>n</tt> 个顶点和零边的图对象。<br>
+(<a href="MutableGraph.html">可变图MutableGraph</a> 的要求)
+
+<hr>
+<pre>template &lt;typename EdgeIterator&gt;<br>adjacency_matrix(EdgeIterator first,<br>                 EdgeIterator last,<br>                 vertices_size_type n,<br>                 const GraphProperty&amp; p = GraphProperty())<br></pre>创建一个具有 <tt>n</tt> 个顶点的图对象，以由区间 <tt>[first, last)</tt> 所给出的边列表中的边为边。<tt>EdgeIterator</tt> 的值类型必须是一个
+  <tt>std::pair</tt>，且 pair 中的类型是一个整数类型。这些整数将对应于各顶点，且必须位于区间
+  <tt>[0, n)</tt> 中。<br>
+  (<a href="IteratorConstructibleGraph.html">可迭代器构造图IteratorConstructibleGraph</a> 的要求)
+
+<hr>
+<pre>template &lt;typename EdgeIterator, typename EdgePropertyIterator&gt;<br>adjacency_matrix(EdgeIterator first, EdgeIterator last,<br>                 EdgePropertyIterator ep_iter,<br>                 vertices_size_type n,<br>                 const GraphProperty&amp; p = GraphProperty())<br></pre>创建一个具有 <tt>n</tt> 个顶点的图对象，以由区间 <tt>[first, last)</tt> 所给出的边列表中的边为边。<tt>EdgeIterator</tt> 的值类型必须是一个
+  <tt>std::pair</tt>，且 pair 中的类型是一个整数类型。这些整数将对应于各顶点，且必须位于区间
+  <tt>[0, n)</tt> 中。<tt>ep_iter</tt> 的 <tt>value_type</tt> 应为 <tt>EdgeProperty</tt>。
+
+<hr>
+
+
+<h3>Non-Member Functions 非成员函数</h3>
+
+<hr>
+<pre>std::pair&lt;vertex_iterator, vertex_iterator&gt;<br>vertices(const adjacency_matrix&amp; g)<br></pre>返回一个迭代器区间，提供对图
+<tt>g</tt> 的顶点集的访问。&nbsp;<br>
+(<a href="VertexListGraph.html">点列表图VertexListGraph</a> 的要求)
+
+<hr>
+<pre>std::pair&lt;edge_iterator, edge_iterator&gt;<br>edges(const adjacency_matrix&amp; g);<br></pre>返回一个迭代器区间，提供对图
+<tt>g</tt> 的边集的访问。
+
+<br>
+(<a href="EdgeListGraph.html">边列表图EdgeListGraph</a> 的要求)
+
+<hr>
+<pre>std::pair&lt;adjacency_iterator, adjacency_iterator&gt;<br>adjacent_vertices(vertex_descriptor v, const adjacency_matrix&amp; g)<br></pre>返回一个迭代器区间，提供对图 <tt>g</tt> 的顶点&nbsp;<tt>v</tt> 的邻接顶点的访问。<br>
+(<a href="AdjacencyGraph.html">关联图AdjacencyGraph</a> 的要求)
+
+<hr>
+<pre>std::pair&lt;out_edge_iterator, out_edge_iterator&gt;<br>out_edges(vertex_descriptor v, const adjacency_matrix&amp; g)<br></pre>返回一个迭代器区间，提供对图 <tt>g</tt> 的顶点&nbsp;<tt>v</tt> 的出边的访问。如果是无向图，则该迭代器区间提供对顶点&nbsp;<tt>v</tt> 的所有邻接边的访问。<br>
+(<a href="IncidenceGraph.html">关联图IncidenceGraph</a> 的要求)
+
+<hr>
+<pre>vertex_descriptor<br>source(edge_descriptor e, const adjacency_matrix&amp; g)<br></pre>返回边 <tt>e</tt> 的源顶点。
+
+<br>
+(<a href="IncidenceGraph.html">关联图IncidenceGraph</a> 的要求)
+
+<hr>
+<pre>vertex_descriptor<br>target(edge_descriptor e, const adjacency_matrix&amp; g)<br></pre>返回边 <tt>e</tt> 的目标顶点。
+
+<br>
+(<a href="IncidenceGraph.html">关联图IncidenceGraph</a> 的要求)
+
+<hr>
+<pre>degree_size_type<br>out_degree(vertex_descriptor u, const adjacency_matrix&amp; g)<br></pre>返回顶点 <tt>u</tt> 的出边数量。
+
+<br>
+(<a href="IncidenceGraph.html">关联图IncidenceGraph</a> 的要求) 
+<hr>
+
+<hr>
+<pre>std::pair&lt;in_edge_iterator, in_edge_iterator&gt;<br>in_edges(vertex_descriptor v, const adjacency_matrix&amp; g)<br></pre>返回一个迭代器区间，提供对图 <tt>g</tt> 的顶点&nbsp;<tt>v</tt> 的入边的访问。如果是无向图，则该迭代器区间提供对顶点&nbsp;<tt>v</tt> 的所有邻接边的访问。<br>
+(<a href="BidirectionalGraph.html">双向图BidirectionalGraph</a> 的要求)
+
+<hr>
+<pre>degree_size_type<br>in_degree(vertex_descriptor u, const adjacency_matrix&amp; g)<br></pre>返回顶点 <tt>u</tt> 的入边数量。<br>
+(<a href="BidirectionalGraph.html">双向图BidirectionalGraph</a> 的要求) 
+<hr>
+
+<hr>
+<pre>vertices_size_type num_vertices(const adjacency_matrix&amp; g)<br></pre>返回图 <tt>g</tt> 中的顶点数量。
+
+<br>
+(<a href="VertexListGraph.html">点列表图VertexListGraph</a> 的要求)
+
+<hr>
+<pre>edges_size_type num_edges(const adjacency_matrix&amp; g)<br></pre>
+返回图 <tt>g</tt> 中的边数量。
+
+<br>
+(<a href="EdgeListGraph.html">边列表图EdgeListGraph</a> 的要求)
+
+<hr>
+<pre>vertex_descriptor vertex(vertices_size_type n, const adjacency_matrix&amp; g)<br></pre>返回图的顶点列表中的第 n 个顶点。&nbsp;
+
+<hr>
+<pre>std::pair&lt;edge_descriptor, bool&gt;<br>edge(vertex_descriptor u, vertex_descriptor v,<br>     const adjacency_matrix&amp; g)<br></pre>返回图 <tt>g</tt> 中连接顶点 <tt>u</tt>&nbsp;和 <tt>v</tt>&nbsp;的一条边。&nbsp;<br>
+(<a href="AdjacencyMatrix.html">关联图AdjacencyMatrix</a> 的要求)
+
+<hr>
+<pre>std::pair&lt;edge_descriptor, bool&gt;<br>add_edge(vertex_descriptor u, vertex_descriptor v,<br>         adjacency_matrix&amp; g)<br></pre>将边 <i>(u,v)</i> 增加至图中，并返回新边的边描述符。如果要加入的边已在图中，则不会加入且 <tt>bool</tt> 标志为 <tt>false</tt>。该操作不会令图中的任何迭代器或描述符失效。<br>
+(<a href="MutableGraph.html">可变图MutableGraph</a> 的要求)
+
+<hr>
+<pre>std::pair&lt;edge_descriptor, bool&gt;<br>add_edge(vertex_descriptor u, vertex_descriptor v,<br>         const EdgeProperty&amp; p,<br>         adjacency_matrix&amp; g)<br></pre>将边 <i>(u,v)</i> 增加至图中，并将 <tt>p</tt> 附加为该边的内部属性存储值。具体细节请参见前一个
+<tt>add_edge()</tt> 成员函数。&nbsp;
+
+<hr>
+<pre>void remove_edge(vertex_descriptor u, vertex_descriptor v,<br>                 adjacency_matrix&amp; g)<br></pre>从图中删除边 <tt>(u,v)</tt>。<br>
+(<a href="MutableGraph.html">可变图MutableGraph</a> 的要求)
+
+<hr>
+<pre>void remove_edge(edge_descriptor e, adjacency_matrix&amp; g)<br></pre>从图中删除边 <tt>e</tt>。本函数等价于调用 <tt>remove_edge(source(e, g), target(e, g), g)</tt>。<br>
+(<a href="MutableGraph.html">可变图MutableGraph</a> 的要求)
+
+<hr>
+<pre>void clear_vertex(vertex_descriptor u, adjacency_matrix&amp; g)<br></pre>删除顶点&nbsp;<tt>u</tt> 的所有出边和入边。该顶点则仍然保留在图的顶点集中。<br>
+(<a href="MutableGraph.html">可变图MutableGraph</a> 的要求)
+
+<hr>
+<pre>template &lt;typename Property&gt;<br>property_map&lt;adjacency_matrix, Property&gt;::type<br>get(Property, adjacency_matrix&amp; g)<br><br>template &lt;typename Property&gt;<br>property_map&lt;adjacency_matrix, Property&gt;::const_type<br>get(Property, const adjacency_matrix&amp; g)<br></pre>返回由
+<tt>PropertyTag</tt> 指定的顶点属性的属性映射对象。<tt>PropertyTag</tt> 必须与在该图的 <tt>VertexProperty</tt> 模板参数中所指定的某一个属性相匹配。&nbsp;<br>
+(<a href="PropertyGraph.html">属性图PropertyGraph</a> 的要求)
+
+<hr>
+<pre>template &lt;typename Property, typename X&gt;<br>typename property_traits&lt;<br>  typename property_map&lt;adjacency_matrix, Property&gt;::const_type<br>&gt;::value_type<br>get(Property, const adjacency_matrix&amp; g, X x)<br></pre>返回 <tt>x</tt> 的属性值，其中 <tt>x</tt> 是一个顶点描述符或边描述符。&nbsp;<br>
+(<a href="PropertyGraph.html">属性图PropertyGraph</a> 的要求)
+
+<hr>
+<pre>template &lt;typename Property, typename X, typename Value&gt;<br>void<br>put(Property, const adjacency_matrix&amp; g, X x, const Value&amp; value)<br></pre>将 <tt>x</tt> 的属性值设为
+<tt>value</tt>。<tt>x</tt> 是一个顶点描述符或边描述符。<tt>Value</tt> 必须可以转换为
+<tt>typename property_traits&lt;property_map&lt;adjacency_matrix, Property&gt;::type&gt;::value_type</tt>.<br>
+(<a href="PropertyGraph.html">属性图PropertyGraph</a> 的要求)
+
+<hr>
+<pre>template &lt;typename GraphProperty, typename GraphProperty&gt;<br>typename property_value&lt;GraphProperty, GraphProperty&gt;::type&amp;<br>get_property(adjacency_matrix&amp; g, GraphProperty)<br></pre>返回由 <tt>GraphProperty</tt> 所指定的关联至图对象 <tt>g</tt> 的属性。该&nbsp;<tt>property_value</tt>
+traits 类定义于 <tt>boost/pending/property.hpp</tt>。
+
+<hr>
+<pre>template &lt;typename GraphProperty, typename GraphProperty&gt;<br>const typename property_value&lt;GraphProperty, GraphProperty&gt;::type&amp;<br>get_property(const adjacency_matrix&amp; g, GraphProperty)<br></pre>返回由 <tt>GraphProperty</tt> 所指定的关联至图对象 <tt>g</tt> 的属性。该&nbsp;<tt>property_value</tt>
+traits 类定义于 <tt>boost/pending/property.hpp</tt>。
+
+
+<hr>
+</body></html>

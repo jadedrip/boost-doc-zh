@@ -1,0 +1,410 @@
+<!DOCTYPE html PUBLIC "-//W3C//DTD HTML 4.01 Transitional//EN">
+<html><head>
+  <meta http-equiv="Content-Type" content="text/html; charset=utf-8">
+
+  <title>Boost 随机数库：分布</title></head>
+
+
+<body bgcolor="#ffffff" text="#000000">
+  <h1>随机数库：分布</h1>
+
+  <ul>
+    <li><a href="#intro">简介</a></li>
+
+    <li><a href="#synopsis">概览</a></li>
+
+    <li><a href="#uniform_smallint"><code>uniform_smallint</code> 类模板</a></li>
+
+    <li><a href="#uniform_int"><code>uniform_int</code> 类模板</a></li>
+
+    <li><a href="#uniform_01"><code>uniform_01</code> 类模板</a></li>
+
+    <li><a href="#uniform_real"><code>uniform_real</code> 类模板</a></li>
+
+    <li><a href="#bernoulli_distribution"><code>bernoulli_distribution</code> 类模板</a></li>
+
+    <li><a href="#geometric_distribution"><code>geometric_distribution</code> 类模板</a></li>
+
+    <li><a href="#triangle_distribution"><code>triangle_distribution</code> 类模板</a></li>
+
+    <li><a href="#exponential_distribution"><code>exponential_distribution</code> 类模板</a></li>
+
+    <li><a href="#normal_distribution"><code>normal_distribution</code> 类模板</a></li>
+
+    <li><a href="#lognormal_distribution"><code>lognormal_distribution</code> 类模板</a></li>
+
+    <li><a href="#uniform_on_sphere"><code>uniform_on_sphere</code> 类模板</a></li>
+  </ul>
+
+  <h2><a name="intro" id="intro">简介</a></h2>
+
+  <p>除了 <a href="random-generators.html">随机数生成器</a> 之外，本库还提供了把一种分布 (通常是生成器产生的均匀分布) 映射到另一种分布的分布函数。(译注：在本节中，“分布”指统计学意义上的分布，而“分布函数”指的是类模板。内部的随机数生成器有时会更一般地被称为“随机数源”。)</p>
+
+  <p>对
+于某一映射通常会有多种实现方案：有的需要较多的空间和对内部随机数源的调用，而有的需要进行较多的费时的运算
+(如三角函数)。以下给出的对接口的描述是与具体实现无关的；然而，如果某一实现不能覆盖特定分布的全部值域，或者不符合该分布的统计学性质，该实现是无
+效的。</p>
+
+  <table summary="" border="1">
+    <tbody><tr>
+      <th>分布</th>
+
+      <th>描述</th>
+
+      <th>实例</th>
+    </tr>
+
+    <tr>
+      <td><code><a href="#uniform_smallint">uniform_smallint</a></code></td>
+
+      <td>在小整数集 (远小于内部生成器的值域) 上的离散均匀分布</td>
+
+      <td>罐中取物</td>
+    </tr>
+
+    <tr>
+      <td><code><a href="#uniform_int">uniform_int</a></code></td>
+
+      <td>在整数集上的离散均匀分布；可能会多次调用内部生成器以获得足够多的“随机性”</td>
+
+      <td>罐中取物</td>
+    </tr>
+
+    <tr>
+      <td><code><a href="#uniform_01">uniform_01</a></code></td>
+
+      <td>区间 [0,1) 上的连续均匀分布；此分布是其它分布的重要基础</td>
+
+      <td>-</td>
+    </tr>
+
+    <tr>
+      <td><code><a href="#uniform_real">uniform_real</a></code></td>
+
+      <td>实数区间 [min, max) 上的连续均匀分布</td>
+
+      <td>随机投下一木棍，其偏转角的弧度数是 [0, 2pi) 上的这种分布 (假设偏转角的分布是均匀的)</td>
+    </tr>
+
+    <tr>
+      <td><code><a href="#bernoulli_distribution">bernoulli_distribution</a></code></td>
+
+      <td>伯努利试验 (Bernoulli experiment)：布尔离散分布，概率可配置</td>
+
+      <td>投掷硬币 (p=0.5)</td>
+    </tr>
+
+    <tr>
+      <td><code><a href="#geometric_distribution">geometric_distribution</a></code></td>
+
+      <td>几何分布：重复伯努利试验，直到出现某一结果的试验次数</td>
+
+      <td>抛掷骰子，记录“6”首次出现时的试验次数</td>
+    </tr>
+
+    <tr>
+      <td><code><a href="#triangle_distribution">triangle_distribution</a></code></td>
+
+      <td>?</td>
+
+      <td>?</td>
+    </tr>
+
+    <tr>
+      <td><code><a href="#exponential_distribution">exponential_distribution</a></code></td>
+
+      <td>指数分布</td>
+
+      <td>放射性物质发射 alpha 粒子的间隔时间</td>
+    </tr>
+
+    <tr>
+      <td><code><a href="#normal_distribution">normal_distribution</a></code></td>
+
+      <td>无穷次重复伯努利试验的结果计数</td>
+
+      <td>投掷硬币 10000 次，记录正面出现的次数</td>
+    </tr>
+
+    <tr>
+      <td><code><a href="#lognormal_distribution">lognormal_distribution</a></code></td>
+
+      <td>对数正态分布 (lognormal distribution) (有时用于模拟)</td>
+
+      <td>流水线工人的工作完成时间</td>
+    </tr>
+
+    <tr>
+      <td><code><a href="#uniform_on_sphere">uniform_on_sphere</a></code></td>
+
+      <td>任意给定维数空间的单位球面上的均匀分布</td>
+
+      <td>在地球 (近似看作是球体) 表面任选一点去旅游</td>
+    </tr>
+  </tbody></table>
+
+  <p>分布函数的模板参数总按照下列顺序排列：</p>
+
+  <ul>
+    <li>内部随机数源</li>
+
+    <li>返回类型，其默认值为一合适的类型 (可能无这一参数)</li>
+  </ul>
+
+  <p><em>分
+布函数不再满足输入迭代器 (input iterator) 的需求 (std:24.1.1
+[lib.input.iterators])，因为这对于生成器(Generator)接口来说是多余的，还会对所有用户带来运行时的开销。而且，一个
+诉诸于随机数生成的生成器接口更为"自然"。如果你需要把生成器包装进一个输入迭代器接口，可以使用 <a href="../utility/iterator_adaptors.htm">迭代器适配器(iterator adaptor)</a>。</em></p>
+
+  <p>下
+面描述的所有分布函数都保存对随机数源的一个非 const 引用；因此分布函数不是 Assignable；不过它们是
+CopyConstructible。复制分布函数将会复制参数值；副本和原分布函数将会使用同一内部随机数源，因此两者会从同一序列中取得随机数。</p>
+
+  <p>对于在 <a href="random-concepts.html">概念文档</a> 中已经给出定义的成员，在下面的描述中不会详细说明。</p>
+
+  <h2><code>&lt;boost/random.hpp&gt;</code> 中的分布：<a name="synopsis" id="synopsis">概览</a></h2>
+  <pre>namespace boost {<br>  template&lt;class IntType = int&gt;<br>  class uniform_smallint;<br>  template&lt;class IntType = int&gt;<br>  class uniform_int;<br>  template&lt;class RealType = double&gt;<br>  class uniform_01;<br>  template&lt;class RealType = double&gt;<br>  class uniform_real;<br><br>  // discrete distributions<br>  template&lt;class RealType = double&gt;<br>  class bernoulli_distribution;<br>  template&lt;class IntType = int&gt;<br>  class geometric_distribution;<br><br>  // continuous distributions<br>  template&lt;class RealType = double&gt;<br>  class triangle_distribution;<br>  template&lt;class RealType = double&gt;<br>  class exponential_distribution;<br>  template&lt;class RealType = double&gt;<br>  class normal_distribution;<br>  template&lt;class RealType = double&gt;<br>  class lognormal_distribution;<br>  template&lt;class RealType = double,<br>    class Cont = std::vector&lt;RealType&gt; &gt;<br>  class uniform_on_sphere;<br>}<br></pre>
+
+  <h2><a name="uniform_smallint" id="uniform_smallint"><code>uniform_smallint</code> 类模板</a></h2>
+
+  <h3>概览</h3>
+  <pre>#include &lt;<a href="../../boost/random/uniform_smallint.hpp">boost/random/uniform_smallint.hpp</a>&gt;<br><br>template&lt;class IntType = int&gt;<br>class uniform_smallint<br>{<br>public:<br>  typedef IntType input_type;<br>  typedef IntType result_type;<br>  static const bool has_fixed_range = false;<br>  uniform_smallint(IntType min, IntType max);<br>  result_type min() const;<br>  result_type max() const;<br>  void reset();<br>  template&lt;class UniformRandomNumberGenerator&gt;<br>  result_type operator()(UniformRandomNumberGenerator&amp; urng);<br>};<br></pre>
+
+  <h3>描述</h3>
+
+  <p>分布函数 <code>uniform_smallint</code> 是 <a href="random-concepts.html#random-dist">随机分布</a> 的模型。每次调用都将返回在整数集 {min, min+1, min+2, ..., max} 上均匀分布的随机整数。它假设目的区间长度 (max-min+1) 比内部随机数源小得多，因此不考虑量子化 (quantization) 问题。</p>
+
+  <p>令 r<sub>out</sub>=(max-min+1) 为目的区间 (或其长度)，r<sub>base</sub> 为随机数源的区间 (或其长度)。今要求产生一均匀分布，即 r<sub>out</sub> 中任意数 i 的理论概率为 p<sub>out</sub>(i) = 1/r<sub>out</sub>。类似地，内部随机数源产生 r<sub>base</sub> 上的均匀分布，故有 p<sub>base</sub>(i) = 1/r<sub>base</sub>。令概率函数 p<sub>out_s</sub>(i) 描述 <code>uniform_smallint</code> 实际产生的分布函数。对 r<sub>out</sub> 中的各 i ，(p<sub>out_s</sub>(i)/p<sub>out</sub>(i) -1)<sup>2</sup> 的和应不大于 r<sub>out</sub>/r<sub>base</sub><sup>2</sup> (r<sub>base</sub> mod
+  r<sub>out</sub>)(r<sub>out</sub> - r<sub>base</sub> mod
+  r<sub>out</sub>)。</p>
+
+  <p>模板参数 <code>IntType</code> 应为一类整数的值类型。</p>
+
+  <p><em>注记：</em>上述和式是要求的分布函数 p<sub>out</sub>(i) 和实际产生的分布函数 p<sub>out_s</sub>(i) 中各数概率相对差的平方和。其值可由计算 (base_rng mod
+  r<sub>out</sub>) 来得到，如下：令 r = r<sub>base</sub> mod r<sub>out</sub>。r<sub>base</sub> 上的基础分布被折叠到区间 r<sub>out</sub> 上。数字 i &lt; r 快已被赋以基础分布的 (r<sub>base</sub> div
+  r<sub>out</sub>)+1 个数字，只剩下
+  (r<sub>base</sub> div r<sub>out</sub>)。因此，对于 i &lt; r，p<sub>out_s</sub>(i) =
+  ((r<sub>base</sub> div r<sub>out</sub>)+1) / r<sub>base</sub>，而对于其它 i，p<sub>out_s</sub>(i) = (r<sub>base</sub> div
+  r<sub>out</sub>)/r<sub>base</sub>。在以上求和公式中替换这一部分，可得到希望的结果。</p>
+
+  <p><em>注记：</em>(r<sub>base</sub> mod
+  r<sub>out</sub>)(r<sub>out</sub> - r<sub>base</sub> mod r<sub>out</sub>) 的上限是
+  r<sub>out</sub><sup>2</sup>/4。对于
+  r<sub>out</sub><sup>3</sup>/(4*r<sub>base</sub><sup>2</sup>) 的相对量化误差的平方和的上限,&nbsp;明智的方法是，要么选择一个满足 r<sub>base</sub> &gt;
+  10*r<sub>out</sub><sup>2</sup> 的 r<sub>base</sub><sup></sup>，要么确保 r<sub>base</sub> 可被 r<sub>out</sub> 整除。</p>
+
+  <h3>成员</h3>
+  <pre>uniform_smallint(IntType min, IntType max)<br></pre>
+
+  <p><strong>效果：</strong>构造一 <code>uniform_smallint</code> 函子。<code>min</code> 和 <code>max</code> 分别为输出值域的上下界。</p>
+
+  <h2><a name="uniform_int" id="uniform_int"><code>uniform_int</code> 类模板</a></h2>
+
+  <h3>概览</h3>
+  <pre>#include &lt;<a href="../../boost/random/uniform_int.hpp">boost/random/uniform_int.hpp</a>&gt;<br><br>template&lt;class IntType = int&gt;<br>class uniform_int<br>{<br>public:<br>  typedef IntType input_type;<br>  typedef IntType result_type;<br>  static const bool has_fixed_range = false;<br>  explicit uniform_int(IntType min = 0, IntType max = 9);<br>  result_type min() const;<br>  result_type max() const;<br>  void reset();<br>  template&lt;class UniformRandomNumberGenerator&gt;<br>  result_type operator()(UniformRandomNumberGenerator&amp; urng);<br>  template&lt;class UniformRandomNumberGenerator&gt;<br>  result_type operator()(UniformRandomNumberGenerator&amp; urng, result_type n);<br>};<br></pre>
+
+  <h3>描述</h3>
+
+  <p>分布函数 <code>uniform_int</code> 是 <a href="random-concepts.html#random-dist">随机分布</a> 的模型。每次调用都将返回在整数集 {min, min+1, min+2, ..., max} 上均匀分布的随机整数。</p>
+
+  <p>模板参数 <code>IntType</code> 应为一类整数的值类型。</p>
+
+  <h3>成员</h3>
+  <pre>    uniform_int(IntType min = 0, IntType max = 9)<br></pre>
+
+  <p><strong>需求：</strong> min &lt;= max<br>
+  <strong>效果：</strong>构造一 <code>uniform_int</code> 对象。<code>min</code> 和 <code>max</code> 为分布的参数。</p>
+  <pre>    result_type min() const<br></pre>
+
+  <p><strong>返回：</strong>分布的 "min" 参数。</p>
+  <pre>    result_type max() const<br></pre>
+
+  <p><strong>返回：</strong>分布的 "max" 参数。</p>
+  <pre>    result_type operator()(UniformRandomNumberGenerator&amp; urng, result_type n)<br></pre>
+
+  <p><strong>返回：</strong>在值域 0 &lt;= x &lt; n 内均匀分布的随机数 x。<em>[注记：可以将一个带有</em><em> <code>uniform_int</code></em><em> 分布的 <code>variate_generator</code> 对象用于 std::random_shuffe，请见 [lib.alg.random.shuffle]. ]</em></p>
+
+  <h2><a name="uniform_01" id="uniform_01"><code>uniform_01</code> 类模板</a></h2>
+
+  <h3>概览</h3>
+  <pre>#include &lt;<a href="../../boost/random/uniform_01.hpp">boost/random/uniform_01.hpp</a>&gt;<br><br>template&lt;class UniformRandomNumberGenerator, class RealType = double&gt;<br>class uniform_01<br>{<br>public:<br>  typedef UniformRandomNumberGenerator base_type;<br>  typedef RealType result_type;<br>  static const bool has_fixed_range = false;<br>  explicit uniform_01(base_type rng);<br>  result_type operator()();<br>  result_type min() const;<br>  result_type max() const;<br>};<br></pre>
+
+  <h3>描述</h3>
+
+  <p>分布函数 <code>uniform_01</code> 是 <a href="random-concepts.html#random-dist">随机分布</a> 的模型。每次调用都将返回在区间 [0...1) 上均匀分布的随机浮点数。这一数值是用  <code>std::numeric_limits&lt;RealType&gt;::digits</code> 个随机二进制位构造而成的，也即浮点数的尾数全都是随机的二进制位。[<em>注记：</em>是否要使这一行为可配置？]</p>
+
+  <p><em>警告：</em>因为偶然的历史原因，此类的构造函数取一 UniformRandomNumberGenerator，且 <strong>传值</strong>。通常需要的是引用语义，从而生成器可以被“就地”地修改；如果需要引用语义，用引用类型作为 UniformRandomNumberGenerator 的模板参数。</p>
+
+  <p>模板参数 <code>RealType</code> 应为一类浮点的值类型，支持双目运算符 +, - 和 /。<code>rng.max()-rng.min()+1</code> 的值必须在其可表示范围内。</p>
+
+  <p><code>base_type::result_type</code> 必须为一类数字的值类型，必须支持到 <code>RealType</code> 的 <code>static_cast&lt;&gt;</code>和双目运算符 -。</p>
+
+  <p><em>注意：</em>当前的实现是有 bug 的，因为在某些情况下不会把尾数全部填充为随机的二进制位。目前尚不知道如何把 (未实现的) <code>boost::bigfloat</code> 类有效地用随机位填满。可能需要一个 traits 类。</p>
+
+  <h3>成员</h3>
+  <pre>explicit uniform_01(base_type rng)<br></pre>
+
+  <p><strong>效果：</strong>构造一 <code>uniform_01</code> 函子，使用给定的随机数生成器作为内部随机数源。</p>
+
+  <h2><a name="uniform_real" id="uniform_real"><code>uniform_real</code> 类模板</a></h2>
+
+  <h3>概览</h3>
+  <pre>#include &lt;<a href="../../boost/random/uniform_real.hpp">boost/random/uniform_real.hpp</a>&gt;<br><br>template&lt;class RealType = double&gt;<br>class uniform_real<br>{<br>public:<br>  typedef RealType input_type;<br>  typedef RealType result_type;<br>  static const bool has_fixed_range = false;<br>  uniform_real(RealType min = RealType(0), RealType max = RealType(1));<br>  result_type min() const;<br>  result_type max() const;<br>  void reset();<br>  template&lt;class UniformRandomNumberGenerator&gt;<br>  result_type operator()(UniformRandomNumberGenerator&amp; urng);<br>};<br></pre>
+
+  <h3>描述</h3>
+
+  <p>分布函数 <code>uniform_real</code> 是 <a href="random-concepts.html#random-dist">随机分布</a> 的模型。每次调用都将返回在区间 [min..max) 上均匀分布的随机浮点数。这一数值是用 <code>std::numeric_limits&lt;RealType&gt;::digits</code> 个随机二进制位构造而成的，也即浮点数的尾数全都是随机的二进制位。</p>
+
+  <p><em>注意：</em>当前的实现是有 bug 的，因为在某些情况下不会把尾数全部填充为随机的二进制位。</p>
+
+  <h3>成员</h3>
+  <pre>    uniform_real(RealType min = RealType(0), RealType max = RealType(1))<br></pre>
+
+  <p><strong>需求：</strong> min &lt;= max<br>
+  <strong>效果：</strong>构造一 <code>uniform_real</code> 对象。<code>min</code> 和 <code>max</code> 是分布的参数。</p>
+  <pre>    result_type min() const<br></pre>
+
+  <p><strong>返回：</strong>分布的 "min" 参数。</p>
+  <pre>    result_type max() const<br></pre>
+
+  <p><strong>返回：</strong>分布的 "max" 参数。</p>
+
+  <h2><a name="bernoulli_distribution" id="bernoulli_distribution"><code>bernoulli_distribution</code> 类模板</a></h2>
+
+  <h3>概览</h3>
+  <pre>#include &lt;<a href="../../boost/random/bernoulli_distribution.hpp">boost/random/bernoulli_distribution.hpp</a>&gt;<br><br>template&lt;class RealType = double&gt;<br>class bernoulli_distribution<br>{<br>public:<br>  typedef int input_type;<br>  typedef bool result_type;<br><br>  explicit bernoulli_distribution(const RealType&amp; p = RealType(0.5));<br>  RealType p() const;<br>  void reset();<br>  template&lt;class UniformRandomNumberGenerator&gt;<br>  result_type operator()(UniformRandomNumberGenerator&amp; urng);<br>};<br></pre>
+
+  <h3>描述</h3>
+
+  <p><code>bernoulli_distribution</code> 类模板的实例是 <a href="random-concepts.html#random-dist">随机分布</a> 的模型。此分布产生 <code>bool</code> 值，概率满足 P(true) = p 且 P(false) = 1-p。p 是分布的参数。</p>
+
+  <h3>成员</h3>
+  <pre>    bernoulli_distribution(const RealType&amp; p = RealType(0.5))<br></pre>
+
+  <p><strong>需求：</strong> 0 &lt;= p &lt;= 1<br>
+  <strong>效果：</strong>构造一 <code>bernoulli_distribution</code> 对象。<code>p</code> 是分布的参数。</p>
+  <pre>    RealType p() const<br></pre>
+
+  <p><strong>返回：</strong>分布的 "p" 参数。</p>
+
+  <h2><a name="geometric_distribution" id="geometric_distribution"><code>geometric_distribution</code> 类模板</a></h2>
+
+  <h3>概览</h3>
+  <pre>#include &lt;<a href="../../boost/random/geometric_distribution.hpp">boost/random/geometric_distribution.hpp</a>&gt;<br><br>template&lt;class UniformRandomNumberGenerator, class IntType = int&gt;<br>class geometric_distribution<br>{<br>public:<br>  typedef RealType input_type;<br>  typedef IntType result_type;<br><br>  explicit geometric_distribution(const RealType&amp; p = RealType(0.5));<br>  RealType p() const;<br>  void reset();<br>  template&lt;class UniformRandomNumberGenerator&gt;<br>  result_type operator()(UniformRandomNumberGenerator&amp; urng);<br>};<br></pre>
+
+  <h3>描述</h3>
+
+  <p><code>geometric_distribution</code> 类模板的实例是 <a href="random-concepts.html#random-dist">随机分布</a> 的模型。对整数 <em>i</em> &gt;= 1，产生 i 的概率 p(i) = (1-p) * p<sup>i-1</sup>，其中 p 是分布的参数。对 UniformRandomNumberGenerator 的每次调用应产生在 [0,1) 上均匀分布的浮点数。</p>
+
+  <h3>成员</h3>
+  <pre>    geometric_distribution(const RealType&amp; p = RealType(0.5))<br></pre>
+
+  <p><strong>需求：</strong> 0 &lt; p &lt; 1<br>
+  <strong>效果：</strong>构造一 <code>geometric_distribution</code> 对象。<code>p</code> 是分布的参数。</p>
+  <pre>   RealType p() const<br></pre>
+
+  <p><strong>返回：</strong>分布的 "p" 参数。</p>
+
+  <h2><a name="triangle_distribution" id="triangle_distribution"><code>triangle_distribution</code> 类模板</a></h2>
+
+  <h3>概览</h3>
+  <pre>#include &lt;<a href="../../boost/random/triangle_distribution.hpp">boost/random/triangle_distribution.hpp</a>&gt;<br><br>template&lt;class RealType = double&gt;<br>class triangle_distribution<br>{<br>public:<br>  typedef RealType input_type;<br>  typedef RealType result_type;<br>  triangle_distribution(result_type a, result_type b, result_type c);<br>  result_type a() const;<br>  result_type b() const;<br>  result_type c() const;<br>  void reset();<br>  template&lt;class UniformRandomNumberGenerator&gt;<br>  result_type operator()(UniformRandomNumberGenerator&amp; urng);<br>};<br></pre>
+
+  <h3>描述</h3>
+
+  <p><code>triangle_distribution</code> 类模板的实例是 <a href="random-concepts.html#random-dist">随机分布</a> 的模型。返回的浮点数 <code>x</code> 满足 <code>a &lt;= x
+  &lt;= c</code>; <code>x</code> 服从三角形分布 (triangle distribution)，其中 <code>b</code> 为密度最大的点。对 UniformRandomNumberGenerator 的每次调用应产生在 [0,1) 上均匀分布的浮点数。</p>
+
+  <h3>成员</h3>
+  <pre>triangle_distribution(result_type a, result_type b, result_type c)<br></pre>
+
+  <p><strong>效果：</strong>构造一 <code>triangle_distribution</code> 函子。<code>a, b, c</code> 是分布的参数。</p>
+
+  <h2><a name="exponential_distribution" id="exponential_distribution"><code>exponential_distribution</code> 类模板</a></h2>
+
+  <h3>概览</h3>
+  <pre>#include &lt;<a href="../../boost/random/exponential_distribution.hpp">boost/random/exponential_distribution.hpp</a>&gt;<br><br>template&lt;class RealType = double&gt;<br>class exponential_distribution<br>{<br>public:<br>  typedef RealType input_type;<br>  typedef RealType result_type;<br>  explicit exponential_distribution(const result_type&amp; lambda);<br>  RealType lambda() const;<br>  void reset();<br>  template&lt;class UniformRandomNumberGenerator&gt;<br>  result_type operator()(UniformRandomNumberGenerator&amp; urng);<br>};<br></pre>
+
+  <h3>描述</h3>
+
+  <p><code>exponential_distribution</code> 类模板的实例是 <a href="random-concepts.html#random-dist">随机分布</a>
+的模型。对实数 x &gt; 0，其密度 p(x) = lambda * exp(-lambda * x)，其中 lambda
+是分布的参数。对 UniformRandomNumberGenerator 的每次调用应产生在 [0,1) 上均匀分布的浮点数。</p>
+
+  <h3>成员</h3>
+  <pre>    exponential_distribution(const result_type&amp; lambda = result_type(1))<br></pre>
+
+  <p><strong>需求：</strong> lambda &gt; 0<br>
+  <strong>效果：</strong>构造一 <code>exponential_distribution</code> 对象。<code>lambda</code> 是分布的参数。</p>
+  <pre>    RealType lambda() const<br></pre>
+
+  <p><strong>返回：</strong>分布的 "lambda" 参数。</p>
+
+  <h2><a name="normal_distribution" id="normal_distribution"><code>normal_distribution</code> 类模板</a></h2>
+
+  <h3>概览</h3>
+  <pre>#include &lt;<a href="../../boost/random/normal_distribution.hpp">boost/random/normal_distribution.hpp</a>&gt;<br><br>template&lt;class RealType = double&gt;<br>class normal_distribution<br>{<br>public:<br>  typedef RealType input_type;<br>  typedef RealType result_type;<br>  explicit normal_distribution(const result_type&amp; mean = 0,<br>                               const result_type&amp; sigma = 1);<br>  RealType mean() const;<br>  RealType sigma() const;<br>  void reset();<br>  template&lt;class UniformRandomNumberGenerator&gt;<br>  result_type operator()(UniformRandomNumberGenerator&amp; urng);<br>};<br></pre>
+
+  <h3>描述</h3>
+
+  <p><code>normal_distribution</code> 类模板的实例是 <a href="random-concepts.html#random-dist">随机分布</a> 的模型。对任意实数 x，其密度 p(x) = 1/sqrt(2*pi*sigma) * exp(- (x-mean)<sup>2</sup> / (2*sigma<sup>2</sup>) )，其中 mean 和 sigma 是分布的参数。对 UniformRandomNumberGenerator 的每次调用应产生在 [0,1) 上均匀分布的浮点数。</p>
+
+  <h3>成员</h3>
+  <pre>    explicit normal_distribution(const result_type&amp; mean = 0,<br>                                 const result_type&amp; sigma = 1);<br></pre>
+
+  <p><strong>需求：</strong> sigma &gt; 0<br>
+  <strong>效果：</strong>构造一 <code>normal_distribution</code>。<code>mean</code> 和 <code>sigma</code> 是分布的参数。</p>
+  <pre>    RealType mean() const<br></pre>
+
+  <p><strong>返回：</strong>分布的 "mean" 参数。</p>
+  <pre>    RealType sigma() const<br></pre>
+
+  <p><strong>返回：</strong>分布的 "sigma" 参数。</p>
+
+  <h2><a name="lognormal_distribution" id="lognormal_distribution"><code>lognormal_distribution</code> 类模板</a></h2>
+
+  <h3>概览</h3>
+  <pre>#include &lt;<a href="../../boost/random/lognormal_distribution.hpp">boost/random/lognormal_distribution.hpp</a>&gt;<br><br>template&lt;class RealType = double&gt;<br>class lognormal_distribution<br>{<br>public:<br>  typedef typename normal_distribution&lt;RealType&gt;::input_type<br>  typedef RealType result_type;<br>  explicit lognormal_distribution(const result_type&amp; mean = 1.0,<br>                                  const result_type&amp; sigma = 1.0);<br>  RealType&amp; mean() const;<br>  RealType&amp; sigma() const;                                 <br>  void reset();<br>  template&lt;class UniformRandomNumberGenerator&gt;<br>  result_type operator()(UniformRandomNumberGenerator&amp; urng);<br>};<br></pre>
+
+  <h3>描述</h3>
+
+  <p><code>lognormal_distribution</code> 类模板的实例是 <a href="random-concepts.html#random-dist">随机分布</a> 的模型。对实数 x &gt; 0，其密度 p(x) = 1/(x * normal_sigma * sqrt(2*pi)) * exp( -(log(x)-normal_mean)<sup>2</sup> / (2*normal_sigma<sup>2</sup>) )，其中 normal_mean = log(mean<sup>2</sup>/sqrt(sigma<sup>2</sup> + mean<sup>2</sup>)) 且 normal_sigma = sqrt(log(1 + sigma<sup>2</sup>/mean<sup>2</sup>))。对 UniformRandomNumberGenerator 的每次调用应产生在 [0,1) 上均匀分布的浮点数。</p>
+
+  <h3>成员</h3>
+  <pre>lognormal_distribution(const result_type&amp; mean,<br>                       const result_type&amp; sigma)<br></pre>
+
+  <p><strong>效果：</strong>构造一 <code>lognormal_distribution</code> 函子。<code>mean</code> 和 <code>sigma</code> 是分布的参数。</p>
+
+  <h2><a name="uniform_on_sphere" id="uniform_on_sphere"><code>uniform_on_sphere</code> 类模板</a></h2>
+
+  <h3>概览</h3>
+  <pre>#include &lt;<a href="../../boost/random/uniform_on_sphere.hpp">boost/random/uniform_on_sphere.hpp</a>&gt;<br><br>template&lt;class RealType = double,<br>  class Cont = std::vector&lt;RealType&gt; &gt;<br>class uniform_on_sphere<br>{<br>public:<br>  typedef RealType input_type;<br>  typedef Cont result_type;<br>  explicit uniform_on_sphere(int dim = 2);<br>  void reset();<br>  template&lt;class UniformRandomNumberGenerator&gt;<br>  const result_type &amp; operator()(UniformRandomNumberGenerator&amp; urng);<br>};<br></pre>
+
+  <h3>描述</h3>
+
+  <p><code>uniform_on_sphere</code> 类模板的实例是 <a href="random-concepts.html#random-dist">随机分布</a> 的模型。这一分布产生在 <code>dim</code> 维空间的单位球面上均匀分布的随机坐标。模板参数 <code>Cont</code> 应为一类 STL 的容器，其 <code>begin</code> 和 <code>end</code> 返回 <code>Cont::iterator</code> 类型的非 const 前向迭代器 (non-const forward iterator)。对 UniformRandomNumberGenerator 的每次调用应产生在 [0,1) 上均匀分布的浮点数。</p>
+
+  <h3>成员</h3>
+  <pre>explicit uniform_on_sphere(int dim = 2)<br></pre>
+
+  <p><strong>效果：</strong>构造一 <code>uniform_on_sphere</code> 函子。<code>dim</code> 是空间的维度。</p>
+  <hr>
+
+  <p><a href="http://validator.w3.org/check?uri=referer"><img src="http://www.w3.org/Icons/valid-html401" alt="Valid HTML 4.01 Transitional" border="0" height="31" width="88"></a></p>
+
+  <p>Revised 
+  <!--webbot bot="Timestamp" s-type="EDITED" s-format="%d %B, %Y" startspan -->05
+  December, 2006<!--webbot bot="Timestamp" endspan i-checksum="38516" --></p>
+
+  <p><i>Copyright © 2000-2007 <a href="http://www.boost.org/people/jens_maurer.htm">Jens Maurer</a></i></p>
+
+  <p><i>Distributed under the Boost Software License, Version 1.0. (See
+  accompanying file <a href="../../LICENSE_1_0.txt">LICENSE_1_0.txt</a> or
+  copy at <a href="http://www.boost.org/LICENSE_1_0.txt">http://www.boost.org/LICENSE_1_0.txt</a>)</i></p>
+  <p>中文版修订：2009/1/25</p>
+
+  <p><i>Copyright © 2008 <a href="http://wiki.woodpecker.org.cn/moin/XiaoQi">xiaq</a></i></p>
+
+  <p><i>在 Boost Software License, Version 1.0 的条款下发布。(参看文件 <a href="../../LICENSE_1_0.txt">LICENSE_1_0.txt</a> 或在线副本 <a href="http://www.boost.org/LICENSE_1_0.txt"> http://www.boost.org/LICENSE_1_0.txt</a>)</i></p>
+
+</body></html>

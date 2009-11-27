@@ -1,0 +1,108 @@
+<!DOCTYPE HTML PUBLIC "-//W3C//DTD HTML 4.01 Transitional//EN">
+<html><head>
+
+<title>The Tracing Facility</title><meta http-equiv="Content-Type" content="text/html; charset=UTF-8">
+<link href="theme/style.css" rel="stylesheet" type="text/css"></head>
+<body>
+<table background="theme/bkd2.gif" border="0" cellspacing="2" width="100%">
+  <tbody><tr> 
+    <td width="21"> <h1></h1></td>
+    <td width="885"> <font face="Verdana, Arial, Helvetica, sans-serif"><b><font size="6">The 
+      Tracing Facility 跟踪工具</font></b></font></td>
+    <td width="96"><a href="http://www.boost.org"><img src="theme/wave.gif" align="right" border="0" height="68" width="93"></a></td>
+  </tr>
+</tbody></table>
+<br>
+<table border="0">
+  <tbody><tr> 
+    <td width="10"></td>
+    <td width="30"><a href="../index.html"><img src="theme/u_arr.gif" border="0"></a></td>
+    <td width="30"><a href="wave_driver.html"><img src="theme/l_arr.gif" border="0"></a></td>
+    <td width="30"><a href="supported_pragmas.html"><img style="border: 0px solid ; width: 20px; height: 19px;" alt="next" src="theme/r_arr.gif"></a></td>
+  </tr>
+</tbody></table>
+
+<p>If you ever had the need to debug a macro expansion you had to discover, that 
+  your tools provide only little or no support for this task. For this reason 
+  the <i>Wave</i> library has a tracing facility, which allows to get selectively 
+  some information about the expansion of a certain macro or several macros.<br>如果你需要对宏展开进行调试，你会发现你的工具只对此提供了很少或没有支持。出于这个原因，<i>Wave</i> 库有一个跟踪工具，它可以有选择地获得一些关于某个或某几个宏的展开的信息。 </p><p>The tracing of macro expansions generates a possibly huge amount of information, 
+  so it is recommended, that you explicitely enable/disable the tracing for the 
+  macro in question only. This may be done with the help of a special, <tt>Wave</tt> 
+  specific #pragma:<br>对宏展开的跟踪可能会产生非常大量的信息，所以我们建议你只对有问题的宏明确地启用/禁用跟踪。这可以使用一个 <tt>Wave</tt> 
+  专用的 #pragma 来实现：</p>
+<pre><span class="preprocessor">    #pragma</span> wave trace(enable)    <span class="comment">// enable the tracing</span>
+    <span class="comment">// the macro expansions here will be traced</span>
+    <span class="comment">// ...</span>
+<span class="preprocessor">    #pragma</span> wave trace(disable)   <span class="comment">// disable the tracing</span></pre>
+<p>In C99 mode or when specifying the <tt>--variadics</tt> command line option 
+  you may additionally use the <tt>operator&nbsp;_Pragma()</tt> variant to enable/disable 
+  the tracing output:<br>在C99模式下或指定了 <tt>--variadics</tt> 命令行选项时，你可能要另外使用 <tt>operator&nbsp;_Pragma()</tt> 变体来启用/禁用跟踪信息的输出：</p>
+<pre><span class="preprocessor">    #define</span> CONCAT(x, y) \<br>        <span class="preprocessor">_Pragma</span>(<span class="string">"wave trace(enable)"</span>) \<br>        x \<br>        <span class="preprocessor">_Pragma</span>(<span class="string">"wave trace(disable)"</span>) \<br>        <span class="keyword">##</span> y</pre>
+<p>This way you have the possibility to enable the tracing during the expansion 
+  of a part of a macro only. In the sample shown there is traced the expansion 
+  of the macro argument <tt>'x'</tt> only. Note, that the <tt>operator _Pragma()</tt> 
+  directives expand to nothing inside the macro expansion result.<br>你也可以仅在一个宏的部分展开中启用跟踪。以上示例只跟踪宏参数 <tt>'x'</tt> 的展开。注意，在宏展开结果中 <tt>operator _Pragma()</tt> 
+  指令被展开为空。</p>
+<p>To see, what the <tt>Wave</tt> driver generates while expanding a simple macro, 
+  let's have a look at the tracing output for the following example:<br>为了看看在展开一个简单的宏时 <tt>Wave</tt> 驱动器会生成些什么，我们来看一下以下例子的跟踪输出：</p>
+<pre><span class="comment">    // test.cpp</span>
+<span class="preprocessor">    #define</span> X(x)          x<br><span class="preprocessor">    #define</span> Y()           2<br><span class="preprocessor">    #define</span> CONCAT_(x, y) x <span class="keyword">##</span> y<br><span class="preprocessor">    #define</span> CONCAT(x, y)  CONCAT_(x, y)<br><span class="preprocessor">    #pragma</span> wave trace(enable)<br><span class="comment">    // this macro expansion is to be traced</span>
+    CONCAT(X(1), Y())     <span class="comment">// should expand to 12</span>
+<span class="preprocessor">    #pragma</span> wave trace(disable)</pre>
+<p>When preprocessed with <tt>'wave -t test.trace test.cpp'</tt> the <tt>Wave</tt> 
+  driver generates a file <tt>test.trace</tt>, which contains (without the line 
+  numbers in front of the lines):<br>使用 <tt>'wave -t test.trace test.cpp'</tt> 来进行预处理，<tt>Wave</tt> 
+  驱动器将生成一个文件 <tt>test.trace</tt>，其中包含(不带各行的行号)：</p>
+<pre>  1: test.cpp:8:1: CONCAT(X(1), Y())<br>  2:   test.cpp:5:9: see macro definition: CONCAT(x, y)<br>  3:   invoked with<br>  4:   [<br>  5:     x = X(1)<br>  6:     y = Y()<br>  7:   ]<br>  8:   [<br>  9:     test.cpp:2:9: see macro definition: X(x)<br> 10:     invoked with<br> 11:     [<br> 12:       x = 1<br> 13:     ]<br> 14:     [<br> 15:       1<br> 16:       rescanning<br> 17:       [<br> 18:         1<br> 19:       ]<br> 20:     ]<br> 21:     test.cpp:3:9: see macro definition: Y()<br> 22:     [<br> 23:       2<br> 24:       rescanning<br> 25:       [<br> 26:         2<br> 27:       ]<br> 28:     ]<br> 29:     CONCAT_(1, 2)<br> 30:     rescanning<br> 31:     [<br> 32:       test.cpp:4:9: see macro definition: CONCAT_(x, y)<br> 33:       invoked with<br> 34:       [<br> 35:         x = 1<br> 36:         y = 2<br> 37:       ]<br> 38:       [<br> 39:         12<br> 40:         rescanning<br> 41:         [<br> 42:           12<br> 43:         ]<br> 44:       ]<br> 45:       12<br> 46:     ]<br> 47:   ]<br></pre>
+<p>The generated trace output is very verbose, but allows to follow every step 
+  of the actual macro expansion process. The first line in this tracing example 
+  contains the reference to the position, from where the macro expansion was initiated. 
+  Additionally the following information is contained for every single macro expansion:<br>生成的跟踪输出非常详细，可以跟踪实际的宏展开过程中的每一步。在这个跟踪例子中的第一行中有对宏展开初始化时的位置的引用。接下来是包含每一次宏展开的信息：</p>
+<ul>
+  <li>The reference to the position (line and column numbers), where the macro to expand was defined first 
+    (see lines 2, 9, 21 and 32).<br>首先是要展开的宏的定义所在位置(行号和列号)的引用(见第 2, 9, 21 和 32 行)。</li>
+  <li>The real parameters supplied for this macro expansion (see lines 3, 10 and 
+    33), this information is traced inside the <tt>invoked with</tt> block, where 
+    the corresponding formal and actual parameters are listed.<br>本次宏展开所提供的实际参数(见第 3, 10 和 33 行)，这些信息用一个 <tt>invoked with</tt> 块来跟踪，其中列出相应的形参和实参。</li>
+  <li>The expansion of the given arguments (if any and if these are defined as 
+    macros). This repeats the full tracing information for the argument macro 
+    expansion, only indended by one level. Note though, that the macro expansion 
+    of the actual arguments is traced, regardless of the fact, whether this argument 
+    is really to be inserted into the replacement list after its expansion 
+    or as it was initially supplied (see C++ Standard [16.3.1.1]: "A parameter 
+    in the replacement list, unless preceded by a <tt>#</tt> or <tt>##</tt> preprocessing 
+    token or followed by a <tt>##</tt> preprocessing token, is replaced by the 
+    corresponding argument after all macros contained therein have been expanded" 
+    <a href="references.html#iso_cpp">[1]</a>).<br>给定参数(如果有且定义为宏)的展开。对参数的宏展开重复完整的跟踪信息，只是缩入一级。注意，实参的宏展开也会被跟踪，无论该参数是在展开后插入到替换列表中的，还是最初提供的(见C++标准[16.3.1.1]："一个在替换列表中的参数，除非前面有 <tt>#</tt> 或 <tt>##</tt> 预处理单词，或者后面有 <tt>##</tt> 预处理单词，否则要在所有内含的宏被展开后，替换为相应的实参" 
+    <a href="references.html#iso_cpp">[1]</a>)。 </li>
+  <li>The result of the argument substitution (see lines 15, 23, 29 and 39), i.e. 
+    the substituted replacement list.<br>参数替换的结果(见第 15, 23, 29 和 39 行)，即替换后的参数列表。</li>
+  <li>The rescanning process, which again includes the full subsequent macro expansion 
+    process of all found macros (see C++ Standard [16.3.4.1]: "After all 
+    parameters in the replacement list have been substituted, the resulting preprocessing 
+    token sequence is rescanned with all subsequent preprocessing tokens of the 
+    source file for more macro names to replace." <a href="references.html#iso_cpp">[1]</a>).<br>重扫描过程，再次对所有找到的宏进行后续的宏展开处理(见C++标准[16.3.4.1]："在替换列表中的所有参数被替换后，对所得到的预处理单词及源文件中后续的预处理单词重新扫描，进一步替换宏名。"<a href="references.html#iso_cpp">[1]</a>)。</li>
+  <li>The result of the actual macro expansion (this is the last line inside the 
+    corresponding rescanning block - see lines 18, 26, 42 and 45).<br>宏展开的实际结果(这是相应的重扫描块中的最后一行 - 见第 18, 26, 42 和 45 行)。</li>
+</ul>
+<p>Every found macro to expand will add an additional indentation level inside 
+  the trace output.<br>每一个找到的要展开的宏都会在跟踪输出中增加一级缩入。</p>
+<table border="0">
+  <tbody><tr> 
+    <td width="10"></td>
+    <td width="30"><a href="../index.html"><img src="theme/u_arr.gif" border="0"></a></td>
+    <td width="30"><a href="wave_driver.html"><img src="theme/l_arr.gif" border="0"></a></td>
+    <td width="30"><a href="supported_pragmas.html"><img style="border: 0px solid ; width: 20px; height: 19px;" alt="next" src="theme/r_arr.gif"></a></td>
+  </tr>
+</tbody></table>
+<hr size="1">
+<p class="copyright">Copyright © 2003-2008 Hartmut Kaiser<br>
+  <br>
+<font size="2">Distributed under the Boost Software License, Version
+1.0. (See accompanying file LICENSE_1_0.txt or copy at
+http://www.boost.org/LICENSE_1_0.txt) </font> </p>
+<p class="copyright"><span class="updated">Last updated: 
+  <!-- #BeginDate format:fcAm1m -->Tuesday, March 21, 2006  9:25<!-- #EndDate -->
+  </span>
+</p>
+</body></html>

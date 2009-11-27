@@ -1,0 +1,1662 @@
+<!DOCTYPE HTML PUBLIC "-//W3C//DTD HTML 4.01 Transitional//EN">
+<html><head>
+
+
+
+		
+		
+  
+  
+  
+  
+  
+  <title>shared_ptr</title><meta http-equiv="Content-Type" content="text/html; charset=UTF-8"></head>
+
+<body bgcolor="#ffffff" text="#000000">
+
+
+
+		
+<h1><a href="../../index.htm"><img alt="boost.png (6897 bytes)" src="../../boost.png" align="middle" border="0" height="86" width="277"></a>shared_ptr 类模板</h1>
+
+
+
+		
+<p><a href="#Introduction">Introduction 简介</a><br>
+
+
+
+			<a href="#BestPractices">Best Practices 最佳实践</a><br>
+
+
+
+			<a href="#Synopsis">Synopsis 概要</a><br>
+
+
+
+			<a href="#Members">Members 成员</a><br>
+
+
+
+			<a href="#functions">Free Functions 自由函数</a><br>
+
+
+
+			<a href="#example">Example 示例</a><br>
+
+
+
+			<a href="#Handle/Body">Handle/Body Idiom Handle/Body 惯用法</a><br>
+
+
+
+			<a href="#ThreadSafety">Thread Safety 线程安全</a><br>
+
+
+
+			<a href="#FAQ">Frequently Asked Questions 常见问题</a><br>
+
+
+
+			<a href="smarttests.htm">Smart Pointer Timings 智能指针测时</a><br>
+
+
+
+			<a href="sp_techniques.html">Programming Techniques 编程技术</a></p>
+
+
+
+		
+<h2><a name="Introduction">Introduction 简介</a></h2>
+
+
+
+		
+<p><b>shared_ptr</b> 类模板存储一个指向动态分配对象（一般是用 C++ <em>new-expression</em> 生成的）的指针。在最后一个 <b>shared_ptr</b> 所指向的对象被销毁或重置时，要保证它所指向的对象被删除。参见<a href="#example">示例</a>。</p>
+
+
+
+		
+<p>每一个 <b>shared_ptr</b> 都符合 C++ 标准库的 <b>CopyConstructible</b> 和 <b>Assignable</b> 的必要条件，并因此能够用于标准库容器。因为提供了比较操作，因此 <b>shared_ptr</b> 可以和标准库中的关联式容器一起工作。</p>
+
+
+
+		
+<p>通常，一个 <b>shared_ptr</b> 不能正确地持有一个指向动态分配的数组的指针。关于那种用法请参见 <a href="shared_array.htm"><b>shared_array</b></a>。</p>
+
+
+
+		
+<p>因为在实现中使用了引用计数，<b>shared_ptr</b>实例的循环引用不会被回收。例如，如果 <b>main()</b> 持有一个指向 <b>A</b> 的 <b>shared_ptr</b>， <b>A</b> 又直接或间接持有一个指回 <b>A</b> 的 <b>shared_ptr</b>，<b>A</b> 的使用计数是 2。最初的 <b>shared_ptr</b> 析构后将导致一个使用计数为 1 的 <b>A</b> 被悬挂。使用 <a href="weak_ptr.htm">weak_ptr</a> 以“打破循环”。</p>
+
+
+
+		
+<p>这个类模板被 <b>T</b> 参数化，<b>T</b> 是被指向的对象的类型。<strong>shared_ptr</strong> 和它的大多数成员函数对于 <strong>T</strong> 没什么要求，允许它是一个不完整类型，或者为 <strong>void</strong>。对 <strong>T</strong> 有附加要求的成员函数 (<a href="#constructors">constructors</a>, <a href="#reset">reset</a>) 都明确地记录在下面。</p>
+
+
+
+		
+<p>只要 <strong>T*</strong> 能被隐式地转换到 <strong>U*</strong>，则 <strong>shared_ptr&lt;T&gt;</strong> 就能被隐式地转换到 <strong>shared_ptr&lt;U&gt;</strong>。特别是，<strong>shared_ptr&lt;T&gt;</strong> 隐式转换到 <strong>shared_ptr&lt;T const&gt;</strong>，当 <strong>U</strong> 是 <strong>T</strong> 的一个可访问基类的时候，还能转换到 <strong>shared_ptr&lt;U&gt;</strong>，以及转换到 <strong>shared_ptr&lt;void&gt;</strong>。</p>
+
+
+
+		
+<p><strong>shared_ptr</strong> 现在是 <strong>TR1</strong>（第一个 C++ 库技术报告）的一部分。<strong>TR1</strong> 的最新草案可以在下述位置找到：</p>
+
+
+
+		
+<p><a href="http://www.open-std.org/JTC1/SC22/WG21/docs/papers/2005/n1745.pdf">http://www.open-std.org/JTC1/SC22/WG21/docs/papers/2005/n1745.pdf</a>
+			(1.36Mb PDF)</p>
+
+
+
+		
+<p>这个实现与 TR1 规范一致，仅有的例外是它依然存在于名字空间 <code>boost</code> 中，而不是 <code>std::tr1</code>。</p>
+
+
+
+		
+<h2><a name="BestPractices">Best Practices 最佳实践</a></h2>
+
+
+
+		
+<p>一个简单的近乎完全消灭内存泄露的方针是：总是使用一个已命名的智能指针变量接收 <strong>new</strong> 的结果。代码中每一次出现 <strong>new</strong> 关键字都应该是如下形式：</p>
+
+
+
+		
+<pre>shared_ptr&lt;T&gt; p(new Y);</pre>
+
+
+
+		
+<p>当然，也可以用其它智能指针代替上面的 <strong>shared_ptr</strong>；<strong>T</strong> 是和 <strong>Y</strong> 相同的类型，或者是可作为参数传递给 <strong>Y</strong> 的构造函数即可。</p>
+
+
+
+		
+<p>如果你遵守这个方针，自然导致你不再需要显式 <strong>delete</strong>s，<strong>try/catch</strong> 结构也将非常罕见。</p>
+
+
+
+		
+<p>避免使用匿名 <strong>shared_ptr</strong> 临时变量去存储内容，为了看到这样做是如何的危险，请考虑下面的例子：</p>
+
+
+
+		
+<pre>void f(shared_ptr&lt;int&gt;, int);<br>int g();<br><br>void ok()<br>{<br>    shared_ptr&lt;int&gt; p(new int(2));<br>    f(p, g());<br>}<br><br>void bad()<br>{<br>    f(shared_ptr&lt;int&gt;(new int(2)), g());<br>}<br></pre>
+
+
+
+		
+<p>函数 <strong>ok</strong> 亦步亦趋地遵循了方针，相反 <strong>bad</strong> 构造了临时的 <strong>shared_ptr</strong> 来代替，这就为内存泄漏留下了可乘之机。因为函数参数的求值顺序是不确定的，<strong>new int(2)</strong> 首先被求值，<strong>g()</strong> 第二个是有可能的，如果 <strong>g</strong> 抛出一个异常，我们永远也不可能到达 <strong>shared_ptr</strong> 的构造函数。关于这个问题的更多信息请参见 <a href="http://www.gotw.ca/gotw/056.htm">Herb Sutter 的对策</a>（还有 <a href="http://www.cuj.com/reference/articles/2002/0212/0212_sutter.htm">这里</a>）。</p>
+<p>上述异常安全性的问题也可以通过使用 <a href="make_shared.html"><code>make_shared</code></a> 或 <a href="make_shared.html"><code>allocate_shared</code></a> 工厂函数来消除，这两个函数在 boost/make_shared.hpp 中定义。这些工厂函数还通过加强的内存分配提供了效率上的好处。</p>
+
+
+
+		
+<h2><a name="Synopsis">Synopsis 概要</a></h2>
+
+
+
+		
+<pre>namespace boost {<br><br>  class bad_weak_ptr: public std::exception;<br><br>  template&lt;class T&gt; class <a href="weak_ptr.htm">weak_ptr</a>;<br><br>  template&lt;class T&gt; class shared_ptr {<br><br>    public:<br><br>      typedef T <a href="#element_type">element_type</a>;<br><br>      <a href="#constructors">shared_ptr</a>(); // never throws<br>      template&lt;class Y&gt; explicit <a href="#constructors">shared_ptr</a>(Y * p);<br>      template&lt;class Y, class D&gt; <a href="#constructors">shared_ptr</a>(Y * p, D d);<br>      template&lt;class Y, class D, class A&gt; <a href="#allocator_constructor">shared_ptr</a>(Y * p, D d, A a);<br>      <a href="#destructor">~shared_ptr</a>(); // never throws<br><br>      <a href="#constructors">shared_ptr</a>(shared_ptr const &amp; r); // never throws<br>      template&lt;class Y&gt; <a href="#constructors">shared_ptr</a>(shared_ptr&lt;Y&gt; const &amp; r); // never throws<br>      template&lt;class Y&gt; explicit <a href="#constructors">shared_ptr</a>(<a href="weak_ptr.htm">weak_ptr</a>&lt;Y&gt; const &amp; r);<br>      template&lt;class Y&gt; explicit <a href="#constructors">shared_ptr</a>(std::auto_ptr&lt;Y&gt; &amp; r);<br><br>      shared_ptr &amp; <a href="#assignment">operator=</a>(shared_ptr const &amp; r); // never throws  <br>      template&lt;class Y&gt; shared_ptr &amp; <a href="#assignment">operator=</a>(shared_ptr&lt;Y&gt; const &amp; r); // never throws<br>      template&lt;class Y&gt; shared_ptr &amp; <a href="#assignment">operator=</a>(std::auto_ptr&lt;Y&gt; &amp; r);<br><br>      void <a href="#reset">reset</a>(); // never throws<br>      template&lt;class Y&gt; void <a href="#reset">reset</a>(Y * p);<br>      template&lt;class Y, class D&gt; void <a href="#reset">reset</a>(Y * p, D d);<br>      template&lt;class Y, class D, class A&gt; void <a href="#reset">reset</a>(Y * p, D d, A a);<br>     &nbsp;template&lt;class Y&gt; void <a href="#reset">reset</a>(shared_ptr&lt;Y&gt; const &amp; r, T * p); // never throws<br><br>      T &amp; <a href="#indirection">operator*</a>() const; // never throws<br>      T * <a href="#indirection">operator-&gt;</a>() const; // never throws<br>      T * <a href="#get">get</a>() const; // never throws<br><br>      bool <a href="#unique">unique</a>() const; // never throws<br>      long <a href="#use_count">use_count</a>() const; // never throws<br><br>      operator <a href="#conversions"><i>unspecified-bool-type</i></a>() const; // never throws<br><br>      void <a href="#swap">swap</a>(shared_ptr &amp; b); // never throws<br>  };<br><br>  template&lt;class T, class U&gt;<br>    bool <a href="#comparison">operator==</a>(shared_ptr&lt;T&gt; const &amp; a, shared_ptr&lt;U&gt; const &amp; b); // never throws<br><br>  template&lt;class T, class U&gt;<br>    bool <a href="#comparison">operator!=</a>(shared_ptr&lt;T&gt; const &amp; a, shared_ptr&lt;U&gt; const &amp; b); // never throws<br><br>  template&lt;class T, class U&gt;<br>    bool <a href="#comparison">operator&lt;</a>(shared_ptr&lt;T&gt; const &amp; a, shared_ptr&lt;U&gt; const &amp; b); // never throws<br><br>  template&lt;class T&gt; void <a href="#free-swap">swap</a>(shared_ptr&lt;T&gt; &amp; a, shared_ptr&lt;T&gt; &amp; b); // never throws<br><br>  template&lt;class T&gt; T * <a href="#get_pointer">get_pointer</a>(shared_ptr&lt;T&gt; const &amp; p); // never throws<br><br>  template&lt;class T, class U&gt;<br>    shared_ptr&lt;T&gt; <a href="#static_pointer_cast">static_pointer_cast</a>(shared_ptr&lt;U&gt; const &amp; r); // never throws<br><br>  template&lt;class T, class U&gt;<br>    shared_ptr&lt;T&gt; <a href="#const_pointer_cast">const_pointer_cast</a>(shared_ptr&lt;U&gt; const &amp; r); // never throws<br><br>  template&lt;class T, class U&gt;<br>    shared_ptr&lt;T&gt; <a href="#dynamic_pointer_cast">dynamic_pointer_cast</a>(shared_ptr&lt;U&gt; const &amp; r); // never throws<br><br>  template&lt;class E, class T, class Y&gt;<br>    std::basic_ostream&lt;E, T&gt; &amp; <a href="#insertion-operator">operator&lt;&lt;</a> (std::basic_ostream&lt;E, T&gt; &amp; os, shared_ptr&lt;Y&gt; const &amp; p);<br><br>  template&lt;class D, class T&gt;<br>    D * <a href="#get_deleter">get_deleter</a>(shared_ptr&lt;T&gt; const &amp; p);<br>}</pre>
+
+
+
+		
+<h2><a name="Members">Members 成员</a></h2>
+
+
+
+		
+<h3><a name="element_type">element_type 元素类型</a></h3>
+
+
+
+		
+<pre>typedef T element_type;</pre>
+
+
+
+		
+<blockquote>
+			
+  
+  
+  <p>提供模板参数 T 的类型。</p>
+
+
+
+		</blockquote>
+
+
+
+		
+<h3><a name="constructors">constructors 构造函数</a></h3>
+
+
+
+		
+<pre>shared_ptr(); // never throws</pre>
+
+
+
+		
+<blockquote>
+			
+  
+  
+  <p><b>作用：</b>构造一个 <em>empty</em> 的 <b>shared_ptr</b>。</p>
+
+
+
+			
+  
+  
+  <p><b>后置条件：</b><code>use_count() == 0 &amp;&amp; get() == 0</code>。</p>
+
+
+
+			
+  
+  
+  <p><b>抛出：</b>无。</p>
+
+
+
+		</blockquote>
+
+
+
+		
+<p><em>【这里保证不抛出异常非常重要，因为 <strong>reset()</strong> 被指定使用缺省构造函数，这就意味着构造函数不必分配内存。】</em></p>
+
+
+
+		
+<pre>template&lt;class Y&gt; explicit shared_ptr(Y * p);</pre>
+
+
+
+		
+<blockquote>
+			
+  
+  
+  <p><b>条件：</b><b>p</b> 必须可以被转换到 <b>T *</b>。<strong>Y</strong> 必须是一个完整类型。表达式 <code>delete p</code> 必须是正常可用的，不能发生未定义行为，也不能抛出异常。</p>
+
+
+
+			
+  
+  
+  <p><b>作用：</b>构造一个拥有指针 <b>p</b> 的 <b>shared_ptr</b>。</p>
+
+
+
+			
+  
+  
+  <p><b>后置条件：</b><code>use_count() == 1 &amp;&amp; get() == p</code>。</p>
+
+
+
+			
+  
+  
+  <p><b>抛出：</b><strong>std::bad_alloc</strong>，或者一个由实现定义的当内存之外的某个资源无法获得时的异常。</p>
+
+
+
+			
+  
+  
+  <p><b>异常安全：</b>如果抛出一个异常，则调用 <code>delete p</code>。</p>
+
+
+
+			
+  
+  
+  <p><strong>注意：</strong><b>p</b> 必须是一个指向由 C++ <b>new</b> 表达式分配的对象的指针或者是 0。即使 <b>p</b> 是 0，后置条件中的 <a href="#use_count">use count</a> 也是 1，在一个值为 0 的指针上调用 <strong>delete</strong> 是无害的。</p>
+
+
+
+		</blockquote>
+
+
+
+		
+<p><em>【这个构造函数被变成模板是为了记住被传递的实际的指针类型。析构函数可以针对同样的指针，连同它的原始类型调用 <strong>delete</strong>，即使 <strong>T</strong> 没有虚拟析构函数，或者是 <strong>void</strong>。</em></p>
+
+
+
+		
+<p><em>可选的侵入式的计数支持暴露了太多的实现细节，而且无法和 <strong>weak_ptr</strong> 很好地结合。当前实现使用了一个不同的机制，<a href="enable_shared_from_this.html">enable_shared_from_this</a> 以解决 "<strong>shared_ptr</strong> from <strong>this</strong>" 问题。】</em></p>
+
+
+
+		<a name="allocator_constructor"></a>
+		
+<pre>template&lt;class Y, class D&gt; shared_ptr(Y * p, D d);<br>template&lt;class Y, class D, class A&gt; shared_ptr(Y * p, D d, A a);</pre>
+
+
+
+		
+<blockquote>
+			
+  
+  
+  <p><b>条件：</b><b>p</b> 必须可变换为 <b>T *</b>。<strong>D</strong> 必须是 <strong>CopyConstructible</strong>（可拷贝构造）的。<b>D</b> 的拷贝构造函数和析构函数不能抛出异常。表达式 <code>d(p)</code> 必须是正常可用的，不能发生未定义行为，也不能抛出异常。<strong>A</strong> 必须是一个 <em>Allocator</em>（分配器），关于分配器的描述可参见 C++ 标准 20.1.5 (<strong>Allocator requirements</strong>)。</p>
+
+
+
+			
+  
+  
+  <p><b>作用：</b>构造一个拥有指针 <strong>p</strong> 和删除器 <b>d</b> 的 <b>shared_ptr</b>。第二个构造函数用 <strong>a</strong> 的一个拷贝分配内存。</p>
+
+
+
+			
+  
+  
+  <p><b>后置条件：</b><code>use_count() == 1 &amp;&amp; get() == p</code>。</p>
+
+
+
+			
+  
+  
+  <p><b>抛出：</b><strong>std::bad_alloc</strong>，或者一个由实现定义的当内存之外的某个资源无法获得时的异常。</p>
+
+
+
+			
+  
+  
+  <p><b>异常安全：</b>如果抛出一个异常，则调用 <code>d(p)</code>。</p>
+
+
+
+			
+  
+  
+  <p><b>注意：</b>在 <b>p</b> 指向的对象被删除时，所存储的 <strong>d</strong> 的拷贝被调用，并以所存储的 <strong>p</strong> 的拷贝作为参数。</p>
+
+
+
+		</blockquote>
+
+
+
+		
+<p><em>【custom deallocators（定制化释放器）准许一个返回 <strong>shared_ptr</strong> 的工厂函数以将用户隔离在它的内存分配策略之外。因为这个 deallocator（释放器）不是类型的一部分，改变其分配策略不会破坏源代码级或二进制级兼容性，也不需要客户端重新编译。例如，一个 "no-op" 释放器返回一个指向静态分配对象的 <strong>shared_ptr</strong> 是有用的，而其它变种却允许用一个 <strong>shared_ptr</strong> 来包装其它智能指针，以方便互操作性。</em></p>
+
+
+
+		
+<p><em>对 custom deallocators（定制化释放器）的支持不会强加很大的负担。其它 <strong>shared_ptr</strong> 特性依然需要 deallocator（释放器）提供支持。</em></p>
+
+
+
+		
+<p><em>对 <b>D</b> 的拷贝构造函数不能抛出异常的需求来自于以值传递。如果拷贝构造函数抛出异常，指针就会泄漏。排除这一需求需要使用以 (const) reference（（常）引用）传递。</em></p>
+
+
+
+		
+<p><em>以引用传递的主要问题在于它和 rvalues（右值）的相互影响。一个 const
+reference（常引用）可能还是会引起一次拷贝，并需要一个 const operator()。而一个 non-const
+reference（非常引用）根本不会绑定在一个右值上。解决这个问题的一个好的方案是 <a href="http://std.dkuug.dk/jtc1/sc22/wg21/docs/papers/2002/n1377.htm">N1377</a>/<a href="http://std.dkuug.dk/jtc1/sc22/wg21/docs/papers/2002/n1385.htm">N1385</a> 提案中的 rvalue reference（右值引用）。】</em></p>
+
+
+
+		
+<pre>shared_ptr(shared_ptr const &amp; r); // never throws<br>template&lt;class Y&gt; shared_ptr(shared_ptr&lt;Y&gt; const &amp; r); // never throws</pre>
+
+
+
+		
+<blockquote>
+			
+  
+  
+  <p><b>作用：</b>如果 <b>r</b> 为 <em>empty</em>，构造一个 <em>empty</em> <b>shared_ptr</b>，否则，构造一个带有 <b>r</b> 的 <em>shares ownership</em>（共享所有权）的 <b>shared_ptr</b>。</p>
+
+
+
+			
+  
+  
+  <p><b>后置条件：</b> <code>get() == r.get() &amp;&amp; use_count() == r.use_count()</code>。</p>
+
+
+
+			
+  
+  
+  <p><b>抛出：</b>无。</p>
+
+
+
+		</blockquote>
+
+
+
+		
+<pre>template&lt;class Y&gt; explicit shared_ptr(<a href="weak_ptr.htm">weak_ptr</a>&lt;Y&gt; const &amp; r);</pre>
+
+
+
+		
+<blockquote>
+			
+  
+  
+  <p><b>作用：</b>构造一个带有 <b>r</b> 的 <em>shares ownership</em>（共享所有权）的 <b>shared_ptr</b>，并存储 <b>r</b> 中所存储指针的一个拷贝。</p>
+
+
+
+			
+  
+  
+  <p><b>后置条件：</b><code>use_count() == r.use_count()</code>。</p>
+
+
+
+			
+  
+  
+  <p><b>抛出：</b>当 <code>r.use_count() == 0</code> 时，抛出 <b>bad_weak_ptr</b>。</p>
+
+
+
+			
+  
+  
+  <p><b>异常安全：</b>如果抛出一个异常，构造函数将不起作用。</p>
+
+
+
+		</blockquote>
+
+
+
+		
+<pre>template&lt;class Y&gt; shared_ptr(std::auto_ptr&lt;Y&gt; &amp; r);</pre>
+
+
+
+		
+<blockquote>
+			
+  
+  
+  <p><b>作用：</b>构造一个 <b>shared_ptr</b>，就像存储了一个 <strong>r.release()</strong> 的返回值的拷贝。</p>
+
+
+
+			
+  
+  
+  <p><b>后置条件：</b><code>use_count() == 1</code>。</p>
+
+
+
+			
+  
+  
+  <p><b>抛出：</b><strong>std::bad_alloc</strong>，或者一个由实现定义的当内存之外的某个资源无法获得时的异常。</p>
+
+
+
+			
+  
+  
+  <p><b>异常安全：</b>如果抛出一个异常，构造函数将不起作用。</p>
+
+
+
+		</blockquote>
+
+
+
+		
+<p><em>【这个构造函数所得到的源 <strong>auto_ptr</strong> 是以引用传递的，而非以值传递，而且不能接收 <strong>auto_ptr</strong> 临时变量。这是故意的，作为构造函数提出的强制保证，一个右值引用也可以解决这个问题。】</em></p>
+
+
+
+		
+<h3><a name="destructor">destructor 析构函数</a></h3>
+
+
+
+		
+<pre>~shared_ptr(); // never throws</pre>
+
+
+
+		
+<blockquote>
+			
+  
+  
+  <p><b>作用：</b></p>
+
+
+
+			
+  
+  
+  <ul>
+
+
+
+				<li>
+					如果 <strong>*this</strong> 为 <em>empty</em>，或者和其他 <strong>shared_ptr</strong> 实例共享所有权 (<code>use_count() &gt; 1</code>)，没有副作用。
+				</li>
+
+
+    <li>
+					否则，如果 <strong>*this</strong> 拥有一个指针 <strong>p</strong> 和一个删除器 <strong>d</strong>，则调用 <code>d(p)</code>。
+				</li>
+
+
+    <li>
+					否则，<strong>*this</strong> 拥有一个指针 <strong>p</strong>，则调用 <code>delete p</code>。</li>
+
+
+  
+  
+  </ul>
+
+
+
+			
+  
+  
+  <p><b>抛出：</b>无。</p>
+
+
+
+		</blockquote>
+
+
+
+		
+<h3><a name="assignment">assignment 赋值</a></h3>
+
+
+
+		
+<pre>shared_ptr &amp; operator=(shared_ptr const &amp; r); // never throws<br>template&lt;class Y&gt; shared_ptr &amp; operator=(shared_ptr&lt;Y&gt; const &amp; r); // never throws<br>template&lt;class Y&gt; shared_ptr &amp; operator=(std::auto_ptr&lt;Y&gt; &amp; r);</pre>
+
+
+
+		
+<blockquote>
+			
+  
+  
+  <p><b>作用：</b>等价于 <code>shared_ptr(r).swap(*this)</code>。</p>
+
+
+
+			
+  
+  
+  <p><b>返回：</b><code>*this</code>。</p>
+
+
+
+			
+  
+  
+  <p><b>注意：</b>由临时对象的构造和析构造成的使用计数的更新不被认为是可察觉的副作用，而实现可以自由地经由不同的手段达到其效果（以及隐含的保证），而不创建临时变量。特别是，在下例中：</p>
+
+
+
+			
+  
+  
+  <pre>shared_ptr&lt;int&gt; p(new int);<br>shared_ptr&lt;void&gt; q(p);<br>p = p;<br>q = p;<br></pre>
+
+
+
+			
+  
+  
+  <p>两个赋值可能都是 no-op（什么都不做）。</p>
+
+
+
+		</blockquote>
+
+
+
+		
+<h3><a name="reset">reset 重置</a></h3>
+
+
+
+		
+<pre>void reset(); // never throws</pre>
+
+
+
+		
+<blockquote>
+			
+  
+  
+  <p><b>作用：</b>等价于 <code>shared_ptr().swap(*this)</code>。</p>
+
+
+
+		</blockquote>
+
+
+
+		
+<pre>template&lt;class Y&gt; void reset(Y * p);</pre>
+
+
+
+		
+<blockquote>
+			
+  
+  
+  <p><b>作用：</b>等价于 <code>shared_ptr(p).swap(*this)</code>。</p>
+
+
+
+		</blockquote>
+
+
+
+		
+<pre>template&lt;class Y, class D&gt; void reset(Y * p, D d);</pre>
+
+
+
+		
+<blockquote>
+			
+  
+  
+  <p><b>作用：</b>等价于 <code>shared_ptr(p, d).swap(*this)</code>。</p>
+
+
+
+		</blockquote>
+
+
+
+		
+<pre>template&lt;class Y, class D, class A&gt; void reset(Y * p, D d, A a);</pre>
+
+
+
+		
+<blockquote>
+			
+  
+  
+  <p><b>作用：</b>等价于 <code>shared_ptr(p, d, a).swap(*this)</code>。</p>
+
+
+
+		</blockquote>
+
+
+
+		
+<pre>template&lt;class Y&gt; void reset(shared_ptr&lt;Y&gt; const &amp; r, T * p); // 不抛出</pre>
+
+
+
+<blockquote>
+  
+  
+  <p><b>作用：</b>等价于 <code>shared_ptr(r, 
+p).swap(*this)</code>.</p>
+
+
+</blockquote>
+
+
+<h3><a name="indirection">indirection 间接引用</a></h3>
+
+
+
+		
+<pre>T &amp; operator*() const; // never throws</pre>
+
+
+
+		
+<blockquote>
+			
+  
+  
+  <p><b>条件：</b>所存储的指针不能为 0。</p>
+
+
+
+			
+  
+  
+  <p><b>返回：</b>一个引向所存储的指针所指向的对象的引用。</p>
+
+
+
+			
+  
+  
+  <p><b>抛出：</b>无。</p>
+
+
+
+		</blockquote>
+
+
+
+		
+<pre>T * operator-&gt;() const; // never throws</pre>
+
+
+
+		
+<blockquote>
+			
+  
+  
+  <p><b>条件：</b>所存储的指针不能为 0。</p>
+
+
+
+			
+  
+  
+  <p><b>返回：</b>所存储的指针。</p>
+
+
+
+			
+  
+  
+  <p><b>抛出：</b>无。</p>
+
+
+
+		</blockquote>
+
+
+
+		
+<h3><a name="get">get 取得</a></h3>
+
+
+
+		
+<pre>T * get() const; // never throws</pre>
+
+
+
+		
+<blockquote>
+			
+  
+  
+  <p><b>返回：</b>所存储的指针。</p>
+
+
+
+			
+  
+  
+  <p><b>抛出：</b>无。</p>
+
+
+
+		</blockquote>
+
+
+
+		
+<h3><a name="unique">unique 唯一性</a></h3>
+
+
+
+		
+<pre>bool unique() const; // never throws</pre>
+
+
+
+		
+<blockquote>
+			
+  
+  
+  <p><b>返回：</b><code>use_count() == 1</code>。</p>
+
+
+
+			
+  
+  
+  <p><b>抛出：</b>无。</p>
+
+
+
+			
+  
+  
+  <p><b>注意：</b><code>unique()</code> 可能比 <code>use_count()</code> 更快。如果你用 <code>unique()</code> 实现 copy on write（写时拷贝），当所存储的指针为 0 是，不要依赖于一个特定的值。</p>
+
+
+
+		</blockquote>
+
+
+
+		
+<h3><a name="use_count">use_count 使用计数</a></h3>
+
+
+
+		
+<pre>long use_count() const; // never throws</pre>
+
+
+
+		
+<blockquote>
+			
+  
+  
+  <p><b>返回：</b>与 <b>*this</b> 共享所有权的 <b>shared_ptr</b> 对象（包括 <strong>*this</strong> 在内）的数量，或者当 <strong>*this</strong> 为空时，一个不特定的非负值。</p>
+
+
+
+			
+  
+  
+  <p><b>抛出：</b>无。</p>
+
+
+
+			
+  
+  
+  <p><b>注意：</b><code>use_count()</code> 达不到必要的效率。只用于调试和测试的目的。而不要用于产品代码。</p>
+
+
+
+		</blockquote>
+
+
+
+		
+<h3><a name="conversions">conversions 转换</a></h3>
+
+
+
+		
+<pre>operator <i>unspecified-bool-type</i> () const; // never throws</pre>
+
+
+
+		
+<blockquote>
+			
+  
+  
+  <p><b>返回：</b>一个未确定的值，在需要布尔值的上下文中，它等价于 <code>get() != 0</code>。</p>
+
+
+
+			
+  
+  
+  <p><b>抛出：</b>无。</p>
+
+
+
+			
+  
+  
+  <p><b>注意：</b>这一转换操作符允许将 <b>shared_ptr</b> 对象用于需要布尔值的上下文中，就像 <code>if (p &amp;&amp; p-&gt;valid()) {}</code>。实际目标类型通常是一个指向成员函数的指针，消除了很多隐式转换的陷阱。</p>
+
+
+
+		</blockquote>
+
+
+
+		
+<p><em>【到 bool 的转换不仅仅是语法糖。它允许在使用 <a href="#dynamic_pointer_cast">dynamic_pointer_cast</a> 或 <a href="weak_ptr.htm#lock">weak_ptr::lock</a> 时，在条件中声明 <strong>shared_ptrs</strong>。】</em></p>
+
+
+
+		
+<h3><a name="swap">swap 交换</a></h3>
+
+
+
+		
+<pre>void swap(shared_ptr &amp; b); // never throws</pre>
+
+
+
+		
+<blockquote>
+			
+  
+  
+  <p><b>作用：</b>交换两个智能指针中的内容。</p>
+
+
+
+			
+  
+  
+  <p><b>抛出：</b>无。</p>
+
+
+
+		</blockquote>
+
+
+
+		
+<h2><a name="functions">Free Functions 自由函数</a></h2>
+
+
+
+		
+<h3><a name="comparison">comparison 比较</a></h3>
+
+
+
+		
+<pre>template&lt;class T, class U&gt;<br>  bool operator==(shared_ptr&lt;T&gt; const &amp; a, shared_ptr&lt;U&gt; const &amp; b); // never throws</pre>
+
+
+
+		
+<blockquote>
+			
+  
+  
+  <p><b>返回：</b><code>a.get() == b.get()</code>。</p>
+
+
+
+			
+  
+  
+  <p><b>抛出：</b>无。</p>
+
+
+
+		</blockquote>
+
+
+
+		
+<pre>template&lt;class T, class U&gt;<br>  bool operator!=(shared_ptr&lt;T&gt; const &amp; a, shared_ptr&lt;U&gt; const &amp; b); // never throws</pre>
+
+
+
+		
+<blockquote>
+			
+  
+  
+  <p><b>返回：</b><code>a.get() != b.get()</code>。</p>
+
+
+
+			
+  
+  
+  <p><b>抛出：</b>无。</p>
+
+
+
+		</blockquote>
+
+
+
+		
+<pre>template&lt;class T, class U&gt;<br>  bool operator&lt;(shared_ptr&lt;T&gt; const &amp; a, shared_ptr&lt;U&gt; const &amp; b); // never throws</pre>
+
+
+
+		
+<blockquote>
+			
+  
+  
+  <p><b>返回：</b>一个未确定值，以致于</p>
+
+
+
+			
+  
+  
+  <ul>
+
+
+
+				<li>
+					<b>operator&lt;</b> 是一个严格意义上的 C++ 标准 25.3 <code>[lib.alg.sorting]</code> 中描述的 weak ordering（弱顺序）；
+				</li>
+
+
+    <li>等值关系通过 <strong>operator&lt;</strong> 来定义，<code>!(a &lt; b) &amp;&amp; !(b &lt; a)</code>，在这种情况下，当且仅当两个 <strong>shared_ptr</strong> 实例共享所有权或者都为空时，两个 <strong>shared_ptr</strong> 相等。</li>
+
+
+  
+  
+  </ul>
+
+
+
+			
+  
+  
+  <p><b>抛出：</b>无。</p>
+
+
+
+			
+  
+  
+  <p><b>注意：</b>允许 <strong>shared_ptr</strong> 对象在关联式容器中作为键值使用。</p>
+
+
+
+		</blockquote>
+
+
+
+		
+<p><em>【因为兼容性和合法性的原因，<strong>Operator&lt;</strong> 比 <strong>std::less </strong> 的特化版本更优先被选用，因为 <strong>std::less</strong> 需要返回一个 <strong>operator&lt;</strong> 的结果，而当没有提供谓词时，许多标准算法在比较中使用 <strong>operator&lt;</strong> 来代替 <strong>std::less</strong>。组合对象，比如 <strong>std::pair</strong>，也根据它们所包含的子对象的 <strong>operator&lt;</strong> 来实现它们的 <strong>operator&lt;</strong>。</em></p>
+
+
+
+		
+<p><em>其余的比较操作符被故意省略。】</em></p>
+
+
+
+		
+<h3><a name="free-swap">swap 交换</a></h3>
+
+
+
+		
+<pre>template&lt;class T&gt;<br>  void swap(shared_ptr&lt;T&gt; &amp; a, shared_ptr&lt;T&gt; &amp; b); // never throws</pre>
+
+
+
+		
+<blockquote>
+			
+  
+  
+  <p><b>作用：</b>等价于 <code>a.swap(b)</code>。</p>
+
+
+
+			
+  
+  
+  <p><b>抛出：</b>无。</p>
+
+
+
+			
+  
+  
+  <p><b>注意：</b>与 <b>std::swap</b> 的接口匹配。为泛型编程提供帮助。</p>
+
+
+
+		</blockquote>
+
+
+
+		
+<p><em>【<strong>swap</strong> 被定义在和 <strong>shared_ptr</strong> 同样的名字空间中，这是当前提供一个让标准库有机会使用的 <strong>swap</strong> 函数的仅有的合法方法。】</em></p>
+
+
+
+		
+<h3><a name="get_pointer">get_pointer 取得指针</a></h3>
+
+
+
+		
+<pre>template&lt;class T&gt;<br>  T * get_pointer(shared_ptr&lt;T&gt; const &amp; p); // never throws</pre>
+
+
+
+		
+<blockquote>
+			
+  
+  
+  <p><b>返回：</b><code>p.get()</code>。</p>
+
+
+
+			
+  
+  
+  <p><b>抛出：</b>无。</p>
+
+
+
+			
+  
+  
+  <p><b>注意：</b>为泛型编程提供帮助，用于 <a href="../bind/mem_fn.html">mem_fn</a>。</p>
+
+
+
+		</blockquote>
+
+
+
+		
+<h3><a name="static_pointer_cast">static_pointer_cast</a></h3>
+
+
+
+		
+<pre>template&lt;class T, class U&gt;<br>  shared_ptr&lt;T&gt; static_pointer_cast(shared_ptr&lt;U&gt; const &amp; r); // never throws</pre>
+
+
+
+		
+<blockquote>
+			
+  
+  
+  <p><strong>条件：</strong>表达式 <code>static_cast&lt;T*&gt;(r.get())</code> 必须正常可用。</p>
+
+
+
+			
+  
+  
+  <p><b>返回：</b>如果 <b>r</b> 为 <i>empty</i>，返回一个 <i>empty</i> <b>shared_ptr&lt;T&gt;</b>；否则，返回一个存储 <code>static_cast&lt;T*&gt;(r.get())</code> 的拷贝并和 <b>r</b> 共享所有权的 <strong>shared_ptr&lt;T&gt;</strong> 对象。</p>
+
+
+
+			
+  
+  
+  <p><b>抛出：</b>无。</p>
+
+
+
+			
+  
+  
+  <p><b>注意：</b>表面上看似乎等价的表达式</p>
+
+
+
+			
+  
+  
+  <p><code>shared_ptr&lt;T&gt;(static_cast&lt;T*&gt;(r.get()))</code></p>
+
+
+
+			
+  
+  
+  <p>因为试图删除同样的对象两次，而最终陷入未定义行为。</p>
+
+
+
+		</blockquote>
+
+
+
+		
+<h3><a name="const_pointer_cast">const_pointer_cast</a></h3>
+
+
+
+		
+<pre>template&lt;class T, class U&gt;<br>  shared_ptr&lt;T&gt; const_pointer_cast(shared_ptr&lt;U&gt; const &amp; r); // never throws</pre>
+
+
+
+		
+<blockquote>
+			
+  
+  
+  <p><strong>条件：</strong>表达式 <code>const_cast&lt;T*&gt;(r.get())</code> 必须正常可用。</p>
+
+
+
+			
+  
+  
+  <p><b>返回：</b>如果 <b>r</b> 为 <i>empty</i>，返回一个 <i>empty</i> <strong>shared_ptr&lt;T&gt;</strong>；否则，返回一个存储 <code>const_cast&lt;T*&gt;(r.get())</code> 的拷贝并和 <b>r</b> 共享所有权的 <strong>shared_ptr&lt;T&gt;</strong> 对象。</p>
+
+
+
+			
+  
+  
+  <p><b>抛出：</b>无。</p>
+
+
+
+			
+  
+  
+  <p><b>注意：</b>表面上看似乎等价的表达式</p>
+
+
+
+			
+  
+  
+  <p><code>shared_ptr&lt;T&gt;(const_cast&lt;T*&gt;(r.get()))</code></p>
+
+
+
+			
+  
+  
+  <p>因为试图删除同样的对象两次，而最终陷入未定义行为。</p>
+
+
+
+		</blockquote>
+
+
+
+		
+<h3><a name="dynamic_pointer_cast">dynamic_pointer_cast</a></h3>
+
+
+
+		
+<pre>template&lt;class T, class U&gt;<br>  shared_ptr&lt;T&gt; dynamic_pointer_cast(shared_ptr&lt;U&gt; const &amp; r);</pre>
+
+
+
+		
+<blockquote>
+			
+  
+  
+  <p><strong>条件：</strong>表达式 <code>dynamic_cast&lt;T*&gt;(r.get())</code> 必须正常可用，而且它的行为已被定义。</p>
+
+
+
+			
+  
+  
+  <p><b>返回：</b></p>
+
+
+
+			
+  
+  
+  <ul>
+
+
+
+				<li>当 <code>dynamic_cast&lt;T*&gt;(r.get())</code> 返回一个非 0 值，则返回一个存储它的拷贝并和 <strong>r</strong> 共享所有权的 <strong>shared_ptr&lt;T&gt;</strong> 对象；
+				</li>
+
+
+    <li>否则，返回一个 <i>empty</i> <strong>shared_ptr&lt;T&gt;</strong> 对象。</li>
+
+
+  
+  
+  </ul>
+
+
+
+			
+  
+  
+  <p><b>抛出：</b>无。</p>
+
+
+
+			
+  
+  
+  <p><b>注意：</b>表面上看似乎等价的表达式</p>
+
+
+
+			
+  
+  
+  <p><code>shared_ptr&lt;T&gt;(dynamic_cast&lt;T*&gt;(r.get()))</code></p>
+
+
+
+			
+  
+  
+  <p>因为试图删除同样的对象两次，而最终陷入未定义行为。</p>
+
+
+
+		</blockquote>
+
+
+
+		
+<h3><a name="insertion-operator">operator&lt;&lt;</a></h3>
+
+
+
+		
+<pre>template&lt;class E, class T, class Y&gt;<br>    std::basic_ostream&lt;E, T&gt; &amp; operator&lt;&lt; (std::basic_ostream&lt;E, T&gt; &amp; os, shared_ptr&lt;Y&gt; const &amp; p);</pre>
+
+
+
+		
+<blockquote>
+			
+  
+  
+  <p><strong>作用：</strong><code>os &lt;&lt; p.get();</code>。</p>
+
+
+
+			
+  
+  
+  <p><b>返回：</b><b>os</b>。</p>
+
+
+
+		</blockquote>
+
+
+
+		
+<h3><a name="get_deleter">get_deleter</a></h3>
+
+
+
+		
+<pre>template&lt;class D, class T&gt;<br>    D * get_deleter(shared_ptr&lt;T&gt; const &amp; p);</pre>
+
+
+
+		
+<blockquote>
+			
+  
+  
+  <p><b>返回：</b>如果 <strong>*this</strong> 拥有一个类型为 <strong>D</strong> 的删除器 <strong>d</strong>，则返回 <code>&amp;d</code>；否则返回 0。</p>
+
+
+
+		</blockquote>
+
+
+
+		
+<h2><a name="example">Example 示例</a></h2>
+
+
+
+		
+<p>来看一个完整的示例程序 <a href="example/shared_ptr_example.cpp">shared_ptr_example.cpp</a>。这个程序创建了一个 <b>shared_ptr</b> 对象的 <b>std::vector</b> 和 <b>std::set</b>。</p>
+
+
+
+		
+<p>注意，在容器被填充之后，一些 <b>shared_ptr</b> 对象的使用计数为 1，而不是 2，这是因为 set 是一个 <b>std::set</b> 而不是 <b>std::multiset</b>，而这样就不能包含重复的条目。此外，当 <b>push_back</b> 和 <b>insert</b> 容器操作执行的次数不同，使用计数可能会更高。还有更复杂的，容器操作在多种情况下都可能抛出异常。在这个示例程序中的内存管理和异常处理都很正常，而没有让智能指针成为一场噩梦。</p>
+
+
+
+		
+<h2><a name="Handle/Body">Handle/Body</a> Idiom Handle/Body 惯用法</h2>
+
+
+
+		
+<p><b>shared_ptr</b> 的一个惯常用法是实现 handle/body（也称为 pimpl）惯用法，以避免在头文件中暴露身体（实现）。</p>
+
+
+
+		
+<p><a href="example/shared_ptr_example2_test.cpp">shared_ptr_example2_test.cpp</a> 示例程序包含一个头文件 <a href="example/shared_ptr_example2.hpp">shared_ptr_example2.hpp</a>，其中使用了一个指向一个完整类型的 <b>shared_ptr&lt;&gt;</b> 来隐藏实现。成员函数的实例化要求在 <a href="example/shared_ptr_example2.cpp">shared_ptr_example2.cpp</a> 实现文件中存在完整类型。注意这里不需要显示的析构函数。不像 ~scoped_ptr，~shared_ptr 不需要 <b>T</b> 是一个完整类型。</p>
+
+
+
+		
+<h2><a name="ThreadSafety">Thread Safety</a> 线程安全</h2>
+
+
+
+		
+<p><strong>shared_ptr</strong> 对象提供与内建类型一样的线程安全级别。一个 <strong>shared_ptr</strong> 实例可以同时被多个线程“读”（仅使用不变操作进行访问）。不同的 <strong>shared_ptr</strong> 实例可以同时被多个线程“写入”（使用类似 <strong>operator=</strong> 或 <strong>reset</strong> 这样的可变操作进行访问）（即使这些实例是拷贝，而且共享下层的引用计数）。</p>
+
+
+
+		
+<p>任何其它的同时访问的结果会导致未定义行为。</p>
+
+
+
+		
+<p>示例：</p>
+
+
+
+		
+<pre>shared_ptr&lt;int&gt; p(new int(42));<br><br>//--- Example 1 ---<br><br>// thread A<br>shared_ptr&lt;int&gt; p2(p); // reads p<br><br>// thread B<br>shared_ptr&lt;int&gt; p3(p); // OK, multiple reads are safe<br><br>//--- Example 2 ---<br><br>// thread A<br>p.reset(new int(1912)); // writes p<br><br>// thread B<br>p2.reset(); // OK, writes p2<br><br>//--- Example 3 ---<br><br>// thread A<br>p = p3; // reads p3, writes p<br><br>// thread B<br>p3.reset(); // writes p3; undefined, simultaneous read/write<br><br>//--- Example 4 ---<br><br>// thread A<br>p3 = p2; // reads p2, writes p3<br><br>// thread B<br>// p2 goes out of scope: undefined, the destructor is considered a "write access"<br><br>//--- Example 5 ---<br><br>// thread A<br>p3.reset(new int(1));<br><br>// thread B<br>p3.reset(new int(2)); // undefined, multiple writes<br></pre>
+
+
+
+		
+<p>&nbsp;</p>
+
+
+
+		
+<p>从 Boost 版本 1.33.0 开始，<strong>shared_ptr</strong> 在以下平台上使用了 lock-free 实现：</p>
+
+
+
+		
+<ul>
+
+
+
+			<li>
+			GNU GCC on x86 or x86-64;
+			</li>
+
+
+  <li>
+			GNU GCC on IA64;
+			</li>
+
+
+  <li>
+			Metrowerks CodeWarrior on PowerPC;
+			</li>
+
+
+  <li>
+			GNU GCC on PowerPC;
+			</li>
+
+
+  <li>
+				Windows.</li>
+
+
+</ul>
+
+
+
+		
+<p>如果你的程序是单线程的，而且在它的缺省配置中没有连接任何可能使用了 <strong>shared_ptr</strong> 的库，你可以在项目基准中 <strong>#define</strong> 宏 <strong>BOOST_SP_DISABLE_THREADS</strong> 以转换到普通的非原子的引用计数更新。</p>
+
+
+
+		
+<p>（在部分（而非全部）编译单元中定义 <strong>BOOST_SP_DISABLE_THREADS</strong> 在技术上是对单一定义规则和未定义行为的触犯。然而，实现会尽其所能满足那些提出使用非原子更新的编译单元的要求。但是，没有任何保证。）</p>
+
+
+
+		
+<p>你可以定义宏 <strong>BOOST_SP_USE_PTHREADS</strong> 以避开特定平台的 lock-free 实现，并退回到普通的基于 <strong>pthread_mutex_t</strong> 的代码。</p>
+
+
+
+		
+<h2><a name="FAQ">Frequently Asked Questions 常见问题</a></h2>
+
+
+
+		
+<p><b>问：</b>有几种共享指针的变化，反映不同的权衡，为什么智能指针库仅提供一种单一的实现？能够用每一种类型做试验以发现最适合手边工作的那一种不是非常有好处的吗？</p>
+
+
+
+		
+<p><b>答：</b><strong>shared_ptr</strong>
+的一个重要目标是提供一个标准的共享所有权指针。对于稳定的库接口来说，单一指针类型是很重要的，因为不同的共享指针一般无法互操作，例如，一个
+reference counted pointer（引用计数指针）（用于库 A）不能和一个 linked pointer（连接指针）（用于库
+B）共享所有权。<br>
+
+
+</p>
+
+
+
+		
+<p><b>问：</b><b>shared_ptr</b> 为什么没有用来提供特性或规则的模板参数以允许广泛的用户定制性？</p>
+
+
+
+		
+<p><b>答：</b>参数化会阻碍用户。<b>shared_ptr</b> 模板小心谨慎地精工细作以满足通用需求，而没有大量的参数化。有朝一日，可能会有人发明可配置性很高的智能指针，而且很易于使用并难于犯错。到那时，<b>shared_ptr</b> 会成为为各种各样的应用而选择的智能指针。（那些对基于策略的智能指针感兴趣的人可以阅读 Andrei Alexandrescu 写的 <a href="http://www.awprofessional.com/bookstore/product.asp?isbn=0201704315&amp;rl=1">Modern C++ Design</a>。）<br>
+
+
+</p>
+
+
+
+		
+<p><b>问：</b>我不确定。缺省参数可以用于那些需要隐藏复杂度的地方。再问一次，为什么不规则化？</p>
+
+
+
+		
+<p><b>答：</b>模板参数影响类型。参见上面第一个问题的回答。<br>
+
+
+</p>
+
+
+
+		
+<p><b>问：</b><b>shared_ptr</b> 为什么不用链表实现？</p>
+
+
+
+		
+<p><b>答：</b>链表实现的好处不足以抵消一个额外的指针所增加的开销。参见 <a href="smarttests.htm">timings</a> 页面。另外，让一个链表实现线程安全的代价太大了。<br>
+
+
+</p>
+
+
+
+		
+<p><b>问：</b><b>shared_ptr</b>（或其它任何一个 Boost 智能指针）不提供一个到 <b>T*</b> 的自动转换？</p>
+
+
+
+		
+<p><b>答：</b>自动转换被认为更易于导致错误。<br>
+
+
+</p>
+
+
+
+		
+<p><b>问：</b><b>shared_ptr</b> 为什么提供 use_count()？</p>
+
+
+
+		
+<p><b>答：</b>为了帮助写测试用例和调试显示。一个祖先类有 use_count()，它对于在一个复杂的项目中追踪 bugs 并切断循环依赖是非常有用的。<br>
+
+
+</p>
+
+
+
+		
+<p><b>问：</b>为什么 <b>shared_ptr</b> 不指定复杂度要求？</p>
+
+
+
+		
+<p><b>答：</b>因为复杂度要求限制了实现，并且使规范更复杂，对于 <b>shared_ptr</b> 的用户却没有明显的好处。例如，如果不得不符合严厉的复杂度要求，错误检查的实现可能会变得不一致。<br>
+
+
+</p>
+
+
+
+		
+<p><b>问：</b>为什么 <b>shared_ptr</b> 不提供一个 release() 函数？</p>
+
+
+
+		
+<p><b>答：</b><b>shared_ptr</b> 不能放弃所有权除非它是 unique()，因为其它拷贝仍然可以销毁这个对象。</p>
+
+
+
+		
+<p>考虑：</p>
+
+
+
+		
+<blockquote>
+  
+  
+  <pre>shared_ptr&lt;int&gt; a(new int);<br>shared_ptr&lt;int&gt; b(a); // a.use_count() == b.use_count() == 2<br><br>int * p = a.release();<br><br>// Who owns p now? b will still call delete on it in its destructor.</pre>
+
+
+
+		</blockquote>
+
+
+
+		
+<p>此外，当源 <b>shared_ptr</b> 可能带有一个定制化的删除器时，<code>release()</code> 返回的指针很难可靠地被释放。<br>
+
+
+</p>
+
+
+
+		
+<p><b>问：</b>为什么 <code>operator-&gt;()</code> 是 const 的，而它的返回值却是指向元素类型的 non-const 指针？</p>
+
+
+
+		
+<p><b>答：</b>浅拷贝指针，包括裸指针，一般不会传递常量性。当你能够总是从一个 const 指针得到一个 non-const 指针，并继而通过它改变那个对象的时候，还是有一点儿意义的。<b>shared_ptr</b> 是“尽可能接近而不重合裸指针”。<br>
+
+
+<br>
+
+
+</p>
+
+
+
+		
+<hr>
+<p>$Date: 2009-03-11 11:08:14 -0400 (Wed, 11 Mar 2009) $</p>
+
+
+
+<p><small>Copyright 1999 Greg Colvin and Beman Dawes. Copyright 2002 Darin 
+Adler. Copyright 2002-2005 Peter Dimov. Distributed under the Boost Software 
+License, Version 1.0. See accompanying file <a href="../../LICENSE_1_0.txt">LICENSE_1_0.txt</a> or copy at <a href="http://www.boost.org/LICENSE_1_0.txt">http://www.boost.org/LICENSE_1_0.txt</a>.</small></p>
+
+
+</body></html>

@@ -1,0 +1,87 @@
+<!DOCTYPE html PUBLIC "-//W3C//DTD XHTML 1.0 Transitional//EN" "http://www.w3.org/TR/xhtml1/DTD/xhtml1-transitional.dtd">
+<html xmlns="http://www.w3.org/1999/xhtml" xml:lang="en" lang="en">
+<head>
+<!-- Copyright Aleksey Gurtovoy 2006. Distributed under the Boost --><!-- Software License, Version 1.0. (See accompanying --><!-- file LICENSE_1_0.txt or copy at http://www.boost.org/LICENSE_1_0.txt) -->
+  <meta http-equiv="Content-Type" content="text/html; charset=utf-8" />
+
+  <meta name="generator" content="Docutils 0.3.6: http://docutils.sourceforge.net/" />
+
+
+  <title>THE BOOST MPL LIBRARY: The lambda Metafunction</title>
+  <link rel="stylesheet" href="../style.css" type="text/css" />
+</head>
+
+
+
+
+
+
+<body class="docframe">
+
+<table class="header">
+  <tbody>
+    <tr class="header">
+      <td class="header-group navigation-bar"><span class="navigation-group"><a href="./handling-placeholders.html" class="navigation-link">Prev</a>&nbsp;<a href="./the-apply-metafunction.html" class="navigation-link">Next</a></span><span class="navigation-group-separator">&nbsp;|&nbsp;</span><span class="navigation-group">Back&nbsp;<a href="./the-apply-metafunction.html" class="navigation-link">Along</a></span><span class="navigation-group-separator">&nbsp;|&nbsp;</span><span class="navigation-group"><a href="./handling-placeholders.html" class="navigation-link">Up</a>&nbsp;<a href="../index.html" class="navigation-link">Home</a></span><span class="navigation-group-separator">&nbsp;|&nbsp;</span><span class="navigation-group"><a href="./tutorial_toc.html" class="navigation-link">Full TOC</a></span></td>
+
+      <td class="header-group page-location"><a href="../index.html" class="navigation-link">标题页</a> / <a href="./tutorial-metafunctions.html" class="navigation-link">教程：元函数和高阶元编程</a> / <a href="./handling-placeholders.html" class="navigation-link">处理占位符</a> / <a href="./the-lambda-metafunction.html" class="navigation-link">lambda 元函数</a></td>
+
+    </tr>
+  </tbody>
+</table>
+<div class="header-separator"></div>
+
+<div class="section" id="the-lambda-metafunction">
+<h1><a class="toc-backref" href="./handling-placeholders.html#id49" name="the-lambda-metafunction"><tt class="literal"><span class="pre">lambda</span></tt> 元函数</a></h1>
+
+<p>我们可以用 MPL 的 <tt class="literal"><span class="pre">lambda</span></tt> 元函数从
+<tt class="literal"><span class="pre">boost::add_pointer&lt;_1&gt;</span></tt> 生成一个元函数类：:</p>
+
+<pre class="literal-block">template &lt;class X&gt;<br />struct two_pointers<br />  : twice&lt;<strong>typename mpl::lambda&lt;boost::add_pointer&lt;_1&gt; &gt;::type</strong>, X&gt;<br />{};<br /><br />BOOST_STATIC_ASSERT((<br />    boost::is_same&lt;<br />        two_pointers&lt;int&gt;::type<br />      , int**<br />    &gt;::value<br />));<br /></pre>
+
+<!-- @ prefix.append('#include <boost/mpl/lambda.hpp>')
+compile('all') -->
+<p>我们将象 <tt class="literal"><span class="pre">add_pointer_f</span></tt> 这样的元函数类以及象 <tt class="literal"><span class="pre">boost::add_pointer&lt;_1&gt;</span></tt>
+这样的占位符表达式称为 <strong>lambda 表达式</strong>。该术语的意思是 "匿名函数对象"，在 1930s 由逻辑学家 Alonzo Church
+作为计算学基础理论的一部分提出，他称之为
+<em>lambda-calculus</em>. <a class="footnote-reference" href="#lambda" id="id10" name="id10">[4]</a>  MPL 使用
+<tt class="literal"><span class="pre">lambda</span></tt> 这个词就是因为在函数式编程语言中的先例。</p>
+
+<table class="footnote" id="lambda" frame="void" rules="none">
+
+  <colgroup><col class="label" /><col /></colgroup>
+  <tbody valign="top">
+
+    <tr>
+      <td class="label"><a class="fn-backref" href="#id10" name="lambda">[4]</a></td>
+      <td>更深入的讨论请见 <a class="reference" href="http://en.wikipedia.org/wiki/Lambda_calculus" target="_top">http://en.wikipedia.org/wiki/Lambda_calculus</a>，包含对 Church 的论文的引用，证明了 lambda 表达式的等价物通常是不可判定的。</td>
+    </tr>
+
+  </tbody>
+</table>
+
+<p>虽然主要的目的是将占位符表达式转变为元函数类，不过 <tt class="literal"><span class="pre">mpl::lambda</span></tt> 可以接受任意的 lambda
+表达式，甚至是元函数类。这种情形下，<tt class="literal"><span class="pre">lambda</span></tt> 返回传入的参数本身。象 <tt class="literal"><span class="pre">transform</span></tt> 那样的 MPL 算法在其内部调用了 <tt class="literal"><span class="pre">lambda</span></tt>，并且是在调用所得元函数类之前，所以它无论对于哪种 lambda 表达式都一样可以使用。我们可以将相同的方法用于 <tt class="literal"><span class="pre">twice</span></tt>:</p>
+
+<pre class="literal-block">template &lt;class F, class X&gt;<br />struct twice<br />   : apply1&lt;<br />         typename mpl::lambda&lt;F&gt;::type<br />       , typename apply1&lt;<br />             typename mpl::lambda&lt;F&gt;::type<br />           , X<br />         &gt;::type<br />     &gt;<br />{};<br /></pre>
+
+<p>现在我们可以将 <tt class="literal"><span class="pre">twice</span></tt> 用于元函数类以及占位符表达式：</p>
+
+<pre class="literal-block">int* x;<br /><br />twice&lt;<strong>add_pointer_f</strong>, int&gt;::type           p = &amp;x;<br />twice&lt;<strong>boost::add_pointer&lt;_1&gt;</strong>, int&gt;::type q = &amp;x;<br /></pre>
+
+<!-- @ stack[-2:] = [ apply1, stack[-2], add_pointer_f, stack[-1]]
+compile('all') -->
+</div>
+
+
+<div class="footer-separator"></div>
+
+<table class="footer">
+  <tbody>
+    <tr class="footer">
+      <td class="header-group navigation-bar"><span class="navigation-group"><a href="./handling-placeholders.html" class="navigation-link">Prev</a>&nbsp;<a href="./the-apply-metafunction.html" class="navigation-link">Next</a></span><span class="navigation-group-separator">&nbsp;|&nbsp;</span><span class="navigation-group">Back&nbsp;<a href="./the-apply-metafunction.html" class="navigation-link">Along</a></span><span class="navigation-group-separator">&nbsp;|&nbsp;</span><span class="navigation-group"><a href="./handling-placeholders.html" class="navigation-link">Up</a>&nbsp;<a href="../index.html" class="navigation-link">Home</a></span><span class="navigation-group-separator">&nbsp;|&nbsp;</span><span class="navigation-group"><a href="./tutorial_toc.html" class="navigation-link">Full TOC</a></span></td>
+
+    </tr>
+  </tbody>
+</table>
+</body>
+</html>

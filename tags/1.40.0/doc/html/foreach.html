@@ -1,0 +1,345 @@
+<!DOCTYPE HTML PUBLIC "-//W3C//DTD HTML 4.01 Transitional//EN">
+<html><head>
+
+  <meta http-equiv="Content-Type" content="text/html; charset=UTF-8">
+
+
+  
+  <title>Chapter 6. Boost.Foreach</title><link rel="stylesheet" href="boostbook.css" type="text/css">
+
+  <meta name="generator" content="DocBook XSL Stylesheets V1.68.1">
+
+  <link rel="start" href="index.html" title="The Boost C++ Libraries BoostBook Documentation Subset">
+
+  <link rel="up" href="libraries.html" title="Part&nbsp;I.&nbsp;The Boost C++ Libraries (BoostBook Subset)">
+
+  <link rel="prev" href="boost/local_time/posix_time_zone_base.html" title="Class template posix_time_zone_base">
+
+  <link rel="next" href="foreach/extensibility.html" title="Extensibility"></head>
+<body alink="#0000ff" bgcolor="white" link="#0000ff" text="black" vlink="#840084">
+
+<table cellpadding="2" width="100%">
+
+  <tbody>
+    <tr>
+      <td valign="top"><img alt="Boost C++ Libraries" src="../../boost.png" height="86" width="277"></td>
+
+      <td align="center"><a href="../../index.htm">Home</a></td>
+
+      <td align="center"><a href="../../libs/libraries.htm">Libraries</a></td>
+
+      <td align="center"><a href="../../people/people.htm">People</a></td>
+
+      <td align="center"><a href="../../more/faq.htm">FAQ</a></td>
+
+      <td align="center"><a href="../../more/index.htm">More</a></td>
+
+    </tr>
+  </tbody>
+</table>
+
+<hr>
+<div class="spirit-nav">
+<a accesskey="p" href="boost/local_time/tz_database.html"><img style="border: 0px solid ; width: 19px; height: 19px;" src="images/prev.png" alt="Prev"></a><a accesskey="u" href="libraries.html"><img src="images/up.png" alt="Up"></a><a accesskey="h" href="index.html"><img src="images/home.png" alt="Home"></a><a accesskey="n" href="foreach/extensibility.html"><img src="images/next.png" alt="Next"></a>
+</div>
+
+<div class="chapter" lang="en">
+<div class="titlepage">
+<div>
+<div>
+<h2 class="title">
+<a name="foreach"></a>Chapter 6.&nbsp;Boost.Foreach</h2>
+</div>
+
+<div>
+<div class="author">
+<h3 class="author">
+<span class="firstname">Eric</span> <span class="surname">Niebler</span>
+</h3>
+</div>
+</div>
+
+<div>
+<p class="copyright">Copyright © 2004 Eric Niebler</p>
+</div>
+
+<div>
+<div class="legalnotice">
+<a name="id1180652"></a>
+<p>
+        Distributed under the Boost Software License, Version 1.0. (See accompanying
+        file LICENSE_1_0.txt or copy at <a href="http://www.boost.org/LICENSE_1_0.txt" target="_top">http://www.boost.org/LICENSE_1_0.txt</a>)
+      </p>
+
+</div>
+</div>
+
+</div>
+</div>
+
+<div class="toc">
+<p><b>目录</b></p>
+
+<dl>
+
+  <dt><span class="section"><a href="foreach.html#foreach.introduction">简介</a></span></dt>
+
+  <dt><span class="section"><a href="foreach/extensibility.html">可扩展性</a></span></dt>
+
+  <dt><span class="section"><a href="foreach/portability.html">可移植性</a></span></dt>
+
+  <dt><span class="section"><a href="foreach/pitfalls.html">缺陷</a></span></dt>
+
+  <dt><span class="section"><a href="foreach/history_and_acknowledgements.html">历史和鸣谢</a></span></dt>
+
+</dl>
+
+</div>
+
+<div class="section" lang="en">
+<div class="titlepage">
+<div>
+<div>
+<h2 class="title" style="clear: both;">
+<a name="foreach.introduction"></a>简介</h2>
+</div>
+</div>
+</div>
+
+<div class="blockquote">
+<blockquote class="blockquote">
+  <p>
+        “<span class="quote">Make simple things easy.</span>”<br>
+ <span class="bold"><strong><span class="emphasis"><em>--
+        Larry Wall</em></span></strong></span>
+      </p>
+</blockquote>
+</div>
+
+<a name="foreach.introduction.what_is__literal_boost_foreach__literal__"></a>
+<h2>
+<a name="id1180706"></a>&nbsp;<code class="literal">BOOST_FOREACH</code>&nbsp;是什么?
+    </h2>
+
+<p>在C++中，写一个循环去迭代一个序列是很单调的。我们可以用迭代器，这需要相当大量的代码，或者可以用 <code class="computeroutput"><span class="identifier">std</span><span class="special">::</span><span class="identifier">for_each</span><span class="special">()</span></code>
+      算法，将我们的循环体移到一个谓词中，这样并没有减少代码量，还使得我们的逻辑远离于使用的地点。作为对比，其它一些语言，如 Perl，就提供了专门的 "foreach" 结构来自动进行这一过程。<code class="literal">BOOST_FOREACH</code> 正是在C++中的一个同样作用的结构。它为我们迭代一个序列，不需要我们来直接处理迭代器或编写谓词。
+    </p>
+
+<p>
+      <code class="literal">BOOST_FOREACH</code> 是为了易用性和高效性而设计的。它不进行动态的内存分配，没有虚拟函数调用或通过函数指针的调用，也没有令编译器的优化器无法处理的调用。这样可以生成近似于最优化的代码；<code class="literal">BOOST_FOREACH</code> 的性能通常只比手工编写的循环差几个百分点。而且虽然 <code class="literal">BOOST_FOREACH</code> 是一个宏，但它是有良好行为的。它只会对其参数进行一次求值，不会有令人讨厌的问题。
+    </p>
+
+<a name="foreach.introduction.hello__world_"></a>
+<h2>
+<a name="id1180796"></a>
+      Hello, world!
+    </h2>
+
+<p>以下是一个例子，使用了 <code class="literal">BOOST_FOREACH</code> 来迭代一个 <code class="computeroutput"><span class="identifier">std</span><span class="special">::</span><span class="identifier">string</span></code> 的内容。
+    </p>
+
+<pre class="programlisting"><span class="preprocessor">#include</span> <span class="special">&lt;</span><span class="identifier">string</span><span class="special">&gt;</span>
+<span class="preprocessor">#include</span> <span class="special">&lt;</span><span class="identifier">iostream</span><span class="special">&gt;</span>
+<span class="preprocessor">#include</span> <span class="special">&lt;</span><span class="identifier">boost</span><span class="special">/</span><span class="identifier">foreach</span><span class="special">.</span><span class="identifier">hpp</span><span class="special">&gt;</span>
+
+<span class="keyword">int</span> <span class="identifier">main</span><span class="special">()</span>
+<span class="special">{</span>
+    <span class="identifier">std</span><span class="special">::</span><span class="identifier">string</span> <span class="identifier">hello</span><span class="special">(</span> <span class="string">"Hello, world!"</span> <span class="special">);</span>
+    
+    <span class="identifier">BOOST_FOREACH</span><span class="special">(</span> <span class="keyword">char</span> <span class="identifier">ch</span><span class="special">,</span> <span class="identifier">hello</span> <span class="special">)</span>
+    <span class="special">{</span>
+        <span class="identifier">std</span><span class="special">::</span><span class="identifier">cout</span> <span class="special">&lt;&lt;</span> <span class="identifier">ch</span><span class="special">;</span>
+    <span class="special">}</span>
+
+    <span class="keyword">return</span> <span class="number">0</span><span class="special">;</span>
+<span class="special">}</span>
+</pre>
+
+<p>程序的输出如下：
+    </p>
+
+<pre class="programlisting">Hello, world!<br></pre>
+
+<a name="foreach.introduction.supported_sequence_types"></a>
+<h2>
+<a name="id1181082"></a>
+      支持的序列类型
+    </h2>
+
+<p>
+      <code class="literal">BOOST_FOREACH</code> 用于迭代某个序列。但是这个序列有什么要求呢？由于 <code class="literal">BOOST_FOREACH</code> 是构建在 <a href="../../libs/range/index.html" target="_top">Boost.Range</a> 之上的，所以它自动支持了那些被 <a href="../../libs/range/index.html" target="_top">Boost.Range</a>
+      认可的序列。特定地，<code class="literal">BOOST_FOREACH</code> 可用于满足 <a href="../../libs/range/doc/range.html#single_pass_range" target="_top">单遍区间概念</a> 的类型。例如，我们可以将 <code class="literal">BOOST_FOREACH</code> 用于：
+    </p>
+
+<div class="itemizedlist">
+<ul type="disc">
+
+  <li>
+        STL 容器
+      </li>
+
+  <li>数组
+      </li>
+
+  <li>
+        Null-结尾的字符串(<code class="computeroutput"><span class="keyword">char</span></code> 和 <code class="computeroutput"><span class="keyword">wchar_t</span></code>)
+      </li>
+
+  <li>由迭代器组成的 std::pair
+      </li>
+
+</ul>
+</div>
+
+<div class="note">
+<table summary="Note" border="0">
+
+  <tbody>
+    <tr>
+
+      <td rowspan="2" align="center" valign="top" width="25"><img alt="[Note]" src="images/note.png"></td>
+
+      <th align="left">备注</th>
+
+    </tr>
+
+    <tr>
+      <td align="left" valign="top">
+      <p>对 STL 容器的支持是非常全面的；任何类似于 STL 的容器都可算在内。只要它有嵌套的 <code class="computeroutput"><span class="identifier">iterator</span></code> 和 <code class="computeroutput"><span class="identifier">const_iterator</span></code> 类型以及 <code class="computeroutput"><span class="identifier">begin</span><span class="special">()</span></code> 和 <code class="computeroutput"><span class="identifier">end</span><span class="special">()</span></code> 成员函数，<code class="literal">BOOST_FOREACH</code> 就可以自动得知如何迭代它。这正是 <code class="literal">BOOST_FOREACH</code> 可用于 <a href="../../libs/range/doc/utility_class.html#iter_range" target="_top"><code class="computeroutput"><span class="identifier">boost</span><span class="special">::</span><span class="identifier">iterator_range</span><span class="special">&lt;&gt;</span></code></a> 和 <a href="../../libs/range/doc/utility_class.html#sub_range" target="_top"><code class="computeroutput"><span class="identifier">boost</span><span class="special">::</span><span class="identifier">sub_range</span><span class="special">&lt;&gt;</span></code></a> 的原因。
+      </p>
+      </td>
+    </tr>
+
+  </tbody>
+</table>
+</div>
+
+<p>关于如何将 <code class="literal">BOOST_FOREACH</code> 用于其它类型，请见&nbsp;<a href="foreach/extensibility.html" title="Extensibility">可扩展性</a>
+      一节。
+    </p>
+
+<a name="foreach.introduction.examples"></a>
+<h2>
+<a name="id1181320"></a>例子
+    </h2>
+
+<p>以下是一些例子，示范了我们使用
+      <code class="literal">BOOST_FOREACH</code> 的几种不同方式。
+    </p>
+
+<p>迭代一个 STL 容器：
+    </p>
+
+<pre class="programlisting"><span class="identifier">std</span><span class="special">::</span><span class="identifier">list</span><span class="special">&lt;</span><span class="keyword">int</span><span class="special">&gt;</span> <span class="identifier">list_int</span><span class="special">(</span> <span class="comment">/*...*/</span> <span class="special">);</span>
+<span class="identifier">BOOST_FOREACH</span><span class="special">(</span> <span class="keyword">int</span> <span class="identifier">i</span><span class="special">,</span> <span class="identifier">list_int</span> <span class="special">)</span>
+<span class="special">{</span>
+    <span class="comment">// 用 i 执行某些操作<br></span><span class="special">}</span>
+</pre>
+
+<p>迭代一个数组，具有协变性(即迭代变量的类型与容器的元素类型不完全相同)：
+    </p>
+
+<pre class="programlisting"><span class="keyword">short</span> <span class="identifier">array_short</span><span class="special">[]</span> <span class="special">=</span> <span class="special">{</span><span class="number">1</span><span class="special">,</span><span class="number">2</span><span class="special">,</span><span class="number">3</span><span class="special">};</span>
+<span class="identifier">BOOST_FOREACH</span><span class="special">(</span> <span class="keyword">int</span> <span class="identifier">i</span><span class="special">,</span> <span class="identifier">array_short</span> <span class="special">)</span>
+<span class="special">{</span>
+    <span class="comment">// short 被隐式转换为 int<br></span><span class="special">}</span>
+</pre>
+
+<p>预先声明循环变量，并在循环体中使用 <code class="computeroutput"><span class="keyword">break</span></code>,
+      <code class="computeroutput"><span class="keyword">continue</span></code>, 和 <code class="computeroutput"><span class="keyword">return</span></code> ：
+    </p>
+
+<pre class="programlisting"><span class="identifier">std</span><span class="special">::</span><span class="identifier">deque</span><span class="special">&lt;</span><span class="keyword">int</span><span class="special">&gt;</span> <span class="identifier">deque_int</span><span class="special">(</span> <span class="comment">/*...*/</span> <span class="special">);</span>
+<span class="keyword">int</span> <span class="identifier">i</span> <span class="special">=</span> <span class="number">0</span><span class="special">;</span>
+<span class="identifier">BOOST_FOREACH</span><span class="special">(</span> <span class="identifier">i</span><span class="special">,</span> <span class="identifier">deque_int</span> <span class="special">)</span>
+<span class="special">{</span>
+    <span class="keyword">if</span><span class="special">(</span> <span class="identifier">i</span> <span class="special">==</span> <span class="number">0</span> <span class="special">)</span> <span class="keyword">return</span><span class="special">;</span>
+    <span class="keyword">if</span><span class="special">(</span> <span class="identifier">i</span> <span class="special">==</span> <span class="number">1</span> <span class="special">)</span> <span class="keyword">continue</span><span class="special">;</span>
+    <span class="keyword">if</span><span class="special">(</span> <span class="identifier">i</span> <span class="special">==</span> <span class="number">2</span> <span class="special">)</span> <span class="keyword">break</span><span class="special">;</span>
+<span class="special">}</span>
+</pre>
+
+<p>以引用方式迭代一个序列，并修改底层序列：
+    </p>
+
+<pre class="programlisting"><span class="keyword">short</span> <span class="identifier">array_short</span><span class="special">[]</span> <span class="special">=</span> <span class="special">{</span> <span class="number">1</span><span class="special">,</span> <span class="number">2</span><span class="special">,</span> <span class="number">3</span> <span class="special">};</span>
+<span class="identifier">BOOST_FOREACH</span><span class="special">(</span> <span class="keyword">short</span> <span class="special">&amp;</span> <span class="identifier">i</span><span class="special">,</span> <span class="identifier">array_short</span> <span class="special">)</span>
+<span class="special">{</span>
+    <span class="special">++</span><span class="identifier">i</span><span class="special">;</span>
+<span class="special">}</span>
+<span class="comment">// 现在 array_short 包含 {2,3,4}<br></span></pre>
+
+<p>用嵌套的 <code class="literal">BOOST_FOREACH</code>
+ 循环迭代一个 vector 的 vector. 在这个例子中，注意并不需要在循环体外面使用括号：
+    </p>
+
+<pre class="programlisting"><span class="identifier">std</span><span class="special">::</span><span class="identifier">vector</span><span class="special">&lt;</span><span class="identifier">std</span><span class="special">::</span><span class="identifier">vector</span><span class="special">&lt;</span><span class="keyword">int</span><span class="special">&gt;</span> <span class="special">&gt;</span> <span class="identifier">matrix_int</span><span class="special">;</span>
+<span class="identifier">BOOST_FOREACH</span><span class="special">(</span> <span class="identifier">std</span><span class="special">::</span><span class="identifier">vector</span><span class="special">&lt;</span><span class="keyword">int</span><span class="special">&gt;</span> <span class="special">&amp;</span> <span class="identifier">row</span><span class="special">,</span> <span class="identifier">matrix_int</span> <span class="special">)</span>
+    <span class="identifier">BOOST_FOREACH</span><span class="special">(</span> <span class="keyword">int</span> <span class="special">&amp;</span> <span class="identifier">i</span><span class="special">,</span> <span class="identifier">row</span> <span class="special">)</span>
+        <span class="special">++</span><span class="identifier">i</span><span class="special">;</span>
+</pre>
+
+<p>
+      迭代一个以值方式(即右值)返回一个序列的函数：
+    </p>
+
+<pre class="programlisting"><span class="keyword">extern</span> <span class="identifier">std</span><span class="special">::</span><span class="identifier">vector</span><span class="special">&lt;</span><span class="keyword">float</span><span class="special">&gt;</span> <span class="identifier">get_vector_float</span><span class="special">();</span>
+<span class="identifier">BOOST_FOREACH</span><span class="special">(</span> <span class="keyword">float</span> <span class="identifier">f</span><span class="special">,</span> <span class="identifier">get_vector_float</span><span class="special">()</span> <span class="special">)</span>
+<span class="special">{</span>
+    <span class="comment">// 注: get_vector_float() 只会被调用一次<br></span><span class="special">}</span>    <br></pre>
+
+<p>以反序遍历： </p><pre class="programlisting"><span class="identifier">std</span><span class="special">::</span><span class="identifier">list</span><span class="special">&lt;</span><span class="keyword">int</span><span class="special">&gt;</span> <span class="identifier">list_int</span><span class="special">(</span> <span class="comment">/*...*/</span> <span class="special">);</span><br><span class="identifier">BOOST_REVERSE_FOREACH</span><span class="special">(</span> <span class="keyword">int</span> <span class="identifier">i</span><span class="special">,</span> <span class="identifier">list_int</span> <span class="special">)</span><br><span class="special">{</span><br>    <span class="comment">// 用 i 来做一些操作<br></span><span class="special">}</span>
+</pre><p>在一些旧的编译器上，不能对右值进行迭代。请查看 <a href="foreach/portability.html" title="Portability">可移植性</a> 一节，看看你的编译器是否支持。
+    </p>
+
+<a name="foreach.introduction.making__literal_boost_foreach__literal__prettier"></a>
+<h2>
+<a name="id1182301"></a> 让 <code class="literal">BOOST_FOREACH</code> 更漂亮
+    </h2>
+
+<p>有的人对 <code class="literal">BOOST_FOREACH</code> 的名字有意见。它太长了。<code class="computeroutput"><span class="identifier">而且大写字母看起来有点烦人。这可能是真的，但</span></code> <code class="literal">BOOST_FOREACH</code> 不过是遵从了 <a href="http://www.boost.org/more/lib_guide.htm" target="_top">Boost 名字规则</a>。但是这并不意味着你必须用它。如果你想使用一个不同的标识符(可能是 <code class="computeroutput"><span class="identifier">foreach</span></code>)，你只要：
+    </p>
+
+<pre class="programlisting"><span class="preprocessor">#define</span> <span class="identifier">foreach</span> <span class="identifier">BOOST_FOREACH<br></span><span class="preprocessor">#define</span> <span class="identifier">reverse_foreach</span> <span class="identifier">BOOST_REVERSE_FOREACH</span>
+</pre>
+
+<p>你唯一要保证的是，你选用的标识符不会在你的代码中引起名字冲突。
+    </p>
+
+<div class="note">
+<table summary="Note" border="0">
+
+  <tbody>
+    <tr>
+
+      <td rowspan="2" align="center" valign="top" width="25"><img alt="[Note]" src="images/note.png"></td>
+
+      <th align="left">备注</th>
+
+    </tr>
+
+    <tr>
+      <td align="left" valign="top">
+      <p>不要用 <code class="computeroutput"><span class="preprocessor">#define</span>&nbsp;<span class="identifier">foreach</span><span class="special">(</span><span class="identifier">x</span><span class="special">,</span><span class="identifier">y</span><span class="special">)</span>&nbsp;<span class="identifier">BOOST_FOREACH</span><span class="special">(</span><span class="identifier">x</span><span class="special">,</span><span class="identifier">y</span><span class="special">)</span></code>. 如果参数本身也是宏的话，这会有问题。它会引起这些宏的额外扩展。你应该使用前面所说的形式。
+      </p>
+      </td>
+    </tr>
+
+  </tbody>
+</table>
+</div>
+
+</div>
+
+</div><table xmlns:rev="http://www.cs.rpi.edu/~gregod/boost/tools/doc/revision" width="100%">
+<tbody>
+<tr>
+<td align="left">
+<p><small>Last revised: August 24, 2009 at 23:12:14 GMT</small></p></td>
+<td align="right">
+<div class="copyright-footer"></div></td></tr></tbody></table><hr>
+<div class="spirit-nav">
+<a accesskey="p" href="boost/local_time/tz_database.html"><img style="border: 0px solid ; width: 19px; height: 19px;" src="images/prev.png" alt="Prev"></a><a accesskey="u" href="libraries.html"><img src="images/up.png" alt="Up"></a><a accesskey="h" href="index.html"><img src="images/home.png" alt="Home"></a><a accesskey="n" href="foreach/extensibility.html"><img src="images/next.png" alt="Next"></a>
+</div>
+
+</body></html>

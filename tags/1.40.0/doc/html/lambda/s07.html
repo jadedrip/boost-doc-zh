@@ -1,0 +1,317 @@
+<!DOCTYPE HTML PUBLIC "-//W3C//DTD HTML 4.01 Transitional//EN">
+<html><head>
+<meta http-equiv="Content-Type" content="text/html; charset=UTF-8"><title>Practical considerations（实践中的考虑）</title>
+
+<link rel="stylesheet" href="../boostbook.css" type="text/css">
+<meta name="generator" content="DocBook XSL Stylesheets V1.68.1">
+<link rel="start" href="../index.html" title="The Boost C++ Libraries BoostBook Documentation Subset">
+<link rel="up" href="../lambda.html" title="Chapter 8. Boost.Lambda">
+<link rel="prev" href="extending.html" title="Extending return type deduction system">
+<link rel="next" href="s08.html" title="Relation to other Boost libraries"></head>
+<body style="color: black; background-color: white;" alink="#0000ff" link="#0000ff" vlink="#840084">
+<table cellpadding="2" width="100%">
+<tbody>
+<tr>
+<td valign="top"><img alt="Boost C++ Libraries" src="../../../boost.png" height="86" width="277"></td>
+<td align="center"><a href="../../../index.htm">Home</a></td>
+<td align="center"><a href="../../../libs/libraries.htm">Libraries</a></td>
+<td align="center"><a href="../../../people/people.htm">People</a></td>
+<td align="center"><a href="../../../more/faq.htm">FAQ</a></td>
+<td align="center"><a href="../../../more/index.htm">More</a></td>
+</tr>
+</tbody>
+</table>
+<hr>
+<div class="spirit-nav"><a accesskey="p" href="extending.html"><img src="../images/prev.png" alt="Prev"></a><a accesskey="u" href="../lambda.html"><img src="../images/up.png" alt="Up"></a><a accesskey="h" href="../index.html"><img src="../images/home.png" alt="Home"></a><a accesskey="n" href="s08.html"><img src="../images/next.png" alt="Next"></a>
+</div>
+<div class="section" lang="en">
+<div class="titlepage">
+<div>
+<div>
+<h2 class="title" style="clear: both;"><a name="id1248980"></a>Practical considerations（实践中的考虑）</h2>
+</div>
+</div>
+</div>
+<div class="toc">
+<dl>
+<dt><span class="section"><a href="s07.html#id1248985">Performance（性能）</a></span></dt>
+<dt><span class="section"><a href="s07.html#id1249366">About compiling（关于编译）</a></span></dt>
+<dt><span class="section"><a href="s07.html#id1249416">Portability（可移植性）</a></span></dt>
+</dl>
+</div>
+<div class="section" lang="en">
+<div class="titlepage">
+<div>
+<div>
+<h3 class="title"><a name="id1248985"></a>Performance
+（性能）</h3>
+</div>
+</div>
+</div>
+<p>在理论上，使用 STL 算法和 lambda 仿函数的全部代价要远远小于手写循环，就像标准 STL
+函数对象和绑定器那样。依靠编译器的能力，这在实践中也是成立的。我们使用 GCC 3.0.4 编译器在 1.5 GHz Intel
+Pentium 4 上运行了两个测试。使用了优化标志 -03。</p>
+<p>在第一个测试中我们对比了 lambda
+仿函数与显式写出的函数对象之间的差异。我们用这两种形式定义了参数反复与自己相乘的一元函数。我们从恒等函数开始，一直到 x<sup>5</sup>。
+在一个 <code class="literal">std::transform</code>
+循环中调用了一个表达式，这个表达式从一个 <code class="literal">std::vector&lt;int&gt;</code>
+读取参数，并将结果放入另一个 <code class="literal">std::vector&lt;int&gt;</code>。vectors
+的长度为 100 个元素。运行时间列在 <a href="s07.html#table:increasing_arithmetic_test" title="Table 11.3. Test 1">Table 11.3, “Test 1”</a>
+中。我们可以看到，两种方法没有太大的区别。</p>
+<p>在第二个测试中我们再次使用 <code class="literal">std::transform</code>
+对 100 个元素长的 vector 中的每一个元素执行一项操作。这次 vectors 中的元素类型是 <code class="literal">double</code>，而且我们从非常简单的算术表达式开始，慢慢变得更加复
+杂。运行时间列在 <a href="s07.html#table:ll_vs_stl_test" title="Table 11.4. Test 2">Table 11.4, “Test 2”</a>
+中。这一次，我们在测试中还包括了标准的 STL 形式的无名函数。我们没有列出这些表达式，因为它们更加复杂。比如，<a href="s07.html#table:ll_vs_stl_test" title="Table 11.4. Test 2">Table
+11.4, “Test 2”</a> 中的最后一个表达式如果用标准 STL 工具写出来，包含 7 个 <code class="literal">compose2</code> 的调用，8 个 <code class="literal">bind1st</code> 的调用，和总共 14 个创建 <code class="literal">multiplies</code>，<code class="literal">minus</code> 和 <code class="literal">plus</code> 对象的构造函数的调用。在这个测试中 BLL
+表达式与相应的手写函数对象相比稍微慢了一点（平均大约 10%，所有情况下均不超过 14%）。多少有些意外的是标准 STL
+表达式慢了一些，最简单的表达式相差达到了 27%。</p>
+<p>以上测试表明 BLL 相对于 STL 函数对象没有引入性能损失。通过合理优化的编译器，应该认为性能特征可以和使用标准 STL
+并驾齐驱。而且，对于简单表达式，可以预期性能接近于显式写出的函数对象。评测一个由一系列对声明为 inline 的小函数的调用组成的
+lambda
+表达式时，无论如何要注意。如果编译器没有真的内联扩展这些函数，性能可能会遭受损失。如果这样，运行时间可能会大于二倍。尽管上面的测试不包含这样一个
+表达式，对于一些表面上简单的表达式，我们也会有这样的经验。</p>
+<div class="table">
+<a name="table:increasing_arithmetic_test"></a>
+<p class="title"><b>Table 11.3. Test 1</b></p>
+<div class="caption">整数乘法写成一个 lambda 表达式和写成一个传统的手编码函数对象类的
+CPU 时间。运行时间可以表示为任意单位。</div>
+<table class="table" summary="Test 1">
+<colgroup><col><col><col></colgroup>
+<thead><tr>
+<th>表达式</th>
+<th>lambda 表达式</th>
+<th>手编码函数对象</th>
+</tr>
+</thead><tbody>
+<tr>
+<td>x</td>
+<td>240</td>
+<td>230</td>
+</tr>
+<tr>
+<td>x*x</td>
+<td>340</td>
+<td>350</td>
+</tr>
+<tr>
+<td>x*x*x</td>
+<td>770</td>
+<td>760</td>
+</tr>
+<tr>
+<td>x*x*x*x</td>
+<td>1180</td>
+<td>1210</td>
+</tr>
+<tr>
+<td>x*x*x*x*x</td>
+<td>1950</td>
+<td>1910</td>
+</tr>
+</tbody>
+</table>
+</div>
+<p>
+</p>
+<p>
+</p>
+<div class="table">
+<a name="table:ll_vs_stl_test"></a>
+<p class="title"><b>Table 11.4. Test 2</b></p>
+<div class="caption">算术表达式写成 lambda 表达式，写成标准 STL 无名函数（使用 <code class="literal">compose2</code>，<code class="literal">bind1st</code> 等）和写成传统的手编码函数对象类的 CPU
+时间。使用 BLL 术语，<code class="literal">a</code> 和 <code class="literal">b</code> 是表达式中的已绑定参数，而 <code class="literal">x</code> 是开放的。所有变量是 <code class="literal">double</code> 类型的。运行时间可以表示为任意单位。</div>
+<table class="table" summary="Test 2">
+<colgroup><col><col><col><col></colgroup>
+<thead><tr>
+<th>表达式</th>
+<th>lambda 表达式</th>
+<th>标准 STL 表达式</th>
+<th>手编码函数对象</th>
+</tr>
+</thead><tbody>
+<tr>
+<td>ax</td>
+<td>330</td>
+<td>370</td>
+<td>290</td>
+</tr>
+<tr>
+<td>-ax</td>
+<td>350</td>
+<td>370</td>
+<td>310</td>
+</tr>
+<tr>
+<td>ax-(a+x)</td>
+<td>470</td>
+<td>500</td>
+<td>420</td>
+</tr>
+<tr>
+<td>(ax-(a+x))(a+x)</td>
+<td>620</td>
+<td>670</td>
+<td>600</td>
+</tr>
+<tr>
+<td>((ax) - (a+x))(bx - (b+x))(ax - (b+x))(bx - (a+x))</td>
+<td>1660</td>
+<td>1660</td>
+<td>1460</td>
+</tr>
+</tbody>
+</table>
+</div>
+<p>
+</p>
+<p>还有一些针对库的早期版本的额外的性能测试 [<a href="../lambda.html#cit:jarvi:00" title="[Jr00]"><span class="abbrev">Jr00</span></a>]。
+</p>
+</div>
+<div class="section" lang="en">
+<div class="titlepage">
+<div>
+<div>
+<h3 class="title"><a name="id1249366"></a>About
+compiling（关于编译）</h3>
+</div>
+</div>
+</div>
+<p>BLL 大量使用了模板，实行了无数针对同一模板的递归实例化。这里（至少）有三条推论：</p>
+<div class="itemizedlist">
+<ul type="disc">
+<li>
+<p>写一些难以置信地复杂的 lambda
+表达式即使是可能的，可能也不是好主意。编译这样的表达式可能会需要大量内存，而且编译速度会变得很慢。</p>
+</li>
+<li>
+<p>即使是由最简单的 lambda 表达式产生的 lambda 仿函数的类型也是隐含的。通常程序员根本不需要涉及
+lambda 仿函数类型，但是在一个 lambda 表达式中有错误的情况下，编译器通常会输出被调用的 lambda
+仿函数的类型。这可能使得错误信息非常长而且难以理解，特别是如果编译器输出整串模板实例。</p>
+</li>
+<li>
+<p>C++ 标准建议一个模板嵌套不要超过 17 层以帮助探测无限递归。复杂 lambda
+表达式可能很容易超过这个限制。大多数编译器允许很大数量的嵌套模板，但是通常需要通过一个命令行参数以将界限明确扩充。</p>
+</li>
+</ul>
+</div>
+</div>
+<div class="section" lang="en">
+<div class="titlepage">
+<div>
+<div>
+<h3 class="title"><a name="id1249416"></a>Portability
+（可移植性）</h3>
+</div>
+</div>
+</div>
+<div class="toc">
+<dl>
+<dt><span class="section"><a href="s07.html#id1249449">Test coverage（测试范围）</a></span></dt>
+</dl>
+</div>
+<p>
+The BLL works with the following compilers, that is, the compilers are
+capable of compiling the test cases that are included with the BLL: BLL
+可以和以下编译器一起工作，就是说，这些编译器可以编译包含 BLL 的测试用例：</p>
+<div class="itemizedlist">
+<ul type="disc">
+<li>GCC 3.0.4 </li>
+<li>KCC 4.0f with EDG 2.43.1 </li>
+<li>GCC 2.96（失败一个测试用例，<code class="filename">exception_test.cpp</code>
+导致一个内部编译错误。） </li>
+</ul>
+</div>
+<p>
+</p>
+<div class="section" lang="en">
+<div class="titlepage">
+<div>
+<div>
+<h4 class="title"><a name="id1249449"></a>Test
+coverage（测试范围）</h4>
+</div>
+</div>
+</div>
+<p>下面的列表描述了包含的测试文件以及每一个文件覆盖的特性：</p>
+<div class="itemizedlist">
+<ul type="disc">
+<li>
+<p><code class="filename">bind_tests_simple.cpp</code>：
+不同数量和目标函数类型（函数指针，函数对象和成员函数）的 bind 表达式。结合 bind 表达式的函数。</p>
+</li>
+<li>
+<p><code class="filename">bind_tests_simple_function_references.cpp</code>：
+重复 <code class="filename">bind_tests_simple.cpp</code>
+中那些目标函数为函数指针的所有测试，但是使用函数引用来代替函数指针。</p>
+</li>
+<li>
+<p><code class="filename">bind_tests_advanced.cpp</code>：
+包含针对嵌套 lambda 表达式，<code class="literal">unlambda</code>，<code class="literal">protect</code>，<code class="literal">const_parameters</code>
+和 <code class="literal">break_const</code> 的测试。测试了将
+lambda 仿函数作为实际参数传递给另一个 lambda 仿函数，整理，并使用 <code class="literal">sig</code>
+模板指定一个函数对象的返回值。</p>
+</li>
+<li>
+<p><code class="filename">operator_tests_simple.cpp</code>：
+测试为 lambda
+表达式重载的所有操作符，也就是说，一元和二元算术，位操作，比较，逻辑，增一和减一，复合，赋值，下标，取地址，引用，和逗号操作符。移位操作符的流动
+特性也进行了测试，还包括使用加法和减法操作符的指针算术。</p>
+</li>
+<li>
+<p><code class="filename">member_pointer_test.cpp</code>：
+指向成员函数的指针复杂到足以提供一个单独的测试文件。</p>
+</li>
+<li>
+<p><code class="filename">control_structures.cpp</code>：
+测试了循环和 if 结构。</p>
+</li>
+<li>
+<p><code class="filename">switch_construct.cpp</code>：
+包含针对 switch 语句的全部已支持数量的测试，包含有和没有 default 两种情况。</p>
+</li>
+<li>
+<p><code class="filename">exception_test.cpp</code>：
+包含针对抛出异常和针对 catch 块数量可变的 try/catch 结构的测试。</p>
+</li>
+<li>
+<p><code class="filename">constructor_tests.cpp</code>：
+包含针对 <code class="literal">constructor</code>，<code class="literal">destructor</code>，<code class="literal">new_ptr</code>，<code class="literal">delete_ptr</code>，<code class="literal">new_array</code> 和 <code class="literal">delete_array</code> 的测试。</p>
+</li>
+<li>
+<p><code class="filename">cast_test.cpp</code>：
+针对四种强制转型表达式，以及 <code class="filename">typeid</code>
+和 <code class="literal">sizeof</code> 的测试。</p>
+</li>
+<li>
+<p><code class="filename">extending_return_type_traits.cpp</code>：
+测试为用户定义类型扩展返回类型推演系统。包含几个用户定义操作符和相应的返回类型推演模板的特化。</p>
+</li>
+<li>
+<p><code class="filename">is_instance_of_test.cpp</code>：
+包含针对一个内部使用的特征模板的测试，这个模板可以探测一个给定类型是否是某一个模板的实例。</p>
+</li>
+<li>
+<p><code class="filename">bll_and_function.cpp</code>：
+包含和 lambda 仿函数一起使用 <code class="literal">boost::function</code>
+的测试。</p>
+</li>
+</ul>
+</div>
+<p>
+</p>
+</div>
+</div>
+</div>
+<table width="100%">
+<tbody>
+<tr>
+<td align="left"></td>
+<td align="right"><small>Copyright 1999-2004
+Jaakko Jrvi, Gary Powell</small></td>
+</tr>
+</tbody>
+</table>
+<hr>
+<div class="spirit-nav"><a accesskey="p" href="extending.html"><img src="../images/prev.png" alt="Prev"></a><a accesskey="u" href="../lambda.html"><img src="../images/up.png" alt="Up"></a><a accesskey="h" href="../index.html"><img src="../images/home.png" alt="Home"></a><a accesskey="n" href="s08.html"><img src="../images/next.png" alt="Next"></a>
+</div>
+</body></html>

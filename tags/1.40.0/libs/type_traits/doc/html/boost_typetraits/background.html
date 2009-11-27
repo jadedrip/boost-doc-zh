@@ -1,0 +1,742 @@
+<!DOCTYPE HTML PUBLIC "-//W3C//DTD HTML 4.01 Transitional//EN">
+<html>
+<head>
+
+  <meta http-equiv="Content-Type" content="text/html; charset=UTF-8">
+
+
+  <title>Background and Tutorial</title>
+  <link rel="stylesheet" href="../../../../../doc/html/boostbook.css" type="text/css">
+
+  <meta name="generator" content="DocBook XSL Stylesheets V1.73.2">
+
+  <link rel="start" href="../index.html" title="Chapter&nbsp;1.&nbsp;Boost.TypeTraits">
+
+  <link rel="up" href="../index.html" title="Chapter&nbsp;1.&nbsp;Boost.TypeTraits">
+
+  <link rel="prev" href="intro.html" title="Introduction">
+
+  <link rel="next" href="category.html" title="Type Traits by Category">
+</head>
+
+<body alink="#0000ff" bgcolor="white" link="#0000ff" text="black" vlink="#840084">
+
+<table cellpadding="2" width="100%">
+  <tbody>
+    <tr>
+
+      <td valign="top"><img alt="Boost C++ Libraries" src="../../../../../boost.png" height="86" width="277"></td>
+
+      <td align="center"><a href="../../../../../index.html">Home</a></td>
+
+      <td align="center"><a href="../../../../libraries.htm">Libraries</a></td>
+
+      <td align="center"><a href="http://www.boost.org/people/people.htm">People</a></td>
+
+      <td align="center"><a href="http://www.boost.org/more/faq.htm">FAQ</a></td>
+
+      <td align="center"><a href="../../../../../more/index.htm">More</a></td>
+
+    </tr>
+  </tbody>
+</table>
+
+<hr>
+<div class="spirit-nav">
+<a accesskey="p" href="intro.html"><img src="../../../../../doc/html/images/prev.png" alt="Prev"></a><a accesskey="u" href="../index.html"><img src="../../../../../doc/html/images/up.png" alt="Up"></a><a accesskey="h" href="../index.html"><img src="../../../../../doc/html/images/home.png" alt="Home"></a><a accesskey="n" href="category.html"><img src="../../../../../doc/html/images/next.png" alt="Next"></a>
+</div>
+
+<div class="section" lang="en">
+<div class="titlepage">
+<div>
+<div>
+<h2 class="title" style="clear: both;">
+<a name="boost_typetraits.background"></a><a class="link" href="background.html" title="Background and Tutorial">背景和指南</a>
+</h2>
+</div>
+</div>
+</div>
+
+<p>下面是 John Maddock 和 Steve Cleary 发表在 2000 年 10 月号的 <a href="http://www.ddj.com/" target="_top">Dr Dobb's Journal</a> 上的文章 "C++ Type 
+traits" 的修订版。</p>
+
+<p>泛型编程（写出的代码可以和任何一种符合一系列要求的数据类型一起工作）已经成为提供可复用代码的高品位选择。但是，有时泛型编程中的&ldquo;泛型&rdquo;却不够好&mdash;&mdash;有时不同类型之间的区别太大了，无法提供高效的泛型实现。这就是 
+traits 技术大展身手的时候&mdash;&mdash;通过将那些需要考虑的基于 type by type 的属性封装在一个 traits 
+类中，我们可以将不得不在不同类型间有所区别的代码量减到最小，并将泛型代码量增到最大。</p>
+
+<p>考虑一个例子：和字符串一起工作时，一种常见操作是测定以 null 
+结尾的字符串的长度。很显然，写出做这种事情的泛型代码是可能的，但是还有很多更有效率的方法可用：例如，C 库函数 <code class="computeroutput"><span class="identifier">strlen</span></code> 和 <code class="computeroutput"><span class="identifier">wcslen</span></code> 
+通常用汇编语言写成，在相应的硬件支持下，比用 C++ 写的泛型版本快得多。C++ 标准库的作者认识到了这一点，于是抽象出 <code class="computeroutput"><span class="keyword">char</span></code> 和 <code class="computeroutput"><span class="keyword">wchar_t</span></code> 的属性放到类 <code class="computeroutput"><span class="identifier">char_traits</span></code> 
+中。和字符串一起工作的泛型代码只需要简单地使用 <code class="computeroutput"><span class="identifier">char_traits</span><span class="special">&lt;&gt;::</span><span class="identifier">length</span></code> 就可以确定一个以 null 结尾的字符串的长度，根据经验可以肯定，<code class="computeroutput"><span class="identifier">char_traits</span></code> 
+的特化使用了对于它们来说最适合的方法。</p>
+<a name="boost_typetraits.background.type_traits"></a>
+<h5>
+<a name="id2586461"></a>
+      <a class="link" href="background.html#boost_typetraits.background.type_traits">Type Traits</a>
+    </h5>
+
+<p>类 <code class="computeroutput"><span class="identifier">char_traits</span></code> 
+是收集类型特定属性并包装到一个单独类中的典型示例&mdash;&mdash;Nathan Myers 给出一个术语 <span class="emphasis"><em>baggage 
+class</em></span><a href="background.html#background.references">[1]</a>（包装类）。在 
+Boost type-traits 库中，我们<a href="background.html#background.references">[2]</a>写了一套非常详细的 traits 
+classes（特征类），每一个封装一个 C++ 类型系统的单一特征。例如，某个类型是一个指针还是一个引用类型？或者某个类型是否有一个 
+trivial（非特殊）的构造函数或者有一个 const 修饰符？这些 type-traits 类共享一个统一的设计：如果这个类型具有特定的属性，则从类型 <a title=" integral_constant" href="reference/integral_constant.html">true_type</a> 继承，否则从 <a title=" integral_constant" href="reference/integral_constant.html">false_type</a> 
+继承。就像我们将要展示的，这些类可以用在泛型编程中，用于确定一个特定类型的属性，并引入最适合那种情况的优化。</p>
+
+<p>type-traits 库还包含一套可以对某个类型执行特定转换的类，例如，他们可以从一个类型中移除一个顶层的 const 或 volatile 
+修饰符。每一个执行转换的类都为转换的结果定义了一个单独的 typedef 成员 <code class="computeroutput"><span class="identifier">type</span></code>。所有 type-traits 类都定义在名字空间 <code class="computeroutput"><span class="identifier">boost</span></code> 
+中，为简便起见，在下面给出的大多数代码示例中省略了名字空间限定。</p>
+<a name="boost_typetraits.background.implementation"></a>
+<h5>
+<a name="id2585291"></a><a class="link" href="background.html#boost_typetraits.background.implementation">实现</a>
+    </h5>
+
+<p>有相当多的独立类包含在 type-traits 库中，要在这里给出一个完整的实现是不可能的&mdash;&mdash;关于完整的细节参见 Boost 
+库中的源代码&mdash;&mdash;但是，绝大多数实现以各种不同的方式反复出现，所以在这里我们仅仅给你尝一点关于这些类是如何实现的滋味。我们从可能是库中最简单的类 <code class="computeroutput"><span class="identifier">is_void</span><span class="special">&lt;</span><span class="identifier">T</span><span class="special">&gt;</span></code> 开始，只有当 <span class="identifier">T</span> 为 <code class="computeroutput"><span class="keyword">void</span></code>，<code class="computeroutput"><span class="identifier">is_void</span><span class="special">&lt;</span><span class="identifier">T</span><span class="special">&gt;</span></code> 才从 <code class="computeroutput"><a title=" integral_constant" href="reference/integral_constant.html">true_type</a></code> 
+继承。</p>
+<pre class="programlisting"><span class="keyword">template</span> <span class="special">&lt;</span><span class="keyword">typename</span> <span class="identifier">T</span><span class="special">&gt;</span> <br><span class="keyword">struct</span> <a class="link" href="reference/is_void.html" title="is_void">is_void</a> <span class="special">:</span> <span class="keyword">public</span> <a class="link" href="reference/integral_constant.html" title="integral_constant">false_type</a><span class="special">{};</span>
+
+<span class="keyword">template</span> <span class="special">&lt;&gt;</span> <br><span class="keyword">struct</span> <a class="link" href="reference/is_void.html" title="is_void">is_void</a><span class="special">&lt;</span><span class="keyword">void</span><span class="special">&gt;</span> <span class="special">:</span> <span class="keyword">public</span> <a class="link" href="reference/integral_constant.html" title="integral_constant">true_type</a><span class="special">{};</span>
+</pre>
+
+<p>这里我们定义了模板类 <code class="computeroutput"><a title=" is_void" href="reference/is_void.html">is_void</a></code> 的一个主体版本，并提供了一个 
+<code class="computeroutput"><span class="identifier">T</span></code> 为 <code class="computeroutput"><span class="keyword">void</span></code> 
+时的完全特化。虽然模板类的完全特化是一项重要的技术，但是有时我们需要一个位于完全泛化和完全特化之间的解决方案。这正好就是标准委员会定义的 partial 
+template-class specialization（部分模板类特化）（也可译为模板类偏特化，以后，如果原文为 partial 
+specialization 的，一律译为&ldquo;偏特化&rdquo;&mdash;&mdash;译者注）的用武之地。例如，考虑类 <code class="computeroutput"><span class="identifier">boost</span><span class="special">::</span><span class="identifier">is_pointer</span><span class="special">&lt;</span><span class="identifier">T</span><span class="special">&gt;</span></code>：我们需要一个主体版本用来处理 T 
+不是一个指针时的所有情况，和一个偏特化版本用来处理 T 是一个指针时的所有情况：</p>
+<pre class="programlisting"><span class="keyword">template</span> <span class="special">&lt;</span><span class="keyword">typename</span> <span class="identifier">T</span><span class="special">&gt;</span> <br><span class="keyword">struct</span> <a class="link" href="reference/is_pointer.html" title="is_pointer">is_pointer</a> <span class="special">:</span> <span class="keyword">public</span> <a class="link" href="reference/integral_constant.html" title="integral_constant">false_type</a><span class="special">{};</span>
+
+<span class="keyword">template</span> <span class="special">&lt;</span><span class="keyword">typename</span> <span class="identifier">T</span><span class="special">&gt;</span> <br><span class="keyword">struct</span> <a class="link" href="reference/is_pointer.html" title="is_pointer">is_pointer</a><span class="special">&lt;</span><span class="identifier">T</span><span class="special">*&gt;</span> <span class="special">:</span> <span class="keyword">public</span> <a class="link" href="reference/integral_constant.html" title="integral_constant">true_type</a><span class="special">{};</span>
+</pre>
+
+<p>偏特化的语法多少有些晦涩，而且如果要全面介绍它可能会占据一篇文章的篇幅，和完全特化一样，为一个类写一个偏特化，你必须先声明主体模板。偏特化在类名之后有一个额外的 
+&lt;...&gt; 
+用来包含偏特化参数，这些表明这个类型将被绑定到偏特化版本而不是缺省版本。对于什么东西能够出现在偏特化版本中的规则多少有些费解，但是作为一条经验法则，如果你能写出如下形式的两个合法的函数重载：</p>
+<pre class="programlisting"><span class="keyword">void</span> <span class="identifier">foo</span><span class="special">(</span><span class="identifier">T</span><span class="special">);</span>
+<span class="keyword">void</span> <span class="identifier">foo</span><span class="special">(</span><span class="identifier">U</span><span class="special">);</span>
+</pre>
+
+<p>你就能写出如下形式的偏特化：
+    </p>
+
+<pre class="programlisting"><span class="keyword">template</span> <span class="special">&lt;</span><span class="keyword">typename</span> <span class="identifier">T</span><span class="special">&gt;</span>
+<span class="keyword">class</span> <span class="identifier">c</span><span class="special">{</span> <span class="comment">/*details*/</span> <span class="special">};</span>
+
+<span class="keyword">template</span> <span class="special">&lt;</span><span class="keyword">typename</span> <span class="identifier">T</span><span class="special">&gt;</span>
+<span class="keyword">class</span> <span class="identifier">c</span><span class="special">&lt;</span><span class="identifier">U</span><span class="special">&gt;{</span> <span class="comment">/*details*/</span> <span class="special">};</span>
+</pre>
+
+<p>这个规则相当简单，但是它比较容易记住并非常接近实际规则，适合日常使用。</p>
+
+<p>举一个更复杂的偏特化的例子，考虑类 <code class="computeroutput"><span class="identifier">remove_extent</span><span class="special">&lt;</span><span class="identifier">T</span><span class="special">&gt;</span></code>。这个类只定义一个唯一的 
+typedef 成员 <code class="computeroutput"><span class="identifier">type</span></code>，它和 T 是同一个类型，但会移除任何顶层数组的界限，这是一个在一个对某个类型执行转换的 
+traits 类的例子：</p>
+<pre class="programlisting"><span class="keyword">template</span> <span class="special">&lt;</span><span class="keyword">typename</span> <span class="identifier">T</span><span class="special">&gt;</span> <br><span class="keyword">struct</span> <a class="link" href="reference/remove_extent.html" title="remove_extent">remove_extent</a>
+<span class="special">{</span> <span class="keyword">typedef</span> <span class="identifier">T</span> <span class="identifier">type</span><span class="special">;</span> <span class="special">};</span>
+
+<span class="keyword">template</span> <span class="special">&lt;</span><span class="keyword">typename</span> <span class="identifier">T</span><span class="special">,</span> <span class="identifier">std</span><span class="special">::</span><span class="identifier">size_t</span> <span class="identifier">N</span><span class="special">&gt;</span> <br><span class="keyword">struct</span> <a class="link" href="reference/remove_extent.html" title="remove_extent">remove_extent</a><span class="special">&lt;</span><span class="identifier">T</span><span class="special">[</span><span class="identifier">N</span><span class="special">]&gt;</span>
+<span class="special">{</span> <span class="keyword">typedef</span> <span class="identifier">T</span> <span class="identifier">type</span><span class="special">;</span> <span class="special">};</span>
+</pre>
+
+<p><code class="computeroutput"><a title=" remove_extent" href="reference/remove_extent.html">remove_extent</a></code> 
+的目的是：设想一个泛型算法被传递过来一个数组类型作为模板参数，<code class="computeroutput"><a title=" remove_extent" href="reference/remove_extent.html">remove_extent</a></code> 
+提供了一个检测这个数组的底层类型的手段。例如 <code class="computeroutput"><span class="identifier">remove_extent</span><span class="special">&lt;</span><span class="keyword">int</span><span class="special">[</span><span class="number">4</span><span class="special">][</span><span class="number">5</span><span class="special">]&gt;::</span><span class="identifier">type</span></code> 会被检测出类型 <code class="computeroutput"><span class="keyword">int</span><span class="special">[</span><span class="number">5</span><span class="special">]</span></code>。这个例子也展示了偏特化中的模板参数的个数和缺省模板中的个数不必相同。但是，出现在类名后面的参数的个数和类型必须和缺省模板的参数的个数和类型相同。</p>
+<a name="boost_typetraits.background.optimized_copy"></a>
+<h5>
+<a name="id2636072"></a>
+      <a class="link" href="background.html#boost_typetraits.background.optimized_copy">优化拷贝</a>
+    </h5>
+
+<p>给一个 type traits 类如何使用的例子，考虑模板库算法 copy：</p>
+<pre class="programlisting"><span class="keyword">template</span><span class="special">&lt;</span><span class="keyword">typename</span> <span class="identifier">Iter1</span><span class="special">,</span> <span class="keyword">typename</span> <span class="identifier">Iter2</span><span class="special">&gt;</span>
+<span class="identifier">Iter2</span> <span class="identifier">copy</span><span class="special">(</span><span class="identifier">Iter1</span> <span class="identifier">first</span><span class="special">,</span> <span class="identifier">Iter1</span> <span class="identifier">last</span><span class="special">,</span> <span class="identifier">Iter2</span> <span class="identifier">out</span><span class="special">);</span>
+</pre>
+
+<p>很明显，写一个适用于所有迭代器类型 <code class="computeroutput"><span class="identifier">Iter1</span></code> 和 <code class="computeroutput"><span class="identifier">Iter2</span></code> 的泛型版本没有问题，但是，在一些情形，最好能通过调用 <code class="computeroutput"><span class="identifier">memcpy</span></code> 来执行拷贝操作。为了使用 
+<code class="computeroutput"><span class="identifier">memcpy</span></code> 
+执行拷贝，需要满足下面的所有条件：</p>
+
+<div class="itemizedlist">
+<ul type="disc">
+  <li>迭代器类型 <code class="computeroutput"><span class="identifier">Iter1</span></code> 
+和 <code class="computeroutput"><span class="identifier">Iter2</span></code> 必须都是指针。 
+  </li>
+  <li><code class="computeroutput"><span class="identifier">Iter1</span></code> 和 
+    <code class="computeroutput"><span class="identifier">Iter2</span></code> 
+必须都指向同样的类型&mdash;&mdash; const 和 volatile 修饰符可不予考虑。 
+  </li>
+  <li>被 <code class="computeroutput"><span class="identifier">Iter1</span></code> 
+指向的类型必须有一个 trivial（不特殊）的赋值操作符。 </li>
+</ul>
+</div>
+
+<p>所谓 trivial（非特殊）的赋值操作符，我们指的是这个类型要么是一个 scalar type（标量类型）<a href="background.html#background.references">[3]</a> 要么：</p>
+
+<div class="itemizedlist">
+<ul type="disc">
+  <li>这个类型没有用户定义的赋值操作符。 
+  </li>
+  <li>这个类型没有任何一个数据成员是引用。 
+  </li>
+  <li>所有的基类，或所有数据成员对象必须有 trivial（非特殊）的赋值操作符。 </li>
+</ul>
+</div>
+
+<p>如果这些条件都被满足，那么这个类型就可以用 <code class="computeroutput"><span class="identifier">memcpy</span></code> 执行拷贝，而不使用编译器生成的赋值操作符。type-traits 库提供了一个类 
+<code class="computeroutput"><a title=" has_trivial_assign" href="reference/has_trivial_assign.html">has_trivial_assign</a></code>，它的意思是只有 
+T 有一个 trivial（不特殊）的赋值操作符，<code class="computeroutput"><span class="identifier">has_trivial_assign</span><span class="special">&lt;</span><span class="identifier">T</span><span class="special">&gt;::</span><span class="identifier">value</span></code> 才成立。这个类仅对标量类型能&ldquo;正确地工作&rdquo;，除非为具有一个 
+trivial（非特殊）的赋值操作符的 class/struct 类型进行显式特化。换句话说，如果 <a title=" has_trivial_assign" href="reference/has_trivial_assign.html">has_trivial_assign</a> 
+给出一个错误答案，它会给出一个&ldquo;安全的&rdquo;错误答案&mdash;&mdash;那个 trivial（非特殊）的赋值是不被允许的。</p>
+
+<p>使用 <code class="computeroutput"><span class="identifier">memcpy</span></code> 的 
+copy 的优化版本代码在<a title=" An Optimized Version of std::copy" href="examples/copy.html">示例</a>中给出。代码以定义一个模板函数 <code class="computeroutput"><span class="identifier">do_copy</span></code> 
+开始，这个函数执行一个&ldquo;慢但是安全&rdquo;的拷贝。传给这个函数的最后一个参数既可能是一个 <code class="computeroutput"><a title=" integral_constant" href="reference/integral_constant.html">true_type</a></code>，也可能是一个 
+<code class="computeroutput"><a title=" integral_constant" href="reference/integral_constant.html">false_type</a></code>。然后有一个使用 
+<code class="computeroutput"><span class="identifier">memcpy</span></code> 的 do_copy 
+的重载：这时要求迭代器实际上是一个指向相同类型的指针，而且最后一个参数必须是一个 <code class="computeroutput"><a title=" integral_constant" href="reference/integral_constant.html">true_type</a></code>。最后，<code class="computeroutput"><span class="identifier">copy</span></code> 的这个版本调用 <code class="computeroutput"><span class="identifier">do_copy</span></code>，将 <code class="computeroutput"><a title=" has_trivial_assign" href="reference/has_trivial_assign.html">has_trivial_assign</a><span class="special">&lt;</span><span class="identifier">value_type</span><span class="special">&gt;()</span></code> 作为最后一个参数。如果优化版本更合适就会匹配到优化版本，否则就调用&ldquo;慢但是安全的版本&rdquo;。</p>
+<a name="boost_typetraits.background.was_it_worth_it_"></a>
+<h5>
+<a name="id2636516"></a>
+      <a class="link" href="background.html#boost_typetraits.background.was_it_worth_it_">这是值得的吗？</a>
+    </h5>
+
+<p>有一句名言经常被重复提到：&ldquo;不成熟的优化是一切罪恶的根源&rdquo; <a href="background.html#background.references">[4]</a>。所以必须要问：我们的优化是成熟的吗？我们版本的 
+copy 和传统泛型 copy <a href="background.html#background.references">[5]</a> 的时间比较展示在 
+table 1 中。</p>
+
+<p>很明显，在这种情况下优化造成了区别，但是，为了公平，表中的时间排除了缓存失误的影响&mdash;&mdash;如果不排除这一点，算法的精确比较是很困难的。无论如何，也许我们可以增加一些告诫，作为判别不成熟优化的法则：</p>
+
+<div class="itemizedlist">
+<ul type="disc">
+  <li>如果你一上来就使用了对于这个任务正确的算法，那么就不需要优化，在某些情况下，memcpy 是正确的算法。 
+  </li>
+  <li>如果一个组件被很多人在很多地方复用，那么优化就是值得的，即使对其中的单独一种情况来说也许没有必要&mdash;&mdash;换句话
+说，优化在是某地是绝对必要的这种可能性还是比较高的。一个常备实现的可感知价值应该比较高，这是非常重要的：如果用户当场拒绝一个算法，而使用更好的，
+优化度更高的版本，那么标准化这个算法就是毫无道理的。</li>
+</ul>
+</div>
+<div class="table">
+<a name="id2636577"></a>
+<p class="title"><b>表&nbsp;1.1. 使用 `copy&lt;const
+    T*, T*&gt;` 拷贝1000个元素花费的时间(微秒)</b></p>
+
+<div class="table-contents">
+<table class="table" summary="Time taken to copy 1000 elements using `copy&lt;const
+    T*, T*&gt;` (times in micro-seconds)">
+
+  <colgroup><col><col><col></colgroup>
+  <thead><tr>
+
+    <th>
+          
+    <p>版本
+          </p>
+
+          </th>
+
+    <th>
+          
+    <p>
+            T
+          </p>
+
+          </th>
+
+    <th>
+          
+    <p>时间
+          </p>
+
+          </th>
+
+  </tr>
+  </thead>
+  <tbody>
+
+    <tr>
+
+      <td>
+          
+      <p>
+            "Optimized" copy
+          </p>
+
+          </td>
+
+      <td>
+          
+      <p>
+            char
+          </p>
+
+          </td>
+
+      <td>
+          
+      <p>
+            0.99
+          </p>
+
+          </td>
+
+    </tr>
+
+    <tr>
+
+      <td>
+          
+      <p>
+            Conventional copy
+          </p>
+
+          </td>
+
+      <td>
+          
+      <p>
+            char
+          </p>
+
+          </td>
+
+      <td>
+          
+      <p>
+            8.07
+          </p>
+
+          </td>
+
+    </tr>
+
+    <tr>
+
+      <td>
+          
+      <p>
+            "Optimized" copy
+          </p>
+
+          </td>
+
+      <td>
+          
+      <p>
+            int
+          </p>
+
+          </td>
+
+      <td>
+          
+      <p>
+            2.52
+          </p>
+
+          </td>
+
+    </tr>
+
+    <tr>
+
+      <td>
+          
+      <p>
+            Conventional copy
+          </p>
+
+          </td>
+
+      <td>
+          
+      <p>
+            int
+          </p>
+
+          </td>
+
+      <td>
+          
+      <p>
+            8.02
+          </p>
+
+          </td>
+
+    </tr>
+
+  </tbody>
+</table>
+</div>
+
+</div>
+
+<br class="table-break">
+<a name="boost_typetraits.background.pair_of_references"></a>
+<h5>
+<a name="id2636715"></a>
+      <a class="link" href="background.html#boost_typetraits.background.pair_of_references">引用的 Pair</a>
+    </h5>
+
+<p>优化拷贝示例展示了 type traits 如何被用于编译时的优化决策。type traits 
+的另一个重要用途是是允许那些如果不使用额外的偏特化就无法编译的代码能够编译。通过将偏特化委托给 type traits 
+类，就可能做到这一点。我们为这种使用方式提供的示例是一个可以持有引用的 pair <a href="background.html#background.references">[6]</a>。</p>
+
+<p>首先，我们先检查一下 <code class="computeroutput"><span class="identifier">std</span><span class="special">::</span><span class="identifier">pair</span></code> 
+的定义，为了简单，我们忽略比较操作符，缺省构造函数和模板拷贝构造函数：</p>
+<pre class="programlisting"><span class="keyword">template</span> <span class="special">&lt;</span><span class="keyword">typename</span> <span class="identifier">T1</span><span class="special">,</span> <span class="keyword">typename</span> <span class="identifier">T2</span><span class="special">&gt;</span> <br><span class="keyword">struct</span> <span class="identifier">pair</span> <br><span class="special">{</span>
+<span class="keyword">typedef</span> <span class="identifier">T1</span> <span class="identifier">first_type</span><span class="special">;</span>
+<span class="keyword">typedef</span> <span class="identifier">T2</span> <span class="identifier">second_type</span><span class="special">;</span>
+
+<span class="identifier">T1</span> <span class="identifier">first</span><span class="special">;</span>
+<span class="identifier">T2</span> <span class="identifier">second</span><span class="special">;</span>
+
+<span class="identifier">pair</span><span class="special">(</span><span class="keyword">const</span> <span class="identifier">T1</span> <span class="special">&amp;</span> <span class="identifier">nfirst</span><span class="special">,</span> <span class="keyword">const</span> <span class="identifier">T2</span> <span class="special">&amp;</span> <span class="identifier">nsecond</span><span class="special">)</span>
+<span class="special">:</span><span class="identifier">first</span><span class="special">(</span><span class="identifier">nfirst</span><span class="special">),</span> <span class="identifier">second</span><span class="special">(</span><span class="identifier">nsecond</span><span class="special">)</span> <span class="special">{</span> <span class="special">}</span>
+<span class="special">};</span>
+</pre>
+
+<p>现在，这个 "pair" 不能持有引用作为它的当前支点，因为这样一来构造函数就要接受一个引用的引用，这在当前是非法的 <a href="background.html#background.references">[7]</a>。我们来考虑一下为了让 "pair" 
+持有非引用类型，引用，和常引用，构造函数的参数必须是什么样的：</p>
+<div class="table">
+<a name="id2637023"></a>
+<p class="title"><b>表&nbsp;1.2. 要求的构造函数参数类型</b></p>
+
+<div class="table-contents">
+<table class="table" summary="Required Constructor Argument Types">
+
+  <colgroup><col><col></colgroup>
+  <thead><tr>
+
+    <th>
+          
+    <p> <code class="computeroutput"><span class="identifier">T1</span></code>
+            的类型<code class="computeroutput"><span class="identifier"></span></code>
+          </p>
+
+          </th>
+
+    <th>
+          
+    <p>传给初始构造函数的参数的类型
+          </p>
+
+          </th>
+
+  </tr>
+  </thead>
+  <tbody>
+
+    <tr>
+
+      <td>
+          
+      <p>
+            T
+          </p>
+
+          </td>
+
+      <td>
+          
+      <p>
+            const T &amp;
+          </p>
+
+          </td>
+
+    </tr>
+
+    <tr>
+
+      <td>
+          
+      <p>
+            T &amp;
+          </p>
+
+          </td>
+
+      <td>
+          
+      <p>
+            T &amp;
+          </p>
+
+          </td>
+
+    </tr>
+
+    <tr>
+
+      <td>
+          
+      <p>
+            const T &amp;
+          </p>
+
+          </td>
+
+      <td>
+          
+      <p>
+            const T &amp;
+          </p>
+
+          </td>
+
+    </tr>
+
+  </tbody>
+</table>
+</div>
+
+</div>
+
+<br class="table-break">
+<p>和 type traits 类允许我们创建一个单一映射，以便我们我可从 contained class 的类型确定参数的类型有些类似。type traits 
+类提供了一个转换 <a title=" add_reference" href="reference/add_reference.html">add_reference</a>，它可以为一个类型加上引用，除非它已经是一个引用。
+    </p>
+
+<div class="table">
+<a name="id2637134"></a>
+<p class="title"><b>表&nbsp;1.3. 使用 add_reference 合成正确的构造函数型</b></p>
+
+<div class="table-contents">
+<table class="table" summary="Using add_reference to synthesize the correct constructor
+    type">
+
+  <colgroup><col><col><col></colgroup>
+  <thead><tr>
+
+    <th>
+          
+    <p> <code class="computeroutput"><span class="identifier">T1</span></code>的类型<code class="computeroutput"><span class="identifier"></span></code>
+          </p>
+
+          </th>
+
+    <th>
+          
+    <p> <code class="computeroutput"><span class="keyword">const</span> <span class="identifier">T1</span></code>
+            的类型<code class="computeroutput"><span class="identifier"></span></code>
+          </p>
+
+          </th>
+
+    <th>
+          
+    <p> <code class="computeroutput"><span class="identifier">add_reference</span><span class="special">&lt;</span><span class="keyword">const</span> <span class="identifier">T1</span><span class="special">&gt;::</span><span class="identifier">type</span></code>的类型<code class="computeroutput"><span class="identifier"></span></code>
+          </p>
+
+          </th>
+
+  </tr>
+  </thead>
+  <tbody>
+
+    <tr>
+
+      <td>
+          
+      <p>
+            T
+          </p>
+
+          </td>
+
+      <td>
+          
+      <p>
+            const T
+          </p>
+
+          </td>
+
+      <td>
+          
+      <p>
+            const T &amp;
+          </p>
+
+          </td>
+
+    </tr>
+
+    <tr>
+
+      <td>
+          
+      <p>
+            T &amp;
+          </p>
+
+          </td>
+
+      <td>
+          
+      <p>
+            T &amp; [8]
+          </p>
+
+          </td>
+
+      <td>
+          
+      <p>
+            T &amp;
+          </p>
+
+          </td>
+
+    </tr>
+
+    <tr>
+
+      <td>
+          
+      <p>
+            const T &amp;
+          </p>
+
+          </td>
+
+      <td>
+          
+      <p>
+            const T &amp;
+          </p>
+
+          </td>
+
+      <td>
+          
+      <p>
+            const T &amp;
+          </p>
+
+          </td>
+
+    </tr>
+
+  </tbody>
+</table>
+</div>
+
+</div>
+
+<br class="table-break">
+<p>这就允许我们创建一个可以包含非引用类型，引用类型，和常引用类型的 <code class="computeroutput"><span class="identifier">pair</span></code> 的主模板的定义：
+    </p>
+
+<pre class="programlisting"><span class="keyword">template</span> <span class="special">&lt;</span><span class="keyword">typename</span> <span class="identifier">T1</span><span class="special">,</span> <span class="keyword">typename</span> <span class="identifier">T2</span><span class="special">&gt;</span> <br><span class="keyword">struct</span> <span class="identifier">pair</span> <br><span class="special">{</span>
+<span class="keyword">typedef</span> <span class="identifier">T1</span> <span class="identifier">first_type</span><span class="special">;</span>
+<span class="keyword">typedef</span> <span class="identifier">T2</span> <span class="identifier">second_type</span><span class="special">;</span>
+
+<span class="identifier">T1</span> <span class="identifier">first</span><span class="special">;</span>
+<span class="identifier">T2</span> <span class="identifier">second</span><span class="special">;</span>
+
+<span class="identifier">pair</span><span class="special">(</span><span class="identifier">boost</span><span class="special">::</span><a class="link" href="reference/add_reference.html" title="add_reference">add_reference</a><span class="special">&lt;</span><span class="keyword">const</span> <span class="identifier">T1</span><span class="special">&gt;::</span><span class="identifier">type</span> <span class="identifier">nfirst</span><span class="special">,</span>
+      <span class="identifier">boost</span><span class="special">::</span><a class="link" href="reference/add_reference.html" title="add_reference">add_reference</a><span class="special">&lt;</span><span class="keyword">const</span> <span class="identifier">T2</span><span class="special">&gt;::</span><span class="identifier">type</span> <span class="identifier">nsecond</span><span class="special">)</span>
+<span class="special">:</span><span class="identifier">first</span><span class="special">(</span><span class="identifier">nfirst</span><span class="special">),</span> <span class="identifier">second</span><span class="special">(</span><span class="identifier">nsecond</span><span class="special">)</span> <span class="special">{</span> <span class="special">}</span>
+<span class="special">};</span>
+</pre>
+
+<p>再加上标准的比较操作符，缺省构造函数，和模板拷贝构造函数（都和原来的一样），你就有了一个能够持有引用类型的 <code class="computeroutput"><span class="identifier">std</span><span class="special">::</span><span class="identifier">pair</span></code>！</p>
+
+<p>同样的扩展可以使用 <code class="computeroutput"><span class="identifier">pair</span></code> 的模板偏特化来做到，但要这样特化 <code class="computeroutput"><span class="identifier">pair</span></code>，一共需要三个偏特化，外加主模板。type traits 
+允许我们定义一个单一的主模板，它可以调整自己像变魔术一样变成以上任何一个偏特化，而不需要强制的偏特化步骤。以这种方式使用 type traits 
+允许程序员将偏特化委托给 type traits 类，使得代码易于维护和理解。</p>
+<a name="boost_typetraits.background.conclusion"></a>
+<h5>
+<a name="id2637656"></a> <a class="link" href="background.html#boost_typetraits.background.conclusion">结论</a>
+    </h5>
+
+<p>我们希望我们能在这篇文章中给你一些关于 type-traits 是什么的概念。boost 文档中有一个可用类的更完整的列表，那里还有一些使用 type 
+traits 的更进一步的示例。模板使得 C++ 
+能够利用泛型编程带来的代码复用的好处，同时也希望这篇文章向你展示泛型编程并非最不常用的特性，而且模板可以和泛型一样精彩。
+    </p>
+
+<a name="boost_typetraits.background.acknowledgements"></a>
+<h5>
+<a name="id2637697"></a>
+      <a class="link" href="background.html#boost_typetraits.background.acknowledgements">鸣谢</a>
+    </h5>
+
+<p>感谢 Beman Dawes 和 Howard Hinnant 在这篇文章准备过程中提出的帮助性建议。
+    </p>
+
+<a name="background.references"></a><a name="boost_typetraits.background.references"></a>
+<h5>
+<a name="id2637724"></a>
+      <a class="link" href="background.html#boost_typetraits.background.references">参考资料</a>
+    </h5>
+
+<div class="orderedlist">
+<ol type="1">
+</ol>
+
+
+<div class="orderedlist">
+<ol type="1">
+  <li>Nathan C. Myers, C++ Report, June 1995. 
+  </li>
+  <li>type traits 库基于 Steve Cleary，Beman Dawes，Howard Hinnant 和 John Maddock 
+的贡献：它可以在 www.boost.org 找到。 
+  </li>
+  <li>一个 scalar type（标量类型）是一个算术类型（也就是说，一个内建整数或浮点数类型），一个枚举类型，一个指针，一个成员指针，或一个上述类型的带有 
+const- 或 volatile- 修饰的版本。 
+  </li>
+  <li>这句引言出自 Donald Knuth, ACM Computing Surveys, December 1974, pg 268。 
+  </li>
+  <li>测试代码成为 boost utility 库的一部分（参见 algo_opt_examples.cpp），代码由 gcc 2.95 
+编译，并打开全部优化，测试在一台运行 Microsoft Windows 98 的 400 MHz Pentium II 机器上进行。 
+  </li>
+  <li>John Maddock 和 Howard Hinnant 为 Boost 提交了一个 "compressed_pair" 
+库，使用了一种类似于这里描述的用以持有引用的技术。它们的 pair 也使用 type 
+traits，用来判断如果任何类型为空，就用派生代替包含以节约空间&mdash;&mdash;因此名为 "compressed"。 
+  </li>
+  <li>这实际上是 C++ 核心语言工作组的一个议题 (issue #106)，由 Bjarne Stroustrup 提交。暂定的解决方案是允许一个&ldquo;T 
+的引用的引用&rdquo;和&ldquo;T 的引用&rdquo;意味着同样的东西，但是这仅局限于模板实例化或一个方法中，这就类似于多个 cv 修饰符。 
+  </li>
+  <li>你可能会觉得奇怪，为什么这里不应该被 const 修饰，记住引用总是隐含常量性的（例如，你不能为一个引用再赋值）。同时，还要记住 "const T 
+&amp;" 是完全不同的东西。因此，在模板类型参数是引用的时候，cv 修饰符是被忽略的。 </li>
+</ol>
+</div>
+<ol type="1">
+</ol>
+</div>
+
+</div>
+
+<table xmlns:rev="http://www.cs.rpi.edu/~gregod/boost/tools/doc/revision" width="100%">
+  <tbody>
+    <tr>
+
+      <td align="left"></td>
+
+      <td align="right">
+      <div class="copyright-footer">Copyright &copy; 2000, 2006 Adobe Systems Inc, David Abrahams,
+      Steve Cleary, Beman Dawes, Aleksey Gurtovoy, Howard Hinnant, Jesse Jones, Mat
+      Marcus, Itay Maman, John Maddock, Alexander Nasonov, Thorsten Ottosen, Robert
+      Ramey and Jeremy Siek
+      <p>
+        Distributed under the Boost Software License, Version 1.0. (See accompanying
+        file LICENSE_1_0.txt or copy at <a href="http://www.boost.org/LICENSE_1_0.txt" target="_top">http://www.boost.org/LICENSE_1_0.txt</a>)
+      </p>
+
+      </div>
+      </td>
+
+    </tr>
+  </tbody>
+</table>
+
+<hr>
+<div class="spirit-nav">
+<a accesskey="p" href="intro.html"><img src="../../../../../doc/html/images/prev.png" alt="Prev"></a><a accesskey="u" href="../index.html"><img src="../../../../../doc/html/images/up.png" alt="Up"></a><a accesskey="h" href="../index.html"><img src="../../../../../doc/html/images/home.png" alt="Home"></a><a accesskey="n" href="category.html"><img src="../../../../../doc/html/images/next.png" alt="Next"></a>
+</div>
+
+</body>
+</html>

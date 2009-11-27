@@ -1,0 +1,149 @@
+<!DOCTYPE HTML PUBLIC "-//W3C//DTD HTML 4.01 Transitional//EN">
+<html><head>
+
+  <meta http-equiv="Content-Type" content="text/html; charset=UTF-8">
+
+
+  
+  <title>Pitfalls</title><link rel="stylesheet" href="../boostbook.css" type="text/css">
+
+  <meta name="generator" content="DocBook XSL Stylesheets V1.68.1">
+
+  <link rel="start" href="../index.html" title="The Boost C++ Libraries BoostBook Documentation Subset">
+
+  <link rel="up" href="../foreach.html" title="Chapter&nbsp;5.&nbsp;Boost.Foreach">
+
+  <link rel="prev" href="portability.html" title="Portability">
+
+  <link rel="next" href="history_and_acknowledgements.html" title="History and Acknowledgements"></head>
+
+<body alink="#0000ff" bgcolor="white" link="#0000ff" text="black" vlink="#840084">
+
+<table cellpadding="2" width="100%">
+
+  <tbody>
+    <tr>
+      <td valign="top"><img alt="Boost C++ Libraries" src="../../../boost.png" height="86" width="277"></td>
+
+      <td align="center"><a href="../../../index.htm">Home</a></td>
+
+      <td align="center"><a href="../../../libs/libraries.htm">Libraries</a></td>
+
+      <td align="center"><a href="../../../people/people.htm">People</a></td>
+
+      <td align="center"><a href="../../../more/faq.htm">FAQ</a></td>
+
+      <td align="center"><a href="../../../more/index.htm">More</a></td>
+
+    </tr>
+  </tbody>
+</table>
+
+<hr>
+<div class="spirit-nav">
+<a accesskey="p" href="portability.html"><img src="../images/prev.png" alt="Prev"></a><a accesskey="u" href="../foreach.html"><img src="../images/up.png" alt="Up"></a><a accesskey="h" href="../index.html"><img src="../images/home.png" alt="Home"></a><a accesskey="n" href="history_and_acknowledgements.html"><img src="../images/next.png" alt="Next"></a>
+</div>
+
+<div class="section" lang="en">
+<div class="titlepage">
+<div>
+<div>
+<h2 class="title" style="clear: both;">
+<a name="foreach.pitfalls"></a>缺陷</h2>
+</div>
+</div>
+</div>
+
+<p>本节描述 <code class="literal">BOOST_FOREACH</code> 中的一些常见的缺陷。
+    </p>
+
+<a name="foreach.pitfalls.types_with_commas"></a>
+<h2>
+<a name="id1184829"></a>
+      带逗号的类型
+    </h2>
+
+<p>由于 <code class="literal">BOOST_FOREACH</code> 是一个宏，它必须刚好有两个参数，并以一个逗号分隔它们。这并不总是很方便，尤其当循环变量的类型是一个模板的时候。考虑一下对 <code class="computeroutput"><span class="identifier">std</span><span class="special">::</span><span class="identifier">map</span></code> 进行迭代：
+    </p>
+
+<pre class="programlisting"><span class="identifier">std</span><span class="special">::</span><span class="identifier">map</span><span class="special">&lt;</span><span class="keyword">int</span><span class="special">,</span><span class="keyword">int</span><span class="special">&gt;</span> <span class="identifier">m</span><span class="special">;</span>
+
+<span class="comment">// 错误！BOOST_FOREACH 宏参数过多。<br></span><span class="identifier">BOOST_FOREACH</span><span class="special">(</span><span class="identifier">std</span><span class="special">::</span><span class="identifier">pair</span><span class="special">&lt;</span><span class="keyword">int</span><span class="special">,</span><span class="keyword">int</span><span class="special">&gt;</span> <span class="identifier">p</span><span class="special">,</span> <span class="identifier">m</span><span class="special">)</span> <span class="comment">// ...<br></span></pre>
+
+<p>一个解决方法是使用 typedef.
+    </p>
+
+<pre class="programlisting"><span class="identifier">std</span><span class="special">::</span><span class="identifier">map</span><span class="special">&lt;</span><span class="keyword">int</span><span class="special">,</span><span class="keyword">int</span><span class="special">&gt;</span> <span class="identifier">m</span><span class="special">;</span>
+<span class="keyword">typedef</span> <span class="identifier">std</span><span class="special">::</span><span class="identifier">pair</span><span class="special">&lt;</span><span class="keyword">int</span><span class="special">,</span><span class="keyword">int</span><span class="special">&gt;</span> <span class="identifier">pair_t</span><span class="special">;</span>
+
+<span class="identifier">BOOST_FOREACH</span><span class="special">(</span><span class="identifier">pair_t</span> <span class="identifier">p</span><span class="special">,</span> <span class="identifier">m</span><span class="special">)</span> <span class="comment">// ...<br></span></pre>
+
+<p>另一个解决方法是预先声明循环变量：
+    </p>
+
+<pre class="programlisting"><span class="identifier">std</span><span class="special">::</span><span class="identifier">map</span><span class="special">&lt;</span><span class="keyword">int</span><span class="special">,</span><span class="keyword">int</span><span class="special">&gt;</span> <span class="identifier">m</span><span class="special">;</span>
+<span class="identifier">std</span><span class="special">::</span><span class="identifier">pair</span><span class="special">&lt;</span><span class="keyword">int</span><span class="special">,</span><span class="keyword">int</span><span class="special">&gt;</span> <span class="identifier">p</span><span class="special">;</span>
+
+<span class="identifier">BOOST_FOREACH</span><span class="special">(</span><span class="identifier">p</span><span class="special">,</span> <span class="identifier">m</span><span class="special">)</span> <span class="comment">// ...<br></span></pre>
+
+<a name="foreach.pitfalls.hoisting_and_iterator_invalidation"></a>
+<h2>
+<a name="id1185275"></a>
+      Hoisting 和无效迭代器
+    </h2>
+
+<p>在内部，<code class="literal">BOOST_FOREACH</code> 使用了迭代器来遍历序列的元素。在循环执行之前，结束迭代器会缓存到一个局部变量中。这被称为 <span class="emphasis"><em>hoisting</em></span>, 它是一个重要的优化。但是它假设该序列的结束迭代器是稳定的。通常也是这样，但如果我们在迭代序列时增加或删除了序列的元素，我们就可能自己破坏了 hoisting.
+    </p>
+
+<p>考虑以下代码：
+    </p>
+
+<pre class="programlisting"><span class="identifier">std</span><span class="special">::</span><span class="identifier">vector</span><span class="special">&lt;</span><span class="keyword">int</span><span class="special">&gt;</span> <span class="identifier">vect</span><span class="special">(</span><span class="number">4</span><span class="special">,</span> <span class="number">4</span><span class="special">);</span>
+<span class="identifier">BOOST_FOREACH</span><span class="special">(</span><span class="keyword">int</span> <span class="identifier">i</span><span class="special">,</span> <span class="identifier">vect</span><span class="special">)</span>
+<span class="special">{</span>
+    <span class="identifier">vect</span><span class="special">.</span><span class="identifier">push_back</span><span class="special">(</span><span class="identifier">i</span> <span class="special">+</span> <span class="number">1</span><span class="special">);</span>
+<span class="special">}</span>
+</pre>
+
+<p>这段代码可以编译，但它具有未定义行为。这是因为它在逻辑上等同于以下代码：
+    </p>
+
+<pre class="programlisting"><span class="identifier">std</span><span class="special">::</span><span class="identifier">vector</span><span class="special">&lt;</span><span class="keyword">int</span><span class="special">&gt;</span> <span class="identifier">vect</span><span class="special">(</span><span class="number">4</span><span class="special">,</span> <span class="number">4</span><span class="special">);</span>
+<span class="keyword">for</span><span class="special">(</span><span class="identifier">std</span><span class="special">::</span><span class="identifier">vector</span><span class="special">&lt;</span><span class="keyword">int</span><span class="special">&gt;::</span><span class="identifier">iterator</span> <span class="identifier">it1</span> <span class="special">=</span> <span class="identifier">vect</span><span class="special">.</span><span class="identifier">begin</span><span class="special">(),</span> <span class="identifier">it2</span> <span class="special">=</span> <span class="identifier">vect</span><span class="special">.</span><span class="identifier">end</span><span class="special">();</span>
+    <span class="identifier">it1</span> <span class="special">!=</span> <span class="identifier">it2</span><span class="special">;</span> <span class="special">++</span><span class="identifier">it1</span><span class="special">)</span>
+<span class="special">{</span>
+    <span class="keyword">int</span> <span class="identifier">i</span> <span class="special">=</span> <span class="special">*</span><span class="identifier">it1</span><span class="special">;</span>
+    <span class="identifier">vect</span><span class="special">.</span><span class="identifier">push_back</span><span class="special">(</span><span class="identifier">i</span> <span class="special">+</span> <span class="number">1</span><span class="special">);</span> <span class="comment">// Oops! 这使得 it1 和 it2 无效！<br></span><span class="special">}</span>
+</pre>
+
+<p>对 <code class="computeroutput"><span class="identifier">vect</span><span class="special">.</span><span class="identifier">push_back</span><span class="special">()</span></code>
+      的调用会导致 <code class="computeroutput"><span class="identifier">vect</span></code>
+      中的所有迭代器变为无效，包括 <code class="computeroutput"><span class="identifier">it1</span></code> 和 <code class="computeroutput"><span class="identifier">it2</span></code>. 循环的下一次迭代会使用这些无效迭代器。这可是坏消息。
+    </p>
+
+<p>正确的做法是，在迭代中增加或删除序列中的元素一定要三思。如果这样做会导致迭代器变为无效，就不要这样做。用一个普通的 <code class="computeroutput"><span class="keyword">for</span></code>
+      循环来替代。
+    </p>
+
+</div>
+
+<table width="100%">
+  <tbody>
+    <tr>
+
+      <td align="left"></td>
+
+      <td align="right"><small>Copyright © 2004 Eric Niebler</small></td>
+
+    </tr>
+  </tbody>
+</table>
+
+<hr>
+<div class="copyright-footer"><p>Distributed under the Boost Software License, Version 1.0. (See accompanying 
+file LICENSE_1_0.txt or copy at <a href="http://www.boost.org/LICENSE_1_0.txt" target="_top">http://www.boost.org/LICENSE_1_0.txt</a>) </p></div>
+<div class="spirit-nav">
+<a accesskey="p" href="portability.html"><img src="../images/prev.png" alt="Prev"></a><a accesskey="u" href="../foreach.html"><img src="../images/up.png" alt="Up"></a><a accesskey="h" href="../index.html"><img src="../images/home.png" alt="Home"></a><a accesskey="n" href="history_and_acknowledgements.html"><img src="../images/next.png" alt="Next"></a>
+</div>
+
+</body></html>

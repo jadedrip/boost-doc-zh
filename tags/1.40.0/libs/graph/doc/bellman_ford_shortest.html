@@ -1,0 +1,207 @@
+<!DOCTYPE HTML PUBLIC "-//W3C//DTD HTML 4.01 Transitional//EN">
+<html><head><meta content="text/html; charset=UTF-8" http-equiv="content-type"><!--
+  -- Copyright (c) Jeremy Siek 2000
+  --
+  -- Distributed under the Boost Software License, Version 1.0.
+  -- (See accompanying file LICENSE_1_0.txt or copy at
+  -- http://www.boost.org/LICENSE_1_0.txt)
+  -->
+<title>Bellman Ford Shortest Paths</title></head>
+<body alink="#ff0000" bgcolor="#ffffff" link="#0000ee" text="#000000" vlink="#551a8b"> 
+<img src="../../../boost.png" alt="C++ Boost" height="86" width="277"> 
+
+<br clear="">
+
+
+<h1><a name="sec:bellman-ford"></a><img src="figs/python.gif" alt="(Python)">
+<tt>bellman_ford_shortest_paths</tt>
+</h1>
+
+<p>
+</p><pre><i>// 命名参数版本</i>
+template &lt;class <a href="./EdgeListGraph.html">EdgeListGraph</a>, class Size, class P, class T, class R&gt;<br>bool bellman_ford_shortest_paths(const EdgeListGraph&amp; g, Size N, <br>  const bgl_named_params&lt;P, T, R&gt;&amp; params = <i>all defaults</i>);<br><br>template &lt;class <a href="./VertexAndEdgeListGraph.html">VertexAndEdgeListGraph</a>, class P, class T, class R&gt;<br>bool bellman_ford_shortest_paths(const VertexAndEdgeListGraph&amp; g,<br>  const bgl_named_params&lt;P, T, R&gt;&amp; params = <i>all defaults</i>);<br><br><i>// 非命名参数版本</i>
+template &lt;class <a href="./EdgeListGraph.html">EdgeListGraph</a>, class Size, class WeightMap,<br>	  class PredecessorMap, class DistanceMap,<br>	  class <a href="http://www.sgi.com/tech/stl/BinaryFunction.html">BinaryFunction</a>, class <a href="http://www.sgi.com/tech/stl/BinaryPredicate.html">BinaryPredicate</a>,<br>	  class <a href="./BellmanFordVisitor.html">BellmanFordVisitor</a>&gt;<br>bool bellman_ford_shortest_paths(EdgeListGraph&amp; g, Size N, <br>  WeightMap weight, PredecessorMap pred, DistanceMap distance, <br>  BinaryFunction combine, BinaryPredicate compare, BellmanFordVisitor v)<br></pre>
+
+<p>
+Bellman-Ford 算法[<a href="bibliography.html#bellman58">4</a>,<a href="bibliography.html#ford62:_flows">11</a>,<a href="bibliography.html#lawler76:_comb_opt">20</a>,<a href="bibliography.html#clr90">8</a>]用于解决同时带有正权重和负权重的图的单源最短路径问题。关于最短路径问题的定义，请见 <a href="./graph_theory_review.html#sec:shortest-paths-algorithms">最短路径算法</a> 一节。如果你只需解决正权重的最短路径问题，则 Dijkstra 算法更为高效。如果所有的边权重均为一，则广度优先搜索提供了更为高效的方法。
+</p>
+
+<p>在调用 <tt>bellman_ford_shortest_paths()</tt> 函数之前，用户必须给源顶点赋一个零距离，给其它所有顶点赋一个无限距离<i>除非</i>你提供了一个开始顶点。Bellman-Ford 算法对图中所有边进行重复处理，对每条边应用松驰操作。在以下伪代码中，<i>v</i> 是一个邻接于 <i>u</i> 的顶点，<i>w</i> 将边映射至它们的权重，而 <i>d</i> 则是一个距离映射，用于记录当前对每个顶点可估算的最短路径长度。<i>p</i> 是一个前趋映射，记录了每个顶点的父顶点，即最终在最短路径树中的父节点。
+</p>
+
+<table>
+<tbody><tr>
+<td valign="top">
+<pre>RELAX(<i>u</i>, <i>v</i>, <i>w</i>, <i>d</i>, <i>p</i>)<br>  <b>if</b> (<i>w(u,v) + d[u] &lt; d[v]</i>) <br>    <i>d[v] := w(u,v) + d[u]</i>
+    <i>p[v] := u</i>
+  <b>else</b>
+    ...
+</pre>
+</td>
+<td valign="top">
+<pre>
+松驰边 <i>(u,v)</i>
+
+
+边 <i>(u,v)</i> 未被松驰<br></pre>
+</td>
+</tr>
+</tbody></table>
+
+<p>该算法会重复这个循环 <i>|V|</i> 次，之后即可保证每个顶点的距离值被减少至可能的最小值，除非图中存在负权回路。如果存在负权回路，则图中会有一些边未被正确地最小化。即，存在边 <i>(u,v)</i> 满足 <i>w(u,v) + d[u] &lt; d[v]</i>。本算法最后会按图中的边进行循环，检查是否所有边已最小化。如果是的话就返回 <tt>true</tt>，否则返回 <tt>false</tt>。
+</p>
+
+<table>
+<tbody><tr>
+<td valign="top">
+<pre>BELLMAN-FORD(<i>G</i>)<br>  <i>// Optional initialization</i>
+  <b>for</b> each vertex <i>u in V</i> <br>    <i>d[u] := infinity</i>
+    <i>p[u] := u</i> <br>  <b>end for</b>
+  <b>for</b> <i>i := 1</i> <b>to</b> <i>|V|-1</i> <br>    <b>for</b> each edge <i>(u,v) in E</i> <br>      RELAX(<i>u</i>, <i>v</i>, <i>w</i>, <i>d</i>, <i>p</i>)<br>    <b>end for</b>
+  <b>end for</b>
+  <b>for</b> each edge <i>(u,v) in E</i> <br>    <b>if</b> (<i>w(u,v) + d[u] &lt; d[v]</i>)<br>      <b>return</b> (false, , )<br>    <b>else</b> <br>      ...<br>  <b>end for</b>
+  <b>return</b> (true, <i>p</i>, <i>d</i>)<br></pre>
+</td>
+<td valign="top">
+<pre>
+
+
+
+
+
+检查边 <i>(u,v)</i>
+
+
+
+
+
+边 <i>(u,v)</i> 未最小化<br><br>边 <i>(u,v)</i> 为最小化<br></pre>
+</td>
+</tr>
+</tbody></table>
+
+<p>从&nbsp;<tt>bellman_ford_shortest_paths</tt><tt>()</tt> 函数获得输出，有两个主要选项。如果用户通过 <tt>distance_map()</tt> 参数提供一个距离属性映射，则从源顶点到图中每个顶点的最短距离将被记录在这个距离映射中(当函数返回 <tt>true</tt> 时提供)。第二个选项是将最短路径树记录在 <tt>predecessor_map()</tt> 中。对于<i> V</i> 中的每个顶点
+<i>u</i>，<i>p[u]</i> 为顶点 <i>u</i> 在最短路径树中的前趋(除非 <i>p[u] = u</i>，此时 <i>u</i> 为源顶点或某个不能从源顶点到达的顶点)。除了这两个选项，用户还可以提供他们自己定制的遍历器，在算法中的某些事件点上执行动作。</p><h3>Parameters 参数</h3>
+
+
+IN: <tt>EdgeListGraph&amp; g</tt> 
+<blockquote>一个有向图或无向图，其类型必须符合
+  <a href="./EdgeListGraph.html">边列表图Edge List Graph</a>。如果提供了根顶点，则该图还必须符合
+  <a href="./VertexListGraph.html">点列表图Vertex List Graph</a>。<br>
+
+  
+
+  
+
+  <b>Python</b>: 该参数被命名为 <tt>graph</tt>.&nbsp;
+
+</blockquote>
+
+IN: <tt>Size N</tt>
+<blockquote>图中的顶点数。类型 <tt>Size</tt> 必须是一个整数类型。<br>
+  <b>缺省值：</b><tt>num_vertices(g)</tt>.<br>
+
+  
+
+  <b>Python</b>: 不支持该参数。&nbsp;
+
+</blockquote>
+
+
+<h3>Named Parameters</h3>
+
+IN: <tt>weight_map(WeightMap w)</tt>
+<blockquote>图中各边的权重(又称为"长度"或"代价")。类型 <tt>WeightMap</tt> 必须符合
+  <a href="../../property_map/doc/ReadablePropertyMap.html">可读属性映射</a>。这个属性映射的键类型必须是该图的边描述符类型。权重映射的值类型必须可以与距离映射的值类型相加。<br>
+  <b>缺省值：</b><tt>get(edge_weight, g)</tt><br>
+
+  <b>Python</b>: 必须为该图的一个 <tt>edge_double_map</tt>。<br>
+  <b>Python 缺省值：</b><tt>graph.get_edge_double_map("weight")</tt>
+</blockquote>
+
+OUT: <tt>predecessor_map(PredecessorMap p_map)</tt> 
+<blockquote>这个前趋映射用于记录最小生成树中的边。当该算法结束后，对于<i> V</i> 中的所有 <i>u</i>，边 <i>(p[u],u)</i>&nbsp;<span style="font-style: italic;"></span>均属于最小生成树。如果 <i>p[u] =
+  u</i> 则 <i>u</i> 为源顶点或某个不能从源顶点到达的顶点。类型 <tt>PredecessorMap</tt> 必须符合 <a href="../../property_map/doc/ReadWritePropertyMap.html">读/写属性映射</a>，且其键类型和值类型均与图的顶点描述符类型相同。<br>
+  <b>缺省值：</b><tt>dummy_property_map</tt><br>
+
+  <b>Python</b>: 必须为该图的一个 <tt>vertex_vertex_map</tt>。<br>
+</blockquote>
+
+IN/OUT: <tt>distance_map(DistanceMap d)</tt> 
+<blockquote>从源顶点到图 <tt>g</tt> 中每个顶点的最短路径权重被记录在这个属性映射中。类型 <tt>DistanceMap</tt> 必须符合 <a href="../../property_map/doc/ReadWritePropertyMap.html">读/写属性映射</a>。这个属性映射的键类型必须是该图的顶点描述符类型，且距离映射的值类型必须符合 <a href="http://www.sgi.com/tech/stl/LessThanComparable.html"> 可小于比较</a>。<br>
+  <b>缺省值：</b><tt>get(vertex_distance,
+  g)</tt><br>
+  <b>Python</b>: 必须为该图的一个 <tt>vertex_double_map</tt>。<br>
+</blockquote>
+
+IN: <tt>root_vertex(Vertex s)</tt>
+<blockquote>计算最短路径的开始(或"根")顶点。如果提供，则距离映射无需初始化(算法本身会执行这个初始化)。但是，提供该参数时，图必须符合 <a href="./VertexListGraph.html">点列表图Vertex List
+  Graph</a>。<br>
+  <b>缺省值：</b>无；如果提供，用户必须初始化距离映射。
+</blockquote>
+
+IN: <tt>visitor(BellmanFordVisitor v)</tt>
+<blockquote>遍历器对象，其类型必须符合
+  <a href="./BellmanFordVisitor.html">Bellman-Ford 遍历器</a>。该遍历器对象是以值方式传递的<a href="#1">[1]</a>。<br>
+  <b>缺省值：</b><tt>bellman_visitor&lt;null_visitor&gt;</tt><br>
+
+  
+
+  <b>Python</b>: 该参数应为派生自该图的 <a href="BellmanFordVisitor.html#python"><tt>BellmanFordVisitor</tt></a> 类型的一个对象。&nbsp;
+
+</blockquote>
+
+IN: <tt>distance_combine(BinaryFunction combine)</tt>
+<blockquote>该函数对象将替换松驰操作中的加法角色。第一个参数类型必须与距离映射的值类型相匹配，第二个参数类型必须与权重映射的值类型相匹配。结果类型必须与距离映射的值类型相同。<br>
+  <b>缺省值：</b><tt>std::plus&lt;D&gt;</tt> 其中 <tt>D=typename&nbsp;property_traits&lt;DistanceMap&gt;::value_type</tt>.<br>
+
+  
+
+  <b>Python</b>: 不支持该参数。&nbsp;
+
+</blockquote>
+
+IN: <tt>distance_compare(BinaryPredicate compare)</tt>
+<blockquote>
+  该函数对象将替换松驰操作中进行距离比较的小于操作符角色。参数类型必须与距离映射的值类型相匹配。<br>
+  <b>缺省值：</b><tt>std::less&lt;D&gt;</tt> 其中 <tt>D=typename&nbsp;property_traits&lt;DistanceMap&gt;::value_type</tt>.<br>
+
+  
+
+  <b>Python</b>: 不支持该参数。&nbsp;
+
+</blockquote>
+
+<p>
+
+</p><h3>Complexity 复杂度</h3>
+
+<p>时间复杂度为 <i>O(V E)</i>.
+
+
+</p><h3>Visitor Event Points 遍历器事件点</h3>
+
+<ul>
+<li><b><tt>vis.examine_edge(e, g)</tt></b>  对图中每条边调用 <i>|V|</i> 次。
+</li><li><b><tt>vis.edge_relaxed(e, g)</tt></b>  当目标顶点的距离标号减少时被调用。参与顶点 <i>v</i> 最后一次松驰的边 <i>(u,v)</i> 为最短路径树的一条边。 
+</li><li><b><tt>vis.edge_not_relaxed(e, g)</tt></b> 当目标顶点的距离标号未能减少时被调用。 
+</li><li><b><tt>vis.edge_minimized(e, g)</tt></b>  在算法的第二阶段中测试每条边是否最小化时，如果某条边是最小化的，则调用该函数。
+</li><li><b><tt>vis.edge_not_minimized(e, g)</tt></b>&nbsp;在算法的第二阶段中测试每条边是否最小化时，如果某条边不是最小化的，则调用该函数。当图中存在负权回路时才会发生。
+</li></ul>
+
+<h3>Example 示例</h3>
+
+<p>使用 Bellman-Ford 算法的一个例子在 <a href="../example/bellman-example.cpp"><tt>examples/bellman-example.cpp</tt></a> 中。
+
+</p><h3>Notes 备注</h3>
+
+<p><a name="1">[1]</a> 
+  由于 visitor 参数是以值方式传递的，所以如果你的遍历器含有状态，则在算法中对该状态的所有修改都是针对该遍历器对象的一个拷贝，而不对传入的遍历器对象进行的。因此你应该让该遍历器以指针或引用的方式保存该状态。<br>
+</p><hr>
+<table>
+<tbody><tr valign="top">
+<td nowrap="nowrap">Copyright © 2000</td><td>
+<a href="http://www.boost.org/people/jeremy_siek.htm">Jeremy Siek</a>, Indiana University (<a href="mailto:jsiek@osl.iu.edu">jsiek@osl.iu.edu</a>)
+</td></tr></tbody></table>
+
+</body></html>

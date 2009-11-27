@@ -1,0 +1,145 @@
+<!DOCTYPE HTML PUBLIC "-//W3C//DTD HTML 4.01 Transitional//EN">
+<html><head><meta content="text/html; charset=UTF-8" http-equiv="content-type"><!--
+     Copyright (c) Jeremy Siek 2000
+    
+     Distributed under the Boost Software License, Version 1.0.
+     (See accompanying file LICENSE_1_0.txt or copy at
+     http://www.boost.org/LICENSE_1_0.txt)
+  -->
+<title>Boost Graph Library: Edmonds-Karp Maximum Flow</title></head>
+<body alink="#ff0000" bgcolor="#ffffff" link="#0000ee" text="#000000" vlink="#551a8b"> 
+<img src="../../../boost.png" alt="C++ Boost" height="86" width="277"> 
+
+<br clear="">
+
+<h1><a name="sec:edmonds_karp_max_flow">
+<tt>edmonds_karp_max_flow</tt>
+</a></h1>
+
+<pre><a name="sec:edmonds_karp_max_flow"><i>// 命名参数版本</i>
+template &lt;class </a><a href="./Graph.html">Graph</a>, class P, class T, class R&gt;<br>typename detail::edge_capacity_value&lt;Graph, P, T, R&gt;::value_type<br>edmonds_karp_max_flow(Graph&amp; g, <br>   typename graph_traits&lt;Graph&gt;::vertex_descriptor src,<br>   typename graph_traits&lt;Graph&gt;::vertex_descriptor sink,<br>   const bgl_named_params&lt;P, T, R&gt;&amp; params = <i>all defaults</i>)<br><br><i>// 非命名参数版本</i>
+template &lt;class <a href="./Graph.html">Graph</a>, <br>	  class CapacityEdgeMap, class ResidualCapacityEdgeMap,<br>	  class ReverseEdgeMap, class ColorMap, class PredEdgeMap&gt;<br>typename property_traits&lt;CapacityEdgeMap&gt;::value_type<br>edmonds_karp_max_flow(Graph&amp; g, <br>   typename graph_traits&lt;Graph&gt;::vertex_descriptor src,<br>   typename graph_traits&lt;Graph&gt;::vertex_descriptor sink,<br>   CapacityEdgeMap cap, ResidualCapacityEdgeMap res, ReverseEdgeMap rev, <br>   ColorMap color, PredEdgeMap pred)<br></pre>
+
+<p>
+函数 <tt>edmonds_karp_max_flow()</tt> 计算一个网络的最大流。关于最大流的描述，请见 <a href="./graph_theory_review.html#sec:network-flow-algorithms">网络流算法</a> 一节。该函数的返回值即为计算所得的最大流。该函数还针对
+<i>E</i> 中所有&nbsp;<i>(u,v)</i> 计算了流值 <i>f(u,v)</i>，它以残留容量
+<i>r(u,v) = c(u,v) - f(u,v)</i> 的形式来返回。 
+
+</p><p>本算法的输入图及属性映射参数有几个特别的要求。首先，表示本网络的有向图
+<i>G=(V,E)</i> 必须被扩展，对于 <i>E</i> 中的每条边，增加相应的反向边。即，输入图应为 <i>G<sub>in</sub> = (V,{E U
+E<sup>T</sup>})</i>。<tt>ReverseEdgeMap</tt> 参数 <tt>rev</tt>
+必须将原图中的每条边映射至它的反向边，即对于 <i>E</i> 中的所有 <i>(u,v)</i>，<i>(u,v) -&gt; (v,u)</i>。<tt>CapacityEdgeMap</tt> 参数 <tt>cap</tt> 必须将
+<i>E</i> 中的每条边映射至一个正数，而 <i>E<sup>T</sup></i>
+中的每条边则映射至 0。
+
+</p><p>该算法归功于 <a href="./bibliography.html#edmonds72:_improvements_netflow">Edmonds 和
+Karp</a>，虽然我们在 <a href="bibliography.html#ahuja93:_network_flows">网络流</a> 中会用另一个名称 "标签函数"。
+
+</p><p>该算法为最大流问题的解答提供了一个非常简单和容易的实现。但是，有几个原因令到本算法不如 <a href="./push_relabel_max_flow.html"><tt>push_relabel_max_flow()</tt></a> 或 <a href="./kolmogorov_max_flow.html"><tt>kolmogorov_max_flow()</tt></a> 算法好。
+
+</p><ul>
+  <li>在非整数容量的情形下，时间复杂度为 <i>O(V
+   E<sup>2</sup>)</i>，对于除最为稀疏的图以外的所有图，都劣于
+   push-relabel 算法的时间复杂度 <i>O(V<sup>2</sup>E<sup>1/2</sup>)</i>。</li>
+
+  <li>在整数容量的情形下，如果由 <i>U</i> 所界定的容量非常大，则该算法将花费很长时间。</li>
+</ul>
+
+
+<h3>Where Defined 定义于</h3>
+
+<p>
+<a href="../../../boost/graph/edmonds_karp_max_flow.hpp"><tt>boost/graph/edmonds_karp_max_flow.hpp</tt></a>
+
+</p><p>
+
+</p><h3>Parameters 参数</h3>
+
+IN: <tt>Graph&amp; g</tt>
+<blockquote>一个有向图。图的类型必须符合 <a href="./VertexListGraph.html">点列表图VertexListGraph</a> 和 <a href="./IncidenceGraph.html">关联图IncidenceGraph</a>。对于图中的每条边 <i>(u,v)</i>，反向边 <i>(v,u)</i> 必须也在图中。
+</blockquote>
+
+IN: <tt>vertex_descriptor src</tt>
+<blockquote>流网络图的源顶点。
+</blockquote>
+  
+IN: <tt>vertex_descriptor sink</tt>
+<blockquote>流网络图的汇顶点。
+</blockquote>
+  
+<h3>Named Parameters 命名参数</h3>
+
+
+IN: <tt>capacity_map(CapacityEdgeMap cap)</tt>
+<blockquote>边容量属性映射。该类型必须是一个常性的&nbsp;<a href="../../property_map/doc/LvaluePropertyMap.html">左值属性映射</a>。该映射的键类型必须是该图的边描述符类型。<br>
+  <b>缺省值：</b><tt>get(edge_capacity, g)</tt>
+</blockquote>
+  
+OUT: <tt>residual_capacity_map(ResidualCapacityEdgeMap res)</tt>
+<blockquote>将边映射至它的残留容量。该类型必须是一个可变的 <a href="../../property_map/doc/LvaluePropertyMap.html">左值属性映射</a>。该映射的键类型必须是该图的边描述符类型。<br>
+  <b>缺省值：</b><tt>get(edge_residual_capacity, g)</tt>
+</blockquote>
+
+IN: <tt>reverse_edge_map(ReverseEdgeMap rev)</tt>
+<blockquote>一个边属性映射，将图中每条边 <i>(u,v)</i> 映射至反向边 <i>(v,u)</i>。该映射必须是一个常性的 <a href="../../property_map/doc/LvaluePropertyMap.html">左值属性映射</a>。该映射的键类型必须是图的边描述符类型。<br>
+  <b>缺省值：</b><tt>get(edge_reverse, g)</tt>
+</blockquote>
+
+UTIL: <tt>color_map(ColorMap color)</tt>
+<blockquote>被算法用于在广度优先搜索阶段跟踪处理过程。在算法结束时，白色顶点定义了最小割集。该映射必须是一个可变的 <a href="../../property_map/doc/LvaluePropertyMap.html">左值属性映射</a>。该映射的键类型应为图的顶点描述符类型，且值类型必须符合 <a href="./ColorValue.html">颜色值ColorValue</a>。<br>
+
+  <b>缺省值：</b>一个 <a href="../../property_map/doc/iterator_property_map.html">
+  <tt>iterator_property_map</tt></a>，创建自一个大小为&nbsp;<tt>num_vertices(g)</tt> 的 <tt>default_color_type</tt> 的 <tt>std::vector</tt><tt></tt>，且以 <tt>i_map</tt> 作为索引映射。
+</blockquote>
+
+UTIL: <tt>predecessor_map(PredEdgeMap pred)</tt>
+<blockquote>被算法用于保存增广路径。该映射必须是一个可变的 <a href="../../property_map/doc/LvaluePropertyMap.html">左值属性映射</a>。该映射的键类型必须为图的顶点描述符类型，且值类型必须为图的边描述符类型。<br>
+
+  <b>缺省值：</b>一个 <a href="../../property_map/doc/iterator_property_map.html">
+  <tt>iterator_property_map</tt></a>，创建自一个大小为&nbsp;<tt>num_vertices(g)</tt> 的边描述符 <tt>std::vector</tt>，且以 <tt>i_map</tt> 作为索引映射。
+</blockquote>
+
+IN: <tt>vertex_index_map(VertexIndexMap i_map)</tt>
+<blockquote>将图中每个顶点映射至 <tt>[0, num_vertices(g))</tt> 区间中的一个整数。该属性映射仅当颜色映射或前趋映射使用缺省值时需要。该顶点索引映射必须符合 <a href="../../property_map/doc/ReadablePropertyMap.html">可读属性映射</a>。该映射的键类型必须是图的顶点描述符类型。<br>
+  <b>缺省值：</b><tt>get(vertex_index, g)</tt>
+    注意：如果你使用该缺省值，请确认你的图具有一个内部的 <tt>vertex_index</tt> 属性。例如，带 <tt>VertexList=listS</tt> 的
+    <tt>adjacenty_list</tt> 并不具有内部的 <tt>vertex_index</tt> 属性。
+</blockquote>
+
+
+<h3>Complexity 复杂度</h3>在通常的情况下，时间复杂度为 <i>O(V E<sup>2</sup>)</i>，如果容量值为由某个常数 <i>U</i> 所界定的整数，则为 <i>O(V E U)</i>。
+
+<h3>Example 示例</h3><a href="../example/edmonds-karp-eg.cpp"><tt>example/edmonds-karp-eg.cpp</tt></a>
+中的例子从一个DIMACS格式的文件中读入一个最大流问题(一个带有边容量的图)，并计算最大流。
+
+
+<h3>See Also 参见</h3>
+
+<a href="./push_relabel_max_flow.html"><tt>push_relabel_max_flow()</tt></a><br>
+<a href="./kolmogorov_max_flow.html"><tt>kolmogorov_max_flow()</tt></a>.
+
+<br>
+<hr>
+<table>
+<tbody><tr valign="top">
+<td nowrap="nowrap">Copyright © 2000-2001</td><td>
+<a href="http://www.boost.org/users/people/jeremy_siek.html">Jeremy Siek</a>, Indiana University (<a href="mailto:jsiek@osl.iu.edu">jsiek@osl.iu.edu</a>)
+</td></tr></tbody></table>
+
+<!--  LocalWords:  HTML Siek Edmonds BGCOLOR ffffff ee VLINK ALINK ff IMG SRC
+ -->
+<!--  LocalWords:  gif ALT BR sec edmonds karp TT DIV CELLPADDING TR TD PRE lt
+ -->
+<!--  LocalWords:  typename VertexListGraph CapacityEdgeMap ReverseEdgeMap gt
+ -->
+<!--  LocalWords:  ResidualCapacityEdgeMap VertexIndexMap src rev ColorMap pred
+ -->
+<!--  LocalWords:  PredEdgeMap tt href html hpp ul li nbsp br LvaluePropertyMap
+ -->
+<!--  LocalWords:  num ColorValue DIMACS cpp pre config iostream dimacs int std
+ -->
+<!--  LocalWords:  namespace vecS directedS cout endl iter ei HR valign nowrap
+ -->
+<!--  LocalWords:  jeremy siek htm Univ mailto jsiek lsc edu
+p -->
+</body></html>

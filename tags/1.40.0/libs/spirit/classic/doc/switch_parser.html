@@ -1,0 +1,129 @@
+<!DOCTYPE HTML PUBLIC "-//W3C//DTD HTML 4.01 Transitional//EN">
+<html><head>
+
+<title>The Switch Parser</title><meta http-equiv="Content-Type" content="text/html; charset=UTF-8">
+<link rel="stylesheet" href="theme/style.css" type="text/css">
+<style type="text/css">
+<!--
+.style1 {font-family: "Courier New", Courier, mono}
+.style3 {font-family: "Courier New", Courier, mono; color: #FF0000; }
+-->
+</style></head>
+<body>
+<table background="theme/bkd2.gif" border="0" cellspacing="2" width="100%">
+  <tbody><tr>
+    <td width="10"> </td>
+    <td width="85%"> <font face="Verdana, Arial, Helvetica, sans-serif" size="6"><b>The Switch Parser 跳转分析器 </b></font></td>
+    <td width="112"><a href="http://spirit.sf.net"><img src="theme/spirit.gif" align="right" border="0" height="48" width="112"></a></td>
+  </tr>
+</tbody></table>
+<br>
+<table border="0">
+  <tbody><tr>
+    <td width="10"></td>
+    <td width="30"><a href="../index.html"><img src="theme/u_arr.gif" border="0"></a></td>
+    <td width="30"><a href="select_parser.html"><img src="theme/l_arr.gif" border="0"></a></td>
+    <td width="30"><a href="escape_char_parser.html"><img src="theme/r_arr.gif" border="0"></a></td>
+  </tr>
+</tbody></table>
+<p>Switch parsers may be used to simplify certain alternation constructs. Consider the following code:<br>跳转分析器可用来简化选择结构。考虑下面的代码：</p>
+<pre>    rule<span class="special">&lt;&gt;</span> rule_overall <span class="special">=</span>
+            ch_p<span class="special">(</span><span class="literal">'a'</span><span class="special">)</span> <span class="special">&gt;&gt;</span> parser_a<br>        <span class="special">|</span>   ch_p<span class="special">(</span><span class="literal">'b'</span><span class="special">)</span> <span class="special">&gt;&gt;</span> parser_b<br>            <span class="comment">// ...</span>
+        <span class="special">|</span>   ch_p<span class="special">(</span><span class="literal">'n'</span><span class="special">)</span> <span class="special">&gt;&gt;</span> parser_n<br>        <span class="special">;</span></pre>
+<p>Each of the alternatives are evaluated normally in a sequential
+manner. This tend to be inefficient, especially for a large number of
+alternatives. To avoid this inefficiency and to make it possible to
+write such constructs in a more readable form, Spirit contains the <tt>switch_p</tt> family of parsers. The switch_p parser allows us to rewrite the previous construct as:<br>这些选项被线性地依次调用。这是很低效的，尤其在有大量选择的时候。为了避免这种低效并且把这样的代码写成更加可读的形式，Spirit包含了 <tt>switch_p</tt>&nbsp;分析器族。switch_p 分析器使得我们可以把上面的构造重写为：</p>
+<pre>    rule<span class="special">&lt;&gt;</span> rule_overall <span class="special">=</span>
+            switch_p
+            <span class="special">[</span>
+                case_p<span class="special">&lt;</span><span class="literal">'a'</span><span class="special">&gt;(</span>parser_a<span class="special">),</span>
+                case_p<span class="special">&lt;</span><span class="literal">'b'</span><span class="special">&gt;(</span>parser_b<span class="special">),</span>
+            <span class="comment">    // ...</span>
+                case_p<span class="special">&lt;</span><span class="literal">'n'</span><span class="special">&gt;(</span>parser_n<span class="special">)</span>
+            ]
+        ;</pre>
+<p>This <tt>switch_p</tt> parser takes the next character (or token)
+from the input stream and tries to match it against the given integral
+compile time constants supplied as the template parameters to the <tt>case_p</tt> parsers. If this character matches one of the <tt>case_p</tt> branches, the associated parser is executed (i.e. if 'a' is matched, <tt>parser_a</tt> is executed, if 'b' is matched, <tt>parser_b</tt> is executed and so on) . If no <tt>case_p</tt> branch matches the next input character, the overall construct does not match at all.<br><tt>switch_p</tt>&nbsp;分析器从输入中取出下一个要分析的字符并且尝试把它与经由 <tt>case_p</tt>&nbsp;分析器模板参数给定的编译期整形常量匹配。如果字符匹配任意
+一个 <tt>case_p</tt>&nbsp;分支，则相关联的分析器将被执行（比如，如果 'a' 匹配，<tt>parser_a</tt>&nbsp;被执行；如果匹配 'b'，<tt>parser_b</tt>&nbsp;被执行；如此等
+等）。如果没有那 <tt>case_p</tt>&nbsp;分支匹配下一个输入字符，则整个结构都不匹配。</p>
+<table align="center" border="0" width="80%">
+  <tbody><tr>
+    <td class="note_box"><div align="justify"><img src="theme/bulb.gif" height="18" width="13"><strong> Nabialek trick </strong><strong>&nbsp; Nabialek 戏法</strong><strong> </strong><br>
+            <br>
+        The <strong><em><a href="techniques.html#nabialek_trick">"Nabialek trick" </a></em></strong>(from
+the name of its inventor, Sam Nabialek), can also improve the rule
+dispatch from linear non-deterministic to deterministic. This is
+similar to the <tt>switch_p</tt> parser, yet, can handle grammars
+where a keyword (operator, etc), instead of a single character or
+token, precedes a production.<br><a href="techniques.html#nabialek_trick"><strong><em>"Nabialek 戏法"</em></strong></a> （来源于发明者的名字，Sam Nabialek），同样可以把规则分配过程从线性的不确定改进为确定的。这与 <tt>switch_p</tt>&nbsp;类似，但是在语法中它可以先于产生式处理一个关键字（运算符，等等），而不是单独一个字符。</div></td>
+  </tr>
+</tbody></table>
+<p>Sometimes it is desireable to add handling of the default case (none of the <tt>case_p</tt> branches  matched). This may be achieved with the help of a <tt>default_p</tt> branch:<br>有时我们希望添加对默认情况（没有任何 <tt>case_p</tt>&nbsp;分支匹配）的处理。这可以借由 <tt>default_p</tt>&nbsp;的帮助而完成：</p>
+<pre>    rule<span class="special">&lt;&gt;</span> rule_overall <span class="special">=</span>
+            switch_p
+            <span class="special">[</span>
+                case_p<span class="special">&lt;</span><span class="literal">'a'</span><span class="special">&gt;(</span>parser_a<span class="special">),</span>
+                case_p<span class="special">&lt;</span><span class="literal">'b'</span><span class="special">&gt;(</span>parser_b<span class="special">),</span>
+            <span class="comment">    // ...</span>
+                case_p<span class="special">&lt;</span><span class="literal">'n'</span><span class="special">&gt;(</span>parser_n<span class="special">),</span>
+                default_p<span class="special">(</span>parser_default<span class="special">)</span>
+            <span class="special">]<br>        ;</span></pre>
+<p>This form chooses the <tt>parser_default</tt> parser if none of the cases matches  the next character from the input stream. Please note that, obviously, only one <tt>default_p</tt> branch may be added to the <tt>switch_p</tt> parser construct.<br>这一形式中如果输入流中的下一个字符没有匹配任何分支则其将选择 <tt>parser_default</tt>&nbsp;分析器。请注意，很明显，只允许在 <tt>switch_p</tt>&nbsp;构造中加入一个 <tt>default_p</tt>&nbsp;分支。</p>
+<p>Moreover, it is possible to omit the parentheses and body from the <tt>default_p</tt> construct, in which case, no additional parser is executed and the overall <tt>switch_p</tt> construct simply returns a match on any character of the input stream, which does not match any of the <tt>case_p</tt> branches:<br>此外，可以把 <tt>default_p</tt>&nbsp;构造的括号和分析体拿掉，在这种情况下，不再执行其他分析器，并且 <tt>switch_p</tt>&nbsp;构造返回一个对输入流中任意字符的匹配，这个字符没有和任何 <tt>case_p</tt>&nbsp;匹配。</p>
+<pre>    rule<span class="special">&lt;&gt;</span> rule_overall <span class="special">=</span>
+            switch_p
+            <span class="special">[</span>
+                case_p<span class="special">&lt;</span><span class="literal">'a'</span><span class="special">&gt;(</span>parser_a<span class="special">),</span>
+                case_p<span class="special">&lt;</span><span class="literal">'b'</span><span class="special">&gt;(</span>parser_b<span class="special">),</span>
+                <span class="comment">// ...</span>
+                case_p<span class="special">&lt;</span><span class="literal">'n'</span><span class="special">&gt;(</span>parser_n<span class="special">),</span>
+                default_p
+            <span class="special">]</span>
+        ;</pre>
+<p>There is another form of the switch_p construct. This form allows us
+to explicitly specify the value to be used for matching against the <tt>case_p</tt> branches:<br>这是 switch_p 构造的另一个形式。这个形式允许我们显式地指定用于匹配 <tt>case_p</tt>&nbsp;的值：</p>
+<pre>    rule<span class="special">&lt;&gt;</span> rule_overall <span class="special">=</span>
+            switch_p<span class="special">(</span>cond<span class="special">)</span>
+            <span class="special">[</span>
+                case_p<span class="special">&lt;</span><span class="literal">'a'</span><span class="special">&gt;(</span>parser_a<span class="special">),</span>
+                case_p<span class="special">&lt;</span><span class="literal">'b'</span><span class="special">&gt;(</span>parser_b<span class="special">),</span>
+            <span class="comment">    // ...</span>
+                case_p<span class="special">&lt;</span><span class="literal">'n'</span><span class="special">&gt;(</span>parser_n<span class="special">)</span>
+            <span class="special">]</span>
+        ;</pre>
+<p>where <tt>cond</tt> is a parser or a nullary function or function
+object (functor). If it is a parser, then it is tried and its return
+value is used to match against the <tt>case_p</tt> branches. If it is a nullary function or functor, then its return value will be used.<br>这里 <tt>cond</tt>&nbsp;是一个分析器或者无参函数或者函数对象（仿函数）。如果它是分析器，那么它将被测试并且测试返回值将用来与 <tt>case_p</tt>&nbsp;分支匹配。如果是无参函数或者仿函数，那么将直接使用它的返回值。</p>
+<p>Please note that during its compilation, the <tt>switch_p</tt> construct is transformed  into a real C++ <tt>switch</tt> statement. This makes the runtime execution very efficient.<br>请注意，在编译期，<tt>switch_p</tt>&nbsp;构造被转换成真正的C++的 <tt>switch</tt>&nbsp;语句。这使得运行时的效率相当高。</p>
+<table align="center" border="0" width="80%">
+  <tbody><tr>
+    <td class="note_box"><p><img src="theme/alert.gif" height="16" width="16"> <tt>BOOST_SPIRIT_SWITCH_CASE_LIMIT</tt><br>
+        <br>
+    The number of possible <tt>case_p</tt>/<tt>default_p</tt> branches is limited by the Spirit compile time constant <tt>BOOST_SPIRIT_SWITCH_CASE_LIMIT</tt>,
+which defaults to 3. There is no theoretical upper limit for this
+constant, but most compilers won't allow you to specify a very large
+number.</p><p><tt>case_p</tt>/<tt>default_p</tt>&nbsp;分支的最大数目受限于Spirit编译期常量 <tt>BOOST_SPIRIT_SWITCH_CASE_LIMIT</tt>，其默认值为3。这个常量理论上没有限制，但大多数编译器都不会允许你指定很大的数目。</p>
+    <p>Example:<br>例子：</p>
+    <p class="style1"><span class="comment">// Define these before including switch.hpp 在包含switch.hpp之前定义<br>
+      </span><span class="preprocessor">#define</span> BOOST_SPIRIT_SWITCH_CASE_LIMIT 10 </p></td>
+  </tr>
+</tbody></table><br>
+<table border="0">
+  <tbody><tr>
+    <td width="10"></td>
+    <td width="30"><a href="../index.html"><img src="theme/u_arr.gif" border="0"></a></td>
+    <td width="30"><a href="select_parser.html"><img src="theme/l_arr.gif" border="0"></a></td>
+    <td width="30"><a href="escape_char_parser.html"><img src="theme/r_arr.gif" border="0"></a></td>
+  </tr>
+</tbody></table>
+<br>
+<hr size="1">
+<p class="copyright">Copyright © 2003-2004 Hartmut Kaiser <br>
+  <br>
+  <font size="2">Use,
+modification and distribution is subject to the Boost Software License,
+Version 1.0. (See accompanying file LICENSE_1_0.txt or copy at
+http://www.boost.org/LICENSE_1_0.txt) </font> </p>
+</body></html>

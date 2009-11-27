@@ -1,0 +1,119 @@
+﻿<!DOCTYPE html PUBLIC "-//W3C//DTD HTML 4.01 Transitional//EN"
+"http://www.w3.org/TR/html4/loose.dtd">
+
+<html>
+<head>
+  <meta http-equiv="Content-Language" content="en-us">
+  <meta http-equiv="Content-Type" content="text/html; charset=UTF-8">
+  <link rel="stylesheet" type="text/css" href="../../../../boost.css">
+
+  <title>Numbers Requirements</title>
+</head>
+
+<body lang="en">
+  <h1>数字要求</h1>
+
+  <p>我们所称作的"数字"是<code>interval</code>类的基类型. 为了确保包含性质，区间库期望基类型满足一些性质. 所有的这些性质在这份文档的其它部分已经有详细的描述，但我们将会在这里对它们进行总结：</p>
+
+  <h3>顺序</h3>
+
+  <p>应当以一种顺序来提供这些数字应. 通过运算符<code>&lt; &lt;= =&gt; &gt; == !=</code>来表达这种顺序.
+  它需要是全序的(自反性, 反对称性, 传递性, 以及每一对数字应当是有序的). 所以<code>complex&lt;T&gt;</code> 不是一个好的基类型的候选，如果你需要区间保持包含性质, 你应当使用<code>complex&lt; interval&lt;T&gt;
+  &gt;</code>来取代<code>interval&lt; complex&lt;T&gt; &gt;</code>
+  (但不幸的是，<code>complex</code>仅提供特化).</p>
+
+  <p>请注意：非法的数字不被顺序所考虑，如果与非法数字的比较返回 <code>false</code>在概念上要更好一些(除了<code>!=</code>). 如果你的检查策略使用<code>interval_lib::checking_base</code>并且你的基类型包含非法数字,那么这个性质就是必须的:
+  <code>nan!=nan</code> (这里<code>nan</code> 是一个非法数字). 如果没满足这种性质，那么你不应当直接使用<code>checking_base</code>.</p>
+
+  <p>区间算术涉及到许多与<code>0</code>的比较. 默认情况下,
+  它们通过与<code>static_cast&lt;T&gt;(0)</code>比较来完成. 然而，如果这个数字的形式允许一些更快的与<code>0</code>的比较方法，那么名字空间<code>interval_lib::user</code>中的模板函数应当被特化。</p>
+  <pre>
+namespace user {
+template&lt;class T&gt; inline bool is_zero(T const &amp;v) { return v == static_cast&lt;T&gt;(0); }
+template&lt;class T&gt; inline bool is_neg (T const &amp;v) { return v &lt;  static_cast&lt;T&gt;(0); }
+template&lt;class T&gt; inline bool is_pos (T const &amp;v) { return v &gt;  static_cast&lt;T&gt;(0); }
+}
+</pre>
+
+  <h3>数值限制</h3>
+
+  <p>检查策略的另一个要点. 通常它足够有效来处理基类型产生的异常情况，特别是无限和非法数字(归功于:<code>pos_inf</code>, <code>neg_inf</code>, <code>nan</code> 和
+  <code>is_nan</code>四个函数).然而，如果你使用<code>interval_lib::checking_base</code> (默认的比较策略使用它),你的基类型应当有一个正确的<code>std::numeric_limits&lt;T&gt;</code>特化. 特别是,<code>has_infinity</code> 和 <code>has_quiet_NaN</code>的值, 以及定义相应的函数
+  <code>infinity</code> 和 <code>quiet_NaN</code></p>
+
+  <p>因此，概括一下， 如果你没有依赖于默认的策略并且没有使用<code>interval_lib::checking_base</code>, 那么就没有必要提供一个针对于你的基类型的数值限制的特化.</p>
+
+  <h3>数字性质</h3>
+
+  <p>确保数字正确的排序并不够，依赖于顺序，基本的运算符应当满足一些性质，如下：:</p>
+
+  <ul>
+    <li>0 &le; <i>x</i> &rArr; -<i>x</i> &le; 0</li>
+
+    <li><i>x</i> &le; <i>y</i> &rArr; -<i>y</i> &le; -<i>x</i></li>
+
+    <li><i>x</i> &le; <i>y</i> &rArr; <i>x</i>+<i>z</i> &le;
+    <i>y</i>+<i>z</i></li>
+
+    <li><i>x</i> &le; <i>y</i> 且 <i>z</i> &ge; 0 &rArr;
+    <i>x</i>&times;<i>z</i> &le; <i>y</i>&times;<i>z</i></li>
+
+    <li>0 &lt; <i>x</i> &le; <i>y</i> &rArr; 0 &lt; 1/<i>y</i> &le;
+    1/<i>x</i></li>
+  </ul>
+
+  <p>上面的性质也用于(并且足够了)函数<code>abs</code>,
+  <code>square</code> 和 <code>pow</code>. 对于所有的超越函数(包括函数<code>sqrt</code>), 需要满足其它的性质。 与对应的真正的函数相比，这些函数应当具有相同的性质，例如：对于<code>cos</code>期望的性质为：</p>
+
+  <ul>
+    <li>针对所有的合法值定义了<code>cos</code>;</li>
+
+    <li>以<code>2&pi</code>为周期;</li>
+
+    <li><code>cos</code>(2&pi;-<i>x</i>)等价于
+    <code>cos</code>(<i>x</i>);</li>
+
+    <li><code>cos</code>在区间<code>[0,2&pi;]</code>上是递减函数
+    .</li>
+  </ul>
+
+  <h3>舍入</h3>
+
+  <p>如果你所操作的基类型不会产生不精确的计算结果，你可以跳过余下的段落，如果你对包含性质不感兴趣(如果近似值已经足够的话)，你同样可以跳过这些段落.
+  如果你还在阅读，可能是你想知道舍入策略应当满足的基本性质。</p>
+
+  <p>无论你考虑哪一个运算或函数, 应当满足下面的性质: <code>f_down(x,y) &lt;= f(x,y) &lt;= f_up(x,y)</code>.
+  这里<code>f</code>为无限精度的计算函数而函数<code>f_down</code>和函数<code>f_up</code> 是返回值不精确但类型正确(基类型)的函数. 如果可能的话，它们应当返回最邻近的可表达的值，但并不是永远都那么简单。</p>
+
+  <h3>常量</h3>
+
+  <p>为确保三角函数可以正常工作，库需要知道常量<code>&pi;</code>的值，因为在基类型中这些常量可能无法描述，所以<code>interval</code>库不需要知道精确的值，一个下界和一个上界就足够了，如果用户没有提供这些值，将会使用默认值，它们是整数值(<code>&pi;</code>被定界为<code>3</code>和<code>4</code>).</p>
+
+  <h3>运算符和转换</h3>
+
+  <p>就像开始解释的那样，应当针对基类型定义比较运算符. 舍入策略定义了许多区间库使用的函数，因此，不需要为基类型定义算术运算符(除非被一个预定义的类所要求). 然而，有一个例外 :需要定义一元取负运算符. 更重要的是，这个运算符应当返回精确的值; 这就是为什么舍入策略没有提供一些
+    否定函数(negation
+  functions)。</p>
+
+  <p>需要定义从<code>int</code>到基类型的转化(仅需要一些值是可用的: <code>-1, 0, 1, 2</code>). 这种转换的另一种绕道方式是使用舍入策略来提供
+  (成员函数<code>int_down</code>和<code>int_up</code>); 再没有其它转化要求，然而，为了从区间转换中获益，在舍入策略中提供尽可能多的转化是很有价值的(成员函数<code>conv_down</code>
+  和<code>conv_up</code>)</p>
+  <hr>
+
+  <p><a href="http://validator.w3.org/check?uri=referer"><img border="0" src=
+  "http://www.w3.org/Icons/valid-html401" alt="Valid HTML 4.01 Transitional"
+  height="31" width="88"></a></p>
+
+  <p>Revised 
+  <!--webbot bot="Timestamp" s-type="EDITED" s-format="%Y-%m-%d" startspan -->2006-12-24<!--webbot bot="Timestamp" endspan i-checksum="12172" --></p>
+
+  <p><i>Copyright &copy; 2002 Guillaume Melquiond, Sylvain Pion, Herv&eacute;
+  Br&ouml;nnimann, Polytechnic University<br>
+  Copyright &copy; 2004 Guillaume Melquiond</i></p>
+
+  <p><i>Distributed under the Boost Software License, Version 1.0. (See
+  accompanying file <a href="../../../../LICENSE_1_0.txt">LICENSE_1_0.txt</a>
+  or copy at <a href=
+  "http://www.boost.org/LICENSE_1_0.txt">http://www.boost.org/LICENSE_1_0.txt</a>)</i></p>
+</body>
+</html>

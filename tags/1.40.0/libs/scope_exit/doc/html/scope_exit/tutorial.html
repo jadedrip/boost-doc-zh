@@ -1,0 +1,149 @@
+<!DOCTYPE HTML PUBLIC "-//W3C//DTD HTML 4.01 Transitional//EN">
+<html><head>
+<meta http-equiv="Content-Type" content="text/html; charset=UTF-8">
+
+<title>Tutorial</title><link rel="stylesheet" href="../../../../../doc/html/boostbook.css" type="text/css">
+<meta name="generator" content="DocBook XSL Stylesheets V1.74.0">
+<link rel="home" href="../index.html" title="Chapter&nbsp;1.&nbsp;Boost.ScopeExit">
+<link rel="up" href="../index.html" title="Chapter&nbsp;1.&nbsp;Boost.ScopeExit">
+<link rel="prev" href="../index.html" title="Chapter&nbsp;1.&nbsp;Boost.ScopeExit">
+<link rel="next" href="alternatives.html" title="Alternatives"></head>
+<body alink="#0000ff" bgcolor="white" link="#0000ff" text="black" vlink="#840084">
+<table cellpadding="2" width="100%"><tbody><tr>
+<td valign="top"><img alt="Boost C++ Libraries" src="../../../../../boost.png" height="86" width="277"></td>
+<td align="center"><a href="../../../../../index.html">Home</a></td>
+<td align="center"><a href="../../../../../libs/libraries.htm">Libraries</a></td>
+<td align="center"><a href="http://www.boost.org/users/people.html">People</a></td>
+<td align="center"><a href="http://www.boost.org/users/faq.html">FAQ</a></td>
+<td align="center"><a href="../../../../../more/index.htm">More</a></td>
+</tr></tbody></table>
+<hr>
+<div class="spirit-nav">
+<a accesskey="p" href="../index.html"><img src="../../../../../doc/html/images/prev.png" alt="Prev"></a><a accesskey="u" href="../index.html"><img src="../../../../../doc/html/images/up.png" alt="Up"></a><a accesskey="h" href="../index.html"><img src="../../../../../doc/html/images/home.png" alt="Home"></a><a accesskey="n" href="alternatives.html"><img src="../../../../../doc/html/images/next.png" alt="Next"></a>
+</div>
+<div class="section" lang="en">
+<div class="titlepage"><div><div><h2 class="title" style="clear: both;">
+<a name="scope_exit.tutorial"></a> Tutorial 教程</h2></div></div></div>
+<p>
+      Imagine that you want to make many modifications to data members of the <code class="computeroutput"><span class="identifier">World</span></code> class in the <code class="computeroutput"><span class="identifier">World</span><span class="special">::</span><span class="identifier">addPerson</span></code>
+      function. You start with adding a new <code class="computeroutput"><span class="identifier">Person</span></code>
+      object to a vector of persons:<br>想象一下，你要在 <code class="computeroutput"><span class="identifier">World</span><span class="special">::</span><span class="identifier">addPerson</span></code>
+ 函数中对 <code class="computeroutput"><span class="identifier">World</span></code> 类的数据成员作大量修改。首先，你要增加一个新的 <code class="computeroutput"><span class="identifier">Person</span></code>
+      对象到一个 persons 向量中：
+    </p>
+<pre class="programlisting"><span class="keyword">void</span> <span class="identifier">World</span><span class="special">::</span><span class="identifier">addPerson</span><span class="special">(</span><span class="identifier">Person</span> <span class="keyword">const</span><span class="special">&amp;</span> <span class="identifier">person</span><span class="special">)</span> <span class="special">{</span>
+    <span class="keyword">bool</span> <span class="identifier">commit</span> <span class="special">=</span> <span class="keyword">false</span><span class="special">;</span>
+    <span class="identifier">m_persons</span><span class="special">.</span><span class="identifier">push_back</span><span class="special">(</span><span class="identifier">person</span><span class="special">);</span>  <span class="comment">// (1) direct action 直接动作<br></span></pre>
+<p>
+      Some operation down the road may throw an exception and all changes to involved
+      objects should be rolled back. This all-or-nothing semantic is also known as
+      <a href="http://www.research.att.com/%7Ebs/glossary.html#Gstrong-guarantee" target="_top">strong
+      guarantee</a>.<br>接下来的一些操作有可能会抛出异常，这时所有相关对象的修改应该要回滚。这是"全部或没有"的语义，被称为 <a href="http://www.research.att.com/%7Ebs/glossary.html#Gstrong-guarantee" target="_top">强异常安全保证</a>。
+    </p>
+<p>
+      In particular, last added person must be deleted from <code class="computeroutput"><span class="identifier">m_persons</span></code>
+      when the function throws. All you need is to define a delayed action (release
+      of a resource) right after the direct action (resource acquisition):<br>在这个例子中，当函数抛出异常时，最后加入的 person 必须要从 <code class="computeroutput"><span class="identifier">m_persons</span></code>
+      中删掉。你要做的就是，紧接在直接动作(资源获取)后定义一个延迟动作(资源释放)：
+    </p>
+<pre class="programlisting"><span class="keyword">void</span> <span class="identifier">World</span><span class="special">::</span><span class="identifier">addPerson</span><span class="special">(</span><span class="identifier">Person</span> <span class="keyword">const</span><span class="special">&amp;</span> <span class="identifier">aPerson</span><span class="special">)</span> <span class="special">{</span>
+    <span class="keyword">bool</span> <span class="identifier">commit</span> <span class="special">=</span> <span class="keyword">false</span><span class="special">;</span>
+    <span class="identifier">m_persons</span><span class="special">.</span><span class="identifier">push_back</span><span class="special">(</span><span class="identifier">aPerson</span><span class="special">);</span>  <span class="comment">// (1) direct action 直接动作<br></span>    <span class="identifier">BOOST_SCOPE_EXIT</span><span class="special">(</span> <span class="special">(&amp;</span><span class="identifier">commit</span><span class="special">)(&amp;</span><span class="identifier">m_persons</span><span class="special">)</span> <span class="special">)</span>
+    <span class="special">{</span>
+        <span class="keyword">if</span><span class="special">(!</span><span class="identifier">commit</span><span class="special">)</span>
+            <span class="identifier">m_persons</span><span class="special">.</span><span class="identifier">pop_back</span><span class="special">();</span> <span class="comment">// (2) rollback action 回滚动作<br></span>    <span class="special">}</span> <span class="identifier">BOOST_SCOPE_EXIT_END</span>
+
+    <span class="comment">// ...                        // (3) other operations 其它操作<br></span>    <br>    <span class="identifier">commit</span> <span class="special">=</span> <span class="keyword">true</span><span class="special">;</span>                <span class="comment">// (4) turn all rollback actions into no-op 将所有回滚动作变为空操作<br></span><span class="special">}</span>
+</pre>
+<p>
+      The block below point <code class="computeroutput"><span class="special">(</span><span class="number">1</span><span class="special">)</span></code> is a <a class="link" href="../index.html" title="Chapter&nbsp;1.&nbsp;Boost.ScopeExit">ScopeExit</a>
+      declaration. Unlike point <code class="computeroutput"><span class="special">(</span><span class="number">1</span><span class="special">)</span></code>, an execution of the <a class="link" href="../index.html" title="Chapter&nbsp;1.&nbsp;Boost.ScopeExit">ScopeExit</a>
+      body will be delayed until the end of the current scope. In this case it will
+      be executed either after point <code class="computeroutput"><span class="special">(</span><span class="number">4</span><span class="special">)</span></code> or on any
+      exception.<br>在 <code class="computeroutput"><span class="special">(</span><span class="number">1</span><span class="special">)</span></code> 之后的代码块是一个 <a class="link" href="../index.html" title="Chapter&nbsp;1.&nbsp;Boost.ScopeExit">ScopeExit</a>
+      声明。与 <code class="computeroutput"><span class="special">(</span><span class="number">1</span><span class="special">)</span></code> 不同，<a class="link" href="../index.html" title="Chapter&nbsp;1.&nbsp;Boost.ScopeExit">ScopeExit</a>
+      块的执行将被延迟至当前作用域的结尾处。在这个例子中，它会在 <code class="computeroutput"><span class="special">(</span><span class="number">4</span><span class="special">)</span></code> 之后或者异常抛出之后执行。
+    </p>
+<p>
+      The <a class="link" href="../index.html" title="Chapter&nbsp;1.&nbsp;Boost.ScopeExit">ScopeExit</a> declaration starts with <code class="computeroutput"><span class="identifier">BOOST_SCOPE_EXIT</span></code> macro invocation which accepts
+      <a href="../../../../preprocessor/index.html" target="_top">Boost.Preprocessor sequence</a>
+      of captured variables. If a capture starts with the ampersand sign <code class="computeroutput"><span class="special">&amp;</span></code>, a reference to the captured variable
+      will be available inside the <a class="link" href="../index.html" title="Chapter&nbsp;1.&nbsp;Boost.ScopeExit">ScopeExit</a> body;
+      otherwise, a copy of the variable will be made after the point <code class="computeroutput"><span class="special">(</span><span class="number">1</span><span class="special">)</span></code>
+      and only the copy will be available inside the body.<br><a class="link" href="../index.html" title="Chapter&nbsp;1.&nbsp;Boost.ScopeExit">ScopeExit</a> 声明以一个 <code class="computeroutput"><span class="identifier">BOOST_SCOPE_EXIT</span></code> 宏调用开头，该宏接受一个由捕获变量组成的 <a href="../../../../../libs/preprocessor/index.html" target="_top">Boost.Preprocessor 序列</a>。如果捕获变量是以 <code class="computeroutput"><span class="special">&amp;</span></code> 符号开头，则可以在 <a class="link" href="../index.html" title="Chapter&nbsp;1.&nbsp;Boost.ScopeExit">ScopeExit</a> 块中使用该捕获变量的引用；否则将在 <code class="computeroutput"><span class="special">(</span><span class="number">1</span><span class="special">)</span></code>
+      之后创建该变量的一份拷贝，且在代码块中只可使用该拷贝。
+    </p>
+<p>
+      In the example above, variables <code class="computeroutput"><span class="identifier">commit</span></code>
+      and <code class="computeroutput"><span class="identifier">m_persons</span></code> are passed by
+      reference because the final value of the <code class="computeroutput"><span class="identifier">commit</span></code>
+      variable should be used to determine whether to execute rollback action or
+      not and the action should modify the <code class="computeroutput"><span class="identifier">m_persons</span></code>
+      object, not its copy. This is a most common case but passing a variable by
+      value is sometimes useful as well.<br>在上例中，变量 <code class="computeroutput"><span class="identifier">commit</span></code> 和 <code class="computeroutput"><span class="identifier">m_persons</span></code> 是以引用方式传递的，因为变量 <code class="computeroutput"><span class="identifier">commit</span></code>
+      的最终值要用于决定是否执行回滚动作，且回滚动作要修改 <code class="computeroutput"><span class="identifier">m_persons</span></code>
+      对象而不是它的拷贝。这是最常见的情况，不过以值方式传递变量有时也是有用的。
+    </p>
+<p>
+      Consider a more complex case where <code class="computeroutput"><span class="identifier">World</span><span class="special">::</span><span class="identifier">addPerson</span></code>
+      can save intermediate states at some points and roll back to the last saved
+      state. You can use <code class="computeroutput"><span class="identifier">Person</span><span class="special">::</span><span class="identifier">m_evolution</span></code> to store a version of changes
+      and increment it to cancel all rollback actions associated with those changes.<br>想象一个更复杂的情况，<code class="computeroutput"><span class="identifier">World</span><span class="special">::</span><span class="identifier">addPerson</span></code>
+      可以在某些点上保存中间状态，并且可以回滚到最后保存的状态。你可以用 <code class="computeroutput"><span class="identifier">Person</span><span class="special">::</span><span class="identifier">m_evolution</span></code> 来保存变量的一个版本并对它进行递增，以取消与这些变化相关的所有回滚动作。
+    </p>
+<p>
+      If you pass a current value of <code class="computeroutput"><span class="identifier">m_evolution</span></code>
+      stored in the <code class="computeroutput"><span class="identifier">checkpoint</span></code> variable
+      by value, it will remain unchanged until the end of aa scope and you can compare
+      it with the final value of the <code class="computeroutput"><span class="identifier">m_evolution</span></code>.
+      If the latter wasn't incremented since you saved it, the rollback action inside
+      the block should be executed:<br>如果你以传值的方式来传递保存在 <code class="computeroutput"><span class="identifier">checkpoint</span></code> 变量中的 <code class="computeroutput"><span class="identifier">m_evolution</span></code>
+      当前值，则直至 aa 作用域结束之前，它都会保持不变，你可以将它与 <code class="computeroutput"><span class="identifier">m_evolution</span></code> 的最终值进行比较。如果后者在你保存之后未曾递增，则块中的回滚动作将被执行：
+    </p>
+<pre class="programlisting"><span class="keyword">void</span> <span class="identifier">World</span><span class="special">::</span><span class="identifier">addPerson</span><span class="special">(</span><span class="identifier">Person</span> <span class="keyword">const</span><span class="special">&amp;</span> <span class="identifier">aPerson</span><span class="special">)</span> <span class="special">{</span>
+    <span class="identifier">m_persons</span><span class="special">.</span><span class="identifier">push_back</span><span class="special">(</span><span class="identifier">aPerson</span><span class="special">);</span>
+
+    <span class="comment">// This block must be no-throw 这一块必须无抛出<br></span>    <span class="identifier">Person</span><span class="special">&amp;</span> <span class="identifier">person</span> <span class="special">=</span> <span class="identifier">m_persons</span><span class="special">.</span><span class="identifier">back</span><span class="special">();</span>
+    <span class="identifier">Person</span><span class="special">::</span><span class="identifier">evolution_t</span> <span class="identifier">checkpoint</span> <span class="special">=</span> <span class="identifier">person</span><span class="special">.</span><span class="identifier">m_evolution</span><span class="special">;</span>
+
+    <span class="identifier">BOOST_SCOPE_EXIT</span><span class="special">(</span> <span class="special">(</span><span class="identifier">checkpoint</span><span class="special">)(&amp;</span><span class="identifier">person</span><span class="special">)(&amp;</span><span class="identifier">m_persons</span><span class="special">)</span> <span class="special">)</span>
+    <span class="special">{</span>
+        <span class="keyword">if</span><span class="special">(</span><span class="identifier">checkpoint</span> <span class="special">==</span> <span class="identifier">person</span><span class="special">.</span><span class="identifier">m_evolution</span><span class="special">)</span>
+            <span class="identifier">m_persons</span><span class="special">.</span><span class="identifier">pop_back</span><span class="special">();</span>
+    <span class="special">}</span> <span class="identifier">BOOST_SCOPE_EXIT_END</span>
+
+    <span class="comment">// ...<br></span>
+    <span class="identifier">checkpoint</span> <span class="special">=</span> <span class="special">++</span><span class="identifier">person</span><span class="special">.</span><span class="identifier">m_evolution</span><span class="special">;</span>
+
+    <span class="comment">// Assign new id to the person 将新的 id 赋给 person<br></span>    <span class="identifier">World</span><span class="special">::</span><span class="identifier">id_t</span> <span class="keyword">const</span> <span class="identifier">prev_id</span> <span class="special">=</span> <span class="identifier">person</span><span class="special">.</span><span class="identifier">m_id</span><span class="special">;</span>
+    <span class="identifier">person</span><span class="special">.</span><span class="identifier">m_id</span> <span class="special">=</span> <span class="identifier">m_next_id</span><span class="special">++;</span>
+    <span class="identifier">BOOST_SCOPE_EXIT</span><span class="special">(</span> <span class="special">(</span><span class="identifier">checkpoint</span><span class="special">)(&amp;</span><span class="identifier">person</span><span class="special">)(&amp;</span><span class="identifier">m_next_id</span><span class="special">)(</span><span class="identifier">prev_id</span><span class="special">)</span> <span class="special">)</span>
+    <span class="special">{</span>
+        <span class="keyword">if</span><span class="special">(</span><span class="identifier">checkpoint</span> <span class="special">==</span> <span class="identifier">person</span><span class="special">.</span><span class="identifier">m_evolution</span><span class="special">)</span> <span class="special">{</span>
+            <span class="identifier">m_next_id</span> <span class="special">=</span> <span class="identifier">person</span><span class="special">.</span><span class="identifier">m_id</span><span class="special">;</span>
+            <span class="identifier">person</span><span class="special">.</span><span class="identifier">m_id</span> <span class="special">=</span> <span class="identifier">prev_id</span><span class="special">;</span>
+        <span class="special">}</span>
+    <span class="special">}</span> <span class="identifier">BOOST_SCOPE_EXIT_END</span>
+
+    <span class="comment">// ...<br></span>
+    <span class="identifier">checkpoint</span> <span class="special">=</span> <span class="special">++</span><span class="identifier">person</span><span class="special">.</span><span class="identifier">m_evolution</span><span class="special">;</span>
+<span class="special">}</span>
+</pre>
+<p>
+      Full code listing can be found in <a href="../../../example/world.cpp" target="_top">world.cpp</a>.<br>完整的代码列表可以在 <a href="../../../example/world.cpp" target="_top">world.cpp</a> 找到。
+    </p>
+</div>
+<table xmlns:rev="http://www.cs.rpi.edu/~gregod/boost/tools/doc/revision" width="100%"><tbody><tr>
+<td align="left"></td>
+<td align="right"><div class="copyright-footer">Copyright © 2006 -2009 Alexander Nasonov<p>
+        Distributed under the Boost Software License, Version 1.0. (See accompanying
+        file LICENSE_1_0.txt or copy at <a href="http://www.boost.org/LICENSE_1_0.txt" target="_top">
+        http://www.boost.org/LICENSE_1_0.txt </a>)
+      </p>
+</div></td>
+</tr></tbody></table>
+<hr>
+<div class="spirit-nav">
+<a accesskey="p" href="../index.html"><img src="../../../../../doc/html/images/prev.png" alt="Prev"></a><a accesskey="u" href="../index.html"><img src="../../../../../doc/html/images/up.png" alt="Up"></a><a accesskey="h" href="../index.html"><img src="../../../../../doc/html/images/home.png" alt="Home"></a><a accesskey="n" href="alternatives.html"><img src="../../../../../doc/html/images/next.png" alt="Next"></a>
+</div>
+</body></html>

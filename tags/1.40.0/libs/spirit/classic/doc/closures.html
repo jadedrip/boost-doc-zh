@@ -1,0 +1,248 @@
+<!DOCTYPE HTML PUBLIC "-//W3C//DTD HTML 4.01 Transitional//EN">
+<html><head>
+
+<title>Closures</title><meta http-equiv="Content-Type" content="text/html; charset=UTF-8">
+<link rel="stylesheet" href="theme/style.css" type="text/css">
+<style type="text/css">
+<!--
+.style1 {font-family: "Courier New", Courier, mono}
+-->
+</style></head>
+<body>
+<table background="theme/bkd2.gif" border="0" cellspacing="2" width="100%">
+  <tbody><tr>
+    <td width="10">
+    </td>
+    <td width="85%">
+      <font face="Verdana, Arial, Helvetica, sans-serif" size="6"><b>Closures 闭包</b></font>
+    </td>
+    <td width="112"><a href="http://spirit.sf.net"><img src="theme/spirit.gif" align="right" border="0" height="48" width="112"></a></td>
+  </tr>
+</tbody></table>
+<br>
+<table border="0">
+  <tbody><tr>
+    <td width="10"></td>
+    <td width="30"><a href="../index.html"><img src="theme/u_arr.gif" border="0"></a></td>
+    <td width="30"><a href="phoenix.html"><img src="theme/l_arr.gif" border="0"></a></td>
+    <td width="30"><a href="dynamic_parsers.html"><img src="theme/r_arr.gif" border="0"></a></td>
+  </tr>
+</tbody></table>
+<h2>Overview 概览</h2>
+<p>Using phoenix, in the previous chapter, we've seen how we can get data from our parsers using <tt>var</tt>:<br>在上一章中，通过使用Phoenix，我们已经看到了如何用 <tt>var</tt> 从分析器中取得数据：</p>
+<pre><code><font color="#000000"><span class="special">    </span><span class="keyword">int </span><span class="identifier">i</span><span class="special">;<br></span><span class="identifier">    integer </span><span class="special">= </span><span class="identifier">int_p</span><span class="special">[</span><span class="identifier">var</span><span class="special">(</span><span class="identifier">i</span><span class="special">) = </span><span class="identifier">arg1</span><span class="special">];</span></font></code></pre>
+<p>Nifty! Our rule <tt>integer</tt>, if successful, passes the parsed integer
+  to the variable <tt>i</tt>. Everytime we need to parse an integer, we can call
+  our rule <tt>integer</tt> and simply extract the parsed number from the variable
+  <tt>i</tt>. There's something you should be aware of though. In the viewpoint
+  of the grammar, the variable <tt>i</tt> is global. When the grammar gets more
+  complex, it's hard to keep track of the current state of <tt>i</tt>. And, with
+  recursive rules, global variables simply won't be adequate.<br>好极了！我们的规则 <tt>integer</tt>，如果成功匹配，将把所分析出的整数传递给变量 <tt>i</tt>。每次我们需要分析一个整数，都可以调用 <tt>integer</tt>&nbsp;规则，并简单地
+从变量 <tt>i</tt> 提取分析出的整数。但这里还是有些事情要注意。从语法的视角来看，<tt>i</tt>&nbsp;是全局的。当语法变得越来越复杂时，是很难掌握 <tt>i</tt> 的当前状态的。并且，在递归
+规则的情况下，全局变量通常并不适用。</p>
+<p>Closures are needed if you need your rules (or grammars) to be
+reentrant. For example, a rule (or grammar) might be called recursively
+indirectly or directly by itself. The calculator is a good example. The
+expression rule recursively calls itself indirectly when it invokes the
+factor rule.<br>如果你想让你的规则（或者语法）变成可再入的，那闭包就是必须的了。比如，一个规则（或语法）可能被自身直接或间接地递归调用。caculator是一个好例子。expression规则在调用factor规则时，间接地调用自身。</p>
+<p>Closures provide named (lazy) variables associated with each parse
+rule invocation. A closure variable is addressed using member syntax:<br>闭包提供了与每次规则调用相关联的命名（惰性）变量。一个闭包变量用成员语法表示：</p>
+<pre><code><font color="#000000"><span class="identifier">    </span>rulename<span class="special">.</span>varname</font></code></pre>
+<p>A closure variable <tt>R.x</tt> may be addressed in the semantic action of any other rule invoked by <tt>R</tt>; it refers to the innermost enclosing invocation of <tt>R</tt>. If no such invocation exists, an assertion occurs at runtime.<br>一个闭包变量 <tt>R.x</tt>&nbsp;可以在关联于由 <tt>R</tt> 所调用的任何规则的语义动作中出现；它关联到 <tt>R</tt>&nbsp;的最深一层的调用。如果这样的调用不存在，将产生一个运行时断言错误。</p>
+<p>Closures provide an environment, a stack frame, for local variables.
+  Most importantly, the closure variables are accessible from the EBNF grammar
+  specification and can be used to pass parser information upstream or downstream
+  from the topmost rule down to the terminals in a top-down recursive descent.
+  Closures facilitate dynamic scoping in C++.
+  Spirit's closure implementation is based on <em>Todd Veldhuizen</em>'s <strong>Dynamic
+  scoping in C++</strong> technique that he presented in his paper <a href="ftp://ftp.cs.indiana.edu/pub/techreports/TR542.pdf">Techniques
+  for Scientic C++</a>.<br>闭包为本地变量提供了一个环境，一个栈框架。最重要的是，闭包变量可以在EBNF语法定义中访问且可以在自顶向下递归下降中顺流或逆流传递分析器信息。闭包完善了C++的动态作用范围。Spirit的闭包实现基于<em>Todd Veldhuizen的</em><strong> Dynamic scoping in C++</strong> 技术，见于他的文章 <a href="ftp://ftp.cs.indiana.edu/pub/techreports/TR542.pdf">Techniques for Scientic C++</a>。</p>
+<p>When a rule is given a closure, the closure's local variables are created prior
+    to entering the parse function and destructed after exiting the parse function.
+    These local variables are true local variables that exist on the hardware stack.<br>当一个规则被给定一个闭包，闭包的本地变量在进入parse函数前创建，在退出parse函数后析构。这些本地变量都是真实存在于硬件栈上的本地变量。</p>
+<table align="center" border="0" width="80%">
+  <tbody><tr>
+    <td class="note_box"><img src="theme/alert.gif" height="16" width="16"> <strong>Closures</strong>
+      <strong>and Phoenix </strong><strong>闭包和Phoenix</strong><br> <br>
+      Spirit v1.8 closure support requires <a href="../phoenix/index.html">Phoenix</a>.
+      In the future, Spirit will fully support <a href="../../../../libs/lambda/index.html">BLL</a>.
+      Currently, work is underway to merge the features of both libraries.<br>Spirit1.8闭包需要 <a href="../phoenix/index.html">Phoenix</a> 的支持。在将来，Spirit将完全支持 <a href="../../../lambda/index.html">BLL</a><a href="http://www.boost.org/libs/lambda/index.html"></a>。目前正在进行合并这两个库的功能的工作。</td>
+  </tr>
+</tbody></table>
+<h2>Example 例子</h2>
+<p>Let's go back to the calculator grammar introduced in the <a href="functional.html">Functional</a> chapter. Here's the full grammar again, plus the closure declarations:<br>让我们回到在<a href="functional.html">函数式</a>一章中介绍的计算器语法。这次又是一个完整的语法，附带闭包声明：</p>
+<pre><span class="special">    </span><span class="keyword">struct </span><span class="identifier">calc_closure </span><span class="special">: </span><span class="identifier">boost</span><span class="special">::</span><span class="identifier">spirit</span><span class="special">::</span><span class="identifier">closure</span><span class="special">&lt;</span><span class="identifier">calc_closure</span><span class="special">, </span><span class="keyword">double</span><span class="special">&gt;<br>    </span><span class="special">{<br>        </span><span class="identifier">member1 </span><span class="identifier">val</span><span class="special">;<br>    </span><span class="special">};<br><br>    </span><span class="keyword">struct </span><span class="identifier">calculator </span><span class="special">: </span><span class="keyword">public </span><span class="identifier">grammar</span><span class="special">&lt;</span><span class="identifier">calculator</span><span class="special">, </span><span class="identifier">calc_closure</span><span class="special">::</span><span class="identifier">context_t</span><span class="special">&gt;<br>    </span><span class="special">{<br>        </span><span class="keyword">template </span><span class="special">&lt;</span><span class="keyword">typename </span><span class="identifier">ScannerT</span><span class="special">&gt;<br>        </span><span class="keyword">struct </span><span class="identifier">definition<br>        </span><span class="special">{<br>            </span><span class="identifier">definition</span><span class="special">(</span><span class="identifier">calculator </span><span class="keyword">const</span><span class="special">&amp; </span><span class="identifier">self</span><span class="special">)<br>            </span><span class="special">{<br>                </span><span class="identifier">top </span><span class="special">= </span><span class="identifier">expression</span><span class="special">[</span><span class="identifier">self</span><span class="special">.</span><span class="identifier">val </span><span class="special">= </span><span class="identifier">arg1</span><span class="special">];<br><br>                </span><span class="identifier">expression<br>                    </span><span class="special">=   </span><span class="identifier">term</span><span class="special">[</span><span class="identifier">expression</span><span class="special">.</span><span class="identifier">val </span><span class="special">= </span><span class="identifier">arg1</span><span class="special">]<br>                        </span><span class="special">&gt;&gt; </span><span class="special">*(   </span><span class="special">(</span><span class="literal">'+' </span><span class="special">&gt;&gt; </span><span class="identifier">term</span><span class="special">[</span><span class="identifier">expression</span><span class="special">.</span><span class="identifier">val </span><span class="special">+= </span><span class="identifier">arg1</span><span class="special">])<br>                            </span><span class="special">|   </span><span class="special">(</span><span class="literal">'-' </span><span class="special">&gt;&gt; </span><span class="identifier">term</span><span class="special">[</span><span class="identifier">expression</span><span class="special">.</span><span class="identifier">val </span><span class="special">-= </span><span class="identifier">arg1</span><span class="special">])<br>                            </span><span class="special">)<br>                    </span><span class="special">;<br><br>                </span><span class="identifier">term<br>                    </span><span class="special">=   </span><span class="identifier">factor</span><span class="special">[</span><span class="identifier">term</span><span class="special">.</span><span class="identifier">val </span><span class="special">= </span><span class="identifier">arg1</span><span class="special">]<br>                        </span><span class="special">&gt;&gt; </span><span class="special">*(   </span><span class="special">(</span><span class="literal">'*' </span><span class="special">&gt;&gt; </span><span class="identifier">factor</span><span class="special">[</span><span class="identifier">term</span><span class="special">.</span><span class="identifier">val </span><span class="special">*= </span><span class="identifier">arg1</span><span class="special">])<br>                            </span><span class="special">|   </span><span class="special">(</span><span class="literal">'/' </span><span class="special">&gt;&gt; </span><span class="identifier">factor</span><span class="special">[</span><span class="identifier">term</span><span class="special">.</span><span class="identifier">val </span><span class="special">/= </span><span class="identifier">arg1</span><span class="special">])<br>                            </span><span class="special">)<br>                    </span><span class="special">;<br><br>                </span><span class="identifier">factor<br>                    </span><span class="special">=   </span><span class="identifier">ureal_p</span><span class="special">[</span><span class="identifier">factor</span><span class="special">.</span><span class="identifier">val </span><span class="special">= </span><span class="identifier">arg1</span><span class="special">]<br>                    </span><span class="special">|   </span><span class="literal">'(' </span><span class="special">&gt;&gt; </span><span class="identifier">expression</span><span class="special">[</span><span class="identifier">factor</span><span class="special">.</span><span class="identifier">val </span><span class="special">= </span><span class="identifier">arg1</span><span class="special">] </span><span class="special">&gt;&gt; </span><span class="literal">')'<br>                    </span><span class="special">|   </span><span class="special">(</span><span class="literal">'-' </span><span class="special">&gt;&gt; </span><span class="identifier">factor</span><span class="special">[</span><span class="identifier">factor</span><span class="special">.</span><span class="identifier">val </span><span class="special">= </span><span class="special">-</span><span class="identifier">arg1</span><span class="special">])<br>                    </span><span class="special">|   </span><span class="special">(</span><span class="literal">'+' </span><span class="special">&gt;&gt; </span><span class="identifier">factor</span><span class="special">[</span><span class="identifier">factor</span><span class="special">.</span><span class="identifier">val </span><span class="special">= </span><span class="identifier">arg1</span><span class="special">])<br>                    </span><span class="special">;<br>            </span><span class="special">}<br><br>            </span><span class="keyword">typedef </span><span class="identifier">rule</span><span class="special">&lt;</span><span class="identifier">ScannerT</span><span class="special">, </span><span class="identifier">calc_closure</span><span class="special">::</span><span class="identifier">context_t</span><span class="special">&gt; </span><span class="identifier">rule_t</span><span class="special">;<br>            </span><span class="identifier">rule_t </span><span class="identifier">expression</span><span class="special">, </span><span class="identifier">term</span><span class="special">, </span><span class="identifier">factor</span><span class="special">;<br>            </span><span class="identifier">rule</span><span class="special">&lt;</span><span class="identifier">ScannerT</span><span class="special">&gt; </span><span class="identifier">top</span><span class="special">;<br><br>            </span><span class="identifier">rule</span><span class="special">&lt;</span><span class="identifier">ScannerT</span><span class="special">&gt; </span><span class="keyword">const</span><span class="special">&amp;<br>            </span><span class="identifier">start</span><span class="special">() </span><span class="keyword">const </span><span class="special">{ </span><span class="keyword">return </span><span class="identifier">top</span><span class="special">; </span><span class="special">}<br>        </span><span class="special">};<br>    </span><span class="special">};</span></pre>
+
+<p> <img src="theme/lens.gif" height="16" width="15"> The full source code can be <a href="../example/fundamental/phoenix_calc.cpp">viewed here</a>. This is part of the Spirit distribution.<br><img src="theme/lens.gif" height="16" width="15"> 完整的源码<a href="../example/fundamental/phoenix_calc.cpp">在此查阅</a>。这是Spirit发布包的组成部分。</p><p>Surely, we've come a long way from the original version of this calculator. With inline <a href="phoenix.html#lambda">lambda expressions</a>, we were able to write self contained grammars complete with semantic actions.<br>当然，我们离最初版本的计算器已经很远了。借助内联<a href="phoenix.html#lambda">λ表达式</a>，我们可以写出完全自持的带语义动作的语法。</p>
+<p>The first thing to notice is the declaration of <tt>calc_closure</tt>.<br>首先要注意的是 <tt>calc_closure</tt><span style="font-family: Courier New;"> </span>的生命。</p>
+<p> <strong>Declaring closures 声明闭包</strong></p>
+<p> The general closure declaration syntax is:<br>一般的闭包声明语法为：</p>
+<pre><code>    <span class="keyword">struct </span><span class="identifier">name</span><span class="special"></span> <span class="special">: </span><span class="identifier">spirit</span><span class="special">::</span><span class="identifier">closure</span><span class="special">&lt;</span><span class="identifier">name</span><span class="special">, </span><span class="keyword">type1, type2, type3,... typeN</span><span class="special">&gt;<br>    {<br>        </span><span class="identifier">member1 m_name1</span><span class="special">;<br>        </span><span class="identifier">member2 m_name2</span><span class="special">;<br>        </span><span class="identifier">member3 m_name3</span><span class="special">;<br>        ...<br>        </span><span class="identifier">memberN m_nameN</span><span class="special">;<br>    };</span></code></pre>
+<p> <tt>member1</tt>... <tt>memberN</tt> are indirect links to the actual closure variables. Their indirect types correspond to <code><tt>type1</tt></code>... <code><tt>typeN</tt></code>. In our example, we declared <tt>calc_closure</tt>:<br><tt>member1</tt>... <tt>memberN</tt> 间接地链接到真正的本地变量。它们的间接类型对应于 <code><tt>type1</tt></code>... <code><tt>typeN</tt></code>。在我们的例子中，我们如下声明 <tt>calc_closure</tt>:</p>
+<pre><span class="number">    </span><span class="keyword">struct </span><span class="identifier">calc_closure </span><span class="special">: </span><span class="identifier">boost</span><span class="special">::</span><span class="identifier">spirit</span><span class="special">::</span><span class="identifier">closure</span><span class="special">&lt;</span><span class="identifier">calc_closure</span><span class="special">, </span><span class="keyword">double</span><span class="special">&gt;<br>    </span><span class="special">{<br>        </span><span class="identifier">member1 </span><span class="identifier">val</span><span class="special">;<br>    </span><span class="special">};</span></pre>
+<p><tt>calc_closure</tt> has a single variable <tt>val</tt> of type <span class="keyword">double</span><span class="special"></span>.<br><tt>calc_closure</tt> 有一个类型为 <span class="keyword">double</span><span class="special"></span> 的变量 <tt>val</tt>。</p>
+<table align="center" border="0" width="80%">
+  <tbody><tr>
+    <td class="note_box"><p><img src="theme/alert.gif" height="16" width="16"> <tt>BOOST_SPIRIT_CLOSURE_LIMIT</tt><br>
+        <br>
+Spirit predefined maximum closure limit. This limit defines the maximum
+number of elements a closure can hold. This number defaults to 3. The
+actual maximum is rounded up in multiples of 3. Thus, if this value is
+4, the actual limit is 6. The ultimate maximum limit in this
+implementation is 15. It should <strong>NOT</strong> be greater than <tt>PHOENIX_LIMIT</tt> (see <a href="../phoenix/index.html">phoenix</a>). Example:<br>Spirit预定义了闭包的最大限制。它限制了一个闭包所能持有的元素的最大数目。默认值为3。实际上最大值可以是3的整数倍。因此，如果该值为4，那么实际的最大值为6。这个版本的实现所允许的极大值为15。这个值<strong>不能</strong>大于<tt>PHOENIX_LIMIT</tt> (见 <a href="../phoenix/index.html">phoenix</a>)。例子：
+      <br>
+      <span class="comment style1"></span></p><p><span class="comment style1">// Define these before including anything else       <br>
+        </span><span class="preprocessor style1">#define</span><span class="style1"> PHOENIX_LIMIT 10<br>
+      </span><span class="preprocessor">#define</span><span class="style1"> BOOST_SPIRIT_CLOSURE_LIMIT 10</span></p>      </td>
+  </tr>
+</tbody></table>
+<p><strong>Attaching closures 关联闭包</strong></p>
+<p>Closures can be applied to rules, subrules and grammars (non-terminals). The closure has a
+  special <a href="indepth_the_parser_context.html">parser context</a> that can be used with these non-terminals. The closure's
+  context is its means to hook into the non-terminal. The  context of the closure <tt>C</tt> is <tt>C::context_t</tt>.<br>闭包可应用于规则、子规则和语法（非终结符）。配合这些非终结符使用的闭包有一个特殊的<a href="indepth_the_parser_context.html">分析器语境</a>。这个语境用来把闭包与非终结符挂钩。闭包的语境是它与非终结符挂钩的方法。闭包 <tt>C</tt> 的语境是 <tt>C::context_t</tt></p>
+<p>We can see in the example that we attached <tt>calc_closure</tt> to the <tt>expression</tt>, <tt>term</tt> and <tt>factor</tt> rules in our grammar:<br>在例子中可以看到，在语法中我们把 <tt>calc_closure</tt> 关联到 <tt>expression</tt>, <tt>term</tt> 和 <tt>factor</tt> ：<span style="font-family: Courier New;"><tt></tt></span></p>
+<pre><span class="special">    </span><span class="keyword">typedef </span><span class="identifier">rule</span><span class="special">&lt;</span><span class="identifier">ScannerT</span><span class="special">, </span><span class="identifier">calc_closure</span><span class="special">::</span><span class="identifier">context_t</span><span class="special">&gt; </span><span class="identifier">rule_t</span><span class="special">;<br>    </span><span class="identifier">rule_t </span><span class="identifier">expression</span><span class="special">, </span><span class="identifier">term</span><span class="special">, </span><span class="identifier">factor</span><span class="special">;</span> </pre>
+<p>as well as the grammar itself:<br>以及语法本身：</p>
+<pre><span class="special">    </span><span class="keyword">struct </span><span class="identifier">calculator </span><span class="special">: </span><span class="keyword">public </span><span class="identifier">grammar</span><span class="special">&lt;</span><span class="identifier">calculator</span><span class="special">, </span><span class="identifier">calc_closure</span><span class="special">::</span><span class="identifier">context_t</span><span class="special">&gt;</span></pre>
+<p><strong>Closure return value 闭包的返回值</strong></p>
+<p>The closure <tt>member1</tt> is the closure's return value. This return value, like the one returned by <tt>anychar_p</tt>, for example, can be used to propagate data up the parser hierarchy or passed to semantic actions. Thus, <tt>expression</tt>, <tt>term</tt> and <tt>factor</tt>, as well as the <tt>calculator</tt> grammar itself, all return a <tt>double</tt>.<br>闭包成员 <tt>member1</tt>&nbsp;是闭包的返回值。这个返回值，类似于<span style="font-family: Courier New;"> </span><tt>anychar_p</tt><span style="font-family: Courier New;">&nbsp;</span>的返回值，例如，可用于在分析器层次中传递数据或传递给语义动作。因此， <tt>expression</tt>, <tt>term</tt> 和 <tt>factor</tt>, 以及 <tt>calculator</tt>&nbsp;语法本身，都返回一个 <tt>double</tt>。</p>
+<p><strong>Accessing closure variables 访问闭包变量</strong></p>
+<p>Closure variables can be accessed from within semantic actions just like you
+  would struct members: by qualifying the member name with its owner rule, subrule
+  or grammar. In our example above, notice how we referred to the closure member val. Example:<br>闭包变量可以在语义动作中访问，就用你组织成员变量的方式：指定它所属的规则、子规则或语法以及闭包变量的名字。在上面的例子中，要注意我们是如何引用闭包变量的。例子：</p>
+<pre class="identifier"><code>    expression<span class="special">.</span>val <span class="comment">// refer to expression's closure member val 引向expression的闭包成员val</span></code></pre>
+<p><strong>Initializing closure variables 初始化闭包变量 </strong></p>
+<p>We didn't use this feature in the example, yet, for completeness...<br>虽然我们的例子并未使用这个功能，但为了完整性……</p>
+<p>Sometimes, we need to initialize our closure variables upon entering
+a non-terminal (rule, subrule or grammar). Closure enabled
+non-terminals, by default, default-construct variables upon entering
+the parse member function. If this is not desirable, we can pass
+constructor arguments to the non-terminal. The syntax mimics a function
+call.<br>有时，我们在进入一个非终结符（规则、子规则或语法）前需要初始化闭包变量。默认的，闭包允许非终结符在进入parse成员函数前初始化有默认构造函数的变量。如果这不是我们想要的，我们可以把构造函数的参数传给非终结符。这个语法模仿了函数调用。</p>
+<p>For (<em>a contrived</em>) example, if you wish to construct <tt>calc_closure</tt>'s variables
+    to <tt>3.6</tt>, when we invoke the rule <tt>expression</tt>, we write:<br>（特意的）例如，如果你想把 <tt>calc_closure</tt> <span style="font-family: Courier New;">的变量初始化为</span> <tt>3.6</tt><span style="font-family: Courier New;">，当我们调用</span> <tt>expression</tt><span style="font-family: Courier New;">，这么写：</span></p>
+<pre class="identifier"><code>    expression<span class="special">(</span><span class="keyword">3.6</span><span class="special">) </span><span class="comment">// invoke rule expression and set its closure variable to 3.6 调用规则expression并设置其闭包变量为3.6</span></code></pre>
+<p>The constructor arguments are actually Phoenix lambda expressions, so you can
+  use arbitrarily complex expressions. Here's another <em>contrived example<strong>:</strong></em><br>构造函数参数实际上是Phoenix的λ表达式，因此你可以使用任意复杂的表达式。这里是另一个<em>特意的例子：</em></p>
+<pre class="identifier"><code>    <span class="comment">// call rule factor and set its closure variable to (expression.x / 8) * factor.y <br>    // 调用规则factor并设置其闭包变量为 (expression.x / 8) * factor.y<br></span>    <code>factor</code><span class="special">((</span>expression<span class="special">.</span>x<span class="keyword"> </span><span class="special">/</span><span class="keyword"> 8</span><span class="special">) *</span><span class="keyword"> </span>term<span class="special">.</span>y<span class="special">)</span></code></pre>
+<p><img src="theme/lens.gif" height="16" width="15"> We can pass less arguments than the actual number of variables in the closure.
+  The variables at the right with no corresponding constructor arguments are default
+  constructed. Passing more arguments than there are closure variables is an error.<br><img src="theme/lens.gif" height="16" width="15"> 我们可以传递少于实际的闭包变量数目的参数。右边那些没有对应的构造函数参数的变量将被默认构造。传递多余变量数目的参数将产生一个错误。</p>
+<p><img src="theme/lens.gif" height="16" width="15"> See <a href="../example/intermediate/parameters.cpp">parameters.cpp</a> for a compilable example. This is part of the Spirit distribution.<br><img src="theme/lens.gif" height="16" width="15"> 可编译例子见 <a href="../example/intermediate/parameters.cpp">parameters.cpp</a> 。这是Spirit分发包的组成部分。</p>
+<h2>Closures and Dynamic parsing 闭包与动态分析</h2>
+<p>Let's write a very simple parser for an XML/HTML like language with
+arbitrarily nested tags. The typical approach to this type of nested
+tag parsing is to delegate the actual tag matching to semantic actions,
+perhaps using a symbol table. For example, the semantic actions are
+responsible for ensuring that the tags are nested (e.g. this code: <tt>&lt;p&gt;&lt;table&gt;&lt;/p&gt;&lt;/table&gt;</tt> is erroneous).<br>让我们来写一个类似于XML/HTML的任意的标记语言的分析器。对这种嵌套标记语言典型的方法是在语义动作中进行真正的标记匹配，也许是通过一个符号表。例如，由语义动作负责保证这些标记是嵌套的（比如类似这样的代码是错误的：<tt>&lt;p&gt;&lt;table&gt;&lt;/p&gt;&lt;/table&gt;</tt>)<tt></tt></p>
+<p>Spirit allows us to dynamically modify the parser at runtime. The
+ability to guide parser behavior through semantic actions makes it
+possible to ensure the nesting of tags directly in the parser. We shall
+see how this is possible. here's the grammar in its simplest form:<br>Spirit允许我们在运行时动态地修改分析器。通过语义动作引导分析器行为的能力使得可以直接使用分析器保证标签的嵌套。我们将看到这是如何成为可能的。这是最简形式的语法：</p>
+<pre><span class="identifier">    element </span><span class="special">= </span><span class="identifier">start_tag </span><span class="special">&gt;&gt; </span><span class="special">*</span><span class="identifier">element </span><span class="special">&gt;&gt; </span><span class="identifier">end_tag</span><span class="special">;</span>
+</pre>
+<p>An element is a <tt>start_tag</tt> (e.g. <tt>&lt;font&gt;</tt>) folowed by zero or more elements, and ended by an <tt>end_tag</tt> (e.g. <tt>&lt;/font&gt;</tt>). Now, here's a first shot at our <tt>start_tag</tt>:<br>一个元素即一个 <tt>start_tag</tt> (如 <tt>&lt;font&gt;</tt>)<font>跟随零个或更多元素，且以</font> <tt>end_tag</tt> (如<tt>&lt;/font&gt;</tt>)结尾。那么，下面就是我们的 <tt>start_tag</tt> 的首次定义：</p>
+<pre><span class="special">    </span><span class="identifier">start_tag </span><span class="special">= </span><span class="literal">'&lt;' </span><span class="special">&gt;&gt; </span><span class="identifier">lexeme_d</span><span class="special">[</span><span class="special">(+</span><span class="identifier">alpha_p</span><span class="special">)</span><span class="special">] </span><span class="special">&gt;&gt; </span><span class="literal">'&gt;'</span><span class="special">;</span></pre>
+<p>Notice that the <tt>end_tag</tt> is just the same as <tt>start_tag</tt> with the addition of a slash:<br>注意 <tt>end_tag</tt>&nbsp;和 <tt>start_tag</tt>&nbsp;类似，只是多了一个斜线：</p>
+<pre><span class="special">    </span><span class="identifier">end_tag </span><span class="special">= </span><span class="literal">"&lt;/" </span><span class="special">&gt;&gt; </span>what_we_got_in_the_start_tag <span class="special"></span><span class="special">&gt;&gt; </span><span class="literal">'&gt;'</span><span class="special">;</span>
+</pre>
+<p>What we need to do is to temporarily store what we got in our <tt>start_tag</tt> and use that later to parse our <tt>end_tag</tt>. Nifty, we can use the <a href="parametric_parsers.html">parametric parser</a> primitives to parse our <tt>end_tag</tt>:<br>我们所需要做的是临时储存 <tt>start_tag</tt>&nbsp;并且在随后分析 <tt>end_tag</tt> 中使用它。很好，我们可以用<a href="parametric_parsers.html">参数化</a>的元素分析器来解析 <tt>end_tag</tt>：</p>
+<pre><span class="special">    </span><span class="identifier">end_tag </span><span class="special">= </span><span class="string">"&lt;/" </span><span class="special">&gt;&gt; </span><span class="identifier">f_str_p</span><span class="special">(</span>tag<span class="special">) </span><span class="special">&gt;&gt; </span><span class="literal">'&gt;'</span><span class="special">;</span></pre>
+<p>where we parameterize <tt>f_str_p</tt> with what we stored (tag).<br>这里我们用我们所储存的tag来参数化 <tt>f_str_p</tt>。</p>
+<p>Be reminded though that our grammar is recursive. The element rule calls itself. Hence, we can't just use a variable and use <tt>phoenix::var</tt> or <tt>boost::ref</tt>. Nested recursion will simply gobble up the variable. Each invocation of element must have a closure variable <tt>tag</tt>. Here now is the complete grammar:<br>注意我们的语法是递归的。element 规则调用自身。因此，我们不能只用一个变量和 <tt>phoenix::var</tt> 或 <tt>boost::ref</tt>。嵌套的递归将更改变量。每次对element 的调用都必须有一个闭包变量 <tt>tag</tt>。下面是完整的语法：</p>
+<pre><span class="number">    </span><span class="keyword">struct </span><span class="identifier">tags_closure </span><span class="special">: </span><span class="identifier">boost</span><span class="special">::</span><span class="identifier">spirit</span><span class="special">::</span><span class="identifier">closure</span><span class="special">&lt;</span><span class="identifier">tags_closure</span><span class="special">, </span><span class="identifier">string</span><span class="special">&gt; </span><span class="special">
+    {
+        </span><span class="identifier">member1 </span><span class="identifier">tag</span><span class="special">;<br>    </span><span class="special">};<br><br>    </span><span class="keyword">struct </span><span class="identifier">tags </span><span class="special">: </span><span class="keyword">public </span><span class="identifier">grammar</span><span class="special">&lt;</span><span class="identifier">tags</span><span class="special">&gt;<br>    </span><span class="special">{<br>        </span><span class="keyword">template </span><span class="special">&lt;</span><span class="keyword">typename </span><span class="identifier">ScannerT</span><span class="special">&gt;<br>        </span><span class="keyword">struct </span><span class="identifier">definition </span><span class="special">{<br><br>            </span><span class="identifier">definition</span><span class="special">(</span><span class="identifier">tags </span><span class="keyword">const</span><span class="special">&amp; </span><span class="comment">/*self*/</span><span class="special">)<br>            </span><span class="special">{<br>                </span><span class="identifier">element </span><span class="special">= </span><span class="identifier">start_tag </span><span class="special">&gt;&gt; </span><span class="special">*</span><span class="identifier">element </span><span class="special">&gt;&gt; </span><span class="identifier">end_tag</span><span class="special">;<br><br>                </span><span class="identifier">start_tag </span><span class="special">=<br>                        </span><span class="literal">'&lt;'<br>                    </span><span class="special">&gt;&gt;  </span><span class="identifier">lexeme_d<br>                        </span><span class="special">[<br>                            </span><span class="special">(+</span><span class="identifier">alpha_p</span><span class="special">)<br>                            </span><span class="special">[<br>                                </span><span class="comment">//  construct string from arg1 and arg2 lazily 从arg1和arg2惰性地构造字符串<br>                                </span><span class="comment">//  and assign to element.tag                  并赋值给element.tag<br><br>                                </span><span class="identifier">element</span><span class="special">.</span><span class="identifier">tag </span><span class="special">= </span><span class="identifier">construct_</span><span class="special">&lt;</span><span class="identifier">string</span><span class="special">&gt;(</span><span class="identifier">arg1</span><span class="special">, </span><span class="identifier">arg2</span><span class="special">)<br>                            </span><span class="special">]<br>                        </span><span class="special">]<br>                    </span><span class="special">&gt;&gt; </span><span class="literal">'&gt;'</span><span class="special">;<br><br>                </span><span class="identifier">end_tag </span><span class="special">= </span><span class="string">"&lt;/" </span><span class="special">&gt;&gt; </span><span class="identifier">f_str_p</span><span class="special">(</span><span class="identifier">element</span><span class="special">.</span><span class="identifier">tag</span><span class="special">) </span><span class="special">&gt;&gt; </span><span class="literal">'&gt;'</span><span class="special">;<br>            </span><span class="special">}<br><br>            </span><span class="identifier">rule</span><span class="special">&lt;</span><span class="identifier">ScannerT</span><span class="special">, </span><span class="identifier">tags_closure</span><span class="special">::</span><span class="identifier">context_t</span><span class="special">&gt; </span><span class="identifier">element</span><span class="special">;<br>            </span><span class="identifier">rule</span><span class="special">&lt;</span><span class="identifier">ScannerT</span><span class="special">&gt; </span><span class="identifier">start_tag</span><span class="special">, </span><span class="identifier">end_tag</span><span class="special">;<br><br>            </span><span class="identifier">rule</span><span class="special">&lt;</span><span class="identifier">ScannerT</span><span class="special">, </span><span class="identifier">tags_closure</span><span class="special">::</span><span class="identifier">context_t</span><span class="special">&gt; </span><span class="keyword">const</span><span class="special">&amp;<br>            </span><span class="identifier">start</span><span class="special">() </span><span class="keyword">const </span><span class="special">{ </span><span class="keyword">return </span><span class="identifier">element</span><span class="special">; </span><span class="special">}<br>        </span><span class="special">};<br>    </span><span class="special">};</span></pre>
+<p>We attached a semantic action to the <tt>(+alpha_p)</tt> part of the start_tag. There, we stored the parsed tag in the <tt>element</tt>'s closure variable <tt>tag</tt>. Later, in the <tt>end_tag</tt>, we simply used the <tt>element</tt>'s closure variable <tt>tag</tt> to parameterize our <tt>f_str_p</tt> parser. Simple and elegant. If some of the details begin to look like greek (e.g. what is <tt>construct_</tt>?), please consult the <a href="phoenix.html">Phoenix</a> chapter.<br>我们把语义动作关联到 start_tag 的 <tt>(+alpha_p)</tt>&nbsp;部分上。在那里，我们把分析出的标记储存在这个 <tt>element</tt> 的闭包变量　<tt>tag</tt>　里。随
+后，在 <tt>end_tag</tt>　中，我们简单地用　<tt>element</tt>　的闭包变量　<tt>tag</tt>　来参数化我们的 <tt>f_str_p</tt>&nbsp;分析器。简单而优雅。如果某些细节看起来有点晦涩（比如， <tt>construct_</tt><span style="font-family: Courier New;">　是干嘛的？</span>），请见<a href="phoenix.html">Phoenix</a>章节。</p>
+<p><img src="theme/lens.gif" height="16" width="15"> The full source code can be <a href="../example/fundamental/matching_tags.cpp">viewed here</a>. This is part of the Spirit distribution.</p><p><img src="theme/lens.gif" height="16" width="15"> 完整的源码<a href="../example/fundamental/matching_tags.cpp">在此查阅</a>，这是Spirit分发包的组成部分。</p>
+<h2><img src="theme/lens.gif" height="16" width="15"> Closures in-depth 深入闭包</h2>
+<p><strong>What are Closures? 闭包是什么？</strong></p>
+<p>The closure is an object that <span class="quotes">"closes"</span>
+  over the local variables of a function making them visible and accessible outside
+  the function. What is more interesting is that the closure actually packages
+  a local context (stack frame where some variables reside) and makes it available
+  outside the scope in which they actually exist. The information is essentially
+  <span class="quotes">"captured"</span> by the closure allowing it
+  to be referred to anywhere and anytime, even prior to the actual creation of
+  the variables.<br>闭包指"包裹"函数的本地变量，使其在函数外可见及可访问的对象。更有趣的是闭包实际上包裹了一个本地语境（变量所处的栈框架）并使其在他们实际的可见范围之外可见。这些信息本质上被闭包所"捕捉"以使其在任一时刻任意地点都可以被引用，甚至在变量被实际创建之前。</p>
+<p>The following diagram depicts the situation where a function <tt>A</tt> (or
+  rule) exposes its closure and another function <tt>B</tt> references <tt>A</tt>'s
+  variables through its closure.<br>下图描绘了一个函数 <tt>A</tt>（或者规则）暴露其闭包且另一个函数 <tt>B</tt> 通过这个闭包引用 <tt>A</tt> 的变量。</p>
+<table align="center" border="0" width="40%">
+  <tbody><tr>
+    <td><img src="theme/closure1.png"></td>
+  </tr>
+  <tr>
+    <td> <div align="center"><b><font color="#003399" face="Geneva, Arial, Helvetica, san-serif" size="+1">The
+        closure as an object that <i>"closes"</i> over the local variables
+        of a function making them visible and accessible outside the function<br>闭包就象一个"包裹"着一个函数的某个局部变量的对象，使之可以在函数以外可见并被访问</font></b></div></td>
+  </tr>
+</tbody></table>
+<p>Of course, function <tt>A</tt> should be active when <tt>A.x</tt> is referenced.
+  What this means is that function <tt>B</tt> is reliant on function <tt>A</tt>
+  (If <tt>B</tt> is a nested function of <tt>A</tt>, this will always be the case).
+  The free form nature of Spirit rules allows access to a closure variable anytime,
+  anywhere. Accessing <tt>A.x</tt> is equivalent to referring to the topmost stack
+  variable <tt>x</tt> of function <tt>A</tt>. If function <tt>A</tt> is not active
+  when <tt>A.x</tt> is referenced, a runtime exception will be thrown.<br>当然，在 <tt>A.x</tt>&nbsp;被引用时，函数 <tt>A</tt>&nbsp;应当是活动的。这意味着函数 <tt>B</tt> 依赖于函数 <tt>A</tt>（如果 <tt>B</tt> 嵌套于 <tt>A</tt> 内，那么这永远成立）。Spirit拥有的自由形式允
+许在任何时刻任何地点引用闭包变量。访问 <tt>A.x</tt> 等价于访问函数 <tt>A</tt> 栈内最顶层的变量 <tt>x</tt>。如果在 <tt>A.x</tt>&nbsp;被引用时 <tt>A</tt> 并不是活动的，将抛出一个运行时异常。</p>
+<p><strong>Nested Functions 嵌套函数</strong></p>
+<p>To fully understand the importance of closures, it is best to look at a language
+  such as Pascal which allows nested functions. Since we are dealing with C++,
+  lets us assume for the moment that C++ allows nested functions. Consider the
+  following <b><i>pseudo</i></b> C++ code:<br>要完全明白闭包的重要性，最好看看诸如Pascal这样允许嵌套函数的语言。由于我们是在和C++打交道，让我们假设C++允许嵌套函数。考虑下面的C++伪代码：</p>
+<pre><span class="identifier">    </span><span class="keyword">void </span><span class="identifier">a</span><span class="special">()<br>    </span><span class="special">{<br>        </span><span class="keyword">int </span><span class="identifier">va</span><span class="special">;<br>        </span><span class="keyword">void </span><span class="identifier">b</span><span class="special">()<br>        </span><span class="special">{<br>            </span><span class="keyword">int </span><span class="identifier">vb</span><span class="special">;<br></span>            <span class="keyword">void </span><span class="identifier">c</span><span class="special">()<br>            </span><span class="special">{<br>                </span><span class="keyword">int </span><span class="identifier">vc</span><span class="special">;<br>            </span><span class="special">}<br><br>            </span><span class="identifier">c</span><span class="special">()</span><span class="special">;<br>        </span><span class="special">}<br><br>        </span><span class="identifier">b</span><span class="special">();<br>    </span><span class="special">}</span></pre>
+<p>We have three functions <tt>a</tt>, <tt>b</tt> and <tt>c</tt> where <tt>c</tt>
+  is nested in <tt>b</tt> and <tt>b</tt> is nested in <tt>a</tt>. We also have
+  three variables <tt>va</tt>, <tt>vb</tt> and <tt>vc</tt>. The lifetime of each
+  of these local variables starts when the function where it is declared is entered
+  and ends when the function exits. The scope of a local variable spans all nested
+  functions inside the enclosing function where the variable is declared.<br>我们有三个函数 <tt>a</tt>, <tt>b</tt> 和 <tt>c</tt>。这里 <tt>c</tt> 嵌套于 <tt>b</tt>，<tt>b</tt> 嵌套于 <tt>a</tt>。我们也有三个变量 <tt>va</tt>, <tt>vb</tt> 和 <tt>vc</tt>。这三个局部变量的生命周期从函数中他们声明的位置开始，结束于函数退出之时。局部变量的周期跨越所有在变量声明之后的嵌套函数。</p>
+<p>Going downstream from function <tt>a</tt> to function <tt>c</tt>, when function
+  a is entered, the variable <tt>va</tt> will be created in the stack. When function
+  <tt>b</tt> is entered (called by <tt>a</tt>), <tt>va</tt> is very well in scope
+  and is visble in <tt>b</tt>. At which point a fresh variable, <tt>vb</tt>, is
+  created on the stack. When function <tt>c</tt> is entered, both <tt>va</tt>
+  and <tt>vb</tt> are visibly in scope, and a fresh local variable <tt>vc</tt>
+  is created.<br>从函数 <tt>a </tt>顺流来到函数 <tt>c</tt>，当进入 <tt>a</tt>&nbsp;函数时，变量 <tt>va</tt>&nbsp;将被在栈上创建。当进入函数 <tt>b</tt>（由 <tt>a</tt> 调用），<tt>va</tt> 处于它的周期之内并在 <tt>b</tt> 中可见。此时一个新的变量，<tt>vb</tt> 在栈上创建。当进入函数 <tt>c</tt>，<tt>va</tt> 和 <tt>vb</tt>&nbsp;都在可见范围内，同时新的局部变量 <tt>vc</tt>&nbsp;被创建。</p>
+<p>Going upstream, <tt>vc</tt> is not and cannot be visible outside the function
+  <tt>c</tt>. <tt>vc</tt>'s life has already expired once <tt>c</tt> exits. The
+  same is true with <tt>vb</tt>; vb is accessible in function <tt>c</tt> but not
+  in function <tt>a</tt>.<br>由底而上，<tt>vc</tt> 不是且不能在函数&nbsp;<tt>c</tt>&nbsp;外可见。<tt>vc</tt> 的生命在退出&nbsp;<tt>c</tt>&nbsp;时已经结束了。这同样适用于 <tt>vb</tt>；<tt>vb</tt> 在函数&nbsp;<tt>c</tt>&nbsp;内是可访问的，但在函数&nbsp;<tt>a</tt> 内不是。</p>
+<strong>Nested Mutually Recursive Rules&nbsp;</strong><strong>嵌套交叉递归规则</strong>
+<p>Now consider that <tt>a</tt>, <tt>b</tt> and <tt>c</tt> are rules:<br>下面考虑规则 <tt>a</tt>, <tt>b</tt> 和 <tt>c</tt>:</p>
+<pre><span class="identifier">    </span><span class="identifier">a </span><span class="special">= </span><span class="identifier">b </span><span class="special">&gt;&gt; </span><span class="special">*((</span><span class="literal">'+' </span><span class="special">&gt;&gt; </span><span class="identifier">b</span><span class="special">) </span><span class="special">| </span><span class="special">(</span><span class="literal">'-' </span><span class="special">&gt;&gt; </span><span class="identifier">b</span><span class="special">));<br>    </span><span class="identifier">b </span><span class="special">= </span><span class="identifier">c </span><span class="special">&gt;&gt; </span><span class="special">*((</span><span class="literal">'*' </span><span class="special">&gt;&gt; </span><span class="identifier">c</span><span class="special">) </span><span class="special">| </span><span class="special">(</span><span class="literal">'/' </span><span class="special">&gt;&gt; </span><span class="identifier">c</span><span class="special">));<br>    </span><span class="identifier">c </span><span class="special">= </span><span class="identifier">int_p </span><span class="special">| </span><span class="literal">'(' </span><span class="special">&gt;&gt; </span><span class="identifier">a </span><span class="special">&gt;&gt; </span><span class="literal">')' </span><span class="special">| </span><span class="special">(</span><span class="literal">'-' </span><span class="special">&gt;&gt; </span><span class="identifier">c</span><span class="special">) </span><span class="special">| </span><span class="special">(</span><span class="literal">'+' </span><span class="special">&gt;&gt; </span><span class="identifier">c</span><span class="special">);</span></pre>
+<p>We can visualize <tt>a</tt>, <tt>b</tt> and <tt>c</tt> as mutually recursive
+  functions where <tt>a</tt> calls <tt>b</tt>, <tt>b</tt> calls <tt>c</tt> and
+  <tt>c</tt> recursively calls <tt>a</tt>. Now, imagine if <tt>a</tt>, <tt>b</tt>
+  and <tt>c</tt> each has a local variable named <tt>value</tt> that can be referred
+  to in our grammar by explicit qualification:<br>我们可以看到 <tt>a</tt>, <tt>b</tt> 和 <tt>c</tt> 是交叉引用的，<tt>a</tt> 调用 <tt>b</tt>，<tt>b</tt> 调用 <tt>c</tt> 而 <tt>c</tt> 又回过头来调用&nbsp;<tt>a</tt>。现在，想像 <tt>a</tt>、<tt>b</tt> 和 <tt>c</tt> 都有一个局部变量，名为 <tt>value</tt>，可以在我们的语法中通过显式指定来引用：</p>
+<pre><span class="special">    </span><span class="identifier">a</span><span class="special">.</span><span class="identifier">value </span><span class="comment">// refer to a's value local variable 引用a的局部变量value<br>    </span><span class="identifier">b</span><span class="special">.</span><span class="identifier">value </span><span class="comment">// refer to b's value local variable</span><span class="comment"> 引用b的局部变量value</span><span class="comment"> <br>    </span><span class="identifier">c</span><span class="special">.</span><span class="identifier">value </span><span class="comment">// refer to c's value local variable</span><span class="comment"> 引用c的局部变量value</span><span class="comment"> </span>
+</pre>
+<p>Like above, when <tt>a</tt> is entered, a local variable <tt>value</tt> is
+  created on the stack. This variable can be referred to by both <tt>b</tt> and
+  <tt>c</tt>. Again, when <tt>b</tt> is called by <tt>a</tt>, <tt>b</tt> creates
+  a local variable <tt>value</tt>. This variable is accessible by <tt>c</tt> but
+  not by <tt>a</tt>.<br>就像上面一样，当进入 <tt>a</tt>&nbsp;时，一个本地变量 <tt>value</tt>&nbsp;在栈上创建。这个变量可以由 <tt>b</tt> 和 <tt>c</tt> 引用。同样，当 <tt>b</tt> 被 <tt>a</tt>&nbsp;调用，<tt>b</tt> 创建一个本地变量 <tt>value</tt>。这个变量可以由&nbsp;<tt>c</tt> 引用，但 <tt>a</tt>&nbsp;不行。</p>
+<p>Here now is where the analogy with nested functions end: when <tt>c</tt> is
+  called, a fresh variable <tt>value</tt> is created which, as usual, lasts the
+  whole lifetime of <tt>c</tt>. Pay close attention however that <tt>c</tt> may
+  call <tt>a</tt> recursively. When this happens, <tt>a</tt> may now refer to
+  the local variable of <tt>c</tt><code><span class="special">.<br></span></code>现在这里有了一个类似于嵌套函数的结局：当 <tt>c</tt> 被调用时，一个新的变量 <tt>value</tt> 被创建，持续于 <tt>c</tt> 的整个生命周期。请密切注意，<tt>c</tt> 可能会递归调用 <tt>a</tt>。如果发生了这种情况，那么 <tt>a</tt> 也可以引用 <tt>c</tt> 的局部变量。<tt></tt><code><span class="special"></span></code></p>
+<table border="0">
+  <tbody><tr>
+    <td width="10"></td>
+    <td width="30"><a href="../index.html"><img src="theme/u_arr.gif" border="0"></a></td>
+    <td width="30"><a href="phoenix.html"><img src="theme/l_arr.gif" border="0"></a></td>
+    <td width="30"><a href="dynamic_parsers.html"><img src="theme/r_arr.gif" border="0"></a></td>
+  </tr>
+</tbody></table>
+<br>
+<hr size="1">
+<p class="copyright">Copyright © 1998-2003 Joel de Guzman<br>
+  <br>
+<font size="2">Use, modification and distribution is subject to the Boost Software
+    License, Version 1.0. (See accompanying file LICENSE_1_0.txt or copy at
+    http://www.boost.org/LICENSE_1_0.txt) </font> </p>
+</body></html>

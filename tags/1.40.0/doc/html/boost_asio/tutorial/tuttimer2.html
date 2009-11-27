@@ -1,0 +1,107 @@
+<html>
+<head>
+<meta http-equiv="Content-Type" content="text/html; charset=UTF-8">
+<title>Timer.2 - Using a timer asynchronously</title>
+<link rel="stylesheet" href="../../boostbook.css" type="text/css">
+<meta name="generator" content="DocBook XSL Stylesheets V1.74.3">
+<link rel="home" href="../../boost_asio.html" title="Boost.Asio">
+<link rel="up" href="../tutorial.html" title="Tutorial">
+<link rel="prev" href="tuttimer1/src.html" title="Source listing for Timer.1">
+<link rel="next" href="tuttimer2/src.html" title="Source listing for Timer.2">
+</head>
+<body bgcolor="white" text="black" link="#0000FF" vlink="#840084" alink="#0000FF">
+<table cellpadding="2" width="100%"><tr>
+<td valign="top"><img alt="Boost C++ Libraries" width="277" height="86" src="../../../../boost.png"></td>
+<td align="center"><a href="../../../../index.html">Home</a></td>
+<td align="center"><a href="../../../../libs/libraries.htm">Libraries</a></td>
+<td align="center"><a href="http://www.boost.org/users/people.html">People</a></td>
+<td align="center"><a href="http://www.boost.org/users/faq.html">FAQ</a></td>
+<td align="center"><a href="../../../../more/index.htm">More</a></td>
+</tr></table>
+<hr>
+<div class="spirit-nav">
+<a accesskey="p" href="tuttimer1/src.html"><img src="../../../../doc/html/images/prev.png" alt="Prev"></a><a accesskey="u" href="../tutorial.html"><img src="../../../../doc/html/images/up.png" alt="Up"></a><a accesskey="h" href="../../boost_asio.html"><img src="../../../../doc/html/images/home.png" alt="Home"></a><a accesskey="n" href="tuttimer2/src.html"><img src="../../../../doc/html/images/next.png" alt="Next"></a>
+</div>
+<div class="section" lang="en">
+<div class="titlepage"><div><div><h3 class="title">
+<a name="boost_asio.tutorial.tuttimer2"></a><a class="link" href="tuttimer2.html" title="Timer.2 - Using a timer asynchronously"> Timer.2 - 使用异步定时器</a>
+</h3></div></div></div>
+<p>
+        这个示例程序示范了如何通过修改Timer.1 中的程序，使用Asio的异步回调功能在定时器中演示一个异步等待。
+      </p>
+<pre class="programlisting"><span class="preprocessor">#include</span> <span class="special">&lt;</span><span class="identifier">iostream</span><span class="special">&gt;</span>
+<span class="preprocessor">#include</span> <span class="special">&lt;</span><span class="identifier">boost</span><span class="special">/</span><span class="identifier">asio</span><span class="special">.</span><span class="identifier">hpp</span><span class="special">&gt;</span>
+<span class="preprocessor">#include</span> <span class="special">&lt;</span><span class="identifier">boost</span><span class="special">/</span><span class="identifier">date_time</span><span class="special">/</span><span class="identifier">posix_time</span><span class="special">/</span><span class="identifier">posix_time</span><span class="special">.</span><span class="identifier">hpp</span><span class="special">&gt;</span>
+</pre>
+<p>
+        使用Asio的异步功能意味着当一个异步操作完成时一个回调函数将被调用。在本程序中我们定义一个名为<code class="computeroutput"><span class="identifier">print</span></code>
+        的函数，在异步等待结束后这个函数将被调用。
+      </p>
+<pre class="programlisting"><span class="keyword">void</span> <span class="identifier">print</span><span class="special">(</span><span class="keyword">const</span> <span class="identifier">boost</span><span class="special">::</span><span class="identifier">system</span><span class="special">::</span><span class="identifier">error_code</span><span class="special">&amp;</span> <span class="comment">/*e*/</span><span class="special">)</span>
+<span class="special">{</span>
+  <span class="identifier">std</span><span class="special">::</span><span class="identifier">cout</span> <span class="special">&lt;&lt;</span> <span class="string">"Hello, world!\n"</span><span class="special">;</span>
+<span class="special">}</span>
+
+<span class="keyword">int</span> <span class="identifier">main</span><span class="special">()</span>
+<span class="special">{</span>
+  <span class="identifier">boost</span><span class="special">::</span><span class="identifier">asio</span><span class="special">::</span><span class="identifier">io_service</span> <span class="identifier">io</span><span class="special">;</span>
+
+  <span class="identifier">boost</span><span class="special">::</span><span class="identifier">asio</span><span class="special">::</span><span class="identifier">deadline_timer</span> <span class="identifier">t</span><span class="special">(</span><span class="identifier">io</span><span class="special">,</span> <span class="identifier">boost</span><span class="special">::</span><span class="identifier">posix_time</span><span class="special">::</span><span class="identifier">seconds</span><span class="special">(</span><span class="number">5</span><span class="special">));</span>
+</pre>
+<p>
+        接下来，我们调用
+        <a class="link" href="../reference/basic_deadline_timer/async_wait.html" title="basic_deadline_timer::async_wait">deadline_timer::async_wait()</a>
+        函数执行一个异步等待去取代Timer.1例中的阻塞等待。当调用这个函数时我们传入上面定义的<code class="computeroutput"><span class="identifier">print</span></code>回调句柄。
+      </p>
+<pre class="programlisting">  <span class="identifier">t</span><span class="special">.</span><span class="identifier">async_wait</span><span class="special">(</span><span class="identifier">print</span><span class="special">);</span>
+</pre>
+<p>
+       最后，我们必须在io_service对象上调用<a class="link" href="../reference/io_service/run.html" title="io_service::run">io_service::run()</a>
+       成员函数。
+      </p>
+<p>
+        Asio保证回调句柄仅仅能被<a class="link" href="../reference/io_service/run.html" title="io_service::run">io_service::run()</a>启动的当前线程所调用。
+        因此，如果<a class="link" href="../reference/io_service/run.html" title="io_service::run">io_service::run()</a>
+        函数不执行，用于异步等待完成时的回调函数（在本例中为print函数）将永远不会被调用。
+      </p>
+<p>
+        当仍旧有“工作”可做时，<a class="link" href="../reference/io_service/run.html" title="io_service::run">io_service::run()</a>
+        函数会继续运行。在本例中，“工作”是定时器的异步等待，因此，直到定时器终止和回调函数执行完成，程序才会返回。
+      </p>
+<p>
+        在调用<a class="link" href="../reference/io_service/run.html" title="io_service::run">io_service::run()</a>之前确保给 io_service 一些工作去做，这非常重要。
+        例如，如果我们省略了上面调用的<a class="link" href="../reference/basic_deadline_timer/async_wait.html" title="basic_deadline_timer::async_wait">deadline_timer::async_wait()</a>
+        函数，io_service对象将没有任何事情去做，因此<a class="link" href="../reference/io_service/run.html" title="io_service::run">io_service::run()</a> 将立即返回。
+      </p>
+<pre class="programlisting">  <span class="identifier">io</span><span class="special">.</span><span class="identifier">run</span><span class="special">();</span>
+
+  <span class="keyword">return</span> <span class="number">0</span><span class="special">;</span>
+<span class="special">}</span>
+</pre>
+<p>
+        查看<a class="link" href="tuttimer2/src.html" title="Source listing for Timer.2">本例全部源代码</a>
+      </p>
+<p>
+        返回<a class="link" href="../tutorial.html" title="Tutorial">指南</a>
+      </p>
+<p>
+        前一例: <a class="link" href="tuttimer1.html" title="Timer.1 - Using a timer synchronously">Timer.1 - 使用同步定时器</a>
+      </p>
+<p>
+        后一例: <a class="link" href="tuttimer3.html" title="Timer.3 - Binding arguments to a handler">Timer.3 - 回调函数绑定参数</a>
+      </p>
+</div>
+<table xmlns:rev="http://www.cs.rpi.edu/~gregod/boost/tools/doc/revision" width="100%"><tr>
+<td align="left"></td>
+<td align="right"><div class="copyright-footer">Copyright © 2003 - 2008 Christopher M. Kohlhoff<p>
+        Distributed under the Boost Software License, Version 1.0. (See accompanying
+        file LICENSE_1_0.txt or copy at <a href="http://www.boost.org/LICENSE_1_0.txt" target="_top">http://www.boost.org/LICENSE_1_0.txt</a>)
+      </p>
+</div></td>
+</tr></table>
+<hr>
+<div class="spirit-nav">
+<a accesskey="p" href="tuttimer1/src.html"><img src="../../../../doc/html/images/prev.png" alt="Prev"></a><a accesskey="u" href="../tutorial.html"><img src="../../../../doc/html/images/up.png" alt="Up"></a><a accesskey="h" href="../../boost_asio.html"><img src="../../../../doc/html/images/home.png" alt="Home"></a><a accesskey="n" href="tuttimer2/src.html"><img src="../../../../doc/html/images/next.png" alt="Next"></a>
+</div>
+</body>
+</html>

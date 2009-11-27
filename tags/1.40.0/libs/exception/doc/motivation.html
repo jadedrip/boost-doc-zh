@@ -1,0 +1,148 @@
+<!DOCTYPE html PUBLIC '-//W3C//DTD XHTML 1.0 Strict//EN'
+'http://www.w3.org/TR/xhtml1/DTD/xhtml1-strict.dtd'>
+<html xmlns='http://www.w3.org/1999/xhtml' xml:lang='en' lang='en'>
+<head>
+	<meta http-equiv='Content-Type' content='text/html; charset=utf-8'/>
+	<title>Motivation</title>
+	<link href='reno.css' type='text/css' rel='stylesheet'/>
+</head>
+<body>
+<div class="body-0">
+<div class="body-1">
+<div class="body-2">
+<div>
+<div id="boost_logo">
+<a href="http://www.boost.org"><img style="border:0" src="http://www.boost.org/boost.png" alt="Boost" width="277" height="86"/></a>
+</div>
+<h1>Boost Exception</h1>
+</div>
+<!-- Copyright (c) 2006-2009 Emil Dotchevski and Reverge Studios, Inc. -->
+<!-- Distributed under the Boost Software License, Version 1.0. (See accompanying -->
+<!-- file LICENSE_1_0.txt or copy at http://www.boost.org/LICENSE_1_0.txt) -->
+<div class="RenoIncludeDIV"><div class="RenoAutoDIV"><h3>动机</h3>
+</div>
+<p>传统上, 使用异常机制报告错误, 在抛出端:</p>
+<div><ul><li>创建一个合适类型的异常对象, 并且</li>
+<li>向这个对象添加错误相关的数据.</li>
+</ul></div>
+<p>在程序的高端包含一个catch 语句:</p>
+<div><ul><li>通过异常类型选择特定的错误,并且</li>
+<li>从异常对象中抽取相关的数据处理异常问题.</li>
+</ul></div>
+<p>这种处理异常的 "传统" 方法经常导致在throw端缺乏catch端处理异常所需的足够信息.</p>
+<p>下面是一个catch端得实例:</p>
+<pre>catch( file_read_error &amp; e )
+    {
+    std::cerr &lt;&lt; e.file_name();
+    }</pre>
+<p>还有一个匹配的throw端得实例:</p>
+<pre>void
+read_file( FILE * f )
+    {
+    ....
+    size_t nr=fread(buf,1,count,f);
+    if( ferror(f) )
+        throw file_read_error(???);
+    ....
+    }</pre>
+<p>很清楚, 问题是处理器需要一个文件名, 但是函数 read_file 不能向异常对象提供这个文件名; 它所拥有的只是一个 FILE 指针!</p>
+<p>如果我们企图修改这个问题, 可能会修改函数 read_file ,增加一个文件名:</p>
+<pre>void
+read_file( FILE * f, char const * name )
+    {
+    ....
+    size_t nr=fread(buf,1,count,f);
+    if( ferror(f) )
+        throw file_read_error(name);
+    ....
+    }</pre>
+<p>这不是一个真正的解决之道: 它只是简单的把提供文件名的负担转交给函数 read_file 的调用者.</p>
+<blockquote><p><i>一般来说, 处理一个函数库抛出的异常所需的数据依赖于连接它的程序. 在throw和catch端得上下文含有异常处理必须的数据.</i></p></blockquote>
+<h3>异常包裹</h3>
+<p>异常包裹,就是在在低端函数捕获异常 (例如上面的 read_file 函数), 然后重新抛出一个包含原始对象的新的异常对象 (包含文件名.) 这种方法对有Java背景的C++程序员来说,有特别的吸引力.</p>
+<p>异常包裹会导致以下的问题:</p>
+<div><ul><li>要包裹的异常对象必须被拷贝,这可能会导致对象分裂.</li>
+<li>在泛型编程的上下文环境中, 异常对象的包裹实际上不可能.</li>
+</ul></div>
+<p>第二点实际上时违反异常中立原则的一个特例. 大多数的情况下程序不能处理异常,不能干扰异常处理的正常流程.</p>
+<h3>boost::exception 的解决方案</h3>
+<div><ul><li>简单的从 boost::<span class="RenoLink"><a href="exception.html">exception</a></span> 继承你需要的异常类型.</li>
+<li>在throw端, 很自然并且自信的把提供的数据限制为能力的范围之内.</li>
+<li>在throw和catch之间,在异常中立的上下文环境中, 向展开的异常对象添加相关的数据.</li>
+</ul></div>
+<p>例如, 在下面的throw语句中我们仅需添加错误代码 errno , 因为这是在当前能够得到的唯一的错误信息:</p>
+<pre>struct exception_base: virtual std::exception, virtual boost::<span class="RenoLink"><a href="exception.html">exception</a></span> { };
+struct io_error: virtual exception_base { };
+struct file_read_error: virtual io_error { };
+
+typedef boost::<span class="RenoLink"><a href="error_info.html">error_info</a></span>&lt;struct tag_errno_code,int&gt; errno_code;
+
+void
+read_file( FILE * f )
+    {
+    ....
+    size_t nr=fread(buf,1,count,f);
+    if( ferror(f) )
+        throw file_read_error() <span class="RenoLink"><a href="exception_operator_shl.html">&lt;&lt;</a></span> errno_code(errno);
+    ....
+    }</pre>
+<p>在高端的异常中立的环境中, 我们把文件名添加到 <i>任何</i> 从 boost::<span class="RenoLink"><a href="exception.html">exception</a></span>继承的异常对象:</p>
+<pre>typedef boost::<span class="RenoLink"><a href="error_info.html">error_info</a></span>&lt;struct tag_file_name,std::string&gt; file_name;
+
+....
+try
+    {
+    if( FILE * fp=fopen("foo.txt","rt") )
+        {
+        shared_ptr&lt;FILE&gt; f(fp,fclose);
+        ....
+        read_file(fp); //throws types deriving from boost::<span class="RenoLink"><a href="exception.html">exception</a></span>
+        do_something();
+        ....
+        }
+    else
+        throw file_open_error() <span class="RenoLink"><a href="exception_operator_shl.html">&lt;&lt;</a></span> errno_code(errno);
+    }
+catch( boost::<span class="RenoLink"><a href="exception.html">exception</a></span> &amp; e )
+    {
+    e <span class="RenoLink"><a href="exception_operator_shl.html">&lt;&lt;</a></span> file_name("foo.txt");
+    throw;
+    }</pre>
+<p>最后, 基于boost::<span class="RenoLink"><a href="exception.html">exception</a></span>抛出的异常对象, 异常处理器可以从中抽取文件名:</p>
+<pre>catch( io_error &amp; e )
+    {
+    std::cerr &lt;&lt; "I/O Error!\n";
+
+    if( std::string const * fn=<span class="RenoLink"><a href="get_error_info.html">get_error_info</a></span>&lt;file_name&gt;(e) )
+        std::cerr &lt;&lt; "File name: " &lt;&lt; *fn &lt;&lt; "\n";
+
+    if( int const * c=<span class="RenoLink"><a href="get_error_info.html">get_error_info</a></span>&lt;errno_code&gt;(e) )
+        std::cerr &lt;&lt; "OS says: " &lt;&lt; strerror(*c) &lt;&lt; "\n";
+    }</pre>
+<p>另外, boost::<span class="RenoLink"><a href="diagnostic_information.html">diagnostic_information</a></span> 可以用来自动合成所有的基于 <span class="RenoLink"><a href="error_info.html">error_info</a></span> 向 boost::<span class="RenoLink"><a href="exception.html">exception</a></span>对象添加的消息文本(即便这样的消息不一定是用户友好的). 这对调试对象和日志对象是非常有用的.</p>
+</div><div class="RenoAutoDIV"><div class="RenoHR"><hr/></div>
+<h3>参见:</h3>
+<div class="RenoPageList"><a href="boost-exception.html">Boost Exception<br/>
+</a><a href="exception_types_as_simple_semantic_tags.html">Exception Types as Simple Semantic Tags<br/>
+</a><a href="frequently_asked_questions.html">Frequently Asked Questions<br/>
+</a><a href="tutorial_enable_error_info.html">Integrating Boost Exception in Existing Exception Class Hierarchies<br/>
+</a></div>
+</div>
+<!-- Copyright (c) 2006-2009 Emil Dotchevski and Reverge Studios, Inc. -->
+<!-- Distributed under the Boost Software License, Version 1.0. (See accompanying -->
+<!-- file LICENSE_1_0.txt or copy at http://www.boost.org/LICENSE_1_0.txt) -->
+<div id="footer">
+<p>&nbsp;</p>
+<hr/>
+<p>
+<a class="logo" href="http://jigsaw.w3.org/css-validator/check/referer"><img class="logo_pic" src="valid-css.png" alt="Valid CSS" height="31" width="88"/></a>
+<a class="logo" href="http://validator.w3.org/check?uri=referer"><img class="logo_pic" src="valid-xhtml.png" alt="Valid XHTML 1.0" height="31" width="88"/></a>
+<small>Copyright (c) 2006-2009 by Emil Dotchevski and Reverge Studios, Inc.<br/>
+Distributed under the <a href="http://www.boost.org/LICENSE_1_0.txt">Boost Software License, Version 1.0</a>.<p><i>Copyright &copy; 2009 <a href="http://zadecn.spaces.live.com/">zade</a></i></p>.</small>
+</p>
+</div>
+</div>
+</div>
+</div>
+</body>
+</html>

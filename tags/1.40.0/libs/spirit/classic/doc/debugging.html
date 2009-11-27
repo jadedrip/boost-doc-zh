@@ -1,0 +1,265 @@
+<!DOCTYPE HTML PUBLIC "-//W3C//DTD HTML 4.01 Transitional//EN">
+<html><head>
+
+<title>Debugging</title><meta http-equiv="Content-Type" content="text/html; charset=UTF-8">
+<link rel="stylesheet" href="theme/style.css" type="text/css"></head>
+<body>
+<table background="theme/bkd2.gif" border="0" cellspacing="2" width="100%">
+  <tbody><tr>
+    <td width="10">
+    </td>
+    <td width="85%"> <font face="Verdana, Arial, Helvetica, sans-serif" size="6"><b>Debugging 调试</b></font>
+    </td>
+    <td width="112"><a href="http://spirit.sf.net"><img src="theme/spirit.gif" align="right" border="0" height="48" width="112"></a></td>
+  </tr>
+</tbody></table>
+<br>
+<table border="0">
+  <tbody><tr>
+    <td width="10"></td>
+    <td width="30"><a href="../index.html"><img src="theme/u_arr.gif" border="0"></a></td>
+    <td width="30"><a href="position_iterator.html"><img src="theme/l_arr.gif" border="0"></a></td>
+    <td width="30"><a href="error_handling.html"><img src="theme/r_arr.gif" border="0"></a></td>
+  </tr>
+</tbody></table>
+<p>The top-down nature of Spirit makes the generated parser easy to micro- debug
+  using the standard debugger bundled with the C++ compiler we are using. With
+  recursive-descent, the parse traversal utilizes the hardware stack through C++
+  function call mechanisms. There are no difficult to debug tables or state machines
+  that obscure the parsing logic flow. The stack trace we see in the debugger
+  follows faithfully the hierarchical grammar structure.<br>Spirit
+自上而下的本质使得生成的分析器很容易使用与我们所用的C++编译器捆绑在一起的标准调试器来进行微型调试。通过递归下降，分析的遍历通过C++函数调用
+机制利用了硬件的堆栈。调试解析模糊逻辑流的表格或状态机并没有难度。我们在调试器中所看到的堆栈跟踪忠实地遵守语法结构的层次。</p>
+<p> Since any production rule can initiate a parse traversal , it is a lot easier
+  to pinpoint the bugs by focusing on one or a few rules. For relatively complex
+  parsing tasks, the same way we write robust C++ programs, it is advisable to
+  develop a grammar iteratively on a per-module basis where each module is a small
+  subset of the complete grammar. That way, we can stress-test individual modules
+  piecemeal until we reach the top-most module. For instance, when developing
+  a scripting language, we can start with expressions, then move on to statements,
+  then functions, upwards until we have a complete grammar.&nbsp;<br>因
+为任何产生式规则都可以启动一个分析遍历，所以就更容易通过集中关注一个或几个规则来查明缺陷。对于相对复杂的分析任务，与我们编写强大的C++程序一
+样，建议基于每个模块来开发语法，每个模块都是完整语法的一个小子集。这样，我们可以对单个模块进行压力测试，直至到达最顶层的模块。例如，在开发一种脚
+本语言时，我们可以从表达式开始，然后是语句，然后是函数，向上直至我们完成一个完整的语法。</p>
+<p> At some point when the grammar gets quite complicated, it is desirable to
+  visualize the parse traversal and see what's happening. There are some facilities
+  in the framework that aid in the visualisation of the parse traversal for the
+  purpose of debugging. The following macros enable these features.<br>当语法变得足够复杂的某一点时，最好进行可视化的分析遍历，看看发生了什么。在框架中有一些工具，可以帮助分析遍历的可视化，达到调试的目的。以下宏将启用这些功能。</p>
+<a name="debugging_macros"></a>
+<h2>Debugging Macros 调试所用的宏</h2>
+<a name="spirit_assert_exception"></a>
+<h3>BOOST_SPIRIT_ASSERT_EXCEPTION</h3>
+<p> Spirit contains assertions that may activate when spirit is used incorrectly.
+  By default these assertions use the assert macro from the standard library.
+  If you want spirit to throw an exception instead, define <tt>BOOST_SPIRIT_ASSERT_EXCEPTION</tt>
+  to the name of the class that you want to be thrown. This class's constructor
+  will be passed a <tt>const char*</tt> stringified version of the file, line,
+  and assertion condition, when it is thrown. If you want to totally disable the
+  assertion, <tt>#define NDEBUG</tt>.<br>Spirit带有一些断言，它们会在spirit被错误使用时激活。缺省情况下，这些断言使用标准库的 assert 宏。如果你希望spirit抛出异常，则将 <tt>BOOST_SPIRIT_ASSERT_EXCEPTION</tt>
+  定义为你要抛出的异常类。在被抛出时，该类的构造函数将被传入一个 <tt>const char*</tt>，其中记录了文件版本、行号和断言条件。如果想完全关闭断言，请 <tt>#define NDEBUG</tt>.</p>
+<a name="spirit_debug"></a>
+<h3>BOOST_SPIRIT_DEBUG</h3>
+<p>Define this to enable debugging.<br>定义此宏以激活调试。</p>
+<p>With debugging enabled, special output is generated at key points of the
+  parse process, using the standard output operator (<tt><span class="keyword">operator</span><span class="special">&lt;&lt;</span></tt>)
+  with <tt>BOOST_SPIRIT_DEBUG_OUT</tt> (default is <tt><span class="identifier">std</span><span class="special">::</span><span class="identifier">cout</span></tt>,
+  see below) as its left operand.<br>当调试被激活时，在分析过程的关键点将生成一些特定的输出，输出的方式是使用标准输出操作符(<tt><span class="keyword">operator</span><span class="special">&lt;&lt;</span></tt>)并以 <tt>BOOST_SPIRIT_DEBUG_OUT</tt> (缺省为 <tt><span class="identifier">std</span><span class="special">::</span><span class="identifier">cout</span></tt>,
+  见后)作为左操作数。</p>
+<table align="center" border="0" width="80%">
+  <tbody><tr>
+    <td class="note_box"><img src="theme/note.gif"> In order to use spirit's
+    debugging support you must ensure that appropriate overloads of 
+    <tt><span class="identifier">operator</span><span class="special">&lt;&lt;</span></tt>
+    taking <tt>BOOST_SPIRIT_DEBUG_OUT</tt> as its left operand are available.
+    The expected semantics are those of the standard output operator.<br><img src="theme/note.gif">&nbsp;为了使用spirit的调试支持，你必须确保以&nbsp;<tt>BOOST_SPIRIT_DEBUG_OUT</tt> 作为左操作数的合适 
+    <tt><span class="identifier">operator</span><span class="special">&lt;&lt;</span></tt> 是可用的。所期望的语义就是标准输出操作符的语义。<br>
+    <br>
+    These overloads may be provided either within the namespace where the
+    corresponding class is declared (will be found through Argument Dependent Lookup) or [within an
+    anonymous namespace] within <tt><span class="keyword">namespace</span> <span class="identifier">boost</span><span class="special">::</span><span class="identifier">spirit</span></tt>,
+    so it is visible where it is called.<br>
+这些重载可以在相应类被声明的名字空间中提供(通过ADL查找)，也可以在 <tt><span class="keyword">namespace</span> <span class="identifier">boost</span><span class="special">::</span><span class="identifier">spirit</span></tt> 中提供，这样在调用时它就是可见的。<br>
+    <br>
+    <img src="theme/alert.gif"> Note in particular that when <tt>BOOST_SPIRIT_DEBUG_FLAGS_CLOSURES</tt>
+    is set, overloads of <tt><span class="identifier">operator</span><span class="special">&lt;&lt;</span></tt>
+    taking instances of the types used in closures as their right operands are required.<br><img src="theme/alert.gif"> 注意，特别地，当 <tt>BOOST_SPIRIT_DEBUG_FLAGS_CLOSURES</tt>
+    被设置时，<tt><span class="identifier">operator</span><span class="special">&lt;&lt;</span></tt>
+    的重载所要求的右操作数是在闭包中所使用的类型的实例。<br>
+    <br>
+    You may find an example of overloading the output operator for
+    <tt><span class="identifier">std</span><span class="special">::</span><span class="identifier">pair</span></tt>
+    in a <a href="faq.html#output_operator">related FAQ entry</a>.<br>你可在 <a href="faq.html#output_operator">相关FAQ条目</a> 中看到一个例子，示范了用于
+    <tt><span class="identifier">std</span><span class="special">::</span><span class="identifier">pair</span></tt>
+    的输出操作符重载。</td>
+  </tr>
+</tbody></table>
+
+<p>By default, if the <tt>BOOST_SPIRIT_DEBUG</tt> macro is defined, all available
+  debug output is generated. To fine tune the amount of generated text you can
+  define the <tt>BOOST_SPIRIT_DEBUG_FLAGS</tt> constant to be equal of a combination
+  of the following flags:<br>缺省情况下，如果 <tt>BOOST_SPIRIT_DEBUG</tt> 宏被定义，将生成所有可用的调试输出。要细调生成文本的数量，你可以将 <tt>BOOST_SPIRIT_DEBUG_FLAGS</tt> 常量定义为以下标志位的组合：</p>
+<table align="center" border="0" width="90%">
+  <tbody><tr>
+    <td colspan="2" class="table_title"><b>Available flags to fine tune debug
+      output 用于细调调试输出的标志 </b></td>
+  </tr>
+  <tr>
+    <td class="table_cells" height="27" width="29%"><tt>BOOST_SPIRIT_DEBUG_FLAGS_NODES</tt></td>
+    <td class="table_cells" width="71%"><p>print information about nodes (general
+        for all parsers)</p><p>打印关于节点的信息(对所有分析器通用)</p></td>
+  </tr>
+  <tr>
+    <td class="table_cells" height="27"><tt>BOOST_SPIRIT_DEBUG_FLAGS_TREES</tt></td>
+    <td class="table_cells"><p>print information about parse trees and AST's (general
+        for all tree parsers)</p><p>打印关于分析树和AST的信息(对所有树分析器通用)</p></td>
+  </tr>
+  <tr>
+    <td class="table_cells" height="27"><tt>BOOST_SPIRIT_DEBUG_FLAGS_CLOSURES</tt></td>
+    <td class="table_cells">print information about closures (general for all
+      parsers with closures)<br>打印关于闭包的信息(对所有带闭包的分析器通用)</td>
+  </tr>
+  <tr>
+    <td class="table_cells" height="27"><tt>BOOST_SPIRIT_DEBUG_FLAGS_ESCAPE_CHAR</tt></td>
+    <td class="table_cells"><p>print information out of the <tt>esc_char_parser</tt></p><p>打印 <tt>esc_char_parser</tt> 的信息<tt></tt></p></td>
+  </tr>
+  <tr>
+    <td class="table_cells" height="27"><tt>BOOST_SPIRIT_DEBUG_FLAGS_SLEX</tt></td>
+    <td class="table_cells">print information out of the <tt>SLEX</tt> parser<br>打印 <tt>SLEX</tt> 分析器的信息</td>
+  </tr>
+</tbody></table>
+<p><a name="spirit_debug_out"></a> </p>
+<h3>BOOST_SPIRIT_DEBUG_OUT</h3>
+<p> Define this to redirect the debugging diagnostics printout to somewhere else
+  (e.g. a file or stream). Defaults to <tt>std::cout</tt>.<br>定义此宏可将调试诊断输出重定向至其它地方(如某个文件或流)。缺省输出至 <tt>std::cout</tt>.</p>
+<a name="spirit_debug_token printer"></a>
+<h3>BOOST_SPIRIT_DEBUG_TOKEN_PRINTER</h3>
+<p> The <tt>BOOST_SPIRIT_DEBUG_TOKEN_PRINTER</tt> macro allows you to redefine the way characters are printed on the stream.<br>宏 <tt>BOOST_SPIRIT_DEBUG_TOKEN_PRINTER</tt> 允许你重定义打印至流的方式字符。 </p>
+<p>If <tt>BOOST_SPIRIT_DEBUG_OUT</tt> is of type <tt>StreamT</tt>,  the character type is <tt>CharT</tt> and <tt>BOOST_SPIRIT_DEBUG_TOKEN_PRINTER</tt> is
+  defined to <tt>foo</tt>, it must be compatible with this usage:<br>如果 <tt>BOOST_SPIRIT_DEBUG_OUT</tt> 的类型为 <tt>StreamT</tt>，字符类型为 <tt>CharT</tt> 且 <tt>BOOST_SPIRIT_DEBUG_TOKEN_PRINTER</tt> 被定义为 <tt>foo</tt>，则它必须兼容于以下用法：</p>
+<pre><code><span class="identifier">    foo</span><span class="special">(</span><span class="identifier">StreamT</span><span class="special">, </span><span class="identifier">CharT</span><span class="special">)</span></code></pre>
+<p>The default printer requires <tt>operator&lt;&lt;(StreamT, CharT)</tt>  to
+  be defined. Additionaly, if <tt>CharT</tt> is convertible to a normal character
+  type (<tt>char</tt>, <tt>wchar_t</tt> or <tt>int</tt>), it prints control
+  characters in a friendly manner (e.g., when it receives <span class="special">'\n'</span> it
+  actually prints the <span class="special">\</span> and <span class="special">n</span> charactes,
+instead of a newline).<br>缺省的打印机要求 <tt>operator&lt;&lt;(StreamT, CharT)</tt>  被定义。另外，如果 <tt>CharT</tt> 可以转换为普通的字符类型(<tt>char</tt>, <tt>wchar_t</tt> 或 <tt>int</tt>)，则它会以一种友好的风格打印控制字符(如，当它收到 <span class="special">'\n'</span> 时，实际打印的是 <span class="special">\</span> 和 <span class="special">n</span> 字符，而不是换行)。</p>
+<a name="spirit_debug_print_some"></a>
+<h3>BOOST_SPIRIT_DEBUG_PRINT_SOME</h3>
+<p> The <tt>BOOST_SPIRIT_DEBUG_PRINT_SOME</tt> constant defines the number of
+  characters from the stream to be printed for diagnosis. This defaults to the
+  first 20 characters.<br><tt>BOOST_SPIRIT_DEBUG_PRINT_SOME</tt> 常量定义了从流至被打印的诊断信息的字符数量。缺省为头20个字符。</p>
+<p><a name="spirit_debug_tracenode"></a> </p>
+<h3>BOOST_SPIRIT_DEBUG_TRACENODE</h3>
+<p> By default all parser nodes are traced. This constant may be used to redefine
+  this default. If this is <tt>1</tt> (<tt>true</tt>), then tracing is enabled
+  by default, if this constant is <tt>0</tt> (<tt>false</tt>), the tracing is
+  disabled by default. This preprocessor constant is set to <tt>1 </tt>(<tt>true</tt>)
+  by default.<br>缺省情况下，所有分析器节点都被跟踪。这个常量可用于重定义该缺省行为。如果它为 <tt>1</tt> (<tt>true</tt>)，则跟踪被缺省打开，如果该常量为 <tt>0</tt> (<tt>false</tt>)，则跟踪被缺省关闭。这个预处理器常量缺省被设为 <tt>1 </tt>(<tt>true</tt>)。</p>
+<p>Please note, that the following <tt>BOOST_SPIRIT_DEBUG_...() </tt>macros are
+  to be used at function scope only.<br>请注意，以下的 <tt>BOOST_SPIRIT_DEBUG_...() </tt>宏只能被用在函数作用域中。</p>
+<a name="spirit_debug_node_p_"></a>
+<h3>BOOST_SPIRIT_DEBUG_NODE(p)</h3>
+<p> Define this to print some debugging diagnostics for parser p. This macro<br>定义此宏为分析器 p 打印某些调试诊断信息。该宏</p>
+<ul>
+  <li>Registers the parser name for debugging<br>为调试注册分析器名</li>
+  <li>Enables/disables the tracing for parser depending on <tt>BOOST_SPIRIT_DEBUG_TRACENODE</tt><br>根据 <tt>BOOST_SPIRIT_DEBUG_TRACENODE</tt> 为分析器打开/关闭跟踪<tt></tt></li>
+</ul>
+<p> <b>Pre-parse</b>: Before entering the rule, the rule name followed by a peek
+  into the data at the current iterator position is printed.<br><b>分析前：</b>在进行规则之前，打印规则名及当前迭代器位置读入的数据。</p>
+<p> <b>Post-parse</b>: After parsing the rule, the rule name followed by a peek
+  into the data at the current iterator position is printed. Here, <tt>'/'</tt>
+  before the rule name flags a succesful match while <tt>'#'</tt> before the rule
+  name flags an unsuccesful match.<br><b>分析后：</b>在规则被分析之后，打印规则名及当前迭代器位置读入的数据。在此，规则名之前的<tt>'/'</tt>表示成功匹配，而规则名之前的<tt>'#'</tt>表示不成功的匹配。</p>
+<p> The following are synonyms for <tt>BOOST_SPIRIT_DEBUG_NODE</tt><br>以下是 <tt>BOOST_SPIRIT_DEBUG_NODE</tt> 的同义词</p>
+<ol>
+  <li>BOOST_SPIRIT_DEBUG_RULE</li>
+  <li>BOOST_SPIRIT_DEBUG_GRAMMAR</li>
+</ol>
+<a name="spirit_trace_node_p__flag_"></a>
+<h3>BOOST_SPIRIT_DEBUG_TRACE_NODE(p, flag)</h3>
+<p> Similar to <tt>BOOST_SPIRIT_DEBUG_NODE</tt>. Additionally allows selective debugging.
+  This is useful in situations where we want to debug just a hand picked set of
+  nodes.<br>类似于 <tt>BOOST_SPIRIT_DEBUG_NODE</tt>。另外还允许选择性调试。当我们想只对部分节点调试时可用。</p>
+<p> The following are synonyms for <tt>BOOST_SPIRIT_DEBUG_TRACE_NODE</tt><br>以下是 <tt>BOOST_SPIRIT_DEBUG_TRACE_NODE</tt> 的同义词</p>
+<ol>
+  <li>BOOST_SPIRIT_DEBUG_TRACE_RULE</li>
+  <li>BOOST_SPIRIT_DEBUG_TRACE_GRAMMAR</li>
+</ol>
+<p><a name="spirit_trace_node_p__flag__name_"></a> </p>
+<h3>BOOST_SPIRIT_DEBUG_TRACE_NODE_NAME(p, name, flag)</h3>
+<p> Similar to <tt>BOOST_SPIRIT_DEBUG_NODE</tt>. Additionally allows selective
+  debugging and allows to specify the name used during debug printout. This is
+  useful in situations where we want to debug just a hand picked set of nodes.
+  The <tt>name</tt> may be redefined in situations, where the parser parameter does not reflect the name of the parser to debug.<br>类似于 <tt>BOOST_SPIRIT_DEBUG_NODE</tt>。并允许选择性调试和在调试输出时指定名字。当我们想只调试部分节点时可用。当分析器参数不能反映被调试分析器的名字时，<tt>name</tt> 可用于重定义。</p>
+<p> The following are synonyms for <tt>BOOST_SPIRIT_DEBUG_TRACE_NODE</tt><br>以下是 <tt>BOOST_SPIRIT_DEBUG_TRACE_NODE</tt> 的同义词</p>
+<ol>
+  <li>BOOST_SPIRIT_DEBUG_TRACE_RULE_NAME</li>
+  <li>BOOST_SPIRIT_DEBUG_TRACE_GRAMMAR_NAME</li>
+</ol>
+<hr>
+<p>Here's the original calculator with debugging features enabled:<br>以下是带有调试功能的原始计算器：</p>
+<pre>    <code><span class="preprocessor">#define </span><span class="identifier">BOOST_SPIRIT_DEBUG  </span><span class="comment">///$$$ DEFINE THIS BEFORE ANYTHING ELSE $$$///<br>    </span><span class="preprocessor">#include </span><span class="string">"boost/spirit/include/classic.hpp"<br><br>    </span><span class="comment">/***/<br><br>    /*** CALCULATOR GRAMMAR DEFINITIONS HERE ***/<br><br>    </span><span class="identifier">BOOST_SPIRIT_DEBUG_RULE</span><span class="special">(</span><span class="identifier">integer</span><span class="special">);<br>    </span><span class="identifier">BOOST_SPIRIT_DEBUG_RULE</span><span class="special">(</span><span class="identifier">group</span><span class="special">);<br>    </span><span class="identifier">BOOST_SPIRIT_DEBUG_RULE</span><span class="special">(</span><span class="identifier">factor</span><span class="special">);<br>    </span><span class="identifier">BOOST_SPIRIT_DEBUG_RULE</span><span class="special">(</span><span class="identifier">term</span><span class="special">);<br>    </span><span class="identifier">BOOST_SPIRIT_DEBUG_RULE</span><span class="special">(</span><span class="identifier">expr</span><span class="special">);<br></span></code></pre>
+<p> <img src="theme/note.gif" height="16" width="16"> Be sure to add the macros <strong>inside</strong> the grammar definition's constructor. Now here's a sample session with the calculator.<br><img src="theme/note.gif" height="16" width="16"> 请确认将这些宏加在语法定义的构造函数<strong>内部</strong>。以下是该计算器的一个会话示例。</p>
+
+<pre><code>    <span class="preprocessor">Type an expression...or [q or Q] to quit</span>
+
+    <span class="preprocessor">1 + 2</span>
+
+    grammar(calc):	"1 + 2"
+      rule(expression):	"1 + 2"
+        rule(term):	"1 + 2"
+          rule(factor):	"1 + 2"
+            rule(integer):	"1 + 2"
+    <span class="preprocessor">push	1</span>
+            /rule(integer):	" + 2"
+          /rule(factor):	" + 2"
+        /rule(term):	" + 2"
+        rule(term):	"2"
+          rule(factor):	"2"
+            rule(integer):	"2"
+    <span class="preprocessor">push	2</span>
+            /rule(integer):	""
+          /rule(factor):	""
+        /rule(term):	""
+    <span class="preprocessor">popped 1 and 2 from the stack. pushing 3 onto the stack.</span>
+      /rule(expression):	""
+    /grammar(calc):	""
+    <span class="preprocessor">-------------------------<br>    Parsing succeeded<br>    result = 3<br>    -------------------------</span></code></pre>
+
+<p> We typed in "1 + 2". Notice that there are two successful branches
+  from the top rule <tt>expr</tt>. The text in red is generated by the parser's
+  semantic actions while the others are generated by the debug-diagnostics of
+  our rules. Notice how the first <tt>integer</tt> rule took "1", the
+  first <tt>term</tt> rule took "+" and finally the second <tt>integer</tt>
+  rule took "2".<br>我们输入 "1 + 2"。注意，顶层规则 <tt>expr</tt> 有两个成功的分支。红色的文本是由分析器的语义动作所生成，而其它文本是由我们规则的调试诊断所生成。留意第一个 <tt>integer</tt> 规则是如何获得 "1"，第一个 <tt>term</tt> 规则如何获得 "+" 以及最后，第二个 <tt>integer</tt>
+  如何获得 "2"。</p>
+<p>Please note the special meaning of the first characters appearing on the printed
+  lines:<br>请注意，出现在打印行的第一个字符的特殊意义：</p>
+<ul>
+  <li>a single <span class="literal">'/'</span> starts a line containing the information
+    about a successfully matched parser node (<tt>rule&lt;&gt;</tt>, <tt>grammar&lt;&gt;</tt>
+    or <tt>subrule&lt;&gt;</tt>)<br>以单个 <span class="literal">'/'</span> 开始的行，包含了一个成功匹配的分析器节点(<tt>rule&lt;&gt;</tt>, <tt>grammar&lt;&gt;</tt> 或 <tt>subrule&lt;&gt;</tt>)的信息</li>
+  <li>a single <span class="literal">'#'</span> starts a line containing the information
+    about a failed parser node<br>以单个 <span class="literal">'#'</span> 开始的行，包含了一个失败的分析器节点的信息</li>
+  <li>a single <span class="literal">'^'</span> starts a line containing the first member (return value/synthesised
+    attribute) of the closure of a successfully matched parser node.<br>以单个 <span class="literal">'^'</span> 开始的行，包含了一个成功匹配的分析器节点的闭包的第一个成员(返回值/synthesised属性attribute)。</li>
+</ul>
+<p>Check out  <a href="../example/fundamental/calc_debug.cpp">calc_debug.cpp</a> to see debugging in action.<br>关于调试的运作，请查看  <a href="../example/fundamental/calc_debug.cpp">calc_debug.cpp</a>。 </p>
+<table border="0">
+  <tbody><tr>
+    <td width="10"></td>
+    <td width="30"><a href="../index.html"><img src="theme/u_arr.gif" border="0"></a></td>
+    <td width="30"><a href="position_iterator.html"><img src="theme/l_arr.gif" border="0"></a></td>
+    <td width="30"><a href="error_handling.html"><img src="theme/r_arr.gif" border="0"></a></td>
+  </tr>
+</tbody></table>
+<br>
+<hr size="1">
+<p class="copyright">Copyright © 1998-2003 Joel de Guzman<br>
+  Copyright © 2003 Hartmut Kaiser<br>
+  <br>
+<font size="2">Use, modification and distribution is subject to the Boost Software
+    License, Version 1.0. (See accompanying file LICENSE_1_0.txt or copy at
+    http://www.boost.org/LICENSE_1_0.txt)</font></p>
+<p class="copyright">&nbsp;</p>
+</body></html>

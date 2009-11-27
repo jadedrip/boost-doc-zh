@@ -1,0 +1,342 @@
+﻿<html>
+<head>
+<meta http-equiv="Content-Type" content="text/html; charset=UTF-8">
+<title>Understanding Quantiles of Discrete Distributions</title>
+<link rel="stylesheet" href="../../../../../../../../doc/html/boostbook.css" type="text/css">
+<meta name="generator" content="DocBook XSL Stylesheets Vsnapshot_2006-12-17_0120">
+<link rel="start" href="../../../index.html" title="Math Toolkit">
+<link rel="up" href="../pol_tutorial.html" title="Policy Tutorial">
+<link rel="prev" href="user_def_err_pol.html" title="Calling User Defined Error Handlers">
+<link rel="next" href="../pol_ref.html" title="Policy Reference">
+</head>
+<body bgcolor="white" text="black" link="#0000FF" vlink="#840084" alink="#0000FF">
+<table cellpadding="2" width="100%"><tr>
+<td valign="top"><img alt="Boost C++ Libraries" width="277" height="86" src="../../../../../../../../boost.png"></td>
+<td align="center"><a href="../../../../../../../../index.html">Home</a></td>
+<td align="center"><a href="../../../../../../../../libs/libraries.htm">Libraries</a></td>
+<td align="center"><a href="http://www.boost.org/users/people.html">People</a></td>
+<td align="center"><a href="http://www.boost.org/users/faq.html">FAQ</a></td>
+<td align="center"><a href="../../../../../../../../more/index.htm">More</a></td>
+</tr></table>
+<hr>
+<div class="spirit-nav">
+<a accesskey="p" href="user_def_err_pol.html"><img src="../../../../../../../../doc/html/images/prev.png" alt="Prev"></a><a accesskey="u" href="../pol_tutorial.html"><img src="../../../../../../../../doc/html/images/up.png" alt="Up"></a><a accesskey="h" href="../../../index.html"><img src="../../../../../../../../doc/html/images/home.png" alt="Home"></a><a accesskey="n" href="../pol_ref.html"><img src="../../../../../../../../doc/html/images/next.png" alt="Next"></a>
+</div>
+<div class="section" lang="en">
+<div class="titlepage"><div><div>
+  <h4 class="title">
+<a name="math_toolkit.policy.pol_tutorial.understand_dis_quant"></a><a href="understand_dis_quant.html" title="Understanding Quantiles of Discrete Distributions">
+        理解离散分位点(Understanding Quantiles of Discrete Distributions)</a>
+</h4>
+</div></div></div>
+<p>
+        当计算分位点的时候，离散分布带给我们一个问题：我们从一个连续的浮点值变量(real-valued variable)开始－概率－但结果(随机变量的值)应当是真正的离散的。</p>
+<p>
+  考虑一个二项分布，样本大小为50，成功分数(success fraction)为0.5。我们有多种方式来为一个离散分布作图，但是如果我们把函数PDF作为一个阶梯函数(step-function)来作图，那么函数图像看起来像下面这样：</p>
+<p>
+          <span class="inlinemediaobject"><img src="../../../../graphs/binomial_pdf.png" alt="binomial_pdf"></span>
+  </p>
+<p>
+  现在假设用户要求一个概率为0.05的分位点，如果我们在函数CDF上放大这个区域，我们将看到下面的图像：</p>
+<p>
+          <span class="inlinemediaobject"><img src="../../../../graphs/binomial_quantile_1.png" alt="binomial_quantile_1"></span>
+  </p>
+<p>
+          就像可以看到的那样，并没有一个随机变量的概率对应于0.05，因此，就像在图像中显示的那样，我们有两个选择：</p>
+<div class="itemizedlist"><ul type="disc">
+<li>
+      我们可以将结果向下舍入到18。</li>
+<li>
+      我们可以将结果向上舍入到19。</li>
+</ul></div>
+<p>
+          实际上还有第三个选择：我们可以“假装”这个分布是连续分布并返回一个浮点值：在这种情况下，我们可以计算一个近似到18.701的结果(这就可以精确地反映出结果更接近于19而不是18)。</p>
+<p>
+          通过使用策略我们可以作出上面的任何一个选择，但这仍留给我们一个问题：<span class="emphasis"><em>实际上应该怎么做呢?</em></span>
+  </p>
+<p>
+          特殊一些：我们应当使用哪个策略作为缺省呢<span class="emphasis"><em>?</em></span>
+  </p>
+<p>
+          在回答问题之前我们应当意识到：</p>
+<div class="itemizedlist"><ul type="disc">
+<li>
+      计算一个整数结果通常要比计算一个浮点数结果要更快：实际上在我们的测试中要快20倍。</li>
+<li>
+            通常人们计算分位来进行一些测试：<span class="emphasis"><em>"如果随机变量的值小于N，那么我们可以具有90%的把握来否决我们的虚假设(null-hypothesis)."</em></span>
+</li>
+</ul></div>
+<p>
+  因此计算一个整数结果是一个很大的益处，并且从哲学的观点看，这也是“正确的做法”。更进一步，如果有人需要一个在概率为0.05处的分位点，那么我们通常可以假设他需要一个<span class="emphasis"><em><span class="bold"><strong>至少</strong></span> 95%</em></span>的概率选择右边的一个值，且<span class="emphasis"><em><span class="bold"><strong>至多 </strong></span></em></span>5%的概率选择左边的值。</p>
+<p>在上面的例子中，因此我们应当把结果向下舍入到18。</p>
+<p>
+          这种情况的反面应用于上分位点(upper-quantiles)：如果概率大于0.5，那么我们想要将结果向上舍入，使得至少要求的概率是在返回值的概率的左边，且在返回值概率右边的概率<span class="bold"><strong>不超过</strong></span>1 - 要求的概率。</em></span>
+  </p>
+<p>
+  类似的，对于两侧区间( two-sided intervals)，我们将会把下分位点(lower quantile)向下舍入，将上分位点(upper quantile)向上舍入。这确保在区间的中间区域我们至少有要求的概率并且在尾部区域的概率不超过1－要求的概率。</p>
+<p>
+  例如，使用样本大小为50且成功分数(success fraction)为 0.5的二项分布作为例子，如果我们想要一个双侧的(two-sided)的90%置信区间，那么我们需要结果向外舍入的0.05 和 0.95 的分位点，使得至少90%的概率在中间区域。</p>
+<p>
+          <span class="inlinemediaobject"><img src="../../../../graphs/binomial_pdf_3.png" alt="binomial_pdf_3"></span>
+  </p>
+<p>
+  直到目前为止还可以，但实际上有一个因为不小心面导致的陷阱：</p>
+<pre class="programlisting"><span class="identifier">quantile</span><span class="special">(</span><span class="identifier">binomial</span><span class="special">(</span><span class="number">50</span><span class="special">,</span> <span class="number">0.5</span><span class="special">),</span> <span class="number">0.05</span><span class="special">);</span>
+</pre>
+<p>
+  返回18 作为结果，这也是我们从上面的图像中期待的结果，但实际上没有大于18的x值使得：</p>
+<pre class="programlisting"><span class="identifier">cdf</span><span class="special">(</span><span class="identifier">binomial</span><span class="special">(</span><span class="number">50</span><span class="special">,</span> <span class="number">0.5</span><span class="special">),</span> <span class="identifier">x</span><span class="special">)</span> <span class="special">&lt;=</span> <span class="number">0.05</span><span class="special">;</span>
+</pre>
+<p>
+          然而：</p>
+<pre class="programlisting"><span class="identifier">quantile</span><span class="special">(</span><span class="identifier">binomial</span><span class="special">(</span><span class="number">50</span><span class="special">,</span> <span class="number">0.5</span><span class="special">),</span> <span class="number">0.95</span><span class="special">);</span>
+</pre>
+<p>
+  返回 31，但实际上并没有小于31的x值使得：</p>
+<pre class="programlisting"><span class="identifier">cdf</span><span class="special">(</span><span class="identifier">binomial</span><span class="special">(</span><span class="number">50</span><span class="special">,</span> <span class="number">0.5</span><span class="special">),</span> <span class="identifier">x</span><span class="special">)</span> <span class="special">&gt;=</span> <span class="number">0.95</span><span class="special">;</span>
+</pre>
+<p>
+  我们可能简单地希望对于这些对称分布，结果将会是 32 (因为 32 = 50 - 18)，但是我们需要记住二项分布的cdf函数是<span class="emphasis"><em>包含(inclusive)</em></span> 随机变量的。因此当左边的区域<span class="emphasis"><em>包含</em></span> 返回的分位点时，右边的区域就排除了上分位点值：因为它属于中心区域。</p>
+<p>
+  查看上面的图像来观察在这里会发生什么：下分们点18属于左边的尾部区域，因此任何的小于等于18的值都在左边的尾部区域中。上分位点值31属于中心区域，因此尾部区域实际上从32开始，因此任何大于31的值都在右边的尾部区域中。</p>
+<p>
+  因此，如果 U 和 L 分别是上分位点和下分位点，那么随机变量X位于这个尾部区域－如果</p>
+<pre class="programlisting"><span class="identifier">X</span> <span class="special">&lt;=</span> <span class="identifier">L</span> <span class="special">||</span> <span class="identifier">X</span> <span class="special">&gt;</span> <span class="identifier">U</span>
+</pre>
+<p>那么我们将否决这个虚假设。
+  </p>
+<p>如果：</p>
+<pre class="programlisting"><span class="identifier">L</span> <span class="special">&lt;</span> <span class="identifier">X</span> <span class="special">&lt;=</span> <span class="identifier">U</span>
+</pre>
+<p>那么X位于中心区域。
+  </p>
+<p>这里的寓意是(moral)当处理离散分布时要时刻小心你所进行的操作，<span class="emphasis"><em></em></span> 如果不能肯定，那么将你所进行的比较基于函数<span class="emphasis"><em>CDF</em></span><em>。</em></p>
+<a name="math_toolkit.policy.pol_tutorial.understand_dis_quant.other_rounding_policies_are_available"></a>
+<h5>
+<a name="id833371"></a>
+          <a href="understand_dis_quant.html#math_toolkit.policy.pol_tutorial.understand_dis_quant.other_rounding_policies_are_available">其它可用的舍入策略</a>
+  </h5>
+<p>
+  就像你从策略这部分所期望的那样，你不会惊讶还有其它的可用的策略：</p>
+<div class="variablelist">
+<p class="title"><b></b></p>
+<dl>
+<dt><span class="term">integer_round_outwards</span></dt>
+<dd>
+<p>
+        这是缺省的策略，就像上面描述的那样：下分位点(概率小于0.5)向下舍入，上分位点(概率大于0.5)向上舍入。</p>
+<p>
+        这就可以在尾部区域给定不超过要求的概率，在中心区域给定至少是要求的概率。</p>
+</dd>
+<dt><span class="term">integer_round_inwards</span></dt>
+<dd>
+<p>
+              这个策略与缺省的策略是完全相反的：下分位点(概率小于0.5)向上舍入，上分位点(概率大于0.5)向下舍入。</p>
+<p>
+              这就可以在尾部区域给定至少是要求的概率，在中心区域给定不超过要求的概率。</p>
+</dd>
+<dt><span class="term">integer_round_down</span></dt>
+<dd>
+  <p>
+              这个策略将结果向下舍入而不管是上分位点还是下分位点。</p>
+</dd>
+<dt><span class="term">integer_round_up</span></dt>
+<dd>
+  <p>
+              这个策略将结果向上舍入而不管是上分位点还是下分位点。</p>
+</dd>
+<dt><span class="term">integer_round_nearest</span></dt>
+<dd>
+  <p>
+            这个策略将会把结果舍入到最接近的整数而不管是上分位点还是下分位点。</p>
+</dd>
+<dt><span class="term">real</span></dt>
+<dd>
+  <p>
+            这个策略将会从离散分布的分位点中返回浮点值：这通常要比查找一个整数结果更慢一些，但是却允许更灵活的舍入策略。</p>
+</dd>
+</dl>
+</div>
+<p>
+  </p>
+<p>
+            为了理解舍入策略是如何应用于离散分布的，我们将使用一个样本大小为50，成功分数(success fraction)为0.5的二项分布作为例子，并计算在0.05和0.95处的所有可能的分位点。
+  </p>
+<p>
+            包含一些需要的头文件：</p>
+<p>
+  </p>
+<p>
+            
+</p>
+<pre class="programlisting"><span class="preprocessor">#include</span> <span class="special">&lt;</span><span class="identifier">iostream</span><span class="special">&gt;</span>
+<span class="preprocessor">#include</span> <span class="special">&lt;</span><span class="identifier">boost</span><span class="special">/</span><span class="identifier">math</span><span class="special">/</span><span class="identifier">distributions</span><span class="special">/</span><span class="identifier">binomial</span><span class="special">.</span><span class="identifier">hpp</span><span class="special">&gt;</span></pre>
+<p>
+  </p>
+<p>
+  </p>
+<p>
+            接下来我们将需要的声明引入作用域 ，并针对所有的可用的舍入策略定义分布类型：
+  </p>
+<p>
+            
+</p>
+<pre class="programlisting"><span class="keyword">using</span> <span class="keyword">namespace</span> <span class="identifier">boost</span><span class="special">::</span><span class="identifier">math</span><span class="special">::</span><span class="identifier">policies</span><span class="special">;</span>
+<span class="keyword">using</span> <span class="keyword">namespace</span> <span class="identifier">boost</span><span class="special">::</span><span class="identifier">math</span><span class="special">;</span>
+
+<span class="keyword">typedef</span> <span class="identifier">binomial_distribution</span><span class="special">&lt;</span>
+            <span class="keyword">double</span><span class="special">,</span> 
+            <span class="identifier">policy</span><span class="special">&lt;</span><span class="identifier">discrete_quantile</span><span class="special">&lt;</span><span class="identifier">integer_round_outwards</span><span class="special">&gt;</span> <span class="special">&gt;</span> <span class="special">&gt;</span> 
+        <span class="identifier">binom_round_outwards</span><span class="special">;</span>
+
+<span class="keyword">typedef</span> <span class="identifier">binomial_distribution</span><span class="special">&lt;</span>
+            <span class="keyword">double</span><span class="special">,</span> 
+            <span class="identifier">policy</span><span class="special">&lt;</span><span class="identifier">discrete_quantile</span><span class="special">&lt;</span><span class="identifier">integer_round_inwards</span><span class="special">&gt;</span> <span class="special">&gt;</span> <span class="special">&gt;</span> 
+        <span class="identifier">binom_round_inwards</span><span class="special">;</span>
+
+<span class="keyword">typedef</span> <span class="identifier">binomial_distribution</span><span class="special">&lt;</span>
+            <span class="keyword">double</span><span class="special">,</span> 
+            <span class="identifier">policy</span><span class="special">&lt;</span><span class="identifier">discrete_quantile</span><span class="special">&lt;</span><span class="identifier">integer_round_down</span><span class="special">&gt;</span> <span class="special">&gt;</span> <span class="special">&gt;</span> 
+        <span class="identifier">binom_round_down</span><span class="special">;</span>
+
+<span class="keyword">typedef</span> <span class="identifier">binomial_distribution</span><span class="special">&lt;</span>
+            <span class="keyword">double</span><span class="special">,</span> 
+            <span class="identifier">policy</span><span class="special">&lt;</span><span class="identifier">discrete_quantile</span><span class="special">&lt;</span><span class="identifier">integer_round_up</span><span class="special">&gt;</span> <span class="special">&gt;</span> <span class="special">&gt;</span> 
+        <span class="identifier">binom_round_up</span><span class="special">;</span>
+
+<span class="keyword">typedef</span> <span class="identifier">binomial_distribution</span><span class="special">&lt;</span>
+            <span class="keyword">double</span><span class="special">,</span> 
+            <span class="identifier">policy</span><span class="special">&lt;</span><span class="identifier">discrete_quantile</span><span class="special">&lt;</span><span class="identifier">integer_round_nearest</span><span class="special">&gt;</span> <span class="special">&gt;</span> <span class="special">&gt;</span> 
+        <span class="identifier">binom_round_nearest</span><span class="special">;</span>
+
+<span class="keyword">typedef</span> <span class="identifier">binomial_distribution</span><span class="special">&lt;</span>
+            <span class="keyword">double</span><span class="special">,</span> 
+            <span class="identifier">policy</span><span class="special">&lt;</span><span class="identifier">discrete_quantile</span><span class="special">&lt;</span><span class="identifier">real</span><span class="special">&gt;</span> <span class="special">&gt;</span> <span class="special">&gt;</span> 
+        <span class="identifier">binom_real_quantile</span><span class="special">;</span></pre>
+<p>
+  </p>
+<p>
+  </p>
+<p>
+  现在让我们调用这些分位点函数：</p>
+<p>
+  </p>
+<p>
+            
+</p>
+<pre class="programlisting"><span class="keyword">int</span> <span class="identifier">main</span><span class="special">()</span>
+<span class="special">{</span>
+   <span class="identifier">std</span><span class="special">::</span><span class="identifier">cout</span> <span class="special">&lt;&lt;</span> 
+      <span class="string">"Testing rounding policies for a 50 sample binomial distribution,\n"</span>
+      <span class="string">"with a success fraction of 0.5.\n\n"</span>
+      <span class="string">"Lower quantiles are calculated at p = 0.05\n\n"</span>
+      <span class="string">"Upper quantiles at p = 0.95.\n\n"</span><span class="special">;</span>
+
+   <span class="identifier">std</span><span class="special">::</span><span class="identifier">cout</span> <span class="special">&lt;&lt;</span> <span class="identifier">std</span><span class="special">::</span><span class="identifier">setw</span><span class="special">(</span><span class="number">25</span><span class="special">)</span> <span class="special">&lt;&lt;</span> <span class="identifier">std</span><span class="special">::</span><span class="identifier">right</span>
+      <span class="special">&lt;&lt;</span> <span class="string">"Policy"</span><span class="special">&lt;&lt;</span> <span class="identifier">std</span><span class="special">::</span><span class="identifier">setw</span><span class="special">(</span><span class="number">18</span><span class="special">)</span> <span class="special">&lt;&lt;</span> <span class="identifier">std</span><span class="special">::</span><span class="identifier">right</span> 
+      <span class="special">&lt;&lt;</span> <span class="string">"Lower Quantile"</span> <span class="special">&lt;&lt;</span> <span class="identifier">std</span><span class="special">::</span><span class="identifier">setw</span><span class="special">(</span><span class="number">18</span><span class="special">)</span> <span class="special">&lt;&lt;</span> <span class="identifier">std</span><span class="special">::</span><span class="identifier">right</span> 
+      <span class="special">&lt;&lt;</span> <span class="string">"Upper Quantile"</span> <span class="special">&lt;&lt;</span> <span class="identifier">std</span><span class="special">::</span><span class="identifier">endl</span><span class="special">;</span>
+   
+   <span class="comment">// 测试 integer_round_outwards:
+</span>   <span class="identifier">std</span><span class="special">::</span><span class="identifier">cout</span> <span class="special">&lt;&lt;</span> <span class="identifier">std</span><span class="special">::</span><span class="identifier">setw</span><span class="special">(</span><span class="number">25</span><span class="special">)</span> <span class="special">&lt;&lt;</span> <span class="identifier">std</span><span class="special">::</span><span class="identifier">right</span>
+      <span class="special">&lt;&lt;</span> <span class="string">"integer_round_outwards"</span>
+      <span class="special">&lt;&lt;</span> <span class="identifier">std</span><span class="special">::</span><span class="identifier">setw</span><span class="special">(</span><span class="number">18</span><span class="special">)</span> <span class="special">&lt;&lt;</span> <span class="identifier">std</span><span class="special">::</span><span class="identifier">right</span>
+      <span class="special">&lt;&lt;</span> <span class="identifier">quantile</span><span class="special">(</span><span class="identifier">binom_round_outwards</span><span class="special">(</span><span class="number">50</span><span class="special">,</span> <span class="number">0.5</span><span class="special">),</span> <span class="number">0.05</span><span class="special">)</span>
+      <span class="special">&lt;&lt;</span> <span class="identifier">std</span><span class="special">::</span><span class="identifier">setw</span><span class="special">(</span><span class="number">18</span><span class="special">)</span> <span class="special">&lt;&lt;</span> <span class="identifier">std</span><span class="special">::</span><span class="identifier">right</span>
+      <span class="special">&lt;&lt;</span> <span class="identifier">quantile</span><span class="special">(</span><span class="identifier">binom_round_outwards</span><span class="special">(</span><span class="number">50</span><span class="special">,</span> <span class="number">0.5</span><span class="special">),</span> <span class="number">0.95</span><span class="special">)</span> 
+      <span class="special">&lt;&lt;</span> <span class="identifier">std</span><span class="special">::</span><span class="identifier">endl</span><span class="special">;</span>
+   
+   <span class="comment">// 测试 integer_round_inwards:
+</span>   <span class="identifier">std</span><span class="special">::</span><span class="identifier">cout</span> <span class="special">&lt;&lt;</span> <span class="identifier">std</span><span class="special">::</span><span class="identifier">setw</span><span class="special">(</span><span class="number">25</span><span class="special">)</span> <span class="special">&lt;&lt;</span> <span class="identifier">std</span><span class="special">::</span><span class="identifier">right</span>
+      <span class="special">&lt;&lt;</span> <span class="string">"integer_round_inwards"</span>
+      <span class="special">&lt;&lt;</span> <span class="identifier">std</span><span class="special">::</span><span class="identifier">setw</span><span class="special">(</span><span class="number">18</span><span class="special">)</span> <span class="special">&lt;&lt;</span> <span class="identifier">std</span><span class="special">::</span><span class="identifier">right</span>
+      <span class="special">&lt;&lt;</span> <span class="identifier">quantile</span><span class="special">(</span><span class="identifier">binom_round_inwards</span><span class="special">(</span><span class="number">50</span><span class="special">,</span> <span class="number">0.5</span><span class="special">),</span> <span class="number">0.05</span><span class="special">)</span>
+      <span class="special">&lt;&lt;</span> <span class="identifier">std</span><span class="special">::</span><span class="identifier">setw</span><span class="special">(</span><span class="number">18</span><span class="special">)</span> <span class="special">&lt;&lt;</span> <span class="identifier">std</span><span class="special">::</span><span class="identifier">right</span>
+      <span class="special">&lt;&lt;</span> <span class="identifier">quantile</span><span class="special">(</span><span class="identifier">binom_round_inwards</span><span class="special">(</span><span class="number">50</span><span class="special">,</span> <span class="number">0.5</span><span class="special">),</span> <span class="number">0.95</span><span class="special">)</span> 
+      <span class="special">&lt;&lt;</span> <span class="identifier">std</span><span class="special">::</span><span class="identifier">endl</span><span class="special">;</span>
+   
+   <span class="comment">// 测试 integer_round_down:
+</span>   <span class="identifier">std</span><span class="special">::</span><span class="identifier">cout</span> <span class="special">&lt;&lt;</span> <span class="identifier">std</span><span class="special">::</span><span class="identifier">setw</span><span class="special">(</span><span class="number">25</span><span class="special">)</span> <span class="special">&lt;&lt;</span> <span class="identifier">std</span><span class="special">::</span><span class="identifier">right</span>
+      <span class="special">&lt;&lt;</span> <span class="string">"integer_round_down"</span>
+      <span class="special">&lt;&lt;</span> <span class="identifier">std</span><span class="special">::</span><span class="identifier">setw</span><span class="special">(</span><span class="number">18</span><span class="special">)</span> <span class="special">&lt;&lt;</span> <span class="identifier">std</span><span class="special">::</span><span class="identifier">right</span>
+      <span class="special">&lt;&lt;</span> <span class="identifier">quantile</span><span class="special">(</span><span class="identifier">binom_round_down</span><span class="special">(</span><span class="number">50</span><span class="special">,</span> <span class="number">0.5</span><span class="special">),</span> <span class="number">0.05</span><span class="special">)</span>
+      <span class="special">&lt;&lt;</span> <span class="identifier">std</span><span class="special">::</span><span class="identifier">setw</span><span class="special">(</span><span class="number">18</span><span class="special">)</span> <span class="special">&lt;&lt;</span> <span class="identifier">std</span><span class="special">::</span><span class="identifier">right</span>
+      <span class="special">&lt;&lt;</span> <span class="identifier">quantile</span><span class="special">(</span><span class="identifier">binom_round_down</span><span class="special">(</span><span class="number">50</span><span class="special">,</span> <span class="number">0.5</span><span class="special">),</span> <span class="number">0.95</span><span class="special">)</span> 
+      <span class="special">&lt;&lt;</span> <span class="identifier">std</span><span class="special">::</span><span class="identifier">endl</span><span class="special">;</span>
+   
+   <span class="comment">// 测试 integer_round_up:
+</span>   <span class="identifier">std</span><span class="special">::</span><span class="identifier">cout</span> <span class="special">&lt;&lt;</span> <span class="identifier">std</span><span class="special">::</span><span class="identifier">setw</span><span class="special">(</span><span class="number">25</span><span class="special">)</span> <span class="special">&lt;&lt;</span> <span class="identifier">std</span><span class="special">::</span><span class="identifier">right</span>
+      <span class="special">&lt;&lt;</span> <span class="string">"integer_round_up"</span>
+      <span class="special">&lt;&lt;</span> <span class="identifier">std</span><span class="special">::</span><span class="identifier">setw</span><span class="special">(</span><span class="number">18</span><span class="special">)</span> <span class="special">&lt;&lt;</span> <span class="identifier">std</span><span class="special">::</span><span class="identifier">right</span>
+      <span class="special">&lt;&lt;</span> <span class="identifier">quantile</span><span class="special">(</span><span class="identifier">binom_round_up</span><span class="special">(</span><span class="number">50</span><span class="special">,</span> <span class="number">0.5</span><span class="special">),</span> <span class="number">0.05</span><span class="special">)</span>
+      <span class="special">&lt;&lt;</span> <span class="identifier">std</span><span class="special">::</span><span class="identifier">setw</span><span class="special">(</span><span class="number">18</span><span class="special">)</span> <span class="special">&lt;&lt;</span> <span class="identifier">std</span><span class="special">::</span><span class="identifier">right</span>
+      <span class="special">&lt;&lt;</span> <span class="identifier">quantile</span><span class="special">(</span><span class="identifier">binom_round_up</span><span class="special">(</span><span class="number">50</span><span class="special">,</span> <span class="number">0.5</span><span class="special">),</span> <span class="number">0.95</span><span class="special">)</span> 
+      <span class="special">&lt;&lt;</span> <span class="identifier">std</span><span class="special">::</span><span class="identifier">endl</span><span class="special">;</span>
+   
+   <span class="comment">// 测试 integer_round_nearest:
+</span>   <span class="identifier">std</span><span class="special">::</span><span class="identifier">cout</span> <span class="special">&lt;&lt;</span> <span class="identifier">std</span><span class="special">::</span><span class="identifier">setw</span><span class="special">(</span><span class="number">25</span><span class="special">)</span> <span class="special">&lt;&lt;</span> <span class="identifier">std</span><span class="special">::</span><span class="identifier">right</span>
+      <span class="special">&lt;&lt;</span> <span class="string">"integer_round_nearest"</span>
+      <span class="special">&lt;&lt;</span> <span class="identifier">std</span><span class="special">::</span><span class="identifier">setw</span><span class="special">(</span><span class="number">18</span><span class="special">)</span> <span class="special">&lt;&lt;</span> <span class="identifier">std</span><span class="special">::</span><span class="identifier">right</span>
+      <span class="special">&lt;&lt;</span> <span class="identifier">quantile</span><span class="special">(</span><span class="identifier">binom_round_nearest</span><span class="special">(</span><span class="number">50</span><span class="special">,</span> <span class="number">0.5</span><span class="special">),</span> <span class="number">0.05</span><span class="special">)</span>
+      <span class="special">&lt;&lt;</span> <span class="identifier">std</span><span class="special">::</span><span class="identifier">setw</span><span class="special">(</span><span class="number">18</span><span class="special">)</span> <span class="special">&lt;&lt;</span> <span class="identifier">std</span><span class="special">::</span><span class="identifier">right</span>
+      <span class="special">&lt;&lt;</span> <span class="identifier">quantile</span><span class="special">(</span><span class="identifier">binom_round_nearest</span><span class="special">(</span><span class="number">50</span><span class="special">,</span> <span class="number">0.5</span><span class="special">),</span> <span class="number">0.95</span><span class="special">)</span> 
+      <span class="special">&lt;&lt;</span> <span class="identifier">std</span><span class="special">::</span><span class="identifier">endl</span><span class="special">;</span>
+   
+   <span class="comment">// 测试 real:
+</span>   <span class="identifier">std</span><span class="special">::</span><span class="identifier">cout</span> <span class="special">&lt;&lt;</span> <span class="identifier">std</span><span class="special">::</span><span class="identifier">setw</span><span class="special">(</span><span class="number">25</span><span class="special">)</span> <span class="special">&lt;&lt;</span> <span class="identifier">std</span><span class="special">::</span><span class="identifier">right</span>
+      <span class="special">&lt;&lt;</span> <span class="string">"real"</span>
+      <span class="special">&lt;&lt;</span> <span class="identifier">std</span><span class="special">::</span><span class="identifier">setw</span><span class="special">(</span><span class="number">18</span><span class="special">)</span> <span class="special">&lt;&lt;</span> <span class="identifier">std</span><span class="special">::</span><span class="identifier">right</span>
+      <span class="special">&lt;&lt;</span> <span class="identifier">quantile</span><span class="special">(</span><span class="identifier">binom_real_quantile</span><span class="special">(</span><span class="number">50</span><span class="special">,</span> <span class="number">0.5</span><span class="special">),</span> <span class="number">0.05</span><span class="special">)</span>
+      <span class="special">&lt;&lt;</span> <span class="identifier">std</span><span class="special">::</span><span class="identifier">setw</span><span class="special">(</span><span class="number">18</span><span class="special">)</span> <span class="special">&lt;&lt;</span> <span class="identifier">std</span><span class="special">::</span><span class="identifier">right</span>
+      <span class="special">&lt;&lt;</span> <span class="identifier">quantile</span><span class="special">(</span><span class="identifier">binom_real_quantile</span><span class="special">(</span><span class="number">50</span><span class="special">,</span> <span class="number">0.5</span><span class="special">),</span> <span class="number">0.95</span><span class="special">)</span> 
+      <span class="special">&lt;&lt;</span> <span class="identifier">std</span><span class="special">::</span><span class="identifier">endl</span><span class="special">;</span>
+<span class="special">}</span></pre>
+<p>
+  </p>
+<p>
+  </p>
+<p>
+            程序产生下面的输出：</p>
+<p>
+          
+</p>
+<pre class="programlisting">Testing rounding policies for a 50 sample binomial distribution,
+with a success fraction of 0.5.
+
+Lower quantiles are calculated at p = 0.05
+
+Upper quantiles at p = 0.95.
+
+Testing rounding policies for a 50 sample binomial distribution,
+with a success fraction of 0.5.
+
+Lower quantiles are calculated at p = 0.05
+
+Upper quantiles at p = 0.95.
+
+                   Policy    Lower Quantile    Upper Quantile
+   integer_round_outwards                18                31
+    integer_round_inwards                19                30
+       integer_round_down                18                30
+         integer_round_up                19                31
+    integer_round_nearest                19                30
+                     real            18.701            30.299
+</pre>
+<p>
+  </p>
+</div>
+<table xmlns:rev="http://www.cs.rpi.edu/~gregod/boost/tools/doc/revision" width="100%"><tr>
+<td align="left"></td>
+<td align="right"><div class="copyright-footer">Copyright ?2006 , 2007, 2008 John Maddock, Paul A. Bristow, Hubert
+      Holin, Xiaogang Zhang and Bruno Lalande<p>
+        Distributed under the Boost Software License, Version 1.0. (See accompanying
+        file LICENSE_1_0.txt or copy at <a href="http://www.boost.org/LICENSE_1_0.txt" target="_top">http://www.boost.org/LICENSE_1_0.txt</a>)
+      </p>
+</div></td>
+</tr></table>
+<hr>
+<div class="spirit-nav">
+<a accesskey="p" href="user_def_err_pol.html"><img src="../../../../../../../../doc/html/images/prev.png" alt="Prev"></a><a accesskey="u" href="../pol_tutorial.html"><img src="../../../../../../../../doc/html/images/up.png" alt="Up"></a><a accesskey="h" href="../../../index.html"><img src="../../../../../../../../doc/html/images/home.png" alt="Home"></a><a accesskey="n" href="../pol_ref.html"><img src="../../../../../../../../doc/html/images/next.png" alt="Next"></a>
+</div>
+</body>
+</html>

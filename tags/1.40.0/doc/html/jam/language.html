@@ -1,0 +1,1825 @@
+<!DOCTYPE HTML PUBLIC "-//W3C//DTD HTML 4.01 Transitional//EN">
+<html><head>
+<meta http-equiv="Content-Type" content="text/html; charset=UTF-8">
+
+<title>Language</title><link rel="stylesheet" href="../boostbook.css" type="text/css">
+<meta name="generator" content="DocBook XSL Stylesheets V1.73.2">
+<link rel="start" href="../index.html" title="The Boost C++ Libraries BoostBook Documentation Subset">
+<link rel="up" href="../jam.html" title="Chapter&nbsp;27.&nbsp;Boost.Jam : 3.1.16">
+<link rel="prev" href="usage.html" title="Using BJam">
+<link rel="next" href="miscellaneous.html" title="Miscellaneous"></head>
+<body alink="#0000ff" bgcolor="white" link="#0000ff" text="black" vlink="#840084">
+<table cellpadding="2" width="100%"><tbody><tr>
+<td valign="top"><img alt="Boost C++ Libraries" src="../../../boost.png" height="86" width="277"></td>
+<td align="center"><a href="../../../index.html">Home</a></td>
+<td align="center"><a href="../../../libs/libraries.htm">Libraries</a></td>
+<td align="center"><a href="http://www.boost.org/users/people.html">People</a></td>
+<td align="center"><a href="http://www.boost.org/users/faq.html">FAQ</a></td>
+<td align="center"><a href="../../../more/index.htm">More</a></td>
+</tr></tbody></table>
+<hr>
+<div class="spirit-nav">
+<a accesskey="p" href="usage.html"><img src="../../../doc/html/images/prev.png" alt="Prev"></a><a accesskey="u" href="../jam.html"><img src="../../../doc/html/images/up.png" alt="Up"></a><a accesskey="h" href="../index.html"><img src="../../../doc/html/images/home.png" alt="Home"></a><a accesskey="n" href="miscellaneous.html"><img src="../../../doc/html/images/next.png" alt="Next"></a>
+</div>
+<div class="section" lang="en">
+<div class="titlepage"><div><div><h2 class="title" style="clear: both;">
+<a name="jam.language"></a><a class="link" href="language.html" title="Language"> Language 语言</a>
+</h2></div></div></div>
+<div class="toc"><dl>
+<dt><span class="section"><a href="language.html#jam.language.lexical"> Lexical Features 词汇特征</a></span></dt>
+<dt><span class="section"><a href="language.html#jam.language.target"> Targets 目标</a></span></dt>
+<dt><span class="section"><a href="language.html#jam.language.rules"> Rules 规则</a></span></dt>
+<dt><span class="section"><a href="language.html#jam.language.flow_of_control">Flow-of-Control 控制流</a></span></dt>
+<dt><span class="section"><a href="language.html#jam.language.variables">Variables 变量</a></span></dt>
+<dt><span class="section"><a href="language.html#jam.language.modules">Modules 模块</a></span></dt>
+</dl></div>
+<p>
+      <code class="literal">BJam</code> has an interpreted, procedural language. Statements
+      in <code class="literal">bjam</code> are rule (procedure) definitions, rule invocations,
+      flow-of-control structures, variable assignments, and sundry language support.<br><code class="literal">BJam</code>&nbsp;有一个解释性的过程语言。<code class="literal">bjam</code> 中的语句包括规则(过程)定义，规则调用，控制流结构，变量赋值和各种语言支持。
+    </p>
+<div class="section" lang="en">
+<div class="titlepage"><div><div><h3 class="title">
+<a name="jam.language.lexical"></a><a class="link" href="language.html#jam.language.lexical" title="Lexical Features"> Lexical Features 词汇特征</a>
+</h3></div></div></div>
+<p>
+        <code class="literal">BJam</code> treats its input files as whitespace-separated tokens,
+        with two exceptions: double quotes (") can enclose whitespace to embed
+        it into a token, and everything between the matching curly braces ({}) in
+        the definition of a rule action is treated as a single string. A backslash
+        (\) can escape a double quote, or any single whitespace character.<br><code class="literal">BJam</code> 将它的输入文件视为以空白分隔的记号，除了两种例外：双引号(")可以将空白包含在一个记号中，而在规则动作定义中位于一对大括号({})间的所有东西则被视为单个字符串。后斜杠(\)可以对双引号或任一空白字符进行转义。
+      </p>
+<p>
+        <code class="literal">BJam</code> requires whitespace (blanks, tabs, or newlines) to
+        surround all tokens, including the colon (:) and semicolon (;) tokens.<br><code class="literal">BJam</code> 要求用空白(空格、制表符或换行符)来包围所有记号，包括冒号(:)和分号(;)记号。
+      </p>
+<p>
+        <code class="literal">BJam</code> keywords (an mentioned in this document) are reserved
+        and generally must be quoted with double quotes (") to be used as arbitrary
+        tokens, such as variable or target names.<br><code class="literal">BJam</code> 的关键字(本文档所提及的)是保留的，如果要作为记号使用，如变量名或目标名，则必须用双引号(")引起来。
+      </p>
+<p>
+        Comments start with the <code class="literal">#</code> character and extend until the
+        end of line.<br>注释以 <code class="literal">#</code> 字符开始，直至行末。
+      </p>
+</div>
+<div class="section" lang="en">
+<div class="titlepage"><div><div><h3 class="title">
+<a name="jam.language.target"></a><a class="link" href="language.html#jam.language.target" title="Targets"> Targets 目标</a>
+</h3></div></div></div>
+<div class="toc"><dl><dt><span class="section"><a href="language.html#jam.language.target.binding_detection">Binding Detection 绑定检查</a></span></dt></dl></div>
+<p>
+        The essential <code class="literal">bjam</code> data entity is a target. Build targets
+        are files to be updated. Source targets are the files used in updating built
+        targets. Built targets and source targets are collectively referred to as
+        file targets, and frequently built targets are source targets for other built
+        targets. Pseudotargets are symbols which represent dependencies on other
+        targets, but which are not themselves associated with any real file.<br>实质的 <code class="literal">bjam</code> 数据实体是一个目标。构建的目标是要更新的文件。源目标是在更新构建目标中使用的文件。构建目标和源目标都是文件目标，而且通常构建目标就是其它构建目标的源目标。伪目标是一些符号，用于表示与其它目标的依赖关系，但它们本身并没有关联到真实的文件。
+      </p>
+<p>
+        A file target's identifier is generally the file's name, which can be absolutely
+        rooted, relative to the directory of <code class="literal">bjam</code>'s invocation,
+        or simply local (no directory). Most often it is the last case, and the actual
+        file path is bound using the <code class="literal">$(SEARCH)</code> and <code class="literal">$(LOCATE)</code>
+        special variables. See <a class="link" href="language.html#jam.language.variables.builtins.search" title="SEARCH and LOCATE">SEARCH
+        and LOCATE Variables</a> below. A local filename is optionally qualified
+        with grist, a string value used to assure uniqueness. A file target with
+        an identifier of the form <span class="emphasis"><em>file(member)</em></span> is a library
+        member (usually an <code class="literal">ar</code>(1) archive on Unix).<br>一个文件目标的标识符通常就是文件的名字，可以是绝对路径，或者是相对于调用 <code class="literal">bjam</code> 的目录的相对路径，或者就是本地(无目录)。最常见的就是最后一种，真正的文件路径使用 <code class="literal">$(SEARCH)</code> 和 <code class="literal">$(LOCATE)</code>
+        变量来绑定。详见后文的 <a class="link" href="language.html#jam.language.variables.builtins.search" title="SEARCH and LOCATE">SEARCH 和 LOCATE 变量</a>。一个本地的文件名可以带有 grist，即一个用于确保唯一性的字符串值。带有形如 <span class="emphasis"><em>file(member)</em></span> 的标识符的文件目标是一个库成员(在 Unix 上通常是一个 <code class="literal">ar</code>(1) 存档)。
+      </p>
+<div class="section" lang="en">
+<div class="titlepage"><div><div><h4 class="title">
+<a name="jam.language.target.binding_detection"></a><a class="link" href="language.html#jam.language.target.binding_detection" title="Binding Detection">Binding Detection 绑定检查</a>
+</h4></div></div></div>
+<p>
+          Whenever a target is bound to a location in the filesystem, Boost Jam will
+          look for a variable called <code class="literal">BINDRULE</code> (first "on"
+          the target being bound, then in the global module). If non-empty, =$(BINDRULE[1])=
+          names a rule which is called with the name of the target and the path it
+          is being bound to. The signature of the rule named by =$(BINDRULE[1])=
+          should match the following:<br>只要一个目标被绑定到文件系统的某个位置，Boost Jam 就会查找一个名为 <code class="literal">BINDRULE</code> (首先在被绑定目标上查找，然后在全局模块中查找)的变量。如果非空，则 =$(BINDRULE[1])=
+          命名了一个规则，该规则会以目标名及所绑定的路径来调用。由 =$(BINDRULE[1])=
+          命名的规则的签名应符合：
+        </p>
+<pre class="programlisting">rule <span class="emphasis"><em>bind-rule</em></span> ( <span class="emphasis"><em>target</em></span> : <span class="emphasis"><em>path</em></span> )<br></pre>
+<p>
+          This facility is useful for correct header file scanning, since many compilers
+          will search for <code class="computeroutput"><span class="preprocessor">#include</span></code>
+          files first in the directory containing the file doing the <code class="computeroutput"><span class="preprocessor">#include</span></code> directive. <code class="literal">$(BINDRULE)</code>
+          can be used to make a record of that directory.<br>对于正确的头文件扫描来说这一工具非常有用，因为许多编译器会首先在包含了执行 <code class="computeroutput"><span class="preprocessor">#include</span></code> 指令的文件的目录中查找 <code class="computeroutput"><span class="preprocessor">#include</span></code>
+          文件。<code class="literal">$(BINDRULE)</code>
+          可以用于对该目录作一个记录。
+        </p>
+</div>
+</div>
+<div class="section" lang="en">
+<div class="titlepage"><div><div><h3 class="title">
+<a name="jam.language.rules"></a><a class="link" href="language.html#jam.language.rules" title="Rules"> Rules 规则</a>
+</h3></div></div></div>
+<div class="toc"><dl>
+<dt><span class="section"><a href="language.html#jam.language.rules.action_modifiers">Action Modifiers 动作修改符</a></span></dt>
+<dt><span class="section"><a href="language.html#jam.language.rules.argument_lists">Argument lists 参数列表</a></span></dt>
+<dt><span class="section"><a href="language.html#jam.language.rules.builtins"> Built-in Rules 内建规则</a></span></dt>
+</dl></div>
+<p>
+        The basic <code class="literal">bjam</code> language entity is called a rule. A rule
+        is defined in two parts: the procedure and the actions. The procedure is
+        a body of jam statements to be run when the rule is invoked; the actions
+        are the OS shell commands to execute when updating the built targets of the
+        rule.<br>基本的 <code class="literal">bjam</code> 语言实体称为规则。规则由两部分定义：过程和动作。过程是一组 jam 语句，在规则被调用时运行；动作是一些 OS shell 命令，在更新该规则的构建目标时执行。
+      </p>
+<p>
+        Rules can return values, which can be expanded into a list with "[
+        <span class="emphasis"><em>rule</em></span> <span class="emphasis"><em>args</em></span> ... ]". A rule's
+        value is the value of its last statement, though only the following statements
+        have values: 'if' (value of the leg chosen), 'switch' (value of the case
+        chosen), set (value of the resulting variable), and 'return' (value of its
+        arguments). Note that 'return' doesn't actually cause a return, i.e., is
+        a no-op unless it is the last statement of the last block executed within
+        rule body.<br>规则可以返回值，返回值可以被展开到一个带 "[
+        <span class="emphasis"><em>rule</em></span> <span class="emphasis"><em>args</em></span>
+... ]" 的列表中。规则的值为它的最后一条语句的值，只有以下语句具有值：'if' (被选分支的值), 'switch' (被选分支的值),
+set (结果变量的值), 和 'return' (其参数的值)。注意，'return'
+并不是真的进行返回，即它只是一个空操作，除非它是在规则体中执行的最后一个块的最后一条语句。 </p>
+<p>
+        The <code class="literal">bjam</code> statements for defining and invoking rules are
+        as follows:<br>用于定义和调用规则的 <code class="literal">bjam</code> 语句如下：
+      </p>
+<p>
+        Define a rule's procedure, replacing any previous definition.<br>定义一个规则的过程，替换前面的定义。
+      </p>
+<pre class="programlisting">rule <span class="emphasis"><em>rulename</em></span> { <span class="emphasis"><em>statements</em></span> }<br></pre>
+<p>
+        Define a rule's updating actions, replacing any previous definition.<br>定义一个规则的更新动作，替换前面的定义。
+      </p>
+<pre class="programlisting">actions [ <span class="emphasis"><em>modifiers</em></span> ] <span class="emphasis"><em>rulename</em></span> { <span class="emphasis"><em>commands</em></span> }<br></pre>
+<p>
+        Invoke a rule.<br>调用一个规则。
+      </p>
+<pre class="programlisting"><span class="emphasis"><em>rulename</em></span> <span class="emphasis"><em>field1</em></span> : <span class="emphasis"><em>field2</em></span> : <span class="emphasis"><em>...</em></span> : <span class="emphasis"><em>fieldN</em></span> ;<br></pre>
+<p>
+        Invoke a rule under the influence of target's specific variables..<br>在目标的特定变量的影响下调用规则..
+      </p>
+<pre class="programlisting">on <span class="emphasis"><em>target</em></span> <span class="emphasis"><em>rulename</em></span> <span class="emphasis"><em>field1</em></span> : <span class="emphasis"><em>field2</em></span> : <span class="emphasis"><em>...</em></span> : <span class="emphasis"><em>fieldN</em></span> ;<br></pre>
+<p>
+        Used as an argument, expands to the return value of the rule invoked.<br>被用作一个参数，展开为规则调用的返回值。
+      </p>
+<pre class="programlisting">[ <span class="emphasis"><em>rulename</em></span> <span class="emphasis"><em>field1</em></span> : <span class="emphasis"><em>field2</em></span> : <span class="emphasis"><em>...</em></span> : <span class="emphasis"><em>fieldN</em></span> ]<br>[ on <span class="emphasis"><em>target</em></span> <span class="emphasis"><em>rulename</em></span> <span class="emphasis"><em>field1</em></span> : <span class="emphasis"><em>field2</em></span> : <span class="emphasis"><em>...</em></span> : <span class="emphasis"><em>fieldN</em></span> ]<br></pre>
+<p>
+        A rule is invoked with values in <span class="emphasis"><em>field1</em></span> through <span class="emphasis"><em>fieldN</em></span>.
+        They may be referenced in the procedure's statements as <code class="literal">$(1)</code>
+        through <code class="literal">$(<span class="emphasis"><em>N</em></span>)</code> (9 max), and the first
+        two only may be referenced in the action's <span class="emphasis"><em>commands</em></span>
+        as <code class="literal">$(1)</code> and <code class="literal">$(2)</code>. <code class="literal">$(&lt;)</code>
+        and <code class="literal">$(&gt;)</code> are synonymous with <code class="literal">$(1)</code>
+        and <code class="literal">$(2)</code>.<br>以从 <span class="emphasis"><em>field1</em></span> 到 <span class="emphasis"><em>fieldN</em></span> 的值来调用规则。这些参数在过程语句中可以用 <code class="literal">$(1)</code> 到 <code class="literal">$(<span class="emphasis"><em>N</em></span>)</code> (最大为9)来引用，只有前两个参数可以在动作的 <span class="emphasis"><em>命令</em></span> 中用 <code class="literal">$(1)</code> 和 <code class="literal">$(2)</code> 来引用。<code class="literal">$(&lt;)</code> 和 <code class="literal">$(&gt;)</code> 分别是 <code class="literal">$(1)</code> 和 <code class="literal">$(2)</code> 的别名。
+      </p>
+<p>
+        Rules fall into two categories: updating rules (with actions), and pure procedure
+        rules (without actions). Updating rules treat arguments <code class="literal">$(1)</code>
+        and <code class="literal">$(2)</code> as built targets and sources, respectively, while
+        pure procedure rules can take arbitrary arguments.<br>规则被分为两类：更新规则(带动作)，和纯过程规则(不带动作)。更新规则将参数 <code class="literal">$(1)</code> 和 <code class="literal">$(2)</code> 分别视为构建目标和源，而纯过程规则可以接受任意多参数。
+      </p>
+<p>
+        When an updating rule is invoked, its updating actions are added to those
+        associated with its built targets (<code class="literal">$(1)</code>) before the rule's
+        procedure is run. Later, to build the targets in the updating phase, <span class="emphasis"><em>commands</em></span>
+        are passed to the OS command shell, with <code class="literal">$(1)</code> and <code class="literal">$(2)</code>
+        replaced by bound versions of the target names. See Binding above.<br>当一个更新规则被调用时，在规则的过程运行之前，它的更新动作被加上它的构建目标(<code class="literal">$(1)</code>)。然后，在更新阶段构建这一目标，<span class="emphasis"><em>命令</em></span> 被传递给 OS command shell，其中 <code class="literal">$(1)</code> 和 <code class="literal">$(2)</code>
+        被替换为目标名的被绑定版本。请参见前面的"绑定"一节。
+      </p>
+<p>
+        Rule invocation may be indirected through a variable:<br>规则可以通过一个变量来间接调用：
+      </p>
+<pre class="programlisting">$(<span class="emphasis"><em>var</em></span>) <span class="emphasis"><em>field1</em></span> : <span class="emphasis"><em>field2</em></span> : <span class="emphasis"><em>...</em></span> : <span class="emphasis"><em>fieldN</em></span> ;<br><br>on <span class="emphasis"><em>target</em></span> $(<span class="emphasis"><em>var</em></span>) <span class="emphasis"><em>field1</em></span> : <span class="emphasis"><em>field2</em></span> : <span class="emphasis"><em>...</em></span> : <span class="emphasis"><em>fieldN</em></span> ;<br><br>[ $(<span class="emphasis"><em>var</em></span>) <span class="emphasis"><em>field1</em></span> : <span class="emphasis"><em>field2</em></span> : <span class="emphasis"><em>...</em></span> : <span class="emphasis"><em>fieldN</em></span> ]<br>[ on <span class="emphasis"><em>target</em></span> $(<span class="emphasis"><em>var</em></span>) <span class="emphasis"><em>field1</em></span> : <span class="emphasis"><em>field2</em></span> : <span class="emphasis"><em>...</em></span> : <span class="emphasis"><em>fieldN</em></span> ]<br></pre>
+<p>
+        The variable's value names the rule (or rules) to be invoked. A rule is invoked
+        for each element in the list of <code class="literal">$(<span class="emphasis"><em>var</em></span>)</code>'s
+        values. The fields <code class="literal"><span class="emphasis"><em>field1</em></span> : <span class="emphasis"><em>field2</em></span>
+        : <span class="emphasis"><em>...</em></span></code> are passed as arguments for each invokation.
+        For the [ ... ] forms, the return value is the concatenation of the return
+        values for all of the invocations.<br>该变量的值表示了被调用的规则(或多条规则)。对于在 <code class="literal">$(<span class="emphasis"><em>var</em></span>)</code> 的值的列表中每个元素，调用对应的规则。字段 <code class="literal"><span class="emphasis"><em>field1</em></span> : <span class="emphasis"><em>field2</em></span>
+        : <span class="emphasis"><em>...</em></span></code> 被作为参数传递给每一次调用。对于 [ ... ] 形式，返回值为所有调用的返回值的串接。
+      </p>
+<div class="section" lang="en">
+<div class="titlepage"><div><div><h4 class="title">
+<a name="jam.language.rules.action_modifiers"></a><a class="link" href="language.html#jam.language.rules.action_modifiers" title="Action Modifiers">Action Modifiers 动作修改符</a>
+</h4></div></div></div>
+<p>
+          The following action modifiers are understood:<br>以下是动作修改符：
+        </p>
+<div class="variablelist">
+
+<dl>
+<dt><span class="term"><code class="literal">actions bind <span class="emphasis"><em>vars</em></span></code></span></dt>
+<dd><p>
+              <code class="literal">$(<span class="emphasis"><em>vars</em></span>)</code> will be replaced with
+              bound values.<br><code class="literal">$(<span class="emphasis"><em>vars</em></span>)</code> 被替换为绑定值。
+            </p></dd>
+<dt><span class="term"><code class="literal">actions existing</code></span></dt>
+<dd><p>
+              <code class="literal">$(&gt;)</code> includes only source targets currently existing.<br><code class="literal">$(&gt;)</code> 只包含当前已有的源目标。
+            </p></dd>
+<dt><span class="term"><code class="literal">actions ignore</code></span></dt>
+<dd><p>
+              The return status of the commands is ignored.<br>命令的返回状态被忽略。
+            </p></dd>
+<dt><span class="term"><code class="literal">actions piecemeal</code></span></dt>
+<dd><p>
+              commands are repeatedly invoked with a subset of <code class="literal">$(&gt;)</code>
+              small enough to fit in the command buffer on this OS.<br>以 <code class="literal">$(&gt;)</code>
+              的子集重复调用命令，每次调用的参数要足够小以满足 OS 的命令缓冲区。
+            </p></dd>
+<dt><span class="term"><code class="literal">actions quietly</code></span></dt>
+<dd><p>
+              The action is not echoed to the standard output.<br>该动作不在标准输出上回显。
+            </p></dd>
+<dt><span class="term"><code class="literal">actions together</code></span></dt>
+<dd><p>
+              The <code class="literal">$(&gt;)</code> from multiple invocations of the same
+              action on the same built target are glommed together.<br>将来自同一个构建目标上的同一个动作的多次调用的 <code class="literal">$(&gt;)</code> 组合起来。
+            </p></dd>
+<dt><span class="term"><code class="literal">actions updated</code></span></dt>
+<dd><p>
+              <code class="literal">$(&gt;)</code> includes only source targets themselves
+              marked for updating.<br><code class="literal">$(&gt;)</code> 只包含被标记为更新的源目标本身。
+            </p></dd>
+</dl>
+</div>
+</div>
+<div class="section" lang="en">
+<div class="titlepage"><div><div><h4 class="title">
+<a name="jam.language.rules.argument_lists"></a><a class="link" href="language.html#jam.language.rules.argument_lists" title="Argument lists">Argument lists 参数列表</a>
+</h4></div></div></div>
+<p>
+          You can describe the arguments accepted by a rule, and refer to them by
+          name within the rule. For example, the following prints "I'm sorry,
+          Dave" to the console:<br>你可以描述规则所接受的参数，并在规则内部通过名字来引用它们。例如，以下将在控制台上打印 "I'm sorry,
+          Dave"：
+        </p>
+<pre class="programlisting">rule report ( pronoun index ? : state : names + )<br>{<br>    local he.suffix she.suffix it.suffix = s ;<br>    local I.suffix = m ;<br>    local they.suffix you.suffix = re ;<br>    ECHO $(pronoun)'$($(pronoun).suffix) $(state), $(names[$(index)]) ;<br>}<br>report I 2 : sorry : Joe Dave Pete ;<br></pre>
+<p>
+          Each name in a list of formal arguments (separated by "<code class="literal">:</code>"
+          in the rule declaration) is bound to a single element of the corresponding
+          actual argument unless followed by one of these modifiers:<br>在形参列表中的每个名字(在规则声明中以 "<code class="literal">:</code>"
+          分隔)被绑定到对应的实参中的一个元素，除非后跟以下修改符之一：
+        </p>
+<div class="informaltable"><table class="table">
+<colgroup><col><col></colgroup>
+<thead><tr>
+<th>
+                <p>
+                  Symbol 符号
+                </p>
+                </th>
+<th>
+                <p>
+                  Semantics of preceding symbol 前述符号的语义
+                </p>
+                </th>
+</tr></thead>
+<tbody>
+<tr>
+<td>
+                <p>
+                  <code class="literal">?</code>
+                </p>
+                </td>
+<td>
+                <p>
+                  optional</p><p>可选
+                </p>
+                </td>
+</tr>
+<tr>
+<td>
+                <p>
+                  <code class="literal">*</code>
+                </p>
+                </td>
+<td>
+                <p>
+                  Bind to zero or more unbound elements of the actual argument. When
+                  <code class="literal">*</code> appears where an argument name is expected,
+                  any number of additional arguments are accepted. This feature can
+                  be used to implement "varargs" rules.</p><p>绑定到实参中零个或多个未绑定的元素。当
+                  <code class="literal">*</code> 出现在参数名的位置上时，将接受任意数量的额外参数。该特性可用于实现 "varargs" 规则。
+                </p>
+                </td>
+</tr>
+<tr>
+<td>
+                <p>
+                  <code class="literal">+</code>
+                </p>
+                </td>
+<td>
+                <p>
+                  Bind to one or more unbound elements of the actual argument.</p><p>缩写到实参中一个或多个未绑定的元素。
+                </p>
+                </td>
+</tr>
+</tbody>
+</table></div>
+<p>
+          The actual and formal arguments are checked for inconsistencies, which
+          cause Jam to exit with an error code:<br>实参和形参要检查是否矛盾，矛盾将导致 Jam 以一个错误代码退出：
+        </p>
+<pre class="programlisting">### argument error<br># rule report ( pronoun index ?  : state  : names + )<br># called with: ( I 2 foo  : sorry  : Joe Dave Pete )<br># extra argument foo<br>### argument error<br># rule report ( pronoun index ?  : state  : names + )<br># called with: ( I 2  : sorry )<br># missing argument names<br></pre>
+<p>
+          If you omit the list of formal arguments, all checking is bypassed as in
+          "classic" Jam. Argument lists drastically improve the reliability
+          and readability of your rules, however, and are <span class="bold"><strong>strongly
+          recommended</strong></span> for any new Jam code you write.<br>如果你省略了形参列表，则所有检查将被跳过，和 "经典" Jam 一样。但是，参数列表大大改进了你的规则的可靠性和可读性，<span class="bold"><strong>强烈建议</strong></span>在你新编写的 Jam 代码中使用。
+        </p>
+</div>
+<div class="section" lang="en">
+<div class="titlepage"><div><div><h4 class="title">
+<a name="jam.language.rules.builtins"></a><a class="link" href="language.html#jam.language.rules.builtins" title="Built-in Rules"> Built-in Rules 内建规则</a>
+</h4></div></div></div>
+<div class="toc"><dl>
+<dt><span class="section"><a href="language.html#jam.language.rules.builtins.dependency_building">Dependency
+          Building 依赖关系构建</a></span></dt>
+<dt><span class="section"><a href="language.html#jam.language.rules.builtins.modifying_binding">Modifying
+          Binding 修改构建</a></span></dt>
+<dt><span class="section"><a href="language.html#jam.language.rules.builtins.utility">Utility 工具</a></span></dt>
+</dl></div>
+<p>
+          <code class="literal">BJam</code> has a growing set of built-in rules, all of which
+          are pure procedure rules without updating actions. They are in three groups:
+          the first builds the dependency graph; the second modifies it; and the
+          third are just utility rules.<br><code class="literal">BJam</code> 有一组新增的内建规则，它们都是不带更新动作的纯过程规则。它们被分为三组：第一组构建依赖关系图；第二组修改它；第三组是工具规则。
+        </p>
+<div class="section" lang="en">
+<div class="titlepage"><div><div><h5 class="title">
+<a name="jam.language.rules.builtins.dependency_building"></a><a class="link" href="language.html#jam.language.rules.builtins.dependency_building" title="Dependency Building">Dependency
+          Building 依赖关系构建</a>
+</h5></div></div></div>
+<div class="section" lang="en">
+<div class="titlepage"><div><div><h6 class="title">
+<a name="jam.language.rules.builtins.dependency_building._depends__"></a><a class="link" href="language.html#jam.language.rules.builtins.dependency_building._depends__" title="DEPENDS"><code class="literal">DEPENDS</code>
+            </a>
+</h6></div></div></div>
+<pre class="programlisting">rule DEPENDS ( <span class="emphasis"><em>targets1</em></span> * : <span class="emphasis"><em>targets2</em></span> * )<br></pre>
+<p>
+              Builds a direct dependency: makes each of <span class="emphasis"><em>targets1</em></span>
+              depend on each of <span class="emphasis"><em>targets2</em></span>. Generally, <span class="emphasis"><em>targets1</em></span>
+              will be rebuilt if <span class="emphasis"><em>targets2</em></span> are themselves rebuilt or are newer than <span class="emphasis"><em>targets1</em></span>.<br>构建一个直接依赖关系：让每个 <span class="emphasis"><em>targets1</em></span>
+              依赖于每个 <span class="emphasis"><em>targets2</em></span>。通常，如果 <span class="emphasis"><em>targets2</em></span>
+              本身被重新构建或比 <span class="emphasis"><em>targets1</em></span> 新，则重新构建 <span class="emphasis"><em>targets1</em></span>。
+            </p>
+</div>
+<div class="section" lang="en">
+<div class="titlepage"><div><div><h6 class="title">
+<a name="jam.language.rules.builtins.dependency_building._includes__"></a><a class="link" href="language.html#jam.language.rules.builtins.dependency_building._includes__" title="INCLUDES"><code class="literal">INCLUDES</code>
+            </a>
+</h6></div></div></div>
+<pre class="programlisting">rule INCLUDES ( <span class="emphasis"><em>targets1</em></span> * : <span class="emphasis"><em>targets2</em></span> * )<br></pre>
+<p>
+              Builds a sibling dependency: makes any target that depends on any of
+              <span class="emphasis"><em>targets1</em></span> also depend on each of <span class="emphasis"><em>targets2</em></span>.
+              This reflects the dependencies that arise when one source file includes
+              another: the object built from the source file depends both on the
+              original and included source file, but the two sources files don't
+              depend on each other. For example:<br>构建一个兄弟依赖关系：让任何依赖于任一
+              <span class="emphasis"><em>targets1</em></span> 的目标也依赖于每个 <span class="emphasis"><em>targets2</em></span>。它反映了当一个源文件包含另一个文件时引起的依赖关系：从源文件所构建的对象同时依赖于原始文件和其中包含的源文件，但是这两个源文件互不依赖。例如：
+            </p>
+<pre class="programlisting">DEPENDS foo.o : foo.c ;<br>INCLUDES foo.c : foo.h ;<br></pre>
+<p>
+              "<code class="literal">foo.o</code>" depends on "<code class="literal">foo.c</code>"
+              and "<code class="literal">foo.h</code>" in this example.<br>在这个例子中，"<code class="literal">foo.o</code>" 依赖于 "<code class="literal">foo.c</code>" 和 "<code class="literal">foo.h</code>"。
+            </p>
+</div>
+</div>
+<div class="section" lang="en">
+<div class="titlepage"><div><div><h5 class="title">
+<a name="jam.language.rules.builtins.modifying_binding"></a><a class="link" href="language.html#jam.language.rules.builtins.modifying_binding" title="Modifying Binding">Modifying
+          Binding 修改构建</a>
+</h5></div></div></div>
+<p>
+            The six rules <code class="literal">ALWAYS</code>, <code class="literal">LEAVES</code>,
+            <code class="literal">NOCARE</code>, <code class="literal">NOTFILE</code>, <code class="literal">NOUPDATE</code>,
+            and <code class="literal">TEMPORARY</code> modify the dependency graph so that
+            <code class="literal">bjam</code> treats the targets differently during its target
+            binding phase. See Binding above. Normally, <code class="literal">bjam</code> updates
+            a target if it is missing, if its filesystem modification time is older
+            than any of its dependencies (recursively), or if any of its dependencies
+            are being updated. This basic behavior can be changed by invoking the
+            following rules:<br>有六个规则 <code class="literal">ALWAYS</code>, <code class="literal">LEAVES</code>,
+            <code class="literal">NOCARE</code>, <code class="literal">NOTFILE</code>, <code class="literal">NOUPDATE</code>, 和 <code class="literal">TEMPORARY</code> 会修改依赖关系图，让
+            <code class="literal">bjam</code> 在目标绑定阶段特殊对待这些目标。参见前文中的"绑定"。通常，<code class="literal">bjam</code> 在一个目标不存在，或文件系统中的文件修改时间早于它的任一个依赖文件(递归地)，或它的任一依赖文件被更新时更新该目标。这种基本行为可以通过调用以下规则来改变：
+          </p>
+<div class="section" lang="en">
+<div class="titlepage"><div><div><h6 class="title">
+<a name="jam.language.rules.builtins.modifying_binding._always__"></a><a class="link" href="language.html#jam.language.rules.builtins.modifying_binding._always__" title="ALWAYS"><code class="literal">ALWAYS</code>
+            </a>
+</h6></div></div></div>
+<pre class="programlisting">rule ALWAYS ( <span class="emphasis"><em>targets</em></span> * )<br></pre>
+<p>
+              Causes <span class="emphasis"><em>targets</em></span> to be rebuilt regardless of whether
+              they are up-to-date (they must still be in the dependency graph). This
+              is used for the clean and uninstall targets, as they have no dependencies
+              and would otherwise appear never to need building. It is best applied
+              to targets that are also <code class="literal">NOTFILE</code> targets, but it
+              can also be used to force a real file to be updated as well.<br>不论 <span class="emphasis"><em>targets</em></span> 是否最新的，均重新构建(但目标必须是在依赖关系图中的)。它用于干净和去安装的目标，因为它们没有依赖关系，不会出现在需要构建的目标中。它最适合用于 <code class="literal">NOTFILE</code> 的目标，不过也可以用于强迫更新一个真实文件。
+            </p>
+</div>
+<div class="section" lang="en">
+<div class="titlepage"><div><div><h6 class="title">
+<a name="jam.language.rules.builtins.modifying_binding._leaves__"></a><a class="link" href="language.html#jam.language.rules.builtins.modifying_binding._leaves__" title="LEAVES"><code class="literal">LEAVES</code>
+            </a>
+</h6></div></div></div>
+<pre class="programlisting">rule LEAVES ( <span class="emphasis"><em>targets</em></span> * )<br></pre>
+<p>
+              Makes each of <span class="emphasis"><em>targets</em></span> depend only on its leaf
+              sources, and not on any intermediate targets. This makes it immune
+              to its dependencies being updated, as the "leaf" dependencies
+              are those without their own dependencies and without updating actions.
+              This allows a target to be updated only if original source files change.<br>使得每个 <span class="emphasis"><em>targets</em></span> 只依赖于它的叶子源文件，而不依赖于任何中间目标。这使得它不受依赖关系更新的影响，因为"叶子"依赖关系没有本身的依赖关系和更新动作。它允许一个目标仅当其原始源文件变化时才更新。
+            </p>
+</div>
+<div class="section" lang="en">
+<div class="titlepage"><div><div><h6 class="title">
+<a name="jam.language.rules.builtins.modifying_binding._nocare__"></a><a class="link" href="language.html#jam.language.rules.builtins.modifying_binding._nocare__" title="NOCARE"><code class="literal">NOCARE</code>
+            </a>
+</h6></div></div></div>
+<pre class="programlisting">rule NOCARE ( <span class="emphasis"><em>targets</em></span> * )<br></pre>
+<p>
+              Causes <code class="literal">bjam</code> to ignore <span class="emphasis"><em>targets</em></span>
+              that neither can be found nor have updating actions to build them.
+              Normally for such targets <code class="literal">bjam</code> issues a warning
+              and then skips other targets that depend on these missing targets.
+              The <code class="literal">HdrRule</code> in <code class="literal">Jambase</code> uses
+              <code class="literal">NOCARE</code> on the header file names found during header
+              file scanning, to let <code class="literal">bjam</code> know that the included
+              files may not exist. For example, if an <code class="computeroutput"><span class="preprocessor">#include</span></code>
+              is within an <code class="computeroutput"><span class="preprocessor">#ifdef</span></code>,
+              the included file may not actually be around.<br>让 <code class="literal">bjam</code> 忽略 <span class="emphasis"><em>targets</em></span>，既不管是否能找到它们，也不管是否有更新动作来更新它们。通常对于这些目标，<code class="literal">bjam</code> 发出一个警告然后跳过其它依赖于这些不可用目标的目标。在&nbsp;<code class="literal">Jambase</code> 中的 <code class="literal">HdrRule</code> 对那些在头文件扫描期间找到的头文件名使用
+              <code class="literal">NOCARE</code>，让 <code class="literal">bjam</code> 知道这些头文件可能会不存在。例如，如果一个 <code class="computeroutput"><span class="preprocessor">#include</span></code>
+              是在 <code class="computeroutput"><span class="preprocessor">#ifdef</span></code> 中的，那么被包含的头文件可能并不真实存在。
+            </p>
+<div class="warning"><table summary="Warning" border="0">
+<tbody><tr>
+<td rowspan="2" align="center" valign="top" width="25"><img alt="[Warning]" src="../../../doc/html/images/warning.png"></td>
+<th align="left">Warning 警告</th>
+</tr>
+<tr><td align="left" valign="top"><p>
+                For targets with build actions: if their build actions exit with
+                a nonzero return code, dependent targets will still be built.</p><p>对于带有构建动作的目标：如果它们的构建动作以一个非零返回码退出，则依赖它的目标仍会被构建。
+              </p></td></tr>
+</tbody></table></div>
+</div>
+<div class="section" lang="en">
+<div class="titlepage"><div><div><h6 class="title">
+<a name="jam.language.rules.builtins.modifying_binding._notfile__"></a><a class="link" href="language.html#jam.language.rules.builtins.modifying_binding._notfile__" title="NOTFILE"><code class="literal">NOTFILE</code>
+            </a>
+</h6></div></div></div>
+<pre class="programlisting">rule NOTFILE ( <span class="emphasis"><em>targets</em></span> * )<br></pre>
+<p>
+              Marks <span class="emphasis"><em>targets</em></span> as pseudotargets and not real files.
+              No timestamp is checked, and so the actions on such a target are only
+              executed if the target's dependencies are updated, or if the target
+              is also marked with <code class="literal">ALWAYS</code>. The default <code class="literal">bjam</code>
+              target "<code class="literal">all</code>" is a pseudotarget. In <code class="literal">Jambase</code>,
+              <code class="literal">NOTFILE</code> is used to define several addition convenient
+              pseudotargets.<br>将 <span class="emphasis"><em>targets</em></span> 标记为伪目标和非真实文件。没有时间戳可被检查，所以在这种目标上的动作只有当目标的依赖对象被更新，或该目标同时被标记为 <code class="literal">ALWAYS</code> 时才会执行。缺省的 <code class="literal">bjam</code>
+              目标 "<code class="literal">all</code>" 就是一个伪目标。在 <code class="literal">Jambase</code> 中，<code class="literal">NOTFILE</code> 被用来定义了几个另外的方便使用的伪目标。
+            </p>
+</div>
+<div class="section" lang="en">
+<div class="titlepage"><div><div><h6 class="title">
+<a name="jam.language.rules.builtins.modifying_binding._noupdate__"></a><a class="link" href="language.html#jam.language.rules.builtins.modifying_binding._noupdate__" title="NOUPDATE"><code class="literal">NOUPDATE</code>
+            </a>
+</h6></div></div></div>
+<pre class="programlisting">rule NOUPDATE ( <span class="emphasis"><em>targets</em></span> * )<br></pre>
+<p>
+              Causes the timestamps on <span class="emphasis"><em>targets</em></span> to be ignored.
+              This has two effects: first, once the target has been created it will
+              never be updated; second, manually updating target will not cause other
+              targets to be updated. In <code class="literal">Jambase</code>, for example,
+              this rule is applied to directories by the <code class="literal">MkDir</code>
+              rule, because <code class="literal">MkDir</code> only cares that the target directory
+              exists, not when it has last been updated.<br>使得 <span class="emphasis"><em>targets</em></span> 的时间戳被忽略。这有两个作用：首先，一旦该目标被创建就不会再被更新；其次，手工更新目标不会引起其它目标被更新。例如，在 <code class="literal">Jambase</code> 中，这个规则被 <code class="literal">MkDir</code>
+              规则应用于目录，因为 <code class="literal">MkDir</code> 只关心目标目录是否存在，而不关心目录何时被最后更新。
+            </p>
+</div>
+<div class="section" lang="en">
+<div class="titlepage"><div><div><h6 class="title">
+<a name="jam.language.rules.builtins.modifying_binding._temporary__"></a><a class="link" href="language.html#jam.language.rules.builtins.modifying_binding._temporary__" title="TEMPORARY"><code class="literal">TEMPORARY</code>
+            </a>
+</h6></div></div></div>
+<pre class="programlisting">rule TEMPORARY ( <span class="emphasis"><em>targets</em></span> * )<br></pre>
+<p>
+              Marks <span class="emphasis"><em>targets</em></span> as temporary, allowing them to be
+              removed after other targets that depend upon them have been updated.
+              If a <code class="literal">TEMPORARY</code> target is missing, <code class="literal">bjam</code>
+              uses the timestamp of the target's parent. <code class="literal">Jambase</code>
+              uses <code class="literal">TEMPORARY</code> to mark object files that are archived
+              in a library after they are built, so that they can be deleted after
+              they are archived.<br>将 <span class="emphasis"><em>targets</em></span> 标记为临时的，允许在依赖于它们的其它目标完成更新后删除它们。如果一个 <code class="literal">TEMPORARY</code> 目标不存在，<code class="literal">bjam</code>
+              就使用该目标的父目录的时间戳。<code class="literal">Jambase</code>
+              使用 <code class="literal">TEMPORARY</code> 来对在构建后归档到库中的文件进行标记，这样在它们被归档后就可以删除了。
+            </p>
+</div>
+<div class="section" lang="en">
+<div class="titlepage"><div><div><h6 class="title">
+<a name="jam.language.rules.builtins.modifying_binding._fail_expected__"></a><a class="link" href="language.html#jam.language.rules.builtins.modifying_binding._fail_expected__" title="FAIL_EXPECTED"><code class="literal">FAIL_EXPECTED</code>
+            </a>
+</h6></div></div></div>
+<pre class="programlisting">rule FAIL_EXPECTED ( <span class="emphasis"><em>targets</em></span> * )<br></pre>
+<p>
+              For handling targets whose build actions are expected to fail (e.g.
+              when testing that assertions or compile-time type checking work properly),
+              Boost Jam supplies the <code class="literal">FAIL_EXPECTED</code> rule in the
+              same style as <code class="literal">NOCARE</code>, et. al. During target updating,
+              the return code of the build actions for arguments to <code class="literal">FAIL_EXPECTED</code>
+              is inverted: if it fails, building of dependent targets continues as
+              though it succeeded. If it succeeds, dependent targets are skipped.<br>为了处理那些构建动作预期会失败(如，在测试断言或编译期类型检查是否正确工作时)的目标，Boost Jam 提供了 <code class="literal">FAIL_EXPECTED</code> 规则，它与 <code class="literal">NOCARE</code> 相似，只是在目标更新期间，对于 <code class="literal">FAIL_EXPECTED</code>
+              目标的构建动作的返回码是相反的：如果失败，相关目标的构建会继续。而如果成功，则相关目标被跳过。
+            </p>
+</div>
+<div class="section" lang="en">
+<div class="titlepage"><div><div><h6 class="title">
+<a name="jam.language.rules.builtins.modifying_binding._rmold__"></a><a class="link" href="language.html#jam.language.rules.builtins.modifying_binding._rmold__" title="RMOLD"><code class="literal">RMOLD</code>
+            </a>
+</h6></div></div></div>
+<pre class="programlisting">rule RMOLD ( <span class="emphasis"><em>targets</em></span> * )<br></pre>
+<p>
+              <code class="literal">BJam</code> removes any target files that may exist on
+              disk when the rule used to build those targets fails. However, targets
+              whose dependencies fail to build are not removed by default. The <code class="literal">RMOLD</code>
+              rule causes its arguments to be removed if any of their dependencies
+              fail to build.<br><code class="literal">BJam</code> 在使用该规则构建目标失败时将删除可能留在磁盘上的目标文件。但是，那些依赖于构建失败的对象的目标缺省并不删除。<code class="literal">RMOLD</code>
+              规则导致其参数在它们所依赖的对象构建失败时被删除。
+            </p>
+</div>
+<div class="section" lang="en">
+<div class="titlepage"><div><div><h6 class="title">
+<a name="jam.language.rules.builtins.modifying_binding._isfile__"></a><a class="link" href="language.html#jam.language.rules.builtins.modifying_binding._isfile__" title="ISFILE"><code class="literal">ISFILE</code>
+            </a>
+</h6></div></div></div>
+<pre class="programlisting">rule ISFILE ( <span class="emphasis"><em>targets</em></span> * )<br></pre>
+<p>
+              <code class="literal">ISFILE</code> marks targets as required to be files. This
+              changes the way <code class="literal">bjam</code> searches for the target such
+              that it ignores mathes for file system items that are not file, like
+              directories. This makes it possible to avoid <code class="computeroutput"><span class="preprocessor">#include</span>
+              <span class="string">"exception"</span></code> matching
+              if one happens to have a directory named exception in the header search
+              path.<br><code class="literal">ISFILE</code> 将 targets 标记为要求目标必须是文件。这将改变 <code class="literal">bjam</code> 查找目标的方式，它将忽略那些被匹配到的但不是文件的文件系统项目，如目录。这样可以避免 <code class="computeroutput"><span class="preprocessor">#include</span>
+              <span class="string">"exception"</span></code> 在恰好有一个名为 exception 的目录位于头文件查找路径中时不会被匹配到。
+            </p>
+<div class="warning"><table summary="Warning" border="0">
+<tbody><tr>
+<td rowspan="2" align="center" valign="top" width="25"><img alt="[Warning]" src="../../../doc/html/images/warning.png"></td>
+<th align="left">Warning 警告</th>
+</tr>
+<tr><td align="left" valign="top"><p>
+                This is currently not fully implemented.</p><p>当前尚未完全实现。
+              </p></td></tr>
+</tbody></table></div>
+</div>
+</div>
+<div class="section" lang="en">
+<div class="titlepage"><div><div><h5 class="title">
+<a name="jam.language.rules.builtins.utility"></a><a class="link" href="language.html#jam.language.rules.builtins.utility" title="Utility">Utility 工具</a>
+</h5></div></div></div>
+<p>
+            The two rules <code class="literal">ECHO</code> and <code class="literal">EXIT</code> are
+            utility rules, used only in <code class="literal">bjam</code>'s parsing phase.<br><code class="literal">ECHO</code> 和 <code class="literal">EXIT</code> 这两个规则是工具规则，仅在 <code class="literal">bjam</code> 的分析阶段使用。
+          </p>
+<div class="section" lang="en">
+<div class="titlepage"><div><div><h6 class="title">
+<a name="jam.language.rules.builtins.utility._echo__"></a><a class="link" href="language.html#jam.language.rules.builtins.utility._echo__" title="ECHO"><code class="literal">ECHO</code>
+            </a>
+</h6></div></div></div>
+<pre class="programlisting">rule ECHO ( <span class="emphasis"><em>args</em></span> * )<br></pre>
+<p>
+              Blurts out the message <span class="emphasis"><em>args</em></span> to stdout.<br>将信息 <span class="emphasis"><em>args</em></span> 输出到 stdout。
+            </p>
+</div>
+<div class="section" lang="en">
+<div class="titlepage"><div><div><h6 class="title">
+<a name="jam.language.rules.builtins.utility._exit__"></a><a class="link" href="language.html#jam.language.rules.builtins.utility._exit__" title="EXIT"><code class="literal">EXIT</code>
+            </a>
+</h6></div></div></div>
+<pre class="programlisting">rule EXIT ( <span class="emphasis"><em>message</em></span> * : <span class="emphasis"><em>result-value</em></span> ? )<br></pre>
+<p>
+              Blurts out the <span class="emphasis"><em>message</em></span> to stdout and then exits
+              with a failure status if no <span class="emphasis"><em>result-value</em></span> is given,
+              otherwise it exits with the given <span class="emphasis"><em>result-value</em></span>.<br>将 <span class="emphasis"><em>message</em></span> 输出到 stdout，然后如果没有给出 <span class="emphasis"><em>result-value</em></span> 则以一个失败状态退出，否则以给定的 <span class="emphasis"><em>result-value</em></span> 退出。
+            </p>
+<p>
+              "<code class="literal">Echo</code>", "<code class="literal">echo</code>",
+              "<code class="literal">Exit</code>", and "<code class="literal">exit</code>"
+              are accepted as aliases for <code class="literal">ECHO</code> and <code class="literal">EXIT</code>,
+              since it is hard to tell that these are built-in rules and not part
+              of the language, like "<code class="literal">include</code>".<br>"<code class="literal">Echo</code>", "<code class="literal">echo</code>",
+              "<code class="literal">Exit</code>", 和 "<code class="literal">exit</code>"
+              均可作为 <code class="literal">ECHO</code> 和 <code class="literal">EXIT</code> 的别名，因为很难说它们是内建规则而不是语言的一部分，象 "<code class="literal">include</code>"。
+            </p>
+</div>
+<div class="section" lang="en">
+<div class="titlepage"><div><div><h6 class="title">
+<a name="jam.language.rules.builtins.utility._glob__"></a><a class="link" href="language.html#jam.language.rules.builtins.utility._glob__" title="GLOB"><code class="literal">GLOB</code>
+            </a>
+</h6></div></div></div>
+<p>
+              The <code class="literal">GLOB</code> rule does filename globbing.<br><code class="literal">GLOB</code> 规则将文件名组合起来。
+            </p>
+<pre class="programlisting">rule GLOB ( <span class="emphasis"><em>directories</em></span> * : <span class="emphasis"><em>patterns</em></span> * : <span class="emphasis"><em>downcase-opt</em></span> ? )<br></pre>
+<p>
+              Using the same wildcards as for the patterns in the switch statement.
+              It is invoked by being used as an argument to a rule invocation inside
+              of "<code class="literal">[ ]</code>". For example: "<code class="literal">FILES
+              = [ GLOB dir1 dir2 : *.c *.h ]</code>" sets <code class="literal">FILES</code>
+              to the list of C source and header files in <code class="literal">dir1</code>
+              and <code class="literal">dir2</code>. The resulting filenames are the full pathnames,
+              including the directory, but the pattern is applied only to the file
+              name without the directory.&nbsp;<br>使用和在 switch 语句中的模式相同的通配符。它被用作一个在&nbsp;"<code class="literal">[ ]</code>" 中的规则调用的参数。例如："<code class="literal">FILES
+              = [ GLOB dir1 dir2 : *.c *.h ]</code>" 将 <code class="literal">FILES</code>
+              设置为在 <code class="literal">dir1</code> 和 <code class="literal">dir2</code> 中的C源文件和头文件的列表。得到的文件名是全路径名，包括所在的目录，但所应用的模式只使用没有目录的文件名。
+            </p>
+<p>
+              If <span class="emphasis"><em>downcase-opt</em></span> is supplied, filenames are converted
+              to all-lowercase before matching against the pattern; you can use this
+              to do case-insensitive matching using lowercase patterns. The paths
+              returned will still have mixed case if the OS supplies them. On Windows
+              NT and Cygwin, filenames are always downcased before matching.<br>如果给出了 <span class="emphasis"><em>downcase-opt</em></span>，则文件名在与模式匹配之前要转换为小写；你可以使用它来与小写的模式进行大小写不敏感的匹配。如果OS是支持大小写敏感的，则返回的路径名仍会具有大小写。在 Windows
+              NT 和 Cygwin 中，文件名在匹配前总是转为小写
+            </p>
+</div>
+<div class="section" lang="en">
+<div class="titlepage"><div><div><h6 class="title">
+<a name="jam.language.rules.builtins.utility._match__"></a><a class="link" href="language.html#jam.language.rules.builtins.utility._match__" title="MATCH"><code class="literal">MATCH</code>
+            </a>
+</h6></div></div></div>
+<p>
+              The <code class="literal">MATCH</code> rule does pattern matching.<br><code class="literal">MATCH</code> 规则进行模式匹配。
+            </p>
+<pre class="programlisting">rule MATCH ( <span class="emphasis"><em>regexps</em></span> + : <span class="emphasis"><em>list</em></span> * )<br></pre>
+<p>
+              Matches the <code class="literal">egrep</code>(1) style regular expressions
+              <span class="emphasis"><em>regexps</em></span> against the strings in <span class="emphasis"><em>list</em></span>.
+              The result is the concatenation of matching <code class="literal">()</code> subexpressions
+              for each string in <span class="emphasis"><em>list</em></span>, and for each regular
+              expression in <span class="emphasis"><em>regexps</em></span>. Only useful within the
+              "<code class="literal">[ ]</code>" construct, to change the result
+              into a list.<br>按&nbsp;<code class="literal">egrep</code>(1) 风格的正规表达式
+              <span class="emphasis"><em>regexps</em></span> 匹配 <span class="emphasis"><em>list</em></span> 中的字符串。结果是这样得到的，对 <span class="emphasis"><em>list</em></span> 中的各个字符串按&nbsp;<span class="emphasis"><em>regexps</em></span> &nbsp;中各个正规表达式进行匹配，与各个 <code class="literal">()</code> 子表达式相匹配的字符串串联起来即为结果。它只在
+              "<code class="literal">[ ]</code>" 结构内部使用，用于将结果变为列表。
+            </p>
+</div>
+<div class="section" lang="en">
+<div class="titlepage"><div><div><h6 class="title">
+<a name="jam.language.rules.builtins.utility._backtrace__"></a><a class="link" href="language.html#jam.language.rules.builtins.utility._backtrace__" title="BACKTRACE"><code class="literal">BACKTRACE</code>
+            </a>
+</h6></div></div></div>
+<pre class="programlisting">rule BACKTRACE ( )<br></pre>
+<p>
+              Returns a list of quadruples: <span class="emphasis"><em>filename</em></span> <span class="emphasis"><em>line</em></span>
+              <span class="emphasis"><em>module</em></span> <span class="emphasis"><em>rulename</em></span>..., describing
+              each shallower level of the call stack. This rule can be used to generate
+              useful diagnostic messages from Jam rules.<br>返回一个由四部分组成的列表：<span class="emphasis"><em>filename</em></span> <span class="emphasis"><em>line</em></span>
+              <span class="emphasis"><em>module</em></span> <span class="emphasis"><em>rulename</em></span>...，表示调用栈的各层。该规则可用于从 Jam 规则生成有用的调试信息。
+            </p>
+</div>
+<div class="section" lang="en">
+<div class="titlepage"><div><div><h6 class="title">
+<a name="jam.language.rules.builtins.utility._update__"></a><a class="link" href="language.html#jam.language.rules.builtins.utility._update__" title="UPDATE"><code class="literal">UPDATE</code>
+            </a>
+</h6></div></div></div>
+<pre class="programlisting">rule UPDATE ( <span class="emphasis"><em>targets</em></span> * )<br></pre>
+<p>
+              Classic jam treats any non-option element of command line as a name
+              of target to be updated. This prevented more sophisticated handling
+              of command line. This is now enabled again but with additional changes
+              to the <code class="literal">UPDATE</code> rule to allow for the flexibility
+              of changing the list of targets to update. The UPDATE rule has two
+              effects:<br>经典的 jam 将命令行中任何非可选元素视为要更新的目标名。这防止了对命令行进行更为复杂的处理。现在也可以这样做，不过已变为用 <code class="literal">UPDATE</code> 规则来允许对更新目标列表的灵活修改。UPDATE 规则有两个作用：
+            </p>
+<div class="orderedlist"><ol type="1">
+<li>
+                It clears the list of targets to update, and<br>它清除更新目标列表，并
+              </li>
+<li>
+                Causes the specified targets to be updated.<br>将特定目标列为更新。
+              </li>
+</ol></div>
+<p>
+              If no target was specified with the <code class="literal">UPDATE</code> rule,
+              no targets will be updated. To support changing of the update list
+              in more useful ways, the rule also returns the targets previously
+              in the update list. This makes it possible to add targets as such:<br>如果在 <code class="literal">UPDATE</code> 规则中没有指定目标，则没有目标会被更新。为了以更有用的方式支持更新列表的修改，该规则还会返回之前在更新列表中的目标。这样就可以象下面这样来增加目标：
+            </p>
+<pre class="programlisting">local previous-updates = [ UPDATE ] ;<br>UPDATE $(previous-updates) a-new-target ;<br></pre>
+</div>
+<div class="section" lang="en">
+<div class="titlepage"><div><div><h6 class="title">
+<a name="jam.language.rules.builtins.utility._w32_getreg__"></a><a class="link" href="language.html#jam.language.rules.builtins.utility._w32_getreg__" title="W32_GETREG"><code class="literal">W32_GETREG</code>
+            </a>
+</h6></div></div></div>
+<pre class="programlisting">rule W32_GETREG ( <span class="emphasis"><em>path</em></span> : <span class="emphasis"><em>data</em></span> ? )<br></pre>
+<p>
+              Defined only for win32 platform. It reads the registry of Windows.
+              '<span class="emphasis"><em>path</em></span>' is the location of the information, and
+              '<span class="emphasis"><em>data</em></span>' is the name of the value which we want
+              to get. If '<span class="emphasis"><em>data</em></span>' is omitted, the default value
+              of '<span class="emphasis"><em>path</em></span>' will be returned. The '<span class="emphasis"><em>path</em></span>'
+              value must conform to MS key path format and must be prefixed with
+              one of the predefined root keys. As usual,<br>仅对 win32 平台定义。它读入 Windows 的注册表。'<span class="emphasis"><em>path</em></span>' 为所读信息的位置，'<span class="emphasis"><em>data</em></span>' 为所读值的名字。如果没有给出 '<span class="emphasis"><em>data</em></span>'，则返回 '<span class="emphasis"><em>path</em></span>' 的缺省值。'<span class="emphasis"><em>path</em></span>'
+              的值必须符合 MS 键值路径格式，必须以某个预定义根键为前缀。通常，
+            </p>
+<div class="itemizedlist"><ul type="disc">
+<li>
+                '<code class="literal">HKLM</code>' is equivalent to '<code class="literal">HKEY_LOCAL_MACHINE</code>'.
+              <br>'<code class="literal">HKLM</code>' 等价于 '<code class="literal">HKEY_LOCAL_MACHINE</code>'.
+              </li>
+<li>
+                '<code class="literal">HKCU</code>' is equivalent to '<code class="literal">HKEY_CURRENT_USER</code>'.<br>
+                '<code class="literal">HKCU</code>'&nbsp;等价于 '<code class="literal">HKEY_CURRENT_USER</code>'.
+              </li>
+<li>
+                '<code class="literal">HKCR</code>' is equivalent to '<code class="literal">HKEY_CLASSES_ROOT</code>'.<br>
+                '<code class="literal">HKCR</code>'&nbsp;等价于 '<code class="literal">HKEY_CLASSES_ROOT</code>'.
+              </li>
+</ul></div>
+<p>
+              Other predefined root keys are not supported.<br>不支持其它的预定义根键。
+            </p>
+<p>
+              Currently supported data types : '<code class="literal">REG_DWORD</code>', '<code class="literal">REG_SZ</code>',
+              '<code class="literal">REG_EXPAND_SZ</code>', '<code class="literal">REG_MULTI_SZ</code>'.
+              The data with '<code class="literal">REG_DWORD</code>' type will be turned into
+              a string, '<code class="literal">REG_MULTI_SZ</code>' into a list of strings,
+              and for those with '<code class="literal">REG_EXPAND_SZ</code>' type environment
+              variables in it will be replaced with their defined values. The data
+              with '<code class="literal">REG_SZ</code>' type and other unsupported types will
+              be put into a string without modification. If it can't receive the
+              value of the data, it just return an empty list. For example,<br>当前支持的数据类型：'<code class="literal">REG_DWORD</code>', '<code class="literal">REG_SZ</code>',
+              '<code class="literal">REG_EXPAND_SZ</code>', '<code class="literal">REG_MULTI_SZ</code>'。'<code class="literal">REG_DWORD</code>' 类型的数据将被转换为字符串，'<code class="literal">REG_MULTI_SZ</code>' 则转换为字符串列表，'<code class="literal">REG_EXPAND_SZ</code>' 类型中的环境变量将被替换为它们的定义值。'<code class="literal">REG_SZ</code>' 类型和其它未支持类型的数据将被照原样置于一个字符串中。如果不能接受数据的类型，则只返回一个空的列表。例如：
+            </p>
+<pre class="programlisting">local PSDK-location =<br>  [ W32_GETREG HKEY_LOCAL_MACHINE\\SOFTWARE\\Microsoft\\MicrosoftSDK\\Directories : "Install Dir" ] ;<br></pre>
+</div>
+<div class="section" lang="en">
+<div class="titlepage"><div><div><h6 class="title">
+<a name="jam.language.rules.builtins.utility._w32_getregnames__"></a><a class="link" href="language.html#jam.language.rules.builtins.utility._w32_getregnames__" title="W32_GETREGNAMES"><code class="literal">W32_GETREGNAMES</code>
+            </a>
+</h6></div></div></div>
+<pre class="programlisting">rule W32_GETREGNAMES ( <span class="emphasis"><em>path</em></span> : <span class="emphasis"><em>result-type</em></span> )<br></pre>
+<p>
+              Defined only for win32 platform. It reads the registry of Windows.
+              '<span class="emphasis"><em>path</em></span>' is the location of the information, and
+              '<span class="emphasis"><em>result-type</em></span>' is either '<code class="literal">subkeys</code>'
+              or '<code class="literal">values</code>'. For more information on '<span class="emphasis"><em>path</em></span>'
+              format and constraints, please see <code class="literal">W32_GETREG</code>.<br>只对 win32 平台定义。它读入 Windows 的注册表。'<span class="emphasis"><em>path</em></span>' 为所读信息的位置，'<span class="emphasis"><em>result-type</em></span>' 为 '<code class="literal">subkeys</code>' 或 '<code class="literal">values</code>'。有关 '<span class="emphasis"><em>path</em></span>'
+              格式和约束的信息，请参见 <code class="literal">W32_GETREG</code>.
+            </p>
+<p>
+              Depending on '<span class="emphasis"><em>result-type</em></span>', the rule returns one
+              of the following:<br>取决于 '<span class="emphasis"><em>result-type</em></span>'，该规则返回以下之一：
+            </p>
+<div class="variablelist">
+
+<dl>
+<dt><span class="term"><code class="literal">subkeys</code></span></dt>
+<dd><p>
+                  Names of all direct subkeys of '<span class="emphasis"><em>path</em></span>'.<br>'<span class="emphasis"><em>path</em></span>' 所有直接子键的名字。
+                </p></dd>
+<dt><span class="term"><code class="literal">values</code></span></dt>
+<dd><p>
+                  Names of values contained in registry key given by '<span class="emphasis"><em>path</em></span>'.
+                  The "default" value of the key appears in the returned
+                  list only if its value has been set in the registry.<br>由 '<span class="emphasis"><em>path</em></span>' 给出的注册表键中所包含值的名字。仅当某个键的值已经在注册表中设置，该键的 "default" 缺省值才会出现在返回列表中。
+                </p></dd>
+</dl>
+</div>
+<p>
+              If '<span class="emphasis"><em>result-type</em></span>' is not recognized, or requested
+              data cannot be retrieved, the rule returns an empty list. Example:<br>如果 '<span class="emphasis"><em>result-type</em></span>' 未经验证，或者所请求的数据不可取得，则该规则返回一个空列表。例如：
+            </p>
+<pre class="programlisting">local key = "HKEY_LOCAL_MACHINE\\SOFTWARE\\Microsoft\\Windows\\CurrentVersion\\App Paths" ;<br>local subkeys = [ W32_GETREGNAMES "$(key)" : subkeys ] ;<br>for local subkey in $(subkeys)<br>{<br>    local values = [ W32_GETREGNAMES "$(key)\\$(subkey)" : values ] ;<br>    for local value in $(values)<br>    {<br>        local data = [ W32_GETREG "$(key)\\$(subkey)" : "$(value)" ] ;<br>        ECHO "Registry path: " $(key)\\$(subkey) ":" $(value) "=" $(data) ;<br>    }<br>}<br></pre>
+</div>
+<div class="section" lang="en">
+<div class="titlepage"><div><div><h6 class="title">
+<a name="jam.language.rules.builtins.utility._shell__"></a><a class="link" href="language.html#jam.language.rules.builtins.utility._shell__" title="SHELL"><code class="literal">SHELL</code>
+            </a>
+</h6></div></div></div>
+<pre class="programlisting">rule SHELL ( <span class="emphasis"><em>command</em></span> : * )<br></pre>
+<p>
+              <code class="literal">SHELL</code> executes <span class="emphasis"><em>command</em></span>, and
+              then returns the standard output of <span class="emphasis"><em>command</em></span>.
+              <code class="literal">SHELL</code> only works on platforms with a <code class="literal">popen()</code>
+              function in the C library. On platforms without a working <code class="literal">popen()</code>
+              function, <code class="literal">SHELL</code> is implemented as a no-op. <code class="literal">SHELL</code>
+              works on Unix, MacOS X, and most Windows compilers. <code class="literal">SHELL</code>
+              is a no-op on Metrowerks compilers under Windows. There is a variable
+              set of allowed options as additional arguments:<br><code class="literal">SHELL</code> 执行 <span class="emphasis"><em>command</em></span>，然后返回 <span class="emphasis"><em>command</em></span> 的标准输出。<code class="literal">SHELL</code> 仅工作于在C库中带有 <code class="literal">popen()</code>
+              函数的平台上。在不带有可用的 <code class="literal">popen()</code>
+              函数的平台上，<code class="literal">SHELL</code> 被实现为空操作。<code class="literal">SHELL</code>
+              可在 Unix, MacOS X, 和多数 Windows 编译器上工作。<code class="literal">SHELL</code>
+              在 Windows 的 Metrowerks 编译器上是空操作。有一个可选项的变量集作为参数：
+            </p>
+<div class="variablelist">
+
+<dl>
+<dt><span class="term"><code class="literal">exit-status</code></span></dt>
+<dd><p>
+                  In addition to the output the result status of the executed command
+                  is returned as a second element of the result.<br>增加被执行命令的返回状态作为结果的第二个元素返回。<br><code class="literal"></code>
+                </p></dd>
+<dt><span class="term"><code class="literal">no-output</code></span></dt>
+<dd><p>
+                  Don't capture the output of the command. Instead an empty ("")
+                  string value is returned in place of the output.<br>
+                  不捕获命令的输出。以一个空字符串("")作为输出的替换返回。
+                </p></dd>
+</dl>
+</div>
+<p>
+              Because the Perforce/Jambase defines a <code class="literal">SHELL</code> rule
+              which hides the builtin rule, <code class="literal">COMMAND</code> can be used
+              as an alias for <code class="literal">SHELL</code> in such a case.<br>因为 Perforce/Jambase 定义了一个 <code class="literal">SHELL</code> 规则用于隐藏内建规则，所以在这种情况下可以用 <code class="literal">COMMAND</code> 作为 <code class="literal">SHELL</code> 的别名。
+            </p>
+</div>
+</div>
+</div>
+</div>
+<div class="section" lang="en">
+<div class="titlepage"><div><div><h3 class="title">
+<a name="jam.language.flow_of_control"></a><a class="link" href="language.html#jam.language.flow_of_control" title="Flow-of-Control">Flow-of-Control 控制流</a>
+</h3></div></div></div>
+<p>
+        <code class="literal">BJam</code> has several simple flow-of-control statements:<br><code class="literal">BJam</code> 有几种简单的控制流语句：
+      </p>
+<pre class="programlisting">for <span class="emphasis"><em>var</em></span> in <span class="emphasis"><em>list</em></span> { <span class="emphasis"><em>statements</em></span> }<br></pre>
+<p>
+        Executes <span class="emphasis"><em>statements</em></span> for each element in <span class="emphasis"><em>list</em></span>,
+        setting the variable <span class="emphasis"><em>var</em></span> to the element value.<br>对 <span class="emphasis"><em>list</em></span> 中的每个元素执行 <span class="emphasis"><em>statements</em></span>，将变量 <span class="emphasis"><em>var</em></span> 设置为各元素的值。
+      </p>
+<pre class="programlisting">if <span class="emphasis"><em>cond</em></span> { <span class="emphasis"><em>statements</em></span> }<br>[ else { <span class="emphasis"><em>statements</em></span> } ]<br></pre>
+<p>
+        Does the obvious; the <code class="literal">else</code> clause is optional. <span class="emphasis"><em>cond</em></span>
+        is built of:<br>这很明显；<code class="literal">else</code> 子句是可选的。<span class="emphasis"><em>cond</em></span>
+        可由以下组成：
+      </p>
+<div class="variablelist">
+
+<dl>
+<dt><span class="term"><code class="literal"><span class="emphasis"><em>a</em></span></code></span></dt>
+<dd><p>
+            true if any <span class="emphasis"><em>a</em></span> element is a non-zero-length string<br>如果任一 <span class="emphasis"><em>a</em></span> 元素为非零长度的字符串，则为真
+          </p></dd>
+<dt><span class="term"><code class="literal"><span class="emphasis"><em>a</em></span> = <span class="emphasis"><em>b</em></span></code></span></dt>
+<dd><p>
+            list <span class="emphasis"><em>a</em></span> matches list <span class="emphasis"><em>b</em></span> string-for-string<br>列表 <span class="emphasis"><em>a</em></span> 的字符串与列表 <span class="emphasis"><em>b</em></span> 的字符串相匹配
+          </p></dd>
+<dt><span class="term"><code class="literal"><span class="emphasis"><em>a</em></span> != <span class="emphasis"><em>b</em></span></code></span></dt>
+<dd><p>
+            list <span class="emphasis"><em>a</em></span> does not match list <span class="emphasis"><em>b</em></span><br>列表 <span class="emphasis"><em>a</em></span> 不匹配列表 <span class="emphasis"><em>b</em></span>
+          </p></dd>
+<dt><span class="term"><code class="literal"><span class="emphasis"><em>a</em></span> &lt;
+        <span class="emphasis"><em>b</em></span></code></span></dt>
+<dd><p>
+            <span class="emphasis"><em>a[i]</em></span> string is less than <span class="emphasis"><em>b[i]</em></span>
+            string, where <span class="emphasis"><em>i</em></span> is first mismatched element in lists
+            <span class="emphasis"><em>a</em></span> and <span class="emphasis"><em>b</em></span><br><span class="emphasis"><em>a[i]</em></span> 字符串小于 <span class="emphasis"><em>b[i]</em></span>
+            字符串，其中 <span class="emphasis"><em>i</em></span> 为列表 <span class="emphasis"><em>a</em></span> 和 <span class="emphasis"><em>b</em></span> 中的第一个不匹配元素
+          </p></dd>
+<dt><span class="term"><code class="literal"><span class="emphasis"><em>a</em></span> &lt;=
+        <span class="emphasis"><em>b</em></span></code></span></dt>
+<dd><p>
+            every <span class="emphasis"><em>a</em></span> string is less than or equal to its <span class="emphasis"><em>b</em></span>
+            counterpart<br>每个 <span class="emphasis"><em>a</em></span> 字符串小于或等于
+            <span class="emphasis"><em>b</em></span> 中的对应串
+          </p></dd>
+<dt><span class="term"><code class="literal"><span class="emphasis"><em>a</em></span> &gt;
+        <span class="emphasis"><em>b</em></span></code></span></dt>
+<dd><p>
+            <span class="emphasis"><em>a[i]</em></span> string is greater than <span class="emphasis"><em>b[i]</em></span>
+            string, where <span class="emphasis"><em>i</em></span> is first mismatched element<br><span class="emphasis"><em>a[i]</em></span> 字符串大于 <span class="emphasis"><em>b[i]</em></span>
+            字符串，其中 <span class="emphasis"><em>i</em></span> 为第一个不匹配元素
+          </p></dd>
+<dt><span class="term"><code class="literal"><span class="emphasis"><em>a</em></span> &gt;=
+        <span class="emphasis"><em>b</em></span></code></span></dt>
+<dd><p>
+            every <span class="emphasis"><em>a</em></span> string is greater than or equal to its
+            <span class="emphasis"><em>b</em></span> counterpart<br>每个 <span class="emphasis"><em>a</em></span> 字符串大于或等于
+            <span class="emphasis"><em>b</em></span> 中的对应串
+          </p></dd>
+<dt><span class="term"><code class="literal"><span class="emphasis"><em>a</em></span> in <span class="emphasis"><em>b</em></span></code></span></dt>
+<dd><p>
+            true if all elements of <span class="emphasis"><em>a</em></span> can be found in <span class="emphasis"><em>b</em></span>,
+            or if <span class="emphasis"><em>a</em></span> has no elements<br>如果 <span class="emphasis"><em>a</em></span> 的所有元素都在 <span class="emphasis"><em>b</em></span> 中或 <span class="emphasis"><em>a</em></span> 没有元素，则为真
+          </p></dd>
+<dt><span class="term"><code class="literal">! <span class="emphasis"><em>cond</em></span></code></span></dt>
+<dd><p>
+            condition not true<br>条件非真
+          </p></dd>
+<dt><span class="term"><code class="literal"><span class="emphasis"><em>cond</em></span> &amp;&amp;
+        <span class="emphasis"><em>cond</em></span></code></span></dt>
+<dd><p>
+            conjunction<br>合取
+          </p></dd>
+<dt><span class="term"><code class="literal"><span class="emphasis"><em>cond</em></span> ||
+        <span class="emphasis"><em>cond</em></span></code></span></dt>
+<dd><p>
+            disjunction<br>析取
+          </p></dd>
+<dt><span class="term"><code class="literal">( <span class="emphasis"><em>cond</em></span>
+        )</code></span></dt>
+<dd><p>
+            precedence grouping<br>优先级组
+          </p></dd>
+</dl>
+</div>
+<pre class="programlisting">include <span class="emphasis"><em>file</em></span> ;<br></pre>
+<p>
+        Causes <code class="literal">bjam</code> to read the named <span class="emphasis"><em>file</em></span>.
+        The <span class="emphasis"><em>file</em></span> is bound like a regular target (see Binding
+        above) but unlike a regular target the include <span class="emphasis"><em>file</em></span>
+        cannot be built.<br>让 <code class="literal">bjam</code> 读入 <span class="emphasis"><em>file</em></span>。<span class="emphasis"><em>file</em></span> 象一个普通目标那样被绑定(见前文中的"绑定")，但不同的是，所包含的 <span class="emphasis"><em>file</em></span>
+        不可构建。
+      </p>
+<p>
+        The include <span class="emphasis"><em>file</em></span> is inserted into the input stream during
+        the parsing phase. The primary input file and all the included file(s) are
+        treated as a single file; that is, jam infers no scope boundaries from included
+        files.<br>包含的 <span class="emphasis"><em>file</em></span> 在分析阶段被插入到输入流中。主输入文件和所有包含文件被视为单个文件；即 jam 认为包含文件没有作用域边界。
+      </p>
+<pre class="programlisting">local <span class="emphasis"><em>vars</em></span> [ = <span class="emphasis"><em>values</em></span> ] ;<br></pre>
+<p>
+        Creates new <span class="emphasis"><em>vars</em></span> inside to the enclosing <code class="literal">{}</code>
+        block, obscuring any previous values they might have. The previous values
+        for vars are restored when the current block ends. Any rule called or file
+        included will see the local and not the previous value (this is sometimes
+        called Dynamic Scoping). The local statement may appear anywhere, even outside
+        of a block (in which case the previous value is restored when the input ends).
+        The <span class="emphasis"><em>vars</em></span> are initialized to <span class="emphasis"><em>values</em></span>
+        if present, or left uninitialized otherwise.<br>在所属的 <code class="literal">{}</code>
+ 块中创建新变量 <span class="emphasis"><em>vars</em></span>，掩盖可能已具有的原值。vars 原有的值在当前块结束的时候被恢复。任何规则调用或文件包含都将看到本地值而不是原有的值(有时这被称为动态作用域)。local 语句可以出现在任何地方，甚至在块的外面(这种情况下，原有的值在输入结束时恢复)。如果提供了 <span class="emphasis"><em>values</em></span>，则 <span class="emphasis"><em>vars</em></span> 被初始化为 <span class="emphasis"><em>values</em></span>，否则保持为未初始化。
+      </p>
+<pre class="programlisting">return <span class="emphasis"><em>values</em></span> ;<br></pre>
+<p>
+        Within a rule body, the return statement sets the return value for an invocation
+        of the rule. It does <span class="bold"><strong>not</strong></span> cause the rule
+        to return; a rule's value is actually the value of the last statement executed,
+        so a return should be the last statement executed before the rule "naturally"
+        returns.<br>在一个规则体的内部，return 语句为该规则的调用设置返回值。它并不引起该规则返回；规则的值其实是最后一条执行的语句的值，所以 return 应该是规则"自然地"返回之前的最后一条被执行的语句。
+      </p>
+<pre class="programlisting">switch <span class="emphasis"><em>value</em></span>
+{
+    case <span class="emphasis"><em>pattern1</em></span> : <span class="emphasis"><em>statements</em></span> ;<br>    case <span class="emphasis"><em>pattern2</em></span> : <span class="emphasis"><em>statements</em></span> ;<br>    ...<br>}<br></pre>
+<p>
+        The switch statement executes zero or one of the enclosed <span class="emphasis"><em>statements</em></span>,
+        depending on which, if any, is the first case whose <span class="emphasis"><em>pattern</em></span>
+        matches <span class="emphasis"><em>value</em></span>. The <span class="emphasis"><em>pattern</em></span> values
+        are not variable-expanded. The pattern values may include the following wildcards:<br>switch 语句执行零个或一个内含的 <span class="emphasis"><em>statements</em></span>，这取决于哪一个 <span class="emphasis"><em>pattern</em></span>
+        首先匹配 <span class="emphasis"><em>value</em></span>。<span class="emphasis"><em>pattern</em></span> 的值不是可以按变量展开的。pattern 的值可以包含以下通配符：
+      </p>
+<div class="variablelist">
+
+<dl>
+<dt><span class="term"><code class="literal">?</code></span></dt>
+<dd><p>
+            match any single character<br>匹配任意单个字符
+          </p></dd>
+<dt><span class="term"><code class="literal">*</code></span></dt>
+<dd><p>
+            match zero or more characters<br>匹配零个或多个字符
+          </p></dd>
+<dt><span class="term"><code class="literal">[<span class="emphasis"><em>chars</em></span>]</code></span></dt>
+<dd><p>
+            match any single character in <span class="emphasis"><em>chars</em></span><br>匹配 <span class="emphasis"><em>chars</em></span> 中的任一字符
+          </p></dd>
+<dt><span class="term"><code class="literal">[^<span class="emphasis"><em>chars</em></span>]</code></span></dt>
+<dd><p>
+            match any single character not in <span class="emphasis"><em>chars</em></span><br>匹配不在 <span class="emphasis"><em>chars</em></span> 中的任一字符
+          </p></dd>
+<dt><span class="term"><code class="literal">\<span class="emphasis"><em>x</em></span></code></span></dt>
+<dd><p>
+            match <span class="emphasis"><em>x</em></span> (escapes the other wildcards)<br>匹配 <span class="emphasis"><em>x</em></span> (对其它通配符转义)
+          </p></dd>
+</dl>
+</div>
+<pre class="programlisting">while <span class="emphasis"><em>cond</em></span> { <span class="emphasis"><em>statements</em></span> }<br></pre>
+<p>
+        Repeatedly execute <span class="emphasis"><em>statements</em></span> while <span class="emphasis"><em>cond</em></span>
+        remains true upon entry. (See the description of <span class="emphasis"><em>cond</em></span>
+        expression syntax under if, above).<br>重复执行 <span class="emphasis"><em>statements</em></span>，如果在入口处 <span class="emphasis"><em>cond</em></span>
+        保持为真。(参见前文 if 一节中的对 <span class="emphasis"><em>cond</em></span>
+        表达式的说明)。
+      </p>
+</div>
+<div class="section" lang="en">
+<div class="titlepage"><div><div><h3 class="title">
+<a name="jam.language.variables"></a><a class="link" href="language.html#jam.language.variables" title="Variables">Variables 变量</a>
+</h3></div></div></div>
+<div class="toc"><dl>
+<dt><span class="section"><a href="language.html#jam.language.variables.expansion"> Variable Expansion 变量展开</a></span></dt>
+<dt><span class="section"><a href="language.html#jam.language.variables.local_for_loop_variables">Local
+        For Loop Variables 循环变量的局部化</a></span></dt>
+<dt><span class="section"><a href="language.html#jam.language.variables.atfile"> Generated File Expansion 生成文件的展开</a></span></dt>
+<dt><span class="section"><a href="language.html#jam.language.variables.builtins"> Built-in Variables 内建变量</a></span></dt>
+</dl></div>
+<p>
+        <code class="literal">BJam</code> variables are lists of zero or more elements, with
+        each element being a string value. An undefined variable is indistinguishable
+        from a variable with an empty list, however, a defined variable may have
+        one more elements which are null strings. All variables are referenced as
+        <code class="literal">$(<span class="emphasis"><em>variable</em></span>)</code>.<br><code class="literal">BJam</code> 变量是零个或多个元素的列表，每个元素是一个字符串值。一个未定义的变量与一个为空列表的变量是不可区别的，而一个有定义的变量可以有一个以上的元素为空字符串。所有变量用
+        <code class="literal">$(<span class="emphasis"><em>variable</em></span>)</code> 引用。
+      </p>
+<p>
+        Variables are either global or target-specific. In the latter case, the variable
+        takes on the given value only during the updating of the specific target.<br>变量可以是全局的或特定目标的。在后一种情况下，变量仅在特定目标的更新期间具有给定的值。
+      </p>
+<p>
+        A variable is defined with:<br>一个变量可以用以下方式定义：
+      </p>
+<pre class="programlisting"><span class="emphasis"><em>variable</em></span> = <span class="emphasis"><em>elements</em></span> ;<br><span class="emphasis"><em>variable</em></span> += <span class="emphasis"><em>elements</em></span> ;<br><span class="emphasis"><em>variable</em></span> on <span class="emphasis"><em>targets</em></span> = <span class="emphasis"><em>elements</em></span> ;<br><span class="emphasis"><em>variable</em></span> on <span class="emphasis"><em>targets</em></span> += <span class="emphasis"><em>elements</em></span> ;<br><span class="emphasis"><em>variable</em></span> default = <span class="emphasis"><em>elements</em></span> ;<br><span class="emphasis"><em>variable</em></span> ?= <span class="emphasis"><em>elements</em></span> ;<br></pre>
+<p>
+        The first two forms set <span class="emphasis"><em>variable</em></span> globally. The third
+        and forth forms set a target-specific variable. The <code class="literal">=</code>
+        operator replaces any previous elements of <span class="emphasis"><em>variable</em></span>
+        with <span class="emphasis"><em>elements</em></span>; the <code class="literal">+=</code> operation adds
+        <span class="emphasis"><em>elements</em></span> to <span class="emphasis"><em>variable</em></span>'s list of
+        elements. The final two forms are synonymous: they set <span class="emphasis"><em>variable</em></span>
+        globally, but only if it was previously unset.<br>头两种形式将 <span class="emphasis"><em>variable</em></span> 设为全局。第三和第四种形式则设置一个特定目标变量。<code class="literal">=</code>
+        操作符以 <span class="emphasis"><em>elements</em></span> 替换 <span class="emphasis"><em>variable</em></span>
+        原有的元素；<code class="literal">+=</code> 操作符则将
+        <span class="emphasis"><em>elements</em></span> 增加到 <span class="emphasis"><em>variable</em></span> 的元素列表中。后两种形式是同义的：它们将 <span class="emphasis"><em>variable</em></span>
+        设为全局，但仅当变量原来是未设置的情况下。
+      </p>
+<p>
+        Variables referenced in updating commands will be replaced with their values;
+        target-specific values take precedence over global values. Variables passed
+        as arguments (<code class="literal">$(1)</code> and <code class="literal">$(2)</code>) to actions
+        are replaced with their bound values; the "<code class="literal">bind</code>"
+        modifier can be used on actions to cause other variables to be replaced with
+        bound values. See Action Modifiers above.<br>在更新命令中所引用的变量将被替换为它们的值；特定目标变量优先于全局变量。以参数方式传递到动作中的变量(<code class="literal">$(1)</code> 和 <code class="literal">$(2)</code>)被替换为它们的绑定值；"<code class="literal">bind</code>"
+        修改符可以在动作上用来让其它变量被绑定值替换。请参见前文的"动作修改符"。
+      </p>
+<p>
+        <code class="literal">BJam</code> variables are not re-exported to the environment
+        of the shell that executes the updating actions, but the updating actions
+        can reference <code class="literal">bjam</code> variables with <code class="literal">$(<span class="emphasis"><em>variable</em></span>)</code>.<br><code class="literal">BJam</code> 变量不会被输出到执行更新动作的 shell 的环境中，但是更新动作可以用 <code class="literal">$(<span class="emphasis"><em>variable</em></span>)</code> 来引用 <code class="literal">bjam</code> 变量。
+      </p>
+<div class="section" lang="en">
+<div class="titlepage"><div><div><h4 class="title">
+<a name="jam.language.variables.expansion"></a><a class="link" href="language.html#jam.language.variables.expansion" title="Variable Expansion"> Variable Expansion 变量展开</a>
+</h4></div></div></div>
+<p>
+          During parsing, <code class="literal">bjam</code> performs variable expansion on
+          each token that is not a keyword or rule name. Such tokens with embedded
+          variable references are replaced with zero or more tokens. Variable references
+          are of the form <code class="literal">$(<span class="emphasis"><em>v</em></span>)</code> or <code class="literal">$(<span class="emphasis"><em>vm</em></span>)</code>,
+          where <span class="emphasis"><em>v</em></span> is the variable name, and <span class="emphasis"><em>m</em></span>
+          are optional modifiers.<br>在分析阶段，<code class="literal">bjam</code> 对每一个不是关键字和规则名的记号执行变量展开。这些嵌有变量引用的记号会被替换为零个或多个记号。变量引用的方式为 <code class="literal">$(<span class="emphasis"><em>v</em></span>)</code> 或 <code class="literal">$(<span class="emphasis"><em>vm</em></span>)</code>，其中 <span class="emphasis"><em>v</em></span> 为变量名，<span class="emphasis"><em>m</em></span>
+          为可选的修改符。
+        </p>
+<p>
+          Variable expansion in a rule's actions is similar to variable expansion
+          in statements, except that the action string is tokenized at whitespace
+          regardless of quoting.<br>在规则动作中的变量展开类似于语句中的变量展开，除了动作字符串是以空格来分隔记号，它不管引号。
+        </p>
+<p>
+          The result of a token after variable expansion is the <span class="emphasis"><em>product</em></span>
+          of the components of the token, where each component is a literal substring
+          or a list substituting a variable reference. For example:<br>变量展开后所得的记号是记号的组成元素的 <span class="emphasis"><em>积product</em></span>，即每个组成元素作为子串，或者用一个列表替换变量引用。例如：
+        </p>
+<pre class="programlisting">$(X) -&gt; a b c<br>t$(X) -&gt; ta tb tc<br>$(X)z -&gt; az bz cz<br>$(X)-$(X) -&gt; a-a a-b a-c b-a b-b b-c c-a c-b c-c<br></pre>
+<p>
+          The variable name and modifiers can themselves contain a variable reference,
+          and this partakes of the product as well:<br>变量名和修改符本身也可以包含变量引用，而且要处理所有乘积：
+        </p>
+<pre class="programlisting">$(X) -&gt; a b c<br>$(Y) -&gt; 1 2<br>$(Z) -&gt; X Y<br>$($(Z)) -&gt; a b c 1 2<br></pre>
+<p>
+          Because of this product expansion, if any variable reference in a token
+          is undefined, the result of the expansion is an empty list. If any variable
+          element is a null string, the result propagates the non-null elements:<br>因为乘积也要展开，所以如果记号中有变量引用未定义，则展开的结果为空列表。如果有变量元素为空字符串，则结果只含非空元素：
+        </p>
+<pre class="programlisting">$(X) -&gt; a ""<br>$(Y) -&gt; "" 1<br>$(Z) -&gt;<br>-$(X)$(Y)- -&gt; -a- -a1- -- -1-<br>-$(X)$(Z)- -&gt;<br></pre>
+<p>
+          A variable element's string value can be parsed into grist and filename-related
+          components. Modifiers to a variable are used to select elements, select
+          components, and replace components. The modifiers are:<br>变量元素的字符串值可以被分为 grist 和文件名相关组件。变量的修改符用于选择元素，选择组件和替换组件。修改符有：
+        </p>
+<div class="variablelist">
+
+<dl>
+<dt><span class="term"><code class="literal">[<span class="emphasis"><em>n</em></span>]</code></span></dt>
+<dd><p>
+              Select element number <span class="emphasis"><em>n</em></span> (starting at 1). If the
+              variable contains fewer than <span class="emphasis"><em>n</em></span> elements, the result
+              is a zero-element list. <span class="emphasis"><em>n</em></span> can be negative in which
+              case the element number <span class="emphasis"><em>n</em></span> from the last leftward
+              is returned.<br>选择第 <span class="emphasis"><em>n</em></span> 个元素(从1开始)。如果变量中的元素少于 <span class="emphasis"><em>n</em></span> 个，结果为一个不含元素的列表。<span class="emphasis"><em>n</em></span> 可以为负，这时返回倒数第 <span class="emphasis"><em>n</em></span> 个元素。
+            </p></dd>
+<dt><span class="term"><code class="literal">[<span class="emphasis"><em>n</em></span>-<span class="emphasis"><em>m</em></span>]</code></span></dt>
+<dd><p>
+              Select elements number <span class="emphasis"><em>n</em></span> through <span class="emphasis"><em>m</em></span>.
+              <span class="emphasis"><em>n</em></span> and <span class="emphasis"><em>m</em></span> can be negative in
+              which case they refer to elements counting from the last leftward.<br>选择第 <span class="emphasis"><em>n</em></span> 到 <span class="emphasis"><em>m</em></span> 个元素。<span class="emphasis"><em>n</em></span> 和 <span class="emphasis"><em>m</em></span> 可以是负的，这时它们表示倒数的元素数量。
+            </p></dd>
+<dt><span class="term"><code class="literal">[<span class="emphasis"><em>n</em></span>-]</code></span></dt>
+<dd><p>
+              Select elements number <span class="emphasis"><em>n</em></span> through the last. <span class="emphasis"><em>n</em></span>
+              can be negative in which case it refers to the element counting from
+              the last leftward.<br>选择第 <span class="emphasis"><em>n</em></span> 个到最后的元素。<span class="emphasis"><em>n</em></span>
+              可以是负的，这时它表示倒数的元素数量。
+            </p></dd>
+<dt><span class="term"><code class="literal">:B</code></span></dt>
+<dd><p>
+              Select filename base.<br>选择文件名的基名。
+            </p></dd>
+<dt><span class="term"><code class="literal">:S</code></span></dt>
+<dd><p>
+              Select (last) filename suffix.<br>选择(最后的)文件名后缀。
+            </p></dd>
+<dt><span class="term"><code class="literal">:M</code></span></dt>
+<dd><p>
+              Select archive member name.<br>选择存档成员名。
+            </p></dd>
+<dt><span class="term"><code class="literal">:D</code></span></dt>
+<dd><p>
+              Select directory path.<br>选择目录路径名。
+            </p></dd>
+<dt><span class="term"><code class="literal">:P</code></span></dt>
+<dd><p>
+              Select parent directory.<br>选择父目录名。
+            </p></dd>
+<dt><span class="term"><code class="literal">:G</code></span></dt>
+<dd><p>
+              Select grist.<br>选择 grist。
+            </p></dd>
+<dt><span class="term"><code class="literal">:U</code></span></dt>
+<dd><p>
+              Replace lowercase characters with uppercase.<br>将小写字符替换为大写。
+            </p></dd>
+<dt><span class="term"><code class="literal">:L</code></span></dt>
+<dd><p>
+              Replace uppercase characters with lowercase.<br>将大写字符替换为小写。
+            </p></dd>
+<dt></dt><dt><span class="term"><code class="literal">:T</code></span> 
+</dt><dd>
+<p>Converts all back-slashes ("\") to forward slashes ("/"). For example<br>将所有反斜杠("\")变为正斜杠("/")。例如： </p><pre class="programlisting"><span class="identifier">x</span> <span class="special">=</span> <span class="string">"C:\\Program Files\\Borland"</span> <span class="special">;</span> <span class="identifier">ECHO</span> $<span class="special">(</span><span class="identifier">x</span><span class="special">:</span><span class="identifier">T</span><span class="special">)</span> <span class="special">;</span>
+</pre>
+<p>prints <code class="literal">"C:/Program Files/Borland"</code><br>打印 <code class="literal">"C:/Program Files/Borland"</code> </p></dd><dt><span class="term"><code class="literal">:W</code></span></dt>
+<dd>
+<p>
+              When invoking Windows-based tools from <a href="http://www.cygwin.com/" target="_top">Cygwin</a>
+              it can be important to pass them true windows-style paths. The <code class="literal">:W</code>
+              modifier, <span class="bold"><strong>under Cygwin only</strong></span>, turns
+              a cygwin path into a Win32 path using the <a href="http://www.cygwin.com/cygwin-api/func-cygwin-conv-to-win32-path.html" target="_top"><code class="literal">cygwin_conv_to_win32_path</code></a>
+              function. On other platforms, the string is unchanged. For example<br>从 <a href="http://www.cygwin.com/" target="_top">Cygwin</a>
+              调用基于 Windows 的工具时，将真实的 windows 风格的路径传递给它们可能是很重要的。<code class="literal">:W</code>
+              修改符<span class="bold"><strong>仅用于 Cygwin</strong></span>，它使用 <a href="http://www.cygwin.com/cygwin-api/func-cygwin-conv-to-win32-path.html" target="_top"><code class="literal">cygwin_conv_to_win32_path</code></a>
+              函数将一个 cygwin 路径转换为 Win32 路径。在其它平台上，字符串保持不变。例如：
+              
+</p>
+<pre class="programlisting"><span class="identifier">x</span> <span class="special">=</span> <span class="string">"/cygdrive/c/Program Files/Borland"</span> <span class="special">;</span> <span class="identifier">ECHO</span> $<span class="special">(</span><span class="identifier">x</span><span class="special">:</span><span class="identifier">W</span><span class="special">)</span> <span class="special">;</span>
+</pre>
+<p>
+              prints <code class="literal">"C:\Program Files\Borland"</code> on Cygwin<br>在 Cygwin 上打印 <code class="literal">"C:\Program Files\Borland"</code> 。
+            </p>
+</dd>
+<dt><span class="term"><code class="literal">:<span class="emphasis"><em>chars</em></span></code></span></dt>
+<dd><p>
+              Select the components listed in <span class="emphasis"><em>chars</em></span>.<br>选择列在 <span class="emphasis"><em>chars</em></span> 中的组件。
+            </p></dd>
+<dt><span class="term"><code class="literal">:G=<span class="emphasis"><em>grist</em></span></code></span></dt>
+<dd><p>
+              Replace grist with <span class="emphasis"><em>grist</em></span>.<br>以 <span class="emphasis"><em>grist</em></span> 替换 grist。
+            </p></dd>
+<dt><span class="term"><code class="literal">:D=<span class="emphasis"><em>path</em></span></code></span></dt>
+<dd><p>
+              Replace directory with <span class="emphasis"><em>path</em></span>.<br>以 <span class="emphasis"><em>path</em></span> 替换目录名。
+            </p></dd>
+<dt><span class="term"><code class="literal">:B=<span class="emphasis"><em>base</em></span></code></span></dt>
+<dd><p>
+              Replace the base part of file name with <span class="emphasis"><em>base</em></span>.<br>以 <span class="emphasis"><em>base</em></span> 替换文件名的基名部分。
+            </p></dd>
+<dt><span class="term"><code class="literal">:S=<span class="emphasis"><em>suf</em></span></code></span></dt>
+<dd><p>
+              Replace the suffix of file name with <span class="emphasis"><em>suf</em></span>.<br>以 <span class="emphasis"><em>suf</em></span> 替换文件名的后缀部分。
+            </p></dd>
+<dt><span class="term"><code class="literal">:M=<span class="emphasis"><em>mem</em></span></code></span></dt>
+<dd><p>
+              Replace the archive member name with <span class="emphasis"><em>mem</em></span>.<br>以 <span class="emphasis"><em>mem</em></span> 替换存档成员名。
+            </p></dd>
+<dt><span class="term"><code class="literal">:R=<span class="emphasis"><em>root</em></span></code></span></dt>
+<dd><p>
+              Prepend <span class="emphasis"><em>root</em></span> to the whole file name, if not already
+              rooted.<br>将 <span class="emphasis"><em>root</em></span> 添加到完整的文件名中，如果它未被根目录化。
+            </p></dd>
+<dt><span class="term"><code class="literal">:E=<span class="emphasis"><em>value</em></span></code></span></dt>
+<dd><p>
+              Assign <span class="emphasis"><em>value</em></span> to the variable if it is unset.<br>将&nbsp;<span class="emphasis"><em>value</em></span> 赋给变量，如果变量未设置。
+            </p></dd>
+<dt><span class="term"><code class="literal">:J=<span class="emphasis"><em>joinval</em></span></code></span></dt>
+<dd><p>
+              Concatentate list elements into single element, separated by <span class="emphasis"><em>joinval</em></span>'.<br>将列表中各元素串接为一个元素，以&nbsp;<span class="emphasis"><em>joinval</em></span> 分隔。
+            </p></dd>
+</dl>
+</div>
+<p>
+          On VMS, <code class="literal">$(var:P)</code> is the parent directory of <code class="literal">$(var:D)</code>.<br>在 VMS 上，<code class="literal">$(var:P)</code> 为 <code class="literal">$(var:D)</code> 的父目录。
+        </p>
+</div>
+<div class="section" lang="en">
+<div class="titlepage"><div><div><h4 class="title">
+<a name="jam.language.variables.local_for_loop_variables"></a><a class="link" href="language.html#jam.language.variables.local_for_loop_variables" title="Local For Loop Variables">Local
+        For Loop Variables 循环变量的局部化</a>
+</h4></div></div></div>
+<p>
+          Boost Jam allows you to declare a local for loop control variable right
+          in the loop:<br>Boost Jam 允许你声明一个局部变量为循环控制变量，仅用于循环中：
+        </p>
+<pre class="programlisting">x = 1 2 3 ;<br>y = 4 5 6 ;<br>for <span class="bold"><strong>local</strong></span> y in $(x)<br>{<br>    ECHO $(y) ; # prints "1", "2", or "3"<br>}<br>ECHO $(y) ;     # prints "4 5 6"<br></pre>
+</div>
+<div class="section" lang="en">
+<div class="titlepage"><div><div><h4 class="title">
+<a name="jam.language.variables.atfile"></a><a class="link" href="language.html#jam.language.variables.atfile" title="Generated File Expansion"> Generated File Expansion 生成文件的展开</a>
+</h4></div></div></div>
+<p>
+          During expansion of expressions <code class="literal">bjam</code> also looks for
+          subexpressions of the form =@(filename:E<code class="literal">filecontents)</code>
+          and replaces the expression with <code class="literal">filename</code> after creating
+          the given file with the contents set to <code class="literal">filecontents</code>.
+          This is useful for creating compiler response files, and other "internal"
+          files. The expansion works both during parsing and action execution. Hence
+          it is possible to create files during any of the three build phases.<br>在表达式的展开期间，<code class="literal">bjam</code> 还会查找形如 =@(filename:E<code class="literal">filecontents)</code>
+          的子表达式，并在以&nbsp;<code class="literal">filecontents</code> 为内容创建给定文件后，将该表达式替换为 <code class="literal">filename</code>。这对于创建编译器响应文件和其它"内部'文件非常有用。该展开在分析阶段和动作阶段均会进行。因此可以在三个构建阶段中的任何阶段创建文件。
+        </p>
+</div>
+<div class="section" lang="en">
+<div class="titlepage"><div><div><h4 class="title">
+<a name="jam.language.variables.builtins"></a><a class="link" href="language.html#jam.language.variables.builtins" title="Built-in Variables"> Built-in Variables 内建变量</a>
+</h4></div></div></div>
+<div class="toc"><dl>
+<dt><span class="section"><a href="language.html#jam.language.variables.builtins.search"> SEARCH and
+          LOCATE</a></span></dt>
+<dt><span class="section"><a href="language.html#jam.language.variables.builtins.hdrscan"> HDRSCAN
+          and HDRRULE</a></span></dt>
+<dt><span class="section"><a href="language.html#jam.language.variables.builtins.semaphores">Semaphores 信号灯</a></span></dt>
+<dt><span class="section"><a href="language.html#jam.language.variables.builtins.platform_identifier">Platform
+          Identifier 平台标识符</a></span></dt>
+<dt><span class="section"><a href="language.html#jam.language.variables.builtins.jam_version">Jam
+          Version &nbsp;Jam版本</a></span></dt>
+<dt><span class="section"><a href="language.html#jam.language.variables.builtins.jamshell">JAMSHELL</a></span></dt>
+<dt><span class="section"><a href="language.html#jam.language.variables.builtins.actionrule"> <code class="literal">__TIMING_RULE__</code>
+          and <code class="literal">__ACTION_RULE__</code></a></span></dt>
+</dl></div>
+<p>
+          This section discusses variables that have special meaning to <code class="literal">bjam</code>.<br>本节讨论一些对于 <code class="literal">bjam</code> 具有特殊意义的变量。
+        </p>
+<div class="section" lang="en">
+<div class="titlepage"><div><div><h5 class="title">
+<a name="jam.language.variables.builtins.search"></a><a class="link" href="language.html#jam.language.variables.builtins.search" title="SEARCH and LOCATE"> SEARCH and
+          LOCATE</a>
+</h5></div></div></div>
+<p>
+            These two variables control the binding of file target names to locations
+            in the file system. Generally, <code class="literal">$(SEARCH)</code> is used to
+            find existing sources while <code class="literal">$(LOCATE)</code> is used to fix
+            the location for built targets.<br>这两个变量控制如何将文件目标名绑定到文件系统中的位置。通常，<code class="literal">$(SEARCH)</code> 被用于查找已有的源文件，而 <code class="literal">$(LOCATE)</code> 被用于为内建目标修正位置。
+          </p>
+<p>
+            Rooted (absolute path) file targets are bound as is. Unrooted file target
+            names are also normally bound as is, and thus relative to the current
+            directory, but the settings of <code class="literal">$(LOCATE)</code> and <code class="literal">$(SEARCH)</code>
+            alter this:<br>根化的(绝对路径的)文件目标也同样绑定。非根化的文件目标名通常也同样进行绑定，且相对于当前的目录，不过 <code class="literal">$(LOCATE)</code> 和 <code class="literal">$(SEARCH)</code>
+            的设置改变了这一点：
+          </p>
+<div class="itemizedlist"><ul type="disc">
+<li>
+              If <code class="literal">$(LOCATE)</code> is set then the target is bound relative
+              to the first directory in <code class="literal">$(LOCATE)</code>. Only the first
+              element is used for binding.<br>如果 <code class="literal">$(LOCATE)</code> 被设置，则目标被相对于 <code class="literal">$(LOCATE)</code> 中的第一个目录进行绑定。只有第一个元素被用于绑定。
+            </li>
+<li>
+              If <code class="literal">$(SEARCH)</code> is set then the target is bound to
+              the first directory in <code class="literal">$(SEARCH)</code> where the target
+              file already exists.<br>如果 <code class="literal">$(SEARCH)</code> 被设置，则目标被绑定为 <code class="literal">$(SEARCH)</code> 中的第一个找到目标文件的目录。
+            </li>
+<li>
+              If the <code class="literal">$(SEARCH)</code> search fails, the target is bound
+              relative to the current directory anyhow.<br>如果在 <code class="literal">$(SEARCH)</code> 中查找失败，则目标被相对于当前目录进行绑定。
+            </li>
+</ul></div>
+<p>
+            Both <code class="literal">$(SEARCH)</code> and <code class="literal">$(LOCATE)</code> should
+            be set target-specific and not globally. If they were set globally,
+            <code class="literal">bjam</code> would use the same paths for all file binding,
+            which is not likely to produce sane results. When writing your own rules,
+            especially ones not built upon those in Jambase, you may need to set
+            <code class="literal">$(SEARCH)</code> or <code class="literal">$(LOCATE)</code> directly.
+            Almost all of the rules defined in Jambase set <code class="literal">$(SEARCH)</code>
+            and <code class="literal">$(LOCATE)</code> to sensible values for sources they
+            are looking for and targets they create, respectively.<br><code class="literal">$(SEARCH)</code> 和 <code class="literal">$(LOCATE)</code> 都应被设置为特定目标变量而不是全局的。如果它们被设置为全局的，<code class="literal">bjam</code> 就会对所有文件绑定使用相同的路径，这不太可能得到正确的结果。在编写你自己的规则时，尤其是那些不是构建在 Jambase 规则之上的规则，你可能需要直接设置
+            <code class="literal">$(SEARCH)</code> 或 <code class="literal">$(LOCATE)</code>。几乎所有在 Jambase 中定义的规则都将 <code class="literal">$(SEARCH)</code> 和 <code class="literal">$(LOCATE)</code> 分别设置为对它们所查找的源和它们所创建的目标可感知的值。
+          </p>
+</div>
+<div class="section" lang="en">
+<div class="titlepage"><div><div><h5 class="title">
+<a name="jam.language.variables.builtins.hdrscan"></a><a class="link" href="language.html#jam.language.variables.builtins.hdrscan" title="HDRSCAN and HDRRULE"> HDRSCAN
+          and HDRRULE</a>
+</h5></div></div></div>
+<p>
+            These two variables control header file scanning. <code class="literal">$(HDRSCAN)</code>
+            is an <code class="literal">egrep(1)</code> pattern, with ()'s surrounding the
+            file name, used to find file inclusion statements in source files. <code class="literal">Jambase</code>
+            uses <code class="literal">$(HDRPATTERN)</code> as the pattern for <code class="literal">$(HDRSCAN)</code>.
+            <code class="literal">$(HDRRULE)</code> is the name of a rule to invoke with the
+            results of the scan: the scanned file is the target, the found files
+            are the sources. This is the only place where <code class="literal">bjam</code>
+            invokes a rule through a variable setting.<br>这两个变量控制头文件的扫描。<code class="literal">$(HDRSCAN)</code>
+            是一个 <code class="literal">egrep(1)</code> 模版，用 () 包围着文件名，用于在源文件中查找文件包含语句。<code class="literal">Jambase</code> 使用 <code class="literal">$(HDRPATTERN)</code> 作为 <code class="literal">$(HDRSCAN)</code> 的模版。<code class="literal">$(HDRRULE)</code> 是一个规则名，该规则会以扫描的结果来调用：被扫描的文件为目标，查找到的文件为源。这是 <code class="literal">bjam</code>
+            通过变量设置来调用规则的唯一地方。
+          </p>
+<p>
+            Both <code class="literal">$(HDRSCAN)</code> and <code class="literal">$(HDRRULE)</code>
+            must be set for header file scanning to take place, and they should be
+            set target-specific and not globally. If they were set globally, all
+            files, including executables and libraries, would be scanned for header
+            file include statements.<br>为了进行头文件扫描，<code class="literal">$(HDRSCAN)</code> 和 <code class="literal">$(HDRRULE)</code>
+            都必须被设置，而且它们要被设置为特定目标的而不是全局的。如果它们被设置为全局的，那么所有文件，包括可执行文件和库文件，都会由于头文件包含语句而被扫描。
+          </p>
+<p>
+            The scanning for header file inclusions is not exact, but it is at least
+            dynamic, so there is no need to run something like <code class="literal">makedepend(GNU)</code>
+            to create a static dependency file. The scanning mechanism errs on the
+            side of inclusion (i.e., it is more likely to return filenames that are
+            not actually used by the compiler than to miss include files) because
+            it can't tell if <code class="computeroutput"><span class="preprocessor">#include</span></code>
+            lines are inside <code class="computeroutput"><span class="preprocessor">#ifdefs</span></code>
+            or other conditional logic. In <code class="literal">Jambase</code>, <code class="literal">HdrRule</code>
+            applies the <code class="literal">NOCARE</code> rule to each header file found
+            during scanning so that if the file isn't present yet doesn't cause the
+            compilation to fail, <code class="literal">bjam</code> won't care.<br>对头文件包含的扫描并不是精确的，但是它至少是动态的，所以没有必要运行一些象 <code class="literal">makedepend(GNU)</code>
+            这样的东西去创建一个静态依赖文件。该扫描机制可能会包含错误的文件(即，它更可能返回编译器实际上并没有使用的文件名，而不是漏掉某个文件)，因为如果 <code class="computeroutput"><span class="preprocessor">#include</span></code>
+            行是在 <code class="computeroutput"><span class="preprocessor">#ifdefs</span></code>
+            或其它条件逻辑之中的，它并未被告知。在 <code class="literal">Jambase</code> 中，<code class="literal">HdrRule</code>
+            对在扫描期间找到的每个头文件应用 <code class="literal">NOCARE</code> 规则，这样如果该文件不存在也不会导致编译失败的话，<code class="literal">bjam</code> 就不会关注它。
+          </p>
+<p>
+            Also, scanning for regular expressions only works where the included
+            file name is literally in the source file. It can't handle languages
+            that allow including files using variable names (as the <code class="literal">Jam</code>
+            language itself does).<br>还有，对正规表达式的扫描只有当被包含的文件名在源文件中以字面方式存在时才可工作。它不能处理那些允许使用变量名来包含文件的语言(如 <code class="literal">Jam</code>
+            语言本身)。
+          </p>
+</div>
+<div class="section" lang="en">
+<div class="titlepage"><div><div><h5 class="title">
+<a name="jam.language.variables.builtins.semaphores"></a><a class="link" href="language.html#jam.language.variables.builtins.semaphores" title="Semaphores">Semaphores 信号灯</a>
+</h5></div></div></div>
+<p>
+            It is sometimes desirable to disallow parallel execution of some actions.
+            For example:<br>有时我们想要禁止某些动作的并发执行。例如：
+          </p>
+<div class="itemizedlist"><ul type="disc">
+<li>
+              Old versions of yacc use files with fixed names. So, running two yacc
+              actions is dangerous.<br>旧版本的 yacc 使用固定名字的文件。所以，同时运行两个 yacc 动作是危险的。
+            </li>
+<li>
+              One might want to perform parallel compiling, but not do parallel linking,
+              because linking is i/o bound and only gets slower.<br>你可能想执行并行编译，但不可以并行链接，因为链接是 i/o 限制的，只会更慢。
+            </li>
+</ul></div>
+<p>
+            Craig McPeeters has extended Perforce Jam to solve such problems, and
+            that extension was integrated in Boost.Jam.<br>Craig McPeeters 已经对 Perforce Jam 进行了扩展以解决此类问题，而且该扩展已经集成到 Boost.Jam 中。
+          </p>
+<p>
+            Any target can be assigned a <span class="emphasis"><em>semaphore</em></span>, by setting
+            a variable called <code class="literal">SEMAPHORE</code> on that target. The value
+            of the variable is the semaphore name. It must be different from names
+            of any declared target, but is arbitrary otherwise.<br>任何目标都可以被赋予一个 <span class="emphasis"><em>信号灯semaphore</em></span>，方法是对该目标设置一个名为 <code class="literal">SEMAPHORE</code> 的变量。该变量的值为信号灯名。它必须不同于其它已声明的目标，但可以是其它任意值。
+          </p>
+<p>
+            The semantic of semaphores is that in a group of targets which have the
+            same semaphore, only one can be updated at the moment, regardless of
+            "<code class="literal">-j</code>" option.<br>信号灯的语义是，在一组具有相同信号灯的目标中，在同一时刻只有一个可以被更新，无论有否 "<code class="literal">-j</code>" 选项。
+          </p>
+</div>
+<div class="section" lang="en">
+<div class="titlepage"><div><div><h5 class="title">
+<a name="jam.language.variables.builtins.platform_identifier"></a><a class="link" href="language.html#jam.language.variables.builtins.platform_identifier" title="Platform Identifier">Platform
+          Identifier 平台标识符</a>
+</h5></div></div></div>
+<p>
+            A number of Jam built-in variables can be used to identify runtime platform:<br>有一组 Jam 内建变量可用于标识运行期平台：
+          </p>
+<div class="variablelist">
+<p class="title"><b></b></p>
+<dl>
+<dt><span class="term"><code class="literal">OS</code></span></dt>
+<dd><p>
+                OS identifier string<br>OS 标识符字符串
+              </p></dd>
+<dt><span class="term"><code class="literal">OSPLAT</code></span></dt>
+<dd><p>
+                Underlying architecture, when applicable<br>底层体系，在可用时
+              </p></dd>
+<dt><span class="term"><code class="literal">MAC</code></span></dt>
+<dd><p>
+                true on MAC platform
+              <br>在 MAC 平台上为真</p></dd>
+<dt><span class="term"><code class="literal">NT</code></span></dt>
+<dd><p>
+                true on NT platform<br>在 NT 平台上为真
+              </p></dd>
+<dt><span class="term"><code class="literal">OS2</code></span></dt>
+<dd><p>
+                true on OS2 platform<br>在 OS2 平台上为真
+              </p></dd>
+<dt><span class="term"><code class="literal">UNIX</code></span></dt>
+<dd><p>
+                true on Unix platforms<br>在 Unix 平台上为真
+              </p></dd>
+<dt><span class="term"><code class="literal">VMS</code></span></dt>
+<dd><p>
+                true on VMS platform<br>在 VMS 平台上为真
+              </p></dd>
+</dl>
+</div>
+</div>
+<div class="section" lang="en">
+<div class="titlepage"><div><div><h5 class="title">
+<a name="jam.language.variables.builtins.jam_version"></a><a class="link" href="language.html#jam.language.variables.builtins.jam_version" title="Jam Version">Jam
+          Version &nbsp;Jam版本</a>
+</h5></div></div></div>
+<div class="variablelist">
+<p class="title"><b></b></p>
+<dl>
+<dt><span class="term"><code class="literal">JAMDATE</code></span></dt>
+<dd><p>
+                Time and date at <code class="literal">bjam</code> start-up as an ISO-8601
+                UTC value.<br><code class="literal">bjam</code> 启动时的时间和日期，以 ISO-8601
+                UTC 值表示。
+              </p></dd>
+<dt><span class="term"><code class="literal">JAMUNAME</code></span></dt>
+<dd><p>
+                Ouput of uname(1) command (Unix only)<br>uname(1) 命令的输出(仅用于 Unix)
+              </p></dd>
+<dt><span class="term"><code class="literal">JAMVERSION</code></span></dt>
+<dd><p>
+                <code class="literal">bjam</code> version, currently "3.1.16"<br><code class="literal">bjam</code> 版本，当前为 "3.1.16"
+              </p></dd>
+<dt><span class="term"><code class="literal">JAM_VERSION</code></span></dt>
+<dd><p>
+                A predefined global variable with two elements indicates the version
+                number of Boost Jam. Boost Jam versions start at "<code class="literal">03</code>"
+                "<code class="literal">00</code>". Earlier versions of <code class="literal">Jam</code>
+                do not automatically define <code class="literal">JAM_VERSION</code>.<br>一个带两个元素的预定义全局变量，表示 Boost Jam 版本数。Boost Jam 版本从 "<code class="literal">03</code>"
+                "<code class="literal">00</code>" 开始。更早期的 <code class="literal">Jam</code>
+                版本没有自动定义 <code class="literal">JAM_VERSION</code>.
+              </p></dd>
+</dl>
+</div>
+</div>
+<div class="section" lang="en">
+<div class="titlepage"><div><div><h5 class="title">
+<a name="jam.language.variables.builtins.jamshell"></a><a class="link" href="language.html#jam.language.variables.builtins.jamshell" title="JAMSHELL">JAMSHELL</a>
+</h5></div></div></div>
+<p>
+            When <code class="literal">bjam</code> executes a rule's action block, it forks
+            and execs a shell, passing the action block as an argument to the shell.
+            The invocation of the shell can be controlled by <code class="literal">$(JAMSHELL)</code>.
+            The default on Unix is, for example:<br>当 <code class="literal">bjam</code> 执行一个规则动作块时，它分叉并执行一个 shell，将动作块作为参数传递给 shell。shell 的调用可以通过 <code class="literal">$(JAMSHELL)</code> 来控制。例如，在 Unix 上的缺省值为：
+          </p>
+<pre class="programlisting">JAMSHELL = /bin/sh -c % ;<br></pre>
+<p>
+            The <code class="literal">%</code> is replaced with the text of the action block.<br><code class="literal">%</code> 将被动作块的文本替换。
+          </p>
+<p>
+            <code class="literal">BJam</code> does not directly support building in parallel
+            across multiple hosts, since that is heavily dependent on the local environment.
+            To build in parallel across multiple hosts, you need to write your own
+            shell that provides access to the multiple hosts. You then reset <code class="literal">$(JAMSHELL)</code>
+            to reference it.<br><code class="literal">BJam</code> 不直接支持在多个主机上并行构建，因为这非常依赖于本地环境。要在多个主机上并行构建，你需要编写自己的 shell 来提供对多个主机的访问。然后将 <code class="literal">$(JAMSHELL)</code>
+            重设为引向它。
+          </p>
+<p>
+            Just as <code class="literal">bjam</code> expands a <code class="literal">%</code> to be
+            the text of the rule's action block, it expands a <code class="literal">!</code>
+            to be the multi-process slot number. The slot number varies between 1
+            and the number of concurrent jobs permitted by the <code class="literal">-j</code>
+            flag given on the command line. Armed with this, it is possible to write
+            a multiple host shell. For example:<br>正如 <code class="literal">bjam</code> 会将 <code class="literal">%</code> 展开为规则动作块的文本，它也会将 <code class="literal">!</code>
+            展开为多进程插槽数。该插槽数在 1
+            到命令行中给定的 <code class="literal">-j</code> 选项所允许的并发数之间变化。有了这个，就可以编写一个多主机的 shell。例如：
+          </p>
+<pre class="programlisting">#!/bin/sh<br><br># This sample JAMSHELL uses the SunOS on(1) command to execute a<br># command string with an identical environment on another host.<br><br># Set JAMSHELL = jamshell ! %<br>#<br># where jamshell is the name of this shell file.<br>#<br># This version handles up to -j6; after that they get executed<br># locally.<br><br>case $1 in<br>1|4) on winken sh -c "$2";;<br>2|5) on blinken sh -c "$2";;<br>3|6) on nod sh -c "$2";;<br>*) eval "$2";;<br>esac<br></pre>
+</div>
+<div class="section" lang="en">
+<div class="titlepage"><div><div><h5 class="title">
+<a name="jam.language.variables.builtins.actionrule"></a><a class="link" href="language.html#jam.language.variables.builtins.actionrule" title="__TIMING_RULE__ and __ACTION_RULE__"> <code class="literal">__TIMING_RULE__</code>
+          and <code class="literal">__ACTION_RULE__</code></a>
+</h5></div></div></div>
+<p>
+            The <code class="literal">__TIMING_RULE__</code> and <code class="literal">__ACTION_RULE__</code>
+            can be set to the name of a rule for <code class="literal">bjam</code> to call
+            <span class="bold"><strong>after</strong></span> an action completes for a target.
+            They both give diagnostic information about the action that completed.
+            For <code class="literal">__TIMING_RULE__</code> the rule is called as:<br><code class="literal">__TIMING_RULE__</code> 和 <code class="literal">__ACTION_RULE__</code>
+            可被设置为一个规则名，<code class="literal">bjam</code> 将在一个目标的动作完成后调用该规则。它们两个都给出了关于已完成规则的诊断信息。对于 <code class="literal">__TIMING_RULE__</code>，规则这样调用：
+          </p>
+<pre class="programlisting"><span class="identifier">rule</span> <span class="identifier">timing</span><span class="special">-</span><span class="identifier">rule</span> <span class="special">(</span> <span class="identifier">args</span> <span class="special">*</span> <span class="special">:</span> <span class="identifier">target</span> <span class="special">:</span> <span class="identifier">start</span> <span class="identifier">end</span> <span class="identifier">user</span> <span class="identifier">system</span> <span class="special">)</span>
+</pre>
+<p>
+            And <code class="literal">__ACTION_RULE__</code> is called as:<br>而对于 <code class="literal">__ACTION_RULE__</code> 则如下调用：
+          </p>
+<pre class="programlisting"><span class="identifier">rule</span> <span class="identifier">action</span><span class="special">-</span><span class="identifier">rule</span> <span class="special">(</span> <span class="identifier">args</span> <span class="special">*</span> <span class="special">:</span> <span class="identifier">target</span> <span class="special">:</span> <span class="identifier">command</span> <span class="identifier">status</span> <span class="identifier">start</span> <span class="identifier">end</span> <span class="identifier">user</span> <span class="identifier">system</span> <span class="special">:</span> <span class="identifier">output</span> <span class="special">?</span> <span class="special">)</span>
+</pre>
+<p>
+            The arguments for both are:<br>两者的参数是：
+          </p>
+<div class="variablelist">
+
+<dl>
+<dt><span class="term"><code class="literal">args</code></span></dt>
+<dd><p>
+                Any values following the rule name in the <code class="literal">__TIMING_RULE__</code>
+                or <code class="literal">__ACTION_RULE__</code> are passed along here.<br>在 <code class="literal">__TIMING_RULE__</code> 或 <code class="literal">__ACTION_RULE__</code> 中跟在规则名后的任意值被传递到这里。
+              </p></dd>
+<dt><span class="term"><code class="literal">target</code></span></dt>
+<dd><p>
+                The <code class="literal">bjam</code> target that was built.<br>被构建的 <code class="literal">bjam</code> 目标。
+              </p></dd>
+<dt><span class="term"><code class="literal">command</code></span></dt>
+<dd><p>
+                The text of the executed command in the action body.<br>在动作体中被执行命令的文本。
+              </p></dd>
+<dt><span class="term"><code class="literal">status</code></span></dt>
+<dd><p>
+                The integer result of the executed command.<br>被执行命令的整数结果。
+              </p></dd>
+<dt><span class="term"><code class="literal">start</code></span></dt>
+<dd><p>
+                The starting timestamp of the executed command as a ISO-8601 UTC
+                value.<br>被执行命令的开始时间戳，以 ISO-8601 TUC 值表示。
+              </p></dd>
+<dt><span class="term"><code class="literal">end</code></span></dt>
+<dd><p>
+                The completion timestamp of the executed command as a ISO-8601 UTC
+                value.<br>被执行命令的完成时间戳，以 ISO-8601 TUC 值表示。
+              </p></dd>
+<dt><span class="term"><code class="literal">user</code></span></dt>
+<dd><p>
+                The number of user CPU seconds the executed command spent as a floating
+                point value.<br>被执行命令的用户 CPU 秒数，表示为浮点值。
+              </p></dd>
+<dt><span class="term"><code class="literal">system</code></span></dt>
+<dd><p>
+                The number of system CPU seconds the executed command spent as a
+                floating point value.<br>被执行命令的系统 CPU 秒数，表示为浮点值。
+              </p></dd>
+<dt><span class="term"><code class="literal">output</code></span></dt>
+<dd><p>
+                The output of the command as a single string. The content of the
+                output reflects the use of the <code class="literal">-pX</code> option.<br>以单个字符串表示的命令的输出。输出的内容反映了 <code class="literal">-pX</code> 选项的使用。
+              </p></dd>
+</dl>
+</div>
+<div class="note"><table summary="Note" border="0">
+<tbody><tr>
+<td rowspan="2" align="center" valign="top" width="25"><img alt="[Note]" src="../../../doc/html/images/note.png"></td>
+<th align="left">Note 说明</th>
+</tr>
+<tr><td align="left" valign="top"><p>
+              If both variables are set for a target both are called, first <code class="literal">__TIMING_RULE__</code>
+              then <code class="literal">__ACTION_RULE__</code>.</p><p>如果对一个目标设置了两个变量，则两个均被调用，首先是 <code class="literal">__TIMING_RULE__</code> 然后 <code class="literal">__ACTION_RULE__</code>.
+            </p></td></tr>
+</tbody></table></div>
+</div>
+</div>
+</div>
+<div class="section" lang="en">
+<div class="titlepage"><div><div><h3 class="title">
+<a name="jam.language.modules"></a><a class="link" href="language.html#jam.language.modules" title="Modules">Modules 模块</a>
+</h3></div></div></div>
+<div class="toc"><dl>
+<dt><span class="section"><a href="language.html#jam.language.modules.declaration">Declaration 声明</a></span></dt>
+<dt><span class="section"><a href="language.html#jam.language.modules.variable_scope">Variable Scope 变量作用域</a></span></dt>
+<dt><span class="section"><a href="language.html#jam.language.modules.local_rules">Local Rules 本地规则</a></span></dt>
+<dt><span class="section"><a href="language.html#jam.language.modules.the__rulenames__rule">The <code class="literal">RULENAMES</code>
+        Rule</a></span></dt>
+<dt><span class="section"><a href="language.html#jam.language.modules.the__varnames__rule">The <code class="literal">VARNAMES</code>
+        Rule</a></span></dt>
+<dt><span class="section"><a href="language.html#jam.language.modules.the__import__rule">The <code class="literal">IMPORT</code>
+        Rule</a></span></dt>
+<dt><span class="section"><a href="language.html#jam.language.modules.the__export__rule">The <code class="literal">EXPORT</code>
+        Rule</a></span></dt>
+<dt><span class="section"><a href="language.html#jam.language.modules.the__caller_module__rule">The
+        <code class="literal">CALLER_MODULE</code> Rule</a></span></dt>
+<dt><span class="section"><a href="language.html#jam.language.modules.the__delete_module__rule">The
+        <code class="literal">DELETE_MODULE</code> Rule</a></span></dt>
+</dl></div>
+<p>
+        Boost Jam introduces support for modules, which provide some rudimentary
+        namespace protection for rules and variables. A new keyword, "<code class="literal">module</code>"
+        was also introduced. The features described in this section are primitives,
+        meaning that they are meant to provide the operations needed to write Jam
+        rules which provide a more elegant module interface.<br>Boost Jam 引入了对模块的支持，它为规则和变量提供了一些根本的名字空间保护。引入了一个新的关键字 "<code class="literal">module</code>"。本节中所描述的特性是最基本的，即它们的目的是提供编写更优雅的模块接口的 Jam 规则所需的操作。
+      </p>
+<div class="section" lang="en">
+<div class="titlepage"><div><div><h4 class="title">
+<a name="jam.language.modules.declaration"></a><a class="link" href="language.html#jam.language.modules.declaration" title="Declaration">Declaration 声明</a>
+</h4></div></div></div>
+<pre class="programlisting">module <span class="emphasis"><em>expression</em></span> { ... }<br></pre>
+<p>
+          Code within the <code class="literal">{ ... }</code> executes within the module named
+          by evaluating expression. Rule definitions can be found in the module's
+          own namespace, and in the namespace of the global module as <span class="emphasis"><em>module-name</em></span>.<span class="emphasis"><em>rule-name</em></span>,
+          so within a module, other rules in that module may always be invoked without
+          qualification:<br>在 <code class="literal">{ ... }</code> 中的代码在对表达式求值后得到名字的模块的内部执行。规则的定义可以在模块自己的名字空间和全局模块的名字空间中找到，形如 <span class="emphasis"><em>module-name</em></span>.<span class="emphasis"><em>rule-name</em></span>，在一个模块内部，该模块的其它规则可以无需限定符来调用：
+        </p>
+<pre class="programlisting"><span class="bold"><strong>module my_module</strong></span>
+<span class="bold"><strong>{</strong></span>
+    rule salute ( x ) { ECHO $(x), world ; }
+    rule greet ( ) { salute hello ; }
+    greet ;
+<span class="bold"><strong>}</strong></span>
+<span class="bold"><strong>my_module.salute</strong></span> goodbye ;<br></pre>
+<p>
+          When an invoked rule is not found in the current module's namespace, it
+          is looked up in the namespace of the global module, so qualified calls
+          work across modules:<br>当一个被调用的规则不能在当前模块的名字空间中找到时，就会在全局模块的名字空间中查找，所以限定调用可以跨模块使用：
+        </p>
+<pre class="programlisting">module your_module<br>{<br>    rule bedtime ( ) { <span class="bold"><strong>my_module.salute</strong></span> goodnight ; }<br>}<br></pre>
+</div>
+<div class="section" lang="en">
+<div class="titlepage"><div><div><h4 class="title">
+<a name="jam.language.modules.variable_scope"></a><a class="link" href="language.html#jam.language.modules.variable_scope" title="Variable Scope">Variable Scope 变量作用域</a>
+</h4></div></div></div>
+<p>
+          Each module has its own set of dynamically nested variable scopes. When
+          execution passes from module A to module B, all the variable bindings from
+          A become unavailable, and are replaced by the bindings that belong to B.
+          This applies equally to local and global variables:<br>每个模块都有它自己的动态嵌套变量作用域。当执行从模块A传递到模块B时，所有从A绑定的变量都变成不可用的，并被属于B的绑定所替换。这一点对于局部变量和全局变量同样适用：
+        </p>
+<pre class="programlisting">module A<br>{<br>    x = 1 ;<br>    rule f ( )<br>    {<br>        local y = 999 ; # becomes visible again when B.f calls A.g<br>        B.f ;<br>    }<br>    rule g ( )<br>    {<br>        ECHO $(y) ;     # prints "999"<br>    }<br>}<br>module B<br>{<br>    y = 2 ;<br>    rule f ( )<br>    {<br>        ECHO $(y) ; # always prints "2"<br>        A.g ;<br>    }<br>}<br></pre>
+<p>
+          The only way to access another module's variables is by entering that module:<br>访问其它模块的变量的唯一方法是，进入该模块：
+        </p>
+<pre class="programlisting">rule peek ( module-name ? : variables + )<br>{<br>    module $(module-name)<br>    {<br>        return $($(&gt;)) ;<br>    }<br>}<br></pre>
+<p>
+          Note that because existing variable bindings change whenever a new module
+          scope is entered, argument bindings become unavailable. That explains the
+          use of "<code class="literal">$(&gt;)</code>" in the peek rule above.<br>注意，由于在进入一个新的模块作用域时，退出变量的绑定会改变，所以参数绑定变为不可用。这解释了为何在上面的 peek 规则中使用 "<code class="literal">$(&gt;)</code>"。
+        </p>
+</div>
+<div class="section" lang="en">
+<div class="titlepage"><div><div><h4 class="title">
+<a name="jam.language.modules.local_rules"></a><a class="link" href="language.html#jam.language.modules.local_rules" title="Local Rules">Local Rules 本地规则</a>
+</h4></div></div></div>
+<pre class="programlisting">local rule <span class="emphasis"><em>rulename</em></span>...<br></pre>
+<p>
+          The rule is declared locally to the current module. It is not entered in
+          the global module with qualification, and its name will not appear in the
+          result of:<br>该规则被声明为局部在当前模块中。它不能在全局模块中以限定方式进入，而且它的名字不会出现在以下的结果中：
+        </p>
+<pre class="programlisting">[ RULENAMES <span class="emphasis"><em>module-name</em></span> ]<br></pre>
+</div>
+<div class="section" lang="en">
+<div class="titlepage"><div><div><h4 class="title">
+<a name="jam.language.modules.the__rulenames__rule"></a><a class="link" href="language.html#jam.language.modules.the__rulenames__rule" title="The RULENAMES Rule">The <code class="literal">RULENAMES</code>
+        Rule</a>
+</h4></div></div></div>
+<pre class="programlisting">rule RULENAMES ( <span class="emphasis"><em>module</em></span> ? )<br></pre>
+<p>
+          Returns a list of the names of all non-local rules in the given module.
+          If <span class="emphasis"><em>module</em></span> is omitted, the names of all non-local rules
+          in the global module are returned.<br>返回给定模块中所有非本地规则名字的列表。如果 <span class="emphasis"><em>module</em></span> 未给出，则返回全局模块中所有非本地规则的名字。
+        </p>
+</div>
+<div class="section" lang="en">
+<div class="titlepage"><div><div><h4 class="title">
+<a name="jam.language.modules.the__varnames__rule"></a><a class="link" href="language.html#jam.language.modules.the__varnames__rule" title="The VARNAMES Rule">The <code class="literal">VARNAMES</code>
+        Rule</a>
+</h4></div></div></div>
+<pre class="programlisting">rule VARNAMES ( <span class="emphasis"><em>module</em></span> ? )<br></pre>
+<p>
+          Returns a list of the names of all variable bindings in the given module.
+          If <span class="emphasis"><em>module</em></span> is omitted, the names of all variable bindings
+          in the global module are returned.<br>返回给定模块中所有变量绑定的名字的列表。如果 <span class="emphasis"><em>module</em></span> 未给出，则返回全局模块中所有变量绑定的名字。
+        </p>
+<div class="note"><table summary="Note" border="0">
+<tbody><tr>
+<td rowspan="2" align="center" valign="top" width="25"><img alt="[Note]" src="../../../doc/html/images/note.png"></td>
+<th align="left">Note 说明</th>
+</tr>
+<tr><td align="left" valign="top"><p>
+            This includes any local variables in rules from the call stack which
+            have not returned at the time of the <code class="literal">VARNAMES</code> invocation.</p><p>它包含了规则中在调用&nbsp;<code class="literal">VARNAMES</code> 时尚未从调用栈返回的所有局部变量。
+          </p></td></tr>
+</tbody></table></div>
+</div>
+<div class="section" lang="en">
+<div class="titlepage"><div><div><h4 class="title">
+<a name="jam.language.modules.the__import__rule"></a><a class="link" href="language.html#jam.language.modules.the__import__rule" title="The IMPORT Rule">The <code class="literal">IMPORT</code>
+        Rule</a>
+</h4></div></div></div>
+<p>
+          <code class="literal">IMPORT</code> allows rule name aliasing across modules:<br><code class="literal">IMPORT</code> 允许规则名跨模块使用别名：
+        </p>
+<pre class="programlisting">rule IMPORT ( <span class="emphasis"><em>source_module</em></span> ? : <span class="emphasis"><em>source_rules</em></span> *<br>            : <span class="emphasis"><em>target_module</em></span> ? : <span class="emphasis"><em>target_rules</em></span> * )<br></pre>
+<p>
+          The <code class="literal">IMPORT</code> rule copies rules from the <span class="emphasis"><em>source_module</em></span>
+          into the <span class="emphasis"><em>target_module</em></span> as local rules. If either
+          <span class="emphasis"><em>source_module</em></span> or <span class="emphasis"><em>target_module</em></span>
+          is not supplied, it refers to the global module. <span class="emphasis"><em>source_rules</em></span>
+          specifies which rules from the <span class="emphasis"><em>source_module</em></span> to import;
+          <span class="emphasis"><em>target_rules</em></span> specifies the names to give those rules
+          in <span class="emphasis"><em>target_module</em></span>. If <span class="emphasis"><em>source_rules</em></span>
+          contains a name which doesn't correspond to a rule in <span class="emphasis"><em>source_module</em></span>,
+          or if it contains a different number of items than <span class="emphasis"><em>target_rules</em></span>,
+          an error is issued. For example,<br><code class="literal">IMPORT</code> 规则将规则从 <span class="emphasis"><em>source_module</em></span>
+          复制到 <span class="emphasis"><em>target_module</em></span> 并作为本地规则。如果
+          <span class="emphasis"><em>source_module</em></span> 或 <span class="emphasis"><em>target_module</em></span>
+          未给出，则代表全局模块。<span class="emphasis"><em>source_rules</em></span>
+          指定了从 <span class="emphasis"><em>source_module</em></span> 引入哪一个规则；<span class="emphasis"><em>target_rules</em></span> 指定了在 <span class="emphasis"><em>target_module</em></span> 中的规则名。如果 <span class="emphasis"><em>source_rules</em></span>
+          包含的某个名字不能对应到 <span class="emphasis"><em>source_module</em></span> 中的规则，或者它包含的元素数量与 <span class="emphasis"><em>target_rules</em></span> 不等，则引发一个错误。例如：
+        </p>
+<pre class="programlisting"># import m1.rule1 into m2 as local rule m1-rule1.<br>IMPORT m1 : rule1 : m2 : m1-rule1 ;<br># import all non-local rules from m1 into m2<br>IMPORT m1 : [ RULENAMES m1 ] : m2 : [ RULENAMES m1 ] ;<br></pre>
+</div>
+<div class="section" lang="en">
+<div class="titlepage"><div><div><h4 class="title">
+<a name="jam.language.modules.the__export__rule"></a><a class="link" href="language.html#jam.language.modules.the__export__rule" title="The EXPORT Rule">The <code class="literal">EXPORT</code>
+        Rule</a>
+</h4></div></div></div>
+<p>
+          <code class="literal">EXPORT</code> allows rule name aliasing across modules:<br><code class="literal">EXPORT</code> 允许规则名跨模块使用别名：
+        </p>
+<pre class="programlisting">rule EXPORT ( <span class="emphasis"><em>module</em></span> ? : <span class="emphasis"><em>rules</em></span> * )<br></pre>
+<p>
+          The <code class="literal">EXPORT</code> rule marks <span class="emphasis"><em>rules</em></span> from
+          the <code class="literal">source_module</code> as non-local (and thus exportable).
+          If an element of <span class="emphasis"><em>rules</em></span> does not name a rule in <span class="emphasis"><em>module</em></span>,
+          an error is issued. For example,&nbsp;<br><code class="literal">EXPORT</code> 规则将 <code class="literal">source_module</code> 中的 <span class="emphasis"><em>rules</em></span> 标记为非本地规则(即可导出的)。如果 <span class="emphasis"><em>rules</em></span> 中的某个元素不是 <span class="emphasis"><em>module</em></span> 中的规则名，则引发一个错误。例如：
+        </p>
+<pre class="programlisting">module X {<br>  local rule r { ECHO X.r ; }<br>}<br>IMPORT X : r : : r ; # error - r is local in X<br>EXPORT X : r ;<br>IMPORT X : r : : r ; # OK.<br></pre>
+</div>
+<div class="section" lang="en">
+<div class="titlepage"><div><div><h4 class="title">
+<a name="jam.language.modules.the__caller_module__rule"></a><a class="link" href="language.html#jam.language.modules.the__caller_module__rule" title="The CALLER_MODULE Rule">The
+        <code class="literal">CALLER_MODULE</code> Rule</a>
+</h4></div></div></div>
+<pre class="programlisting">rule CALLER_MODULE ( <span class="emphasis"><em>levels</em></span> ? )<br></pre>
+<p>
+          <code class="literal">CALLER_MODULE</code> returns the name of the module scope enclosing
+          the call to its caller (if levels is supplied, it is interpreted as an
+          integer number of additional levels of call stack to traverse to locate
+          the module). If the scope belongs to the global module, or if no such module
+          exists, returns the empty list. For example, the following prints "{Y}
+          {X}":<br><code class="literal">CALLER_MODULE</code> 返回包含了调用其调用者的模块作用域的名字(如果给出了 levels，则解释为在调用栈中定位该模块所增加的层数)。如果该作用域属于全局模块，或者不存在这样的模块，则返回空列表。例如，下面将打印 "{Y}
+          {X}":
+        </p>
+<pre class="programlisting">module X {<br>    rule get-caller { return [ CALLER_MODULE ] ; }<br>    rule get-caller's-caller { return [ CALLER_MODULE 1 ] ; }<br>    rule call-Y { return Y.call-X2 ; }<br>}<br>module Y {<br>    rule call-X { return X.get-caller ; }<br>    rule call-X2 { return X.get-caller's-caller ; }<br>}<br>callers = [ X.get-caller ] [ Y.call-X ] [ X.call-Y ] ;<br>ECHO {$(callers)} ;<br></pre>
+</div>
+<div class="section" lang="en">
+<div class="titlepage"><div><div><h4 class="title">
+<a name="jam.language.modules.the__delete_module__rule"></a><a class="link" href="language.html#jam.language.modules.the__delete_module__rule" title="The DELETE_MODULE Rule">The
+        <code class="literal">DELETE_MODULE</code> Rule</a>
+</h4></div></div></div>
+<pre class="programlisting">rule DELETE_MODULE ( <span class="emphasis"><em>module</em></span> ? )<br></pre>
+<p>
+          <code class="literal">DELETE_MODULE</code> removes all of the variable bindings and
+          otherwise-unreferenced rules from the given module (or the global module,
+          if no module is supplied), and returns their memory to the system.<br><code class="literal">DELETE_MODULE</code> 从给定模块(或全局模块，如果模块未给出)删除所有变量绑定和其它未引用规则，并将它们的内存返回给系统。
+        </p>
+<div class="note"><table summary="Note" border="0">
+<tbody><tr>
+<td rowspan="2" align="center" valign="top" width="25"><img alt="[Note]" src="../../../doc/html/images/note.png"></td>
+<th align="left">Note 说明</th>
+</tr>
+<tr><td align="left" valign="top"><p>
+            Though it won't affect rules that are currently executing until they
+            complete, <code class="literal">DELETE_MODULE</code> should be used with extreme
+            care because it will wipe out any others and all variable (including
+            locals in that module) immediately. Because of the way dynamic binding
+            works, variables which are shadowed by locals will not be destroyed,
+            so the results can be really unpredictable.</p><p>虽然在当前规则执行完成前，不会受到影响，但是 <code class="literal">DELETE_MODULE</code> 还是要极为小心地使用，因为它会立即销毁所有其它规则和所有变量(包括模块中的局部变量)。因为动态绑定的工作方式，被局部遮蔽的变量不会被销毁，所以结果真的不可预知。
+          </p></td></tr>
+</tbody></table></div>
+</div>
+</div>
+</div>
+<table xmlns:rev="http://www.cs.rpi.edu/~gregod/boost/tools/doc/revision" width="100%"><tbody><tr>
+<td align="left"></td>
+<td align="right"><div class="copyright-footer">Copyright © 2003-2007 Rene Rivera, David Abrahams, Vladimir Prus<p>
+        Distributed under the Boost Software License, Version 1.0. (See accompanying
+        file LICENSE_1_0.txt or copy at <a href="http://www.boost.org/LICENSE_1_0.txt" target="_top">http://www.boost.org/LICENSE_1_0.txt</a>)
+      </p>
+</div></td>
+</tr></tbody></table>
+<hr>
+<div class="spirit-nav">
+<a accesskey="p" href="usage.html"><img src="../../../doc/html/images/prev.png" alt="Prev"></a><a accesskey="u" href="../jam.html"><img src="../../../doc/html/images/up.png" alt="Up"></a><a accesskey="h" href="../index.html"><img src="../../../doc/html/images/home.png" alt="Home"></a><a accesskey="n" href="miscellaneous.html"><img src="../../../doc/html/images/next.png" alt="Next"></a>
+</div>
+</body></html>

@@ -1,0 +1,1036 @@
+<!DOCTYPE HTML PUBLIC "-//W3C//DTD HTML 4.01 Transitional//EN">
+<html><head>
+<meta http-equiv="Content-Type" content="text/html; charset=UTF-8">
+
+<title>Exposing Classes</title><link rel="stylesheet" href="../../../../../../../doc/html/boostbook.css" type="text/css">
+<meta name="generator" content="DocBook XSL Stylesheets V1.66.1">
+<link rel="start" href="../index.html" title="Chapter 1. python 1.0">
+<link rel="up" href="../index.html" title="Chapter 1. python 1.0">
+<link rel="prev" href="hello.html" title=" Building Hello World">
+<link rel="next" href="functions.html" title="Functions"></head>
+<body alink="#0000ff" bgcolor="white" link="#0000ff" text="black" vlink="#840084">
+<table cellpadding="2" width="100%"><tbody><tr>
+<td valign="top"><img alt="Boost C++ Libraries" src="../../../../../../../boost.png" height="86" width="277"></td>
+<td align="center"><a href="../../../../../../../index.html">Home</a></td>
+<td align="center"><a href="../../../../../../../libs/libraries.htm">Libraries</a></td>
+<td align="center"><a href="http://www.boost.org/users/people.html">People</a></td>
+<td align="center"><a href="http://www.boost.org/users/faq.html">FAQ</a></td>
+<td align="center"><a href="../../../../../../../more/index.htm">More</a></td>
+</tr></tbody></table>
+<hr>
+<div class="spirit-nav">
+<a accesskey="p" href="hello.html"><img src="../../../../../../../doc/html/images/prev.png" alt="Prev"></a><a accesskey="u" href="../index.html"><img src="../../../../../../../doc/html/images/up.png" alt="Up"></a><a accesskey="h" href="../index.html"><img src="../../../../../../../doc/html/images/home.png" alt="Home"></a><a accesskey="n" href="functions.html"><img src="../../../../../../../doc/html/images/next.png" alt="Next"></a>
+</div>
+<div class="section" lang="en">
+<div class="titlepage"><div><div><h2 class="title" style="clear: both;">
+<a name="python.exposing"></a> Exposing Classes</h2>
+<h2 class="title" style="clear: both;">导出类</h2>
+</div></div></div>
+<div class="toc"><dl>
+<dt><span class="section"><a href="exposing.html#python.constructors">Constructors</a></span></dt>
+<dt><span class="section"><a href="exposing.html#python.class_data_members">Class Data Members</a></span></dt>
+<dt><span class="section"><a href="exposing.html#python.class_properties">Class Properties</a></span></dt>
+<dt><span class="section"><a href="exposing.html#python.inheritance">Inheritance</a></span></dt>
+<dt><span class="section"><a href="exposing.html#python.class_virtual_functions">Class Virtual Functions</a></span></dt>
+<dt><span class="section"><a href="exposing.html#python.virtual_functions_with_default_implementations">Virtual Functions with Default Implementations</a></span></dt>
+<dt><span class="section"><a href="exposing.html#python.class_operators_special_functions">Class Operators/Special Functions</a></span></dt>
+</dl></div>
+
+<div class="toc"><dl>
+<dt><span class="section"><a href="exposing.html#python.constructors">构造函数</a></span></dt>
+<dt><span class="section"><a href="exposing.html#python.class_data_members">类的数据成员</a></span></dt>
+<dt><span class="section"><a href="exposing.html#python.class_properties">类的属性</a></span></dt>
+<dt><span class="section"><a href="exposing.html#python.inheritance">继承</a></span></dt>
+<dt><span class="section"><a href="exposing.html#python.class_virtual_functions">类的虚函数</a></span></dt>
+<dt><span class="section"><a href="exposing.html#python.virtual_functions_with_default_implementations">具有默认实现的虚函数</a></span></dt>
+<dt><span class="section"><a href="exposing.html#python.class_operators_special_functions">类的运算符/特殊函数</a></span></dt>
+</dl></div>
+
+<p>
+      Now let's expose a C++ class to Python.
+    </p>
+
+<p>
+      现在让我们导出C++类到Python。
+    </p>
+
+<p>
+      Consider a C++ class/struct that we want to expose to Python:
+    </p>
+
+<p>
+      设想，我们要把一个C++类/结构导出到Python：
+    </p>
+
+<pre class="programlisting"><span class="keyword">struct</span> <span class="identifier">World</span>
+<span class="special">{</span>
+    <span class="keyword">void</span> <span class="identifier">set</span><span class="special">(</span><span class="identifier">std</span><span class="special">::</span><span class="identifier">string</span> <span class="identifier">msg</span><span class="special">)</span> <span class="special">{</span> <span class="keyword">this</span><span class="special">-&gt;</span><span class="identifier">msg</span> <span class="special">=</span> <span class="identifier">msg</span><span class="special">;</span> <span class="special">}</span>
+    <span class="identifier">std</span><span class="special">::</span><span class="identifier">string</span> <span class="identifier">greet</span><span class="special">()</span> <span class="special">{</span> <span class="keyword">return</span> <span class="identifier">msg</span><span class="special">;</span> <span class="special">}</span>
+    <span class="identifier">std</span><span class="special">::</span><span class="identifier">string</span> <span class="identifier">msg</span><span class="special">;</span>
+<span class="special">};</span>
+</pre>
+<p>
+      We can expose this to Python by writing a corresponding Boost.Python C++ Wrapper:
+    </p>
+
+<p>
+      我们可以编写相应的Boost.Python C++封装，把它导出给Python：
+    </p>
+
+<pre class="programlisting"><span class="preprocessor">#include</span> <span class="special">&lt;</span><span class="identifier">boost</span><span class="special">/</span><span class="identifier">python</span><span class="special">.</span><span class="identifier">hpp</span><span class="special">&gt;</span>
+<span class="keyword">using</span> <span class="keyword">namespace</span> <span class="identifier">boost</span><span class="special">::</span><span class="identifier">python</span><span class="special">;</span>
+
+<span class="identifier">BOOST_PYTHON_MODULE</span><span class="special">(</span><span class="identifier">hello</span><span class="special">)</span>
+<span class="special">{</span>
+    <span class="identifier">class_</span><span class="special">&lt;</span><span class="identifier">World</span><span class="special">&gt;(</span><span class="string">"World"</span><span class="special">)</span>
+        <span class="special">.</span><span class="identifier">def</span><span class="special">(</span><span class="string">"greet"</span><span class="special">,</span> <span class="special">&amp;</span><span class="identifier">World</span><span class="special">::</span><span class="identifier">greet</span><span class="special">)</span>
+        <span class="special">.</span><span class="identifier">def</span><span class="special">(</span><span class="string">"set"</span><span class="special">,</span> <span class="special">&amp;</span><span class="identifier">World</span><span class="special">::</span><span class="identifier">set</span><span class="special">)</span>
+    <span class="special">;</span>
+<span class="special">}</span>
+</pre>
+<p>
+      Here, we wrote a C++ class wrapper that exposes the member functions <tt class="literal">greet</tt>
+      and <tt class="literal">set</tt>. Now, after building our module as a shared library,
+      we may use our class <tt class="literal">World</tt> in Python. Here's a sample Python
+      session:
+    </p>
+
+<p>
+在这里，我们写了一个C++类封装，导出了成员函数
+<tt class="literal">greet</tt>和
+<tt class="literal">set</tt>。
+现在，把我们的模块构建为共享库之后，
+我们就可以在Python中使用我们的
+<tt class="literal">World</tt>类了。
+Python运行示例如下：
+    </p>
+
+<p>
+    </p>
+<pre class="programlisting"><span class="special">&gt;&gt;&gt;</span> <span class="keyword">import</span> <span class="identifier">hello</span>
+<span class="special">&gt;&gt;&gt;</span> <span class="identifier">planet</span> <span class="special">=</span> <span class="identifier">hello</span><span class="special">.</span><span class="identifier">World</span><span class="special">()</span>
+<span class="special">&gt;&gt;&gt;</span> <span class="identifier">planet</span><span class="special">.</span><span class="identifier">set</span><span class="special">(</span><span class="string">'howdy'</span><span class="special">)</span>
+<span class="special">&gt;&gt;&gt;</span> <span class="identifier">planet</span><span class="special">.</span><span class="identifier">greet</span><span class="special">()</span>
+<span class="string">'howdy'</span>
+</pre>
+<div class="section" lang="en">
+<div class="titlepage"><div><div><h3 class="title">
+<a name="python.constructors"></a>Constructors</h3>
+<h3 class="title">构造函数</h3>
+</div></div></div>
+<p>
+        Our previous example didn't have any explicit constructors. Since <tt class="literal">World</tt>
+        is declared as a plain struct, it has an implicit default constructor. Boost.Python
+        exposes the default constructor by default, which is why we were able to
+        write
+      </p>
+
+<p>
+这个例子没有任何显式构造函数。
+但由于<tt class="literal">World</tt>声明为一个普通结构，
+它有一个隐含的默认构造函数。
+Boost.Python默认情况下会导出默认构造函数，这也就是我们为什么能这样写
+    </p>
+
+<pre class="programlisting"><span class="special">&gt;&gt;&gt;</span> <span class="identifier">planet</span> <span class="special">=</span> <span class="identifier">hello</span><span class="special">.</span><span class="identifier">World</span><span class="special">()</span>
+</pre>
+<p>
+        We may wish to wrap a class with a non-default constructor. Let us build
+        on our previous example:
+      </p>
+
+<p>
+      我们可能希望封装一个具有非默认构造函数的类。让我们构建前面的例子：
+    </p>
+
+<p>
+      </p>
+<pre class="programlisting"><span class="keyword">struct</span> <span class="identifier">World</span>
+<span class="special">{</span>
+    <span class="identifier">World</span><span class="special">(</span><span class="identifier">std</span><span class="special">::</span><span class="identifier">string</span> <span class="identifier">msg</span><span class="special">):</span> <span class="identifier">msg</span><span class="special">(</span><span class="identifier">msg</span><span class="special">)</span> <span class="special">{}</span> <span class="comment">// added constructor<br></span>    <span class="keyword">void</span> <span class="identifier">set</span><span class="special">(</span><span class="identifier">std</span><span class="special">::</span><span class="identifier">string</span> <span class="identifier">msg</span><span class="special">)</span> <span class="special">{</span> <span class="keyword">this</span><span class="special">-&gt;</span><span class="identifier">msg</span> <span class="special">=</span> <span class="identifier">msg</span><span class="special">;</span> <span class="special">}</span>
+    <span class="identifier">std</span><span class="special">::</span><span class="identifier">string</span> <span class="identifier">greet</span><span class="special">()</span> <span class="special">{</span> <span class="keyword">return</span> <span class="identifier">msg</span><span class="special">;</span> <span class="special">}</span>
+    <span class="identifier">std</span><span class="special">::</span><span class="identifier">string</span> <span class="identifier">msg</span><span class="special">;</span>
+<span class="special">};</span>
+</pre>
+<p>
+        This time <tt class="literal">World</tt> has no default constructor; our previous
+        wrapping code would fail to compile when the library tried to expose it.
+        We have to tell <tt class="literal">class_&lt;World&gt;</tt> about the constructor
+        we want to expose instead.
+      </p>
+
+<p>
+这次，<tt class="literal">World</tt>没有默认的构造函数；
+当类库试图导出它时，我们前面的封装代码将无法编译。
+我们必须告诉<tt class="literal">class_&lt;World&gt;</tt>
+我们想要导出的构造函数。
+    </p>
+
+<pre class="programlisting"><span class="preprocessor">#include</span> <span class="special">&lt;</span><span class="identifier">boost</span><span class="special">/</span><span class="identifier">python</span><span class="special">.</span><span class="identifier">hpp</span><span class="special">&gt;</span>
+<span class="keyword">using</span> <span class="keyword">namespace</span> <span class="identifier">boost</span><span class="special">::</span><span class="identifier">python</span><span class="special">;</span>
+
+<span class="identifier">BOOST_PYTHON_MODULE</span><span class="special">(</span><span class="identifier">hello</span><span class="special">)</span>
+<span class="special">{</span>
+    <span class="identifier">class_</span><span class="special">&lt;</span><span class="identifier">World</span><span class="special">&gt;(</span><span class="string">"World"</span><span class="special">,</span> <span class="identifier">init</span><span class="special">&lt;</span><span class="identifier">std</span><span class="special">::</span><span class="identifier">string</span><span class="special">&gt;())</span>
+        <span class="special">.</span><span class="identifier">def</span><span class="special">(</span><span class="string">"greet"</span><span class="special">,</span> <span class="special">&amp;</span><span class="identifier">World</span><span class="special">::</span><span class="identifier">greet</span><span class="special">)</span>
+        <span class="special">.</span><span class="identifier">def</span><span class="special">(</span><span class="string">"set"</span><span class="special">,</span> <span class="special">&amp;</span><span class="identifier">World</span><span class="special">::</span><span class="identifier">set</span><span class="special">)</span>
+    <span class="special">;</span>
+<span class="special">}</span>
+</pre>
+<p>
+        <tt class="literal">init&lt;std::string&gt;()</tt> exposes the constructor taking
+        in a <tt class="literal">std::string</tt> (in Python, constructors are spelled
+        "<tt class="literal">"<span class="underline">_init</span>_"</tt>").
+      </p>
+
+<p>
+        <tt class="literal">init&lt;std::string&gt;()</tt>导出了以
+        <tt class="literal">std::string</tt>为参数的构造函数
+        （在Python中，构造函数为
+        “<tt class="literal">"<span class="underline">_init</span>_"</tt>”）。
+    </p>
+
+<p>
+        We can expose additional constructors by passing more <tt class="literal">init&lt;...&gt;</tt>s
+        to the <tt class="literal">def()</tt> member function. Say for example we have
+        another World constructor taking in two doubles:
+      </p>
+
+<p>
+我们可以导出另外的构造函数，
+只要向<tt class="literal">def()</tt>成员函数
+传入更多的<tt class="literal">init&lt;...&gt;</tt>。
+假设我们有另一个World构造函数，它有两个double参数：
+    </p>
+
+<pre class="programlisting"><span class="identifier">class_</span><span class="special">&lt;</span><span class="identifier">World</span><span class="special">&gt;(</span><span class="string">"World"</span><span class="special">,</span> <span class="identifier">init</span><span class="special">&lt;</span><span class="identifier">std</span><span class="special">::</span><span class="identifier">string</span><span class="special">&gt;())</span>
+    <span class="special">.</span><span class="identifier">def</span><span class="special">(</span><span class="identifier">init</span><span class="special">&lt;</span><span class="keyword">double</span><span class="special">,</span> <span class="keyword">double</span><span class="special">&gt;())</span>
+    <span class="special">.</span><span class="identifier">def</span><span class="special">(</span><span class="string">"greet"</span><span class="special">,</span> <span class="special">&amp;</span><span class="identifier">World</span><span class="special">::</span><span class="identifier">greet</span><span class="special">)</span>
+    <span class="special">.</span><span class="identifier">def</span><span class="special">(</span><span class="string">"set"</span><span class="special">,</span> <span class="special">&amp;</span><span class="identifier">World</span><span class="special">::</span><span class="identifier">set</span><span class="special">)</span>
+<span class="special">;</span>
+</pre>
+<p>
+        On the other hand, if we do not wish to expose any constructors at all, we
+        may use <tt class="literal">no_init</tt> instead:
+      </p>
+
+<p>
+另一方面，如果我们不想导出任何构造函数，
+我们可以使用<tt class="literal">no_init</tt>：
+    </p>
+
+<pre class="programlisting"><span class="identifier">class_</span><span class="special">&lt;</span><span class="identifier">Abstract</span><span class="special">&gt;(</span><span class="string">"Abstract"</span><span class="special">,</span> <span class="identifier">no_init</span><span class="special">)</span>
+</pre>
+<p>
+        This actually adds an <tt class="literal"><span class="underline">_init</span>_</tt>
+        method which always raises a Python RuntimeError exception.
+      </p>
+
+<p>
+这实际上添加了一个
+<tt class="literal"><span class="underline">_init</span>_</tt>
+方法，但它总是抛出一个Python RuntimeError异常。
+    </p>
+
+</div>
+<div class="section" lang="en">
+<div class="titlepage"><div><div><h3 class="title">
+<a name="python.class_data_members"></a>Class Data Members</h3>
+<h3 class="title">类的数据成员</h3>
+</div></div></div>
+<p>
+        Data members may also be exposed to Python so that they can be accessed as
+        attributes of the corresponding Python class. Each data member that we wish
+        to be exposed may be regarded as <span class="bold"><b>read-only</b></span>
+        or <span class="bold"><b>read-write</b></span>. Consider this class <tt class="literal">Var</tt>:
+      </p>
+
+<p>
+数据成员也可以导出到Python，
+按相应Python类的属性进行访问。
+我们导出的每一个数据成员，都可视为
+<span class="bold"><b>只读</b></span>
+或<span class="bold"><b>读写</b></span>。
+考虑这个类Var：
+    </p>
+
+<pre class="programlisting"><span class="keyword">struct</span> <span class="identifier">Var</span>
+<span class="special">{</span>
+    <span class="identifier">Var</span><span class="special">(</span><span class="identifier">std</span><span class="special">::</span><span class="identifier">string</span> <span class="identifier">name</span><span class="special">)</span> <span class="special">:</span> <span class="identifier">name</span><span class="special">(</span><span class="identifier">name</span><span class="special">),</span> <span class="identifier">value</span><span class="special">()</span> <span class="special">{}</span>
+    <span class="identifier">std</span><span class="special">::</span><span class="identifier">string</span> <span class="keyword">const</span> <span class="identifier">name</span><span class="special">;</span>
+    <span class="keyword">float</span> <span class="identifier">value</span><span class="special">;</span>
+<span class="special">};</span>
+</pre>
+<p>
+        Our C++ <tt class="literal">Var</tt> class and its data members can be exposed
+        to Python:
+      </p>
+
+<p>
+我们的C++ <tt class="literal">Var</tt>类和它的数据成员可以导出到Python：
+    </p>
+
+<pre class="programlisting"><span class="identifier">class_</span><span class="special">&lt;</span><span class="identifier">Var</span><span class="special">&gt;(</span><span class="string">"Var"</span><span class="special">,</span> <span class="identifier">init</span><span class="special">&lt;</span><span class="identifier">std</span><span class="special">::</span><span class="identifier">string</span><span class="special">&gt;())</span>
+    <span class="special">.</span><span class="identifier">def_readonly</span><span class="special">(</span><span class="string">"name"</span><span class="special">,</span> <span class="special">&amp;</span><span class="identifier">Var</span><span class="special">::</span><span class="identifier">name</span><span class="special">)</span>
+    <span class="special">.</span><span class="identifier">def_readwrite</span><span class="special">(</span><span class="string">"value"</span><span class="special">,</span> <span class="special">&amp;</span><span class="identifier">Var</span><span class="special">::</span><span class="identifier">value</span><span class="special">);</span>
+</pre>
+<p>
+        Then, in Python, assuming we have placed our Var class inside the namespace
+        hello as we did before:
+      </p>
+
+<p>
+然后，在Python中，假设我们已经和前面一样，将我们的Var类放在名字空间hello中：
+    </p>
+
+<p>
+      </p>
+<pre class="programlisting"><span class="special">&gt;&gt;&gt;</span> <span class="identifier">x</span> <span class="special">=</span> <span class="identifier">hello</span><span class="special">.</span><span class="identifier">Var</span><span class="special">(</span><span class="string">'pi'</span><span class="special">)</span>
+<span class="special">&gt;&gt;&gt;</span> <span class="identifier">x</span><span class="special">.</span><span class="identifier">value</span> <span class="special">=</span> <span class="number">3.14</span>
+<span class="special">&gt;&gt;&gt;</span> <span class="keyword">print</span> <span class="identifier">x</span><span class="special">.</span><span class="identifier">name</span><span class="special">,</span> <span class="string">'is around'</span><span class="special">,</span> <span class="identifier">x</span><span class="special">.</span><span class="identifier">value</span>
+<span class="identifier">pi</span> <span class="keyword">is</span> <span class="identifier">around</span> <span class="number">3.14</span>
+</pre>
+<p>
+        Note that <tt class="literal">name</tt> is exposed as <span class="bold"><b>read-only</b></span>
+        while <tt class="literal">value</tt> is exposed as <span class="bold"><b>read-write</b></span>.
+      </p>
+
+<p>
+注意，<tt class="literal">name</tt>
+按<span class="bold"><b>只读</b></span>导出，
+而<tt class="literal">value</tt>
+按<span class="bold"><b>读写</b></span>导出。
+    </p>
+
+<pre class="programlisting"><span class="special">&gt;&gt;&gt;</span> <span class="identifier">x</span><span class="special">.</span><span class="identifier">name</span> <span class="special">=</span> <span class="string">'e'</span> <span class="comment"># can't change name<br></span><span class="identifier">Traceback</span> <span class="special">(</span><span class="identifier">most</span> <span class="identifier">recent</span> <span class="identifier">call</span> <span class="identifier">last</span><span class="special">):</span>
+  <span class="identifier">File</span> <span class="string">"&lt;stdin&gt;"</span><span class="special">,</span> <span class="identifier">line</span> <span class="number">1</span><span class="special">,</span> <span class="keyword">in</span> #<br><span class="identifier">AttributeError</span><span class="special">:</span> <span class="identifier">can</span>#<span class="identifier">t</span> <span class="identifier">set</span> <span class="identifier">attribute</span>
+</pre>
+</div>
+<div class="section" lang="en">
+<div class="titlepage"><div><div><h3 class="title">
+<a name="python.class_properties"></a>Class Properties</h3>
+<h3 class="title">类的属性</h3>
+</div></div></div>
+<p>
+        In C++, classes with public data members are usually frowned upon. Well designed
+        classes that take advantage of encapsulation hide the class' data members.
+        The only way to access the class' data is through access (getter/setter)
+        functions. Access functions expose class properties. Here's an example:
+      </p>
+
+<p>
+在C++中，通常人们不赞成具有公有数据成员的类。
+设计良好的类会利用封装隐藏类的数据成员。
+访问类中数据唯一的方式，是通过访问函数（getter/setter）。
+访问函数导出了类的属性。
+下面是一个例子：
+    </p>
+
+<p>
+      </p>
+<pre class="programlisting"><span class="keyword">struct</span> <span class="identifier">Num</span>
+<span class="special">{</span>
+    <span class="identifier">Num</span><span class="special">();</span>
+    <span class="keyword">float</span> <span class="identifier">get</span><span class="special">()</span> <span class="keyword">const</span><span class="special">;</span>
+    <span class="keyword">void</span> <span class="identifier">set</span><span class="special">(</span><span class="keyword">float</span> <span class="identifier">value</span><span class="special">);</span>
+    <span class="special">...</span>
+<span class="special">};</span>
+</pre>
+<p>
+        However, in Python attribute access is fine; it doesn't neccessarily break
+        encapsulation to let users handle attributes directly, because the attributes
+        can just be a different syntax for a method call. Wrapping our <tt class="literal">Num</tt>
+        class using Boost.Python:
+      </p>
+
+<p>
+然而，Python可以访问属性；
+它让用户直接操作属性，
+而不必破坏封装，
+因为属性只是一种不同语法的方法调用。
+Boost.Python这样封装我们的<tt class="literal">Num</tt>类：
+    </p>
+
+<pre class="programlisting"><span class="identifier">class_</span><span class="special">&lt;</span><span class="identifier">Num</span><span class="special">&gt;(</span><span class="string">"Num"</span><span class="special">)</span>
+    <span class="special">.</span><span class="identifier">add_property</span><span class="special">(</span><span class="string">"rovalue"</span><span class="special">,</span> <span class="special">&amp;</span><span class="identifier">Num</span><span class="special">::</span><span class="identifier">get</span><span class="special">)</span>
+    <span class="special">.</span><span class="identifier">add_property</span><span class="special">(</span><span class="string">"value"</span><span class="special">,</span> <span class="special">&amp;</span><span class="identifier">Num</span><span class="special">::</span><span class="identifier">get</span><span class="special">,</span> <span class="special">&amp;</span><span class="identifier">Num</span><span class="special">::</span><span class="identifier">set</span><span class="special">);</span>
+</pre>
+<p>
+        And at last, in Python:
+      </p>
+
+<p>
+      最后，在Python中：
+    </p>
+
+<p>
+      </p>
+<pre class="programlisting"><span class="special">&gt;&gt;&gt;</span> <span class="identifier">x</span> <span class="special">=</span> <span class="identifier">Num</span><span class="special">()</span>
+<span class="special">&gt;&gt;&gt;</span> <span class="identifier">x</span><span class="special">.</span><span class="identifier">value</span> <span class="special">=</span> <span class="number">3.14</span>
+<span class="special">&gt;&gt;&gt;</span> <span class="identifier">x</span><span class="special">.</span><span class="identifier">value</span><span class="special">,</span> <span class="identifier">x</span><span class="special">.</span><span class="identifier">rovalue</span>
+<span class="special">(</span><span class="number">3.14</span><span class="special">,</span> <span class="number">3.14</span><span class="special">)</span>
+<span class="special">&gt;&gt;&gt;</span> <span class="identifier">x</span><span class="special">.</span><span class="identifier">rovalue</span> <span class="special">=</span> <span class="number">2.17</span> <span class="comment"># error!<br></span></pre>
+<p>
+        Take note that the class property <tt class="literal">rovalue</tt> is exposed as
+        <span class="bold"><b>read-only</b></span> since the <tt class="literal">rovalue</tt>
+        setter member function is not passed in:
+      </p>
+
+<p>
+注意类属性<tt class="literal">rovalue</tt>按
+<span class="bold"><b>只读</b></span>导出，
+因为没有传入<tt class="literal">rovalue</tt>的成员设置函数：
+    </p>
+
+<p>
+      </p>
+<pre class="programlisting"><span class="special">.</span><span class="identifier">add_property</span><span class="special">(</span><span class="string">"rovalue"</span><span class="special">,</span> <span class="special">&amp;</span><span class="identifier">Num</span><span class="special">::</span><span class="identifier">get</span><span class="special">)</span>
+</pre>
+</div>
+<div class="section" lang="en">
+<div class="titlepage"><div><div><h3 class="title">
+<a name="python.inheritance"></a>Inheritance</h3>
+<h3 class="title">继承</h3>
+</div></div></div>
+<p>
+        In the previous examples, we dealt with classes that are not polymorphic.
+        This is not often the case. Much of the time, we will be wrapping polymorphic
+        classes and class hierarchies related by inheritance. We will often have
+        to write Boost.Python wrappers for classes that are derived from abstract
+        base classes.
+      </p>
+
+<p>
+上面的例子中，我们的类不具有多态性。
+实际情况常常不是这样的。
+多数情况下，我们将封装多态类和具有继承关系的类体系。
+我们经常还会不得不为从抽象基类继承的类编写封装。
+    </p>
+
+<p>
+        Consider this trivial inheritance structure:
+      </p>
+
+<p>
+      考虑这个简单的继承结构：
+    </p>
+
+<pre class="programlisting"><span class="keyword">struct</span> <span class="identifier">Base</span> <span class="special">{</span> <span class="keyword">virtual</span> <span class="special">~</span><span class="identifier">Base</span><span class="special">();</span> <span class="special">};</span>
+<span class="keyword">struct</span> <span class="identifier">Derived</span> <span class="special">:</span> <span class="identifier">Base</span> <span class="special">{};</span>
+</pre>
+<p>
+        And a set of C++ functions operating on <tt class="literal">Base</tt> and <tt class="literal">Derived</tt>
+        object instances:
+      </p>
+
+<p>
+和一组C++函数，对<tt class="literal">Base</tt>
+和<tt class="literal">Derived</tt>对象的实例进行操作：
+    </p>
+
+<pre class="programlisting"><span class="keyword">void</span> <span class="identifier">b</span><span class="special">(</span><span class="identifier">Base</span><span class="special">*);</span>
+<span class="keyword">void</span> <span class="identifier">d</span><span class="special">(</span><span class="identifier">Derived</span><span class="special">*);</span>
+<span class="identifier">Base</span><span class="special">*</span> <span class="identifier">factory</span><span class="special">()</span> <span class="special">{</span> <span class="keyword">return</span> <span class="keyword">new</span> <span class="identifier">Derived</span><span class="special">;</span> <span class="special">}</span>
+</pre>
+<p>
+        We've seen how we can wrap the base class <tt class="literal">Base</tt>:
+      </p>
+
+<p>
+    我们已经见过如何封装基类<tt class="literal">Base</tt>：
+    </p>
+
+<pre class="programlisting"><span class="identifier">class_</span><span class="special">&lt;</span><span class="identifier">Base</span><span class="special">&gt;(</span><span class="string">"Base"</span><span class="special">)</span>
+    <span class="comment">/*...*/</span>
+    <span class="special">;</span>
+</pre>
+<p>
+        Now we can inform Boost.Python of the inheritance relationship between <tt class="literal">Derived</tt>
+        and its base class <tt class="literal">Base</tt>. Thus:
+      </p>
+
+<p>
+现在，我们可以把<tt class="literal">Derived</tt>类和它基类
+<tt class="literal">Base</tt>的继承关系告诉Boost.Python。像这样：
+    </p>
+
+<pre class="programlisting"><span class="identifier">class_</span><span class="special">&lt;</span><span class="identifier">Derived</span><span class="special">,</span> <span class="identifier">bases</span><span class="special">&lt;</span><span class="identifier">Base</span><span class="special">&gt;</span> <span class="special">&gt;(</span><span class="string">"Derived"</span><span class="special">)</span>
+    <span class="comment">/*...*/</span>
+    <span class="special">;</span>
+</pre>
+<p>
+        Doing so, we get some things for free:
+      </p>
+
+<p>
+      这样做，我们免费得到一些东西：
+    </p>
+
+<div class="orderedlist"><ol type="1">
+<li>
+          Derived automatically inherits all of Base's Python methods (wrapped C++
+          member functions)
+        </li>
+<li>
+<span class="bold"><b>If</b></span> Base is polymorphic, <tt class="literal">Derived</tt>
+          objects which have been passed to Python via a pointer or reference to
+          <tt class="literal">Base</tt> can be passed where a pointer or reference to
+          <tt class="literal">Derived</tt> is expected.
+        </li>
+</ol></div>
+
+<div class="orderedlist"><ol type="1">
+<li>
+          Derived类自动继承所有基类的Python方法（即封装的C++成员函数）
+        </li>
+<li>
+<span class="bold">
+          <b>如果</b></span>Base类是多态的，
+          按<tt class="literal">Base</tt>类的指针或引用传给Python的
+          <tt class="literal">Derived</tt>对象，
+          可以在需要<tt class="literal">Derived</tt>类指针或引用的地方使用。
+        </li>
+</ol></div>
+
+<p>
+        Now, we will expose the C++ free functions <tt class="literal">b</tt> and <tt class="literal">d</tt>
+        and <tt class="literal">factory</tt>:
+      </p>
+
+<p>
+现在，我们将导出C++的自由函数<tt class="literal">b</tt>
+和<tt class="literal">d</tt>及<tt class="literal">factory</tt>
+    </p>
+
+<pre class="programlisting"><span class="identifier">def</span><span class="special">(</span><span class="string">"b"</span><span class="special">,</span> <span class="identifier">b</span><span class="special">);</span>
+<span class="identifier">def</span><span class="special">(</span><span class="string">"d"</span><span class="special">,</span> <span class="identifier">d</span><span class="special">);</span>
+<span class="identifier">def</span><span class="special">(</span><span class="string">"factory"</span><span class="special">,</span> <span class="identifier">factory</span><span class="special">);</span>
+</pre>
+<p>
+        Note that free function <tt class="literal">factory</tt> is being used to generate
+        new instances of class <tt class="literal">Derived</tt>. In such cases, we use
+        <tt class="literal">return_value_policy&lt;manage_new_object&gt;</tt> to instruct
+        Python to adopt the pointer to <tt class="literal">Base</tt> and hold the instance
+        in a new Python <tt class="literal">Base</tt> object until the the Python object
+        is destroyed. We will see more of Boost.Python <a href="functions.html#python.call_policies" title="Call Policies">call
+        policies</a> later.
+      </p>
+
+<p>
+注意，自由函数<tt class="literal">factory</tt>
+用于生成新的<tt class="literal">Derived</tt>类实例。 
+在这种情况下，我们使用
+<tt class="literal">return_value_policy&lt;manage_new_object&gt;</tt>，
+指示Python收养指向<tt class="literal">Base</tt>类的指针，
+并在一个新的Python <tt class="literal">Base</tt>对象中保存，
+直到该Python对象销毁。
+我们以后将会见到更多的Boost.Python 
+ <a href="functions.html#python.call_policies" title="Call Policies">
+调用策略</a>。
+    </p>
+
+<pre class="programlisting"><span class="comment">// Tell Python to take ownership of factory's result<br></span><span class="identifier">def</span><span class="special">(</span><span class="string">"factory"</span><span class="special">,</span> <span class="identifier">factory</span><span class="special">,</span>
+    <span class="identifier">return_value_policy</span><span class="special">&lt;</span><span class="identifier">manage_new_object</span><span class="special">&gt;());</span>
+</pre>
+</div>
+<div class="section" lang="en">
+<div class="titlepage"><div><div><h3 class="title">
+<a name="python.class_virtual_functions"></a>Class Virtual Functions</h3>
+<h3 class="title">类的虚函数</h3>
+</div></div></div>
+<p>
+        In this section, we will learn how to make functions behave polymorphically
+        through virtual functions. Continuing our example, let us add a virtual function
+        to our <tt class="literal">Base</tt> class:
+      </p>
+
+<p>
+在本节中，我们将了解如何通过虚函数实现多态的函数行为。
+继续我们的例子，让我们在<tt class="literal">Base</tt>类中添加一个虚函数：
+    </p>
+
+<pre class="programlisting"><span class="keyword">struct</span> <span class="identifier">Base</span>
+<span class="special">{</span>
+    <span class="keyword">virtual</span> <span class="special">~</span><span class="identifier">Base</span><span class="special">()</span> <span class="special">{}</span>
+    <span class="keyword">virtual</span> <span class="keyword">int</span> <span class="identifier">f</span><span class="special">()</span> <span class="special">=</span> <span class="number">0</span><span class="special">;</span>
+<span class="special">};</span>
+</pre>
+<p>
+        One of the goals of Boost.Python is to be minimally intrusive on an existing
+        C++ design. In principle, it should be possible to expose the interface for
+        a 3rd party library without changing it. It is not ideal to add anything
+        to our class <tt class="computeroutput"><span class="identifier">Base</span></tt>. Yet, when
+        you have a virtual function that's going to be overridden in Python and called
+        polymorphically <span class="bold"><b>from C++</b></span>, we'll need to
+        add some scaffoldings to make things work properly. What we'll do is write
+        a class wrapper that derives from <tt class="computeroutput"><span class="identifier">Base</span></tt>
+        that will unintrusively hook into the virtual functions so that a Python
+        override may be called:
+      </p>
+
+<p>
+Boost.Python的目标之一是，对现有的C++设计侵扰最小。
+原则上，它应该可以为第三方库导出接口，而不必更改它。
+向我们的<tt class="computeroutput"><span class="identifier">Base</span></tt>类
+添加任何东西都是不完美的。
+然而，当你想在Python中覆盖一个虚函数，
+并<span class="bold"><b>从C++</b></span>多态地调用时，
+我们需要添加一些脚手架，使其正常工作。
+我们要做的是，写一个封装类，派生自
+<tt class="computeroutput"><span class="identifier">Base</span></tt>类，
+它将非侵入式地挂接到虚函数，
+这样就可以调用Python中的覆盖函数了：
+    </p>
+
+<pre class="programlisting"><span class="keyword">struct</span> <span class="identifier">BaseWrap</span> <span class="special">:</span> <span class="identifier">Base</span><span class="special">,</span> <span class="identifier">wrapper</span><span class="special">&lt;</span><span class="identifier">Base</span><span class="special">&gt;</span>
+<span class="special">{</span>
+    <span class="keyword">int</span> <span class="identifier">f</span><span class="special">()</span>
+    <span class="special">{</span>
+        <span class="keyword">return</span> <span class="keyword">this</span><span class="special">-&gt;</span><span class="identifier">get_override</span><span class="special">(</span><span class="string">"f"</span><span class="special">)();</span>
+    <span class="special">}</span>
+<span class="special">};</span>
+</pre>
+<p>
+        Notice too that in addition to inheriting from <tt class="computeroutput"><span class="identifier">Base</span></tt>,
+        we also multiply- inherited <tt class="computeroutput"><span class="identifier">wrapper</span><span class="special">&lt;</span><span class="identifier">Base</span><span class="special">&gt;</span></tt> (See <a href="../../../../v2/wrapper.html" target="_top">Wrapper</a>).
+        The <tt class="computeroutput"><span class="identifier">wrapper</span></tt> template makes
+        the job of wrapping classes that are meant to overridden in Python, easier.
+      </p>
+
+<p>
+同时注意，除了继承
+<tt class="computeroutput"><span class="identifier">Base</span></tt>，
+我们还多重继承了
+<tt class="computeroutput"><span class="identifier">wrapper</span><span class="special">&lt;</span><span class="identifier">Base</span><span class="special">&gt;</span></tt>
+（见<a href="../../../../v2/wrapper.html" target="_top">Wrapper</a>）。
+<tt class="computeroutput"><span class="identifier">wrapper</span></tt>
+模板使封装类的工作更轻松，
+而该封装对于在Python中覆盖是至关重要的。
+    </p>
+
+<div class="sidebar">
+<p>
+        <span class="inlinemediaobject"><img src="../images/alert.png" alt="alert"></span> <span class="bold"><b>MSVC6/7 Workaround</b></span>
+      </p>
+<p>
+        <span class="bold"><b>MSVC6/7 变通方法</b></span>
+      </p>
+<p>
+        If you are using Microsoft Visual C++ 6 or 7, you have to write <tt class="computeroutput"><span class="identifier">f</span></tt> as:
+      </p>
+<p>
+        如果你用的是Microsoft Visual C++ 6 或 7，
+        <tt class="computeroutput"><span class="identifier">f</span></tt>
+        必须这样写：
+      </p>
+<p>
+        <tt class="computeroutput"><span class="keyword">return</span> <span class="identifier">call</span><span class="special">&lt;</span><span class="keyword">int</span><span class="special">&gt;(</span><span class="keyword">this</span><span class="special">-&gt;</span><span class="identifier">get_override</span><span class="special">(</span><span class="string">"f"</span><span class="special">).</span><span class="identifier">ptr</span><span class="special">());</span></tt>.
+      </p>
+</div>
+
+<p>
+        BaseWrap's overridden virtual member function <tt class="computeroutput"><span class="identifier">f</span></tt>
+        in effect calls the corresponding method of the Python object through <tt class="computeroutput"><span class="identifier">get_override</span></tt>.
+      </p>
+
+<p>
+BaseWrap覆盖了成员虚函数
+<tt class="computeroutput"><span class="identifier">f</span></tt>，
+使它通过
+<tt class="computeroutput"><span class="identifier">get_override</span></tt>
+调用Python对象的相应方法。
+    </p>
+
+<p>
+        Finally, exposing <tt class="computeroutput"><span class="identifier">Base</span></tt>:
+      </p>
+
+<p>
+最后，导出<tt class="computeroutput"><span class="identifier">Base</span></tt>类：
+    </p>
+
+<pre class="programlisting"><span class="identifier">class_</span><span class="special">&lt;</span><span class="identifier">BaseWrap</span><span class="special">,</span> <span class="identifier">boost</span><span class="special">::</span><span class="identifier">noncopyable</span><span class="special">&gt;(</span><span class="string">"Base"</span><span class="special">)</span>
+    <span class="special">.</span><span class="identifier">def</span><span class="special">(</span><span class="string">"f"</span><span class="special">,</span> <span class="identifier">pure_virtual</span><span class="special">(&amp;</span><span class="identifier">Base</span><span class="special">::</span><span class="identifier">f</span><span class="special">))</span>
+    <span class="special">;</span>
+</pre>
+<p>
+        <tt class="computeroutput"><span class="identifier">pure_virtual</span></tt> signals Boost.Python
+        that the function <tt class="computeroutput"><span class="identifier">f</span></tt> is a
+        pure virtual function.
+      </p>
+
+<p>
+<tt class="computeroutput"><span class="identifier">pure_virtual</span></tt>
+告诉Boost.Python，
+函数<tt class="computeroutput"><span class="identifier">f</span></tt>
+是一个纯虚函数。
+    </p>
+
+<div class="note"><table summary="Note" border="0">
+<tbody><tr>
+<td rowspan="2" align="center" valign="top" width="25"><img alt="[Note]" src="../../../../../../../doc/html/images/note.png"></td>
+<th align="left">Note</th>
+</tr>
+<tr><td colspan="2" align="left" valign="top">
+<p>
+          <span class="bold"><b>member function and methods</b></span>
+        </p>
+<p>
+          <span class="bold"><b>成员函数和方法</b></span>
+        </p>
+<p>
+          Python, like many object oriented languages uses the term <span class="bold"><b>methods</b></span>.
+          Methods correspond roughly to C++'s <span class="bold"><b>member functions</b></span>
+        </p>
+<p>
+          Python，与许多面向对象语言一样，
+          使用术语<span class="bold"><b>方法（method）</b></span>。
+          方法大致对应于C++的
+          <span class="bold"><b>成员函数（member function）</b></span>
+        </p>
+</td></tr>
+</tbody></table></div>
+</div>
+<div class="section" lang="en">
+<div class="titlepage"><div><div><h3 class="title">
+<a name="python.virtual_functions_with_default_implementations"></a>Virtual Functions with Default Implementations</h3>
+<h3 class="title">具有默认实现的虚函数</h3>
+</div></div></div>
+<p>
+        We've seen in the previous section how classes with pure virtual functions
+        are wrapped using Boost.Python's <a href="../../../../v2/wrapper.html" target="_top">class
+        wrapper</a> facilities. If we wish to wrap <span class="bold"><b>non</b></span>-pure-virtual
+        functions instead, the mechanism is a bit different.
+      </p>
+
+<p>
+在上一节我们看到，如何使用Boost.Python的
+<a href="../../../../v2/wrapper.html" target="_top">
+类封装器（class wrapper）</a>工具，
+封装具有纯虚函数的类。
+如果我们要封装
+<span class="bold"><b>非</b></span>纯虚函数，
+机制有点不同。
+    </p>
+
+<p>
+        Recall that in the <a href="exposing.html#python.class_virtual_functions" title="Class Virtual Functions">previous
+        section</a>, we wrapped a class with a pure virtual function that we then
+        implemented in C++, or Python classes derived from it. Our base class:
+      </p>
+
+<p>
+记得在<a href="exposing.html#python.class_virtual_functions" title="Class Virtual Functions">上一节</a>中，
+我们封装了一个具有纯虚函数的类，
+然后，我们在C++，或Python的派生类中实现它。
+我们的基类如下：
+    </p>
+
+<pre class="programlisting"><span class="keyword">struct</span> <span class="identifier">Base</span>
+<span class="special">{</span>
+    <span class="keyword">virtual</span> <span class="keyword">int</span> <span class="identifier">f</span><span class="special">()</span> <span class="special">=</span> <span class="number">0</span><span class="special">;</span>
+<span class="special">};</span>
+</pre>
+<p>
+        had a pure virtual function <tt class="literal">f</tt>. If, however, its member
+        function <tt class="literal">f</tt> was not declared as pure virtual:
+      </p>
+
+<p>
+它有一个纯虚函数<tt class="literal">f</tt>。
+但是，如果其成员函数<tt class="literal">f</tt>没有声明为纯虚：
+    </p>
+
+<pre class="programlisting"><span class="keyword">struct</span> <span class="identifier">Base</span>
+<span class="special">{</span>
+    <span class="keyword">virtual</span> <span class="special">~</span><span class="identifier">Base</span><span class="special">()</span> <span class="special">{}</span>
+    <span class="keyword">virtual</span> <span class="keyword">int</span> <span class="identifier">f</span><span class="special">()</span> <span class="special">{</span> <span class="keyword">return</span> <span class="number">0</span><span class="special">;</span> <span class="special">}</span>
+<span class="special">};</span>
+</pre>
+<p>
+        We wrap it this way:
+      </p>
+
+<p>
+      我们这样封装它：
+    </p>
+
+<pre class="programlisting"><span class="keyword">struct</span> <span class="identifier">BaseWrap</span> <span class="special">:</span> <span class="identifier">Base</span><span class="special">,</span> <span class="identifier">wrapper</span><span class="special">&lt;</span><span class="identifier">Base</span><span class="special">&gt;</span>
+<span class="special">{</span>
+    <span class="keyword">int</span> <span class="identifier">f</span><span class="special">()</span>
+    <span class="special">{</span>
+        <span class="keyword">if</span> <span class="special">(</span><span class="identifier">override</span> <span class="identifier">f</span> <span class="special">=</span> <span class="keyword">this</span><span class="special">-&gt;</span><span class="identifier">get_override</span><span class="special">(</span><span class="string">"f"</span><span class="special">))</span>
+            <span class="keyword">return</span> <span class="identifier">f</span><span class="special">();</span> <span class="comment">// *note*<br></span>        <span class="keyword">return</span> <span class="identifier">Base</span><span class="special">::</span><span class="identifier">f</span><span class="special">();</span>
+    <span class="special">}</span>
+
+    <span class="keyword">int</span> <span class="identifier">default_f</span><span class="special">()</span> <span class="special">{</span> <span class="keyword">return</span> <span class="keyword">this</span><span class="special">-&gt;</span><span class="identifier">Base</span><span class="special">::</span><span class="identifier">f</span><span class="special">();</span> <span class="special">}</span>
+<span class="special">};</span>
+</pre>
+<p>
+        Notice how we implemented <tt class="computeroutput"><span class="identifier">BaseWrap</span><span class="special">::</span><span class="identifier">f</span></tt>. Now,
+        we have to check if there is an override for <tt class="computeroutput"><span class="identifier">f</span></tt>.
+        If none, then we call <tt class="computeroutput"><span class="identifier">Base</span><span class="special">::</span><span class="identifier">f</span><span class="special">()</span></tt>.
+      </p>
+
+<p>
+注意我们如何实现
+<tt class="computeroutput"><span class="identifier">BaseWrap</span><span class="special">::</span><span class="identifier">f</span></tt>。
+现在，我们必须检查是否有一个
+<tt class="computeroutput"><span class="identifier">f</span></tt>
+的覆盖函数。
+如果没有，我们就调用
+<tt class="computeroutput"><span class="identifier">Base</span><span class="special">::</span><span class="identifier">f</span><span class="special">()</span></tt>。
+    </p>
+
+<div class="sidebar">
+<p>
+        <span class="inlinemediaobject"><img src="../images/alert.png" alt="alert"></span> <span class="bold"><b>MSVC6/7 Workaround</b></span>
+      </p>
+<p>
+        <span class="bold"><b>MSVC6/7 变通方法</b></span>
+      </p>
+<p>
+        If you are using Microsoft Visual C++ 6 or 7, you have to rewrite the line
+        with the <tt class="computeroutput"><span class="special">*</span><span class="identifier">note</span><span class="special">*</span></tt> as:
+      </p>
+<p>
+        如果你用的是Microsoft Visual C++ 6 或 7，
+        你必须将标注
+        <tt class="computeroutput"><span class="special">*</span><span class="identifier">note</span><span class="special">*</span></tt>
+        的代码行改写为：
+      </p>
+<p>
+        <tt class="computeroutput"><span class="keyword">return</span> <span class="identifier">call</span><span class="special">&lt;</span><span class="keyword">char</span> <span class="keyword">const</span><span class="special">*&gt;(</span><span class="identifier">f</span><span class="special">.</span><span class="identifier">ptr</span><span class="special">());</span></tt>.
+      </p>
+</div>
+
+<p>
+        Finally, exposing:
+      </p>
+
+<p>
+      最后，导出：
+    </p>
+
+<pre class="programlisting"><span class="identifier">class_</span><span class="special">&lt;</span><span class="identifier">BaseWrap</span><span class="special">,</span> <span class="identifier">boost</span><span class="special">::</span><span class="identifier">noncopyable</span><span class="special">&gt;(</span><span class="string">"Base"</span><span class="special">)</span>
+    <span class="special">.</span><span class="identifier">def</span><span class="special">(</span><span class="string">"f"</span><span class="special">,</span> <span class="special">&amp;</span><span class="identifier">Base</span><span class="special">::</span><span class="identifier">f</span><span class="special">,</span> <span class="special">&amp;</span><span class="identifier">BaseWrap</span><span class="special">::</span><span class="identifier">default_f</span><span class="special">)</span>
+    <span class="special">;</span>
+</pre>
+<p>
+        Take note that we expose both <tt class="computeroutput"><span class="special">&amp;</span><span class="identifier">Base</span><span class="special">::</span><span class="identifier">f</span></tt> and <tt class="computeroutput"><span class="special">&amp;</span><span class="identifier">BaseWrap</span><span class="special">::</span><span class="identifier">default_f</span></tt>. Boost.Python needs to keep track
+        of 1) the dispatch function <tt class="literal">f</tt> and 2) the forwarding function
+        to its default implementation <tt class="literal">default_f</tt>. There's a special
+        <tt class="literal">def</tt> function for this purpose.
+      </p>
+
+<p>
+需注意，我们同时导出了
+<tt class="computeroutput"><span class="special">&amp;</span><span class="identifier">Base</span><span class="special">::</span><span class="identifier">f</span></tt> 和
+<tt class="computeroutput"><span class="special">&amp;</span><span class="identifier">BaseWrap</span><span class="special">::</span><span class="identifier">default_f</span></tt>。
+Boost.Python需要明了: 1）分派函数
+<tt class="literal">f</tt>
+和 2）转发函数，转发到它的默认实现<tt class="literal">default_f</tt>。
+为此，存在一个特别的<tt class="literal">def</tt>函数。
+    </p>
+
+<p>
+        In Python, the results would be as expected:
+      </p>
+
+<p>
+      在Python中，其结果将一如所料：
+    </p>
+
+<p>
+      </p>
+<pre class="programlisting"><span class="special">&gt;&gt;&gt;</span> <span class="identifier">base</span> <span class="special">=</span> <span class="identifier">Base</span><span class="special">()</span>
+<span class="special">&gt;&gt;&gt;</span> <span class="keyword">class</span> <span class="identifier">Derived</span><span class="special">(</span><span class="identifier">Base</span><span class="special">):</span>
+<span class="special">...</span>     <span class="keyword">def</span> <span class="identifier">f</span><span class="special">(</span><span class="identifier">self</span><span class="special">):</span>
+<span class="special">...</span>         <span class="keyword">return</span> <span class="number">42</span>
+<span class="special">...</span>
+<span class="special">&gt;&gt;&gt;</span> <span class="identifier">derived</span> <span class="special">=</span> <span class="identifier">Derived</span><span class="special">()</span>
+</pre>
+<p>
+        Calling <tt class="literal">base.f()</tt>:
+      </p>
+
+<p>
+        调用<tt class="literal">base.f()</tt>：
+    </p>
+
+<pre class="programlisting"><span class="special">&gt;&gt;&gt;</span> <span class="identifier">base</span><span class="special">.</span><span class="identifier">f</span><span class="special">()</span>
+<span class="number">0</span>
+</pre>
+<p>
+        Calling <tt class="literal">derived.f()</tt>:
+      </p>
+
+<p>
+        调用<tt class="literal">derived.f()</tt>：
+    </p>
+
+<pre class="programlisting"><span class="special">&gt;&gt;&gt;</span> <span class="identifier">derived</span><span class="special">.</span><span class="identifier">f</span><span class="special">()</span>
+<span class="number">42</span>
+</pre>
+</div>
+<div class="section" lang="en">
+<div class="titlepage"><div><div><h3 class="title">
+<a name="python.class_operators_special_functions"></a>Class Operators/Special Functions</h3>
+<h3 class="title">类的运算符/特殊函数</h3>
+</div></div></div>
+<a name="class_operators_special_functions.python_operators"></a><h2>
+<a name="id461481"></a>
+        Python Operators
+      </h2>
+<h3>Python运算符</h3>      
+<p>
+        C is well known for the abundance of operators. C++ extends this to the extremes
+        by allowing operator overloading. Boost.Python takes advantage of this and
+        makes it easy to wrap C++ operator-powered classes.
+      </p>
+
+<p>
+众所周知，C语言具有丰富的运算符。
+C++允许运算符重载，更是将它们扩展到极致。
+Boost.Python利用了这一点，可以轻松地封装C++带运算符的类。
+    </p>
+
+<p>
+        Consider a file position class <tt class="literal">FilePos</tt> and a set of operators
+        that take on FilePos instances:
+      </p>
+
+<p>
+考虑一个文件位置类<tt class="literal">FilePos</tt>，
+和一组针对FilePos的运算符：
+    </p>
+
+<p>
+      </p>
+<pre class="programlisting"><span class="keyword">class</span> <span class="identifier">FilePos</span> <span class="special">{</span> <span class="comment">/*...*/</span> <span class="special">};</span>
+
+<span class="identifier">FilePos</span>     <span class="keyword">operator</span><span class="special">+(</span><span class="identifier">FilePos</span><span class="special">,</span> <span class="keyword">int</span><span class="special">);</span>
+<span class="identifier">FilePos</span>     <span class="keyword">operator</span><span class="special">+(</span><span class="keyword">int</span><span class="special">,</span> <span class="identifier">FilePos</span><span class="special">);</span>
+<span class="keyword">int</span>         <span class="keyword">operator</span><span class="special">-(</span><span class="identifier">FilePos</span><span class="special">,</span> <span class="identifier">FilePos</span><span class="special">);</span>
+<span class="identifier">FilePos</span>     <span class="keyword">operator</span><span class="special">-(</span><span class="identifier">FilePos</span><span class="special">,</span> <span class="keyword">int</span><span class="special">);</span>
+<span class="identifier">FilePos</span><span class="special">&amp;</span>    <span class="keyword">operator</span><span class="special">+=(</span><span class="identifier">FilePos</span><span class="special">&amp;,</span> <span class="keyword">int</span><span class="special">);</span>
+<span class="identifier">FilePos</span><span class="special">&amp;</span>    <span class="keyword">operator</span><span class="special">-=(</span><span class="identifier">FilePos</span><span class="special">&amp;,</span> <span class="keyword">int</span><span class="special">);</span>
+<span class="keyword">bool</span>        <span class="keyword">operator</span><span class="special">&lt;(</span><span class="identifier">FilePos</span><span class="special">,</span> <span class="identifier">FilePos</span><span class="special">);</span>
+</pre>
+<p>
+        The class and the various operators can be mapped to Python rather easily
+        and intuitively:
+      </p>
+
+<p>
+该类和各种运算符可以相当轻松地，并且直观地，映射到Python：
+    </p>
+
+<pre class="programlisting"><span class="identifier">class_</span><span class="special">&lt;</span><span class="identifier">FilePos</span><span class="special">&gt;(</span><span class="string">"FilePos"</span><span class="special">)</span>
+    <span class="special">.</span><span class="identifier">def</span><span class="special">(</span><span class="identifier">self</span> <span class="special">+</span> <span class="keyword">int</span><span class="special">())</span>          <span class="comment">// __add__<br></span>    <span class="special">.</span><span class="identifier">def</span><span class="special">(</span><span class="keyword">int</span><span class="special">()</span> <span class="special">+</span> <span class="identifier">self</span><span class="special">)</span>          <span class="comment">// __radd__<br></span>    <span class="special">.</span><span class="identifier">def</span><span class="special">(</span><span class="identifier">self</span> <span class="special">-</span> <span class="identifier">self</span><span class="special">)</span>           <span class="comment">// __sub__<br></span>    <span class="special">.</span><span class="identifier">def</span><span class="special">(</span><span class="identifier">self</span> <span class="special">-</span> <span class="keyword">int</span><span class="special">())</span>          <span class="comment">// __sub__<br></span>    <span class="special">.</span><span class="identifier">def</span><span class="special">(</span><span class="identifier">self</span> <span class="special">+=</span> <span class="keyword">int</span><span class="special">())</span>         <span class="comment">// __iadd__<br></span>    <span class="special">.</span><span class="identifier">def</span><span class="special">(</span><span class="identifier">self</span> <span class="special">-=</span> <span class="identifier">other</span><span class="special">&lt;</span><span class="keyword">int</span><span class="special">&gt;())</span>
+    <span class="special">.</span><span class="identifier">def</span><span class="special">(</span><span class="identifier">self</span> <span class="special">&lt;</span> <span class="identifier">self</span><span class="special">);</span>          <span class="comment">// __lt__<br></span></pre>
+<p>
+        The code snippet above is very clear and needs almost no explanation at all.
+        It is virtually the same as the operators' signatures. Just take note that
+        <tt class="literal">self</tt> refers to FilePos object. Also, not every class
+        <tt class="literal">T</tt> that you might need to interact with in an operator
+        expression is (cheaply) default-constructible. You can use <tt class="literal">other&lt;T&gt;()</tt>
+        in place of an actual <tt class="literal">T</tt> instance when writing "self
+        expressions".
+      </p>
+
+<p>
+以上代码片断非常清晰，几乎不需要任何解释。
+它实际上与运算符的函数签名一致。
+只需注意<tt class="literal">self</tt>是指FilePos对象。
+另外，在运算符表达式中，
+你可能需要一个类<tt class="literal">T</tt>并与之交互，
+但不是每个类都可以（低廉地）缺省构造的。
+当编写“self表达式”时，
+你可以使用<tt class="literal">other&lt;T&gt;()</tt>
+替代实际的<tt class="literal">T</tt>实例。
+    </p>
+
+<a name="class_operators_special_functions.special_methods"></a><h2>
+<a name="id462238"></a>
+        Special Methods
+      </h2>
+<h3>特殊方法</h3>      
+<p>
+        Python has a few more <span class="emphasis"><em>Special Methods</em></span>. Boost.Python
+        supports all of the standard special method names supported by real Python
+        class instances. A similar set of intuitive interfaces can also be used to
+        wrap C++ functions that correspond to these Python <span class="emphasis"><em>special functions</em></span>.
+        Example:
+      </p>
+
+<p>
+Python有几个<span class="emphasis"><em>特殊方法</em></span>。
+真实的Python类实例所支持的，所有标准的特殊方法名，Boost.Python都支持。
+也可以使用一组类似的直观接口，
+用来封装对应那些Python
+<span class="emphasis"><em>特殊函数</em></span>的C++函数。
+例如：
+    </p>
+
+<pre class="programlisting"><span class="keyword">class</span> <span class="identifier">Rational</span>
+<span class="special">{</span> <span class="keyword">public</span><span class="special">:</span> <span class="keyword">operator</span> <span class="keyword">double</span><span class="special">()</span> <span class="keyword">const</span><span class="special">;</span> <span class="special">};</span>
+
+<span class="identifier">Rational</span> <span class="identifier">pow</span><span class="special">(</span><span class="identifier">Rational</span><span class="special">,</span> <span class="identifier">Rational</span><span class="special">);</span>
+<span class="identifier">Rational</span> <span class="identifier">abs</span><span class="special">(</span><span class="identifier">Rational</span><span class="special">);</span>
+<span class="identifier">ostream</span><span class="special">&amp;</span> <span class="keyword">operator</span><span class="special">&lt;&lt;(</span><span class="identifier">ostream</span><span class="special">&amp;,</span><span class="identifier">Rational</span><span class="special">);</span>
+
+<span class="identifier">class_</span><span class="special">&lt;</span><span class="identifier">Rational</span><span class="special">&gt;(</span><span class="string">"Rational"</span><span class="special">)</span>
+    <span class="special">.</span><span class="identifier">def</span><span class="special">(</span><span class="identifier">float_</span><span class="special">(</span><span class="identifier">self</span><span class="special">))</span>                  <span class="comment">// __float__<br></span>    <span class="special">.</span><span class="identifier">def</span><span class="special">(</span><span class="identifier">pow</span><span class="special">(</span><span class="identifier">self</span><span class="special">,</span> <span class="identifier">other</span><span class="special">&lt;</span><span class="identifier">Rational</span><span class="special">&gt;))</span>    <span class="comment">// __pow__<br></span>    <span class="special">.</span><span class="identifier">def</span><span class="special">(</span><span class="identifier">abs</span><span class="special">(</span><span class="identifier">self</span><span class="special">))</span>                     <span class="comment">// __abs__<br></span>    <span class="special">.</span><span class="identifier">def</span><span class="special">(</span><span class="identifier">str</span><span class="special">(</span><span class="identifier">self</span><span class="special">))</span>                     <span class="comment">// __str__<br></span>    <span class="special">;</span>
+</pre>
+<p>
+        Need we say more?
+      </p>
+
+<p>
+      还需要多说吗？
+    </p>
+
+<div class="note"><table summary="Note" border="0">
+<tbody><tr>
+<td rowspan="2" align="center" valign="top" width="25"><img alt="[Note]" src="../../../../../../../doc/html/images/note.png"></td>
+<th align="left">Note</th>
+</tr>
+<tr><td colspan="2" align="left" valign="top"><p>
+          What is the business of <tt class="computeroutput"><span class="keyword">operator</span><span class="special">&lt;&lt;</span></tt>? Well, the method <tt class="computeroutput"><span class="identifier">str</span></tt> requires the <tt class="computeroutput"><span class="keyword">operator</span><span class="special">&lt;&lt;</span></tt> to do its work (i.e. <tt class="computeroutput"><span class="keyword">operator</span><span class="special">&lt;&lt;</span></tt>
+          is used by the method defined by <tt class="computeroutput"><span class="identifier">def</span><span class="special">(</span><span class="identifier">str</span><span class="special">(</span><span class="identifier">self</span><span class="special">))</span></tt>.
+        </p>
+
+        <p>
+<tt class="computeroutput"><span class="keyword">operator</span><span class="special">&lt;&lt;</span></tt>
+有什么用？
+喔，<tt class="computeroutput"><span class="identifier">str</span></tt>方法
+要求<tt class="computeroutput"><span class="keyword">operator</span><span class="special">&lt;&lt;</span></tt>
+为它干活，即
+<tt class="computeroutput"><span class="identifier">def</span><span class="special">(</span><span class="identifier">str</span><span class="special">(</span><span class="identifier">self</span><span class="special">))</span></tt>
+定义的方法用到了
+<tt class="computeroutput"><span class="keyword">operator</span><span class="special">&lt;&lt;</span></tt>。
+        </p>
+              
+</td></tr></tbody>
+</table></div>
+</div>
+</div>
+<table xmlns:rev="http://www.cs.rpi.edu/~gregod/boost/tools/doc/revision" width="100%"><tbody><tr>
+<td align="left"></td>
+<td align="right"><div class="copyright-footer">Copyright © 2002-2005 Joel
+      de Guzman, David Abrahams<p>
+        Distributed under the Boost Software License, Version 1.0. (See accompanying
+        file LICENSE_1_0.txt or copy at <a href="http://www.boost.org/LICENSE_1_0.txt" target="_top">
+        http://www.boost.org/LICENSE_1_0.txt </a>)
+      </p>
+      <p>翻译：<a href="http://blog.csdn.net/jq0123">金庆</a></p>
+      <p>译文更新：2008.5.27</p>
+</div></td>
+</tr></tbody></table>
+
+<hr>
+<div class="spirit-nav">
+<a accesskey="p" href="hello.html"><img src="../../../../../../../doc/html/images/prev.png" alt="Prev"></a><a accesskey="u" href="../index.html"><img src="../../../../../../../doc/html/images/up.png" alt="Up"></a><a accesskey="h" href="../index.html"><img src="../../../../../../../doc/html/images/home.png" alt="Home"></a><a accesskey="n" href="functions.html"><img src="../../../../../../../doc/html/images/next.png" alt="Next"></a>
+</div>
+</body></html>

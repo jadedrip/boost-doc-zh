@@ -1,0 +1,535 @@
+<!DOCTYPE html PUBLIC "-//W3C//DTD HTML 4.01 Transitional//EN">
+<html><head>
+<meta http-equiv="Content-Type" content="text/html; charset=utf-8"><title>Boost 随机数库：生成器</title>
+
+</head>
+
+
+<body style="color: rgb(0, 0, 0); background-color: rgb(255, 255, 255);">
+<h1>随机数库：生成器</h1>
+<ul>
+<li><a href="#intro">简介</a></li>
+<li><a href="#synopsis">概览</a></li>
+<li><a href="#const_mod"><code>random::const_mod</code>
+类模板</a></li>
+<li><a href="#linear_congruential"><code>random::linear_congruential</code>
+类模板</a></li>
+<li><a href="#rand48"><code>rand48</code>
+类</a></li>
+<li><a href="#additive_combine"><code>random::additive_combined</code>
+类模板</a></li>
+<li><a href="#shuffle_output"><code>random::shuffle_output</code>
+类模板</a></li>
+<li><a href="#inversive_congruential"><code>random::inversive_congruential</code>
+类模板</a></li>
+<li><a href="#mersenne_twister"><code>random::mersenne_twister</code>
+类模板</a></li>
+<li><a href="#lagged_fibonacci_01"><code>random::lagged_fibonacci_01</code>
+类模板</a></li>
+<li><a href="#performance">性能</a></li>
+</ul>
+<h2><a name="intro" id="intro">简介</a></h2>
+<p>本库提供了数个伪随机数生成器。伪随机数生成器的性质与其算法和参数都有密切的关系。生成算法用取数值参数的类模板实现，封装在 <code>boost::random</code>
+名字空间中。预先选择好的一组参数通过用 <code>typedef</code> 进行专门化来给出，置于 <code>boost</code>
+名字空间中。</p>
+<p>程序执行过程中不应当频繁构造伪随机数生成器。原因有二：其一，生成器的构造要求对其内部状态进行完全的初始化；因此包含大量内部状态
+的生成器 (详下)
+的构造往往是昂贵的。其二，生成器的构造需要提供序列的“种子”。取得多个良好的“种子”值往往是困难的。取得种子的方法之一是使用精确度尽可能高
+(毫秒甚至纳秒)
+的系统时间。如果再构建一个生成器之后再构建另一个，那么它们所使用的种子值之差会很接近一个常数。若系统时间的精确度不够高，这个差值甚至为零，从而得
+到两个行为相同的生成器。对于很多应用，这样的行为都是不合适的。</p>
+<p>注意以下描述的所有伪随机数生成器都是 CopyConstructible and
+Assignable。生成器的复制或赋值将会复制其内部状态，因此原有生成器和副本将会生成完全相同的随机数序列。这种行为往往不是需要的。特别注意标
+准库中的算法，如 std::generate。它们取函子的值作为参数，因此会调用复制构造函数。</p>
+<p>下表给出了生成器某些性质的概览。循环长度是给出了生成器性质的粗略描述；相对速度是性能的量度，值越大表示随机数生成越快。</p>
+<table summary="" border="1">
+<tbody>
+<tr>
+<th>生成器</th>
+<th>循环长度</th>
+<th>内存需求 (近似)</th>
+<th>相对速度 (近似)</th>
+<th>备注</th>
+</tr>
+<tr>
+<td><a href="#minstd_rand"><code>minstd_rand</code></a></td>
+<td>2<sup>31</sup>-2</td>
+<td><code>sizeof(int32_t)</code></td>
+<td>40</td>
+<td>-</td>
+</tr>
+<tr>
+<td><a href="#rand48"><code>rand48</code></a></td>
+<td>2<sup>48</sup>-1</td>
+<td><code>sizeof(uint64_t)</code></td>
+<td>80</td>
+<td>-</td>
+</tr>
+<tr>
+<td><code>lrand48</code> (C library)</td>
+<td>2<sup>48</sup>-1</td>
+<td>-</td>
+<td>20</td>
+<td>状态由全局变量保存</td>
+</tr>
+<tr>
+<td><a href="#ecuyer1988"><code>ecuyer1988</code></a></td>
+<td>约 2<sup>61</sup></td>
+<td><code>2*sizeof(int32_t)</code></td>
+<td>20</td>
+<td>-</td>
+</tr>
+<tr>
+<td><code><a href="#kreutzer1986">kreutzer1986</a></code></td>
+<td>?</td>
+<td><code>1368*sizeof(uint32_t)</code></td>
+<td>60</td>
+<td>-</td>
+</tr>
+<tr>
+<td><code><a href="#hellekalek1995">hellekalek1995</a></code></td>
+<td>2<sup>31</sup>-1</td>
+<td><code>sizeof(int32_t)</code></td>
+<td>3</td>
+<td>good uniform distribution in several dimensions</td>
+</tr>
+<tr>
+<td><code><a href="#mt11213b">mt11213b</a></code></td>
+<td>2<sup>11213</sup>-1</td>
+<td><code>352*sizeof(uint32_t)</code></td>
+<td>100</td>
+<td>good uniform distribution in up to 350 dimensions</td>
+</tr>
+<tr>
+<td><code><a href="#mt19937">mt19937</a></code></td>
+<td>2<sup>19937</sup>-1</td>
+<td><code>625*sizeof(uint32_t)</code></td>
+<td>100</td>
+<td>good uniform distribution in up to 623 dimensions</td>
+</tr>
+<tr>
+<td><code><a href="#lagged_fibonacci_spec">lagged_fibonacci607</a></code></td>
+<td>约 2<sup>32000</sup></td>
+<td><code>607*sizeof(double)</code></td>
+<td>150</td>
+<td>-</td>
+</tr>
+<tr>
+<td><code><a href="#lagged_fibonacci_spec">lagged_fibonacci1279</a></code></td>
+<td>约 2<sup>67000</sup></td>
+<td><code>1279*sizeof(double)</code></td>
+<td>150</td>
+<td>-</td>
+</tr>
+<tr>
+<td><code><a href="#lagged_fibonacci_spec">lagged_fibonacci2281</a></code></td>
+<td>约 2<sup>120000</sup></td>
+<td><code>2281*sizeof(double)</code></td>
+<td>150</td>
+<td>-</td>
+</tr>
+<tr>
+<td><code><a href="#lagged_fibonacci_spec">lagged_fibonacci3217</a></code></td>
+<td>约 2<sup>170000</sup></td>
+<td><code>3217*sizeof(double)</code></td>
+<td>150</td>
+<td>-</td>
+</tr>
+<tr>
+<td><code><a href="#lagged_fibonacci_spec">lagged_fibonacci4423</a></code></td>
+<td>约 2<sup>230000</sup></td>
+<td><code>4423*sizeof(double)</code></td>
+<td>150</td>
+<td>-</td>
+</tr>
+<tr>
+<td><code><a href="#lagged_fibonacci_spec">lagged_fibonacci9689</a></code></td>
+<td>约 2<sup>510000</sup></td>
+<td><code>9689*sizeof(double)</code></td>
+<td>150</td>
+<td>-</td>
+</tr>
+<tr>
+<td><code><a href="#lagged_fibonacci_spec">lagged_fibonacci19937</a></code></td>
+<td>约 2<sup>1050000</sup></td>
+<td><code>19937*sizeof(double)</code></td>
+<td>150</td>
+<td>-</td>
+</tr>
+<tr>
+<td><code><a href="#lagged_fibonacci_spec">lagged_fibonacci23209</a></code></td>
+<td>约 2<sup>1200000</sup></td>
+<td><code>23209*sizeof(double)</code></td>
+<td>140</td>
+<td>-</td>
+</tr>
+<tr>
+<td><code><a href="#lagged_fibonacci_spec">lagged_fibonacci44497</a></code></td>
+<td>约 2<sup>2300000</sup></td>
+<td><code>44497*sizeof(double)</code></td>
+<td>60</td>
+<td>-</td>
+</tr>
+</tbody>
+</table>
+<p>可以从上表中观察到，选择随机数生成器时往往要在品质、性能、内存三者之间作出权衡。本库中提供的大量生成器足以让程序员选择最适合自
+己应用领域的一个。此外，在 Monte Carlo 模拟中使用多个有着根本性不同的随机数生成器将会提高结果的可信度。</p>
+<p>如果你不知如何选择，不妨先使用 <code>mt19937</code>：它快速、可靠。</p>
+<p><em>注意：</em>以上随机数生成器不能用于要求使用不确定随机数的应用领域；关于不确定随机数生成
+器，参看 <a href="nondet_random.html">nondet_random.html</a>。</p>
+<p>对于在 <a href="random-concepts.html">概念文档</a>
+中已经给出定义的成员，在下面的描述中不会详细说明。</p>
+<h2><code>&lt;boost/random.hpp&gt;</code>
+中的生成器：<a name="synopsis" id="synopsis">概览</a></h2>
+<pre>namespace boost {<br>  namespace random {<br>    template&lt;class IntType, IntType m&gt;<br>    class const_mod;<br>    template&lt;class IntType, IntType a, IntType c, IntType m, IntType val&gt;<br>    class linear_congruential;<br>  }<br>  class rand48;<br>  typedef random::linear_congruential&lt; /* ... */ &gt; minstd_rand0;<br>  typedef random::linear_congruential&lt; /* ... */ &gt; minstd_rand;<br><br>  namespace random {<br>    template&lt;class DataType, int w, int n, int m, int r, DataType a, int u,<br>        int s, DataType b, int t, DataType c, int l, IntType val&gt;<br>    class mersenne_twister;<br>  }<br>  typedef random::mersenne_twister&lt; /* ... */ &gt; mt11213b;<br>  typedef random::mersenne_twister&lt; /* ... */ &gt; mt19937;<br><br>  namespace random {<br>    template&lt;class FloatType, int w, unsigned int  p, unsigned int q&gt;<br>    class lagged_fibonacci_01;<br>  }<br>  typedef random::lagged_fibonacci_01&lt; /* ... */ &gt; lagged_fibonacci607;<br>  typedef random::lagged_fibonacci_01&lt; /* ... */ &gt; lagged_fibonacci1279;<br>  typedef random::lagged_fibonacci_01&lt; /* ... */ &gt; lagged_fibonacci2281;<br>  typedef random::lagged_fibonacci_01&lt; /* ... */ &gt; lagged_fibonacci3217;<br>  typedef random::lagged_fibonacci_01&lt; /* ... */ &gt; lagged_fibonacci4423;<br>  typedef random::lagged_fibonacci_01&lt; /* ... */ &gt; lagged_fibonacci9689;<br>  typedef random::lagged_fibonacci_01&lt; /* ... */ &gt; lagged_fibonacci19937;<br>  typedef random::lagged_fibonacci_01&lt; /* ... */ &gt; lagged_fibonacci23209;<br>  typedef random::lagged_fibonacci_01&lt; /* ... */ &gt; lagged_fibonacci44497;  <br>} // namespace boost<br></pre>
+<h2><a name="const_mod" id="const_mod"><code>random::const_mod</code>
+类模板</a></h2>
+<h3>概览</h3>
+<pre>template&lt;class IntType, IntType m&gt;<br>class random::const_mod<br>{<br>public:<br> template&lt;IntType c&gt;<br> static IntType add(IntType x);<br><br> template&lt;IntType a&gt;<br> static IntType mult(IntType x);<br><br> template&lt;IntType a, IntType c&gt;<br> static IntType mult_add(IntType x);<br><br> static IntType invert(IntType x);<br>private:<br> const_mod(); // don't instantiate<br>};<br></pre>
+<h3>描述</h3>
+<p><code>const_mod</code> 类模板提供了同余运算 (模运算)
+函数；这些函数小心设计，确保不会造成溢出。所有的成员函数都是静态的；<code>const_mod&lt;&gt;</code>
+不允许实例化。</p>
+<p>模板参数 <code>IntType</code> 为某一整数类型，<code>m</code>
+为模数 (modulus)。</p>
+<p><em>注记：</em>以下资料给出了一个方法，允许 m 值很大时仍能快速进行同余乘法：</p>
+<blockquote> "A more portable FORTRAN random number generator",
+Linus Schrage, ACM Transactions on Mathematical Software, Vol. 5, No.
+2, June 1979, pp. 132-138 </blockquote>
+<h3>成员函数</h3>
+<pre>template&lt;IntType c&gt; static IntType add(IntType x)<br></pre>
+<p><strong>返回：</strong> (x+c) mod m</p>
+<pre>template&lt;IntType a&gt; static IntType mult(IntType x)<br></pre>
+<p><strong>返回：</strong> (a*x) mod m</p>
+<pre>template&lt;IntType a, IntType c&gt; static IntType<br>mult_add(IntType x)<br></pre>
+<p><strong>返回：</strong> (a*x+c) mod m</p>
+<pre>static IntType invert(IntType x)<br></pre>
+<p><strong>返回：</strong> 满足 (a*i) mod m == 1 的 i<br>
+<strong>前条件</strong> m 为质数</p>
+<h2><a name="linear_congruential" id="linear_congruential"><code>random::linear_congruential</code>
+类模板</a></h2>
+<h3>概览</h3>
+<pre>#include &lt;<a href="../../boost/random/linear_congruential.hpp">boost/random/linear_congruential.hpp</a>&gt;<br><br>template&lt;class IntType, IntType a, IntType c, IntType m, IntType val&gt;<br>class linear_congruential<br>{<br>public:<br> typedef IntType result_type;<br> static const IntType multiplier = a;<br> static const IntType increment = c;<br> static const IntType modulus = m;<br> static const bool has_fixed_range = true;<br> static const result_type min_value;<br> static const result_type max_value;<br> explicit linear_congruential_fixed(IntType x0 = 1);<br> // compiler-generated copy constructor and assignment operator are fine<br> void seed(IntType x0);<br> IntType operator()();<br>};<br><br>typedef random::linear_congruential&lt;long, 16807L, 0, 2147483647L,<br> 1043618065L&gt; minstd_rand0;<br>typedef random::linear_congruential&lt;long, 48271L, 0, 2147483647L,<br> 399268537L&gt; minstd_rand;<br></pre>
+<h3>描述</h3>
+<p><code>linear_congruential</code> 类模板的实例是 <a href="random-concepts.html#pseudo-rng">伪随机数生成器</a>
+的模型。以下资料给出了线性同余 (linear congruential) 伪随机数生成器的描述：</p>
+<blockquote> "Mathematical methods in large-scale computing
+units", D. H. Lehmer, Proc. 2nd Symposium on Large-Scale Digital
+Calculating Machines, Harvard University Press, 1951, pp. 141-146 </blockquote>
+令 x(n) 为伪随机数生成器的返回值序列。对于线性同余生成器，有 x(n+1) := (a * x(n) + c) mod
+m。生成器的参数是 x(0), a, c, m。模板参数 <code>IntType</code>
+为某一整数类型，a, c, m 须在其可表示范围内。a, c 应小于 m。
+<p><em>注意：</em>
+此生成器的品质很大程度上取决于参数的选择。用户代码应该使用已经选择好参数的生成器，如 <code>minstd_rand</code>。<br>
+对参数 a, c, m 的每一组选择，都附带定义了一些类别，从而 <code>static</code>
+成员不会违反单一定义原则。</p>
+<h3>成员</h3>
+<pre>explicit linear_congruential(IntType x0 = 1)<br></pre>
+<p><strong>效果：</strong>构造一 <code>linear_congruential</code>
+生成器，令其 x(0) := <code>x0</code>。</p>
+<pre>void seed(IntType x0)<br></pre>
+<p><strong>效果：</strong>令生成器当前的 x(n) 值为 <code>x0</code>。</p>
+<h3><a name="minstd_rand" id="minstd_rand">专门化</a></h3>
+<p>专门化 <code>minstd_rand0</code> 来自以下资料：</p>
+<blockquote> A pseudo-random number generator for the System/360,
+P.A. Lewis, A.S. Goodman, J.M. Miller, IBM Systems Journal, Vol. 8, No.
+2, 1969, pp. 136-146 </blockquote>
+以下资料中有 <code>minstd_rand0</code> 以及 <code>minstd_rand</code>
+的讨论：
+<blockquote> "Random Number Generators: Good ones are hard to
+find", Stephen K. Park and Keith W. Miller, Communications of the ACM,
+Vol. 31, No. 10, October 1988, pp. 1192-1201 </blockquote>
+<h2><a name="rand48" id="rand48"><code>rand48</code>
+类</a></h2>
+<h3>概览</h3>
+<pre>#include &lt;<a href="../../boost/random/linear_congruential.hpp">boost/random/linear_congruential.hpp</a>&gt;<br><br>class rand48 <br>{<br>public:<br> typedef int32_t result_type;<br> static const bool has_fixed_range = true;<br> static const int32_t min_value = 0;<br> static const int32_t max_value = 0x7fffffff;<br> <br> explicit rand48(int32_t x0 = 1);<br> explicit rand48(uint64_t x0);<br> // compiler-generated copy ctor and assignment operator are fine<br> void seed(int32_t x0);<br> void seed(uint64_t x0);<br> int32_t operator()();<br>};<br></pre>
+<h3>描述</h3>
+<p><code>rand48</code> 类是 <a href="random-concepts.html#pseudo-rng">伪随机数生成器</a>的模型。它
+使用线性同余算法，其中参数 a = 0x5DEECE66D, c = 0xB, m = 2**48。它能产生与某些系统上的 <code>lrand48()</code>
+函数相同的结果 (假设没有调用 <code>lcong48</code>)。</p>
+<p>该类中的常量和枚举定义等使用了 <code>uint64_t</code>；如果系统没有提供整数类型
+<code>uint64_t</code>，该类不可用。</p>
+<h3>构造函数</h3>
+<pre>rand48(int32_t x0)<br></pre>
+<p><strong>效果：</strong>构造一 <code>rand48</code>
+生成器，令其 x(0) := (<code>x0</code> &lt;&lt; 16) |
+0x330e。</p>
+<pre>rand48(uint64_t x0)<br></pre>
+<p><strong>效果：</strong> 构造一 <code>rand48</code>
+生成器，令其 x(0) := <code>x0</code>。</p>
+<h3>赋种</h3>
+<pre>void seed(int32_t x0)<br></pre>
+<p><strong>效果：</strong> 令生成器当前的 x(n) 值为 (<code>x0</code>
+&lt;&lt; 16) | 0x330e。</p>
+<pre>void seed(uint64_t x0)<br></pre>
+<p><strong>效果：</strong> 令生成器当前的 x(n) 值为 <code>x0</code>。</p>
+<h2><a name="additive_combine" id="additive_combine"><code>random::additive_combine</code>类
+模板</a></h2>
+<h3>概览</h3>
+<pre>#include &lt;<a href="../../boost/random/additive_combine.hpp">boost/random/additive_combine.hpp</a>&gt;<br><br>template&lt;class MLCG1, class MLCG2, typename MLCG1::result_type val&gt;<br>class random::additive_combine<br>{<br>public:<br> typedef MLCG1 first_base;<br> typedef MLCG2 second_base;<br> typedef typename MLCG1::result_type result_type;<br> static const bool has_fixed_range = true;<br> static const result_type min_value = 1;<br> static const result_type max_value = MLCG1::max_value-1;<br> additive_combine();<br> additive_combine(typename MLCG1::result_type seed1, <br> typename MLCG2::result_type seed2);<br> result_type operator()();<br> bool validation(result_type x) const;<br>};<br><br>typedef random::additive_combine&lt;<br> random::linear_congruential&lt;int32_t, 40014, 0, 2147483563, 0&gt;,<br> random::linear_congruential&lt;int32_t, 40692, 0, 2147483399, 0&gt;,<br> /* unknown */ 0&gt; ecuyer1988;<br><br></pre>
+<h3>描述</h3>
+<p><code>additive_combine</code> 类模板的实例是 <a href="random-concepts.html#pseudo-rng">伪随机数生成器</a>
+的模型。它把两个倍增线性同余生成器 (即 c = 0 的生成器) 组合起来。以下资料给出了其描述：</p>
+<blockquote> "Efficient and Portable Combined Random Number
+Generators", Pierre L'Ecuyer, Communications of the ACM, Vol. 31, No.
+6, June 1988, pp. 742-749, 774 </blockquote>
+模板参数 <code>MLCG1</code> 和 <code>MLCG2</code>
+应为两个不同的线性同余生成器，且都有 c = 0。每次调用返回 X(n) := (MLCG1(n) - MLCG2(n)) mod (m1 -
+1)，其中 m1 为 <code>MLCG1</code> 的模数。
+<p>模板参数 <code>val</code> 为 <code>validation</code>
+检验的参考值。</p>
+<h3>成员</h3>
+<pre>additive_combine()<br></pre>
+<p><strong>效果：</strong>用两个基础生成器的默认构造函数来构造一 <code>additive_combine</code>
+生成器。</p>
+<pre>additive_combine(typename MLCG1::result_type seed1, <br> typename MLCG2::result_type seed2)<br></pre>
+<p><strong>效果：</strong>以 <code>seed1</code>
+和 <code>seed2</code> 分别为两基础构造函数的参数来构造一 <code>additive_combine</code>
+生成器。</p>
+<h3><a name="ecuyer1988" id="ecuyer1988">专门化</a></h3>
+<p>专门化 <code>ecuyer1988</code> 在上面的资料中给出。</p>
+<h2><a name="shuffle_output" id="shuffle_output"><code>random::shuffle_output</code>
+类模板</a></h2>
+<h3>概览</h3>
+<pre>#include &lt;<a href="../../boost/random/shuffle_output.hpp">boost/random/shuffle_output.hpp</a>&gt;<br><br>template&lt;class UniformRandomNumberGenerator, int k, <br> typename UniformRandomNumberGenerator::result_type val = 0&gt;<br>class random::shuffle_output<br>{<br>public:<br> typedef UniformRandomNumberGenerator base_type;<br> typedef typename base_type::result_type result_type;<br> static const bool has_fixed_range = false;<br><br> shuffle_output();<br> template&lt;class T&gt; explicit shuffle_output(T seed);<br> explicit shuffle_output(const base_type &amp; rng);<br> template&lt;class T&gt; void seed(T s);<br><br> result_type operator()();<br> result_type min() const;<br> result_type max() const;<br> bool validation(result_type) const;<br>};<br></pre>
+<h3>描述</h3>
+<p><code>shuffle_output</code> 类模板的实例是 <a href="random-concepts.html#pseudo-rng">伪随机数生成器</a>
+的模型。它把某种均匀随机数生成器 (通常是线性同余生成器) 的多个输出混合起来，以获得较好的统计学性质。据 Donald E. Knuth 在
+"The Art of Computer Programming, Vol. 2" 中所载，这一算法在以下资料中给出：</p>
+<blockquote> "Improving a poor random number generator", Carter
+Bays and S.D. Durham, ACM Transactions on Mathematical Software, Vol.
+2, 1979, pp. 59-64. </blockquote>
+基础生成器的输出缓冲在长度为 k 的数组中。每一个输出 X(n) 另有一个用途：它给出了 X(n+1)
+在数组中的位置。使用过的数组元素由基础生成器产生的新输出取代。
+<p>模板参数为基础生成器和数组长度 k，其中 k 一般取 100 左右的值。模板参数 <code>val</code>
+为 <code>validation</code> 检验的参考值。</p>
+<h3>成员</h3>
+<pre>shuffle_output()<br></pre>
+<p><strong>效果：</strong>用基础生成器的默认构造函数构造一 <code>shuffle_output</code>
+生成器。</p>
+<p><strong>复杂度：</strong>基础生成器的 k+1 次调用。</p>
+<pre>template&lt;class T&gt; explicit shuffle_output(T seed)<br></pre>
+<p><strong>效果：</strong>以 <code>seed</code>
+为基础生成器单参数构造函数的参数构造一 <code>shuffle_output</code> 生成器。</p>
+<p><strong>复杂度：</strong>基础生成器的 k+1 次调用。</p>
+<pre>explicit shuffle_output(const base_type &amp; rng)<br></pre>
+<p><strong>前条件：</strong> 模板参数 <code>UniformRandomNumberGenerator</code>
+为一 CopyConstructible 类型。</p>
+<p><strong>效果：</strong> 通过复制传递的生成器构造一 <code>shuffle_output</code>
+生成器。</p>
+<p><strong>复杂度：</strong>基础生成器的 k+1 次调用。</p>
+<pre>template&lt;class T&gt; void seed(T s)<br></pre>
+<p><strong>效果：</strong>用 <code>seed</code>
+为参数调用基础生成器的 <code>seed</code> 方法，并对内部缓冲数组重新初始化。</p>
+<p><strong>复杂度：</strong>基础生成器的 k+1 次调用。</p>
+<h3><a name="kreutzer1986" id="kreutzer1986">专
+门化</a></h3>
+<p>据 Harry Erwin 所述 (私人 e-mail)，以下资料给出了专门化 <code>kreutzer1986</code>
+的描述：</p>
+<blockquote> "System Simulation: programming Styles and Languages
+(International Computer Science Series)", Wolfgang Kreutzer,
+Addison-Wesley, December 1986. </blockquote>
+<h2><a name="inversive_congruential" id="inversive_congruential"><code>random::inversive_congruential</code>
+类模板</a></h2>
+<h3>概览</h3>
+<pre>#include &lt;<a href="../../boost/random/inversive_congruential.hpp">boost/random/inversive_congruential.hpp</a>&gt;<br><br>template&lt;class IntType, IntType a, IntType b, IntType p, IntType val&gt;<br>class random::inversive_congruential<br>{<br>public:<br>  typedef IntType result_type;<br>  static const bool has_fixed_range = true;<br>  static const result_type min_value = (b == 0 ? 1 : 0);<br>  static const result_type max_value = p-1;<br>  static const result_type multiplier = a;<br>  static const result_type increment = b;<br>  static const result_type modulus = p;<br>  explicit inversive_congruential(IntType y0 = 1);<br>  void seed(IntType y0);<br>  IntType operator()();<br>};<br><br>typedef random::inversive_congruential&lt;int32_t, 9102, 2147483647-36884165, 2147483647, 0&gt; hellekalek1995;<br></pre>
+<h3>描述</h3>
+<p><code>inversive_congruential</code> 类模板的实例是 <a href="random-concepts.html#pseudo-rng">伪随机数生成器</a>
+的模型。它使用了逆同余算法 (inversive congruential algorithm, ICG)。以下资料给出了这一算法的描述：</p>
+<blockquote> "Inversive pseudorandom number generators: concepts,
+results and links", Peter Hellekalek, In: "Proceedings of the 1995
+Winter Simulation Conference", C. Alexopoulos, K. Kang, W.R. Lilegdon,
+and D. Goldsman (editors), 1995, pp. 255-262. <a href="ftp://random.mat.sbg.ac.at/pub/data/wsc95.ps">ftp://random.mat.sbg.ac.at/pub/data/wsc95.ps</a>
+</blockquote>
+输出序列由 x(n+1) = (a*inv(x(n)) - b) (mod p) 定义，其中 x(0), a, b 和质数 p
+是生成器的参数。inv(k) 为模 p 整数域中 k 的乘法逆元素。特殊地，inv(0) := 0。
+<p>模板参数 <code>IntType</code> 应为一带符号整数类型，p
+在其可表示范围内。a, b 和 p 是生成器的参数。模板参数 <code>val</code>
+为 <code>validation</code> 检验的参考值。</p>
+<p><em>注记：</em>目前的实现使用欧几里德算法 (Euclidian Algorithm)
+计算乘法逆元素。因此，逆同余生成器比其它生成器慢 10-20 倍 (参见 <a href="#performance">performance</a>
+一节)。然而，上面给出的资料指出这一生成器应当只慢 3 倍左右，因此欧几里德算法可能不是计算乘法逆元素的最优算法。</p>
+<h3>成员</h3>
+<pre>inversive_congruential(IntType y0 = 1)<br></pre>
+<p><strong>效果：</strong>构造一 <code>inversive_congruential</code>
+生成器，其初始状态为 <code>y0</code>。</p>
+<pre>void seed(IntType y0)<br></pre>
+<p><strong>效果：</strong>令当前状态为 <code>y0</code>。</p>
+<h3><a name="hellekalek1995" id="hellekalek1995">专
+门化</a></h3>
+<p>上面的资料给出了专门化 <code>hellekalek1995</code> 的描述。</p>
+<h2><a name="mersenne_twister" id="mersenne_twister"><code>random::mersenne_twister</code>
+类模板</a></h2>
+<h3>概览</h3>
+<pre>#include &lt;<a href="../../boost/random/mersenne_twister.hpp">boost/random/mersenne_twister.hpp</a>&gt;<br><br>template&lt;class UIntType, int w, int n, int m, int r, UIntType a, int u,<br>  int s, UIntType b, int t, UIntType c, int l, UIntType val&gt;<br>class random::mersenne_twister<br>{<br>public:<br>  typedef UIntType result_type;<br>  static const bool has_fixed_range = false;<br>  mersenne_twister();<br>  explicit mersenne_twister(UIntType value);<br>  template&lt;class Generator&gt; explicit mersenne_twister(Generator &amp; gen);<br>  // compiler-generated copy ctor and assignment operator are fine<br>  void seed();<br>  void seed(UIntType value);<br>  template&lt;class Generator&gt; void seed(Generator &amp; gen);<br>  result_type operator()();<br>  bool validation(result_type) const;<br>};<br><br>typedef mersenne_twister&lt;uint32_t,351,175,19,0xccab8ee7,11,7,0x31b6ab00,15,0xffe50000,17, /* unknown */ 0&gt; mt11213b;<br>typedef mersenne_twister&lt;uint32_t,624,397,31,0x9908b0df,11,7,0x9d2c5680,15,0xefc60000,18, 3346425566U&gt; mt19937;<br></pre>
+<h3>描述</h3>
+<p><code>mersenne_twister</code> 的实例是 <a href="random-concepts.html#pseudo-rng">伪随机数生成器</a>
+的模型。以下资料给出了其算法的描述：</p>
+<blockquote> "Mersenne Twister: A 623-dimensionally
+equidistributed uniform pseudo-random number generator", Makoto
+Matsumoto and Takuji Nishimura, ACM Transactions on Modeling and
+Computer Simulation: Special Issue on Uniform Random Number Generation,
+Vol. 8, No. 1, January 1998, pp. 3-30.<!-- <a href="http://www.math.keio.ac.jp/matumoto/emt.html">http://www.math.keio.ac.jp/matumoto/emt.html</a> --> </blockquote>
+<em>注记：</em>boost 库中的变种是重新实现的，不派生自也不使用以上网站提供的
+mt19937.c。不过两个生成器的等价性是经过检验的。<br>
+2005 年 4 月发现算法的一个 <a href="http://www.math.sci.hiroshima-u.ac.jp/%7Em-mat/MT/MT2002/emt19937ar.html">缺
+陷</a> 后修改了用整数赋种的方法。<br>
+此生成器的品质很大程度上取决于参数的选择。用户代码应该使用已经选择好参数的生成器，如 <code>mt19937</code>。<br>
+此生成器的状态数组需要的内存是可观的。例如 <code>mt11213b</code> 需要约 1408 bytes
+内存，而 <code>mt19937</code> 需要约 2496 bytes。
+<h3>构造函数</h3>
+<pre>mersenne_twister()<br></pre>
+<p><strong>效果：</strong> 构造一 <code>mersenne_twister</code>
+并调用 <code>seed()</code>。</p>
+<pre>explicit mersenne_twister(result_type value)<br></pre>
+<p><strong>效果：</strong> 构造一 <code>mersenne_twister</code>
+并调用 <code>seed(value)</code>。</p>
+<pre>template&lt;class Generator&gt; explicit mersenne_twister(Generator &amp; gen)<br></pre>
+<p><strong>效果：</strong> 构造一 <code>mersenne_twister</code>
+并调用 <code>seed(gen)</code>。</p>
+<p><em>Note:</em> 复制构造函数总是优先于模板构造函数。mersenne_twister 以特殊的步骤来保证这一点。</p><h3>赋种</h3>
+<pre>void seed()<br></pre>
+<p><strong>效果：</strong>调用 <code>seed(result_type(5489))</code>。</p>
+<pre>void seed(result_type value)<br></pre>
+<p><strong>效果：</strong>令状态 x(0) 为 v mod 2<sup>w</sup>。
+然后迭代地，<br>
+令 x(i) 为 (i + 1812433253 * (x(i-1) <em>xor</em> (x(i-1) <em>rshift</em>
+w-2))) mod 2<sup>w</sup> for i = 1 .. n-1. x(n) 为
+operator() 返回的第一个值。</p>
+<pre>template&lt;class Generator&gt; void seed(Generator &amp; gen)<br></pre>
+<p><strong>效果：</strong>令 <code>mersenne_twister</code>
+的当前状态为调用<code>gen</code> <code>n</code> 次的结果序列。</p>
+<p><strong>复杂度：</strong><code>gen</code>
+的 <code>n</code> 次调用。</p><h3><a name="mt11213b" id="mt11213b"></a><a name="mt19937" id="mt19937">专门化</a></h3>
+<p>专门化 <code>mt11213b</code> 和 <code>mt19937</code>
+来自上面引用的资料。</p>
+<h2><a name="lagged_fibonacci" id="lagged_fibonacci"><code></code><code>random::lagged_fibonacci_01</code> 类模板</a></h2>
+<h3>概览</h3>
+<pre>#include &lt;<a href="../../boost/random/lagged_fibonacci.hpp">boost/random/lagged_fibonacci.hpp</a>&gt;<br><br>template&lt;class FloatType, int w, unsigned int p, unsigned int q&gt;<br>class lagged_fibonacci_01<br>{<br>public:<br>  typedef FloatType result_type;<br>  static const bool has_fixed_range = false;<br>  static const int word_size = w;<br>  static const unsigned int long_lag = p;<br>  static const unsigned int short_lag = q;<br>  result_type min() const { return 0.0; }<br>  result_type max() const { return 1.0; }<br>  lagged_fibonacci_01();<br>  explicit lagged_fibonacci_01(uint32_t value);<br>  template&lt;class Generator&gt;<br>  explicit lagged_fibonacci_01(Generator &amp; gen);<br>  // compiler-generated copy ctor and assignment operator are fine<br>  void seed(uint32_t value = 331u);<br>  template&lt;class Generator&gt; void seed(Generator &amp; gen);<br>  result_type operator()();<br>  bool validation(result_type x) const;<br>};<br><br>typedef random::lagged_fibonacci_01&lt;double, 48, 607, 273&gt; lagged_fibonacci607;<br>typedef random::lagged_fibonacci_01&lt;double, 48, 1279, 418&gt; lagged_fibonacci1279;<br>typedef random::lagged_fibonacci_01&lt;double, 48, 2281, 1252&gt; lagged_fibonacci2281;<br>typedef random::lagged_fibonacci_01&lt;double, 48, 3217, 576&gt; lagged_fibonacci3217;<br>typedef random::lagged_fibonacci_01&lt;double, 48, 4423, 2098&gt; lagged_fibonacci4423;<br>typedef random::lagged_fibonacci_01&lt;double, 48, 9689, 5502&gt; lagged_fibonacci9689;<br>typedef random::lagged_fibonacci_01&lt;double, 48, 19937, 9842&gt; lagged_fibonacci19937;<br>typedef random::lagged_fibonacci_01&lt;double, 48, 23209, 13470&gt; lagged_fibonacci23209;<br>typedef random::lagged_fibonacci_01&lt;double, 48, 44497, 21034&gt; lagged_fibonacci44497;<br></pre>
+<h3>描述</h3>
+<p><code>lagged_fibonacci</code>_01 类模板的实例是 <a href="random-concepts.html#pseudo-rng">伪随机数生成器</a>
+的模型。It uses a lagged Fibonacci algorithm with two lags p and q,
+evaluated in floating-point arithmetic: x(i) = x(i-p) + x(i-q) (mod 1)
+with p &gt; q. See</p>
+<blockquote> "Uniform random number generators for
+supercomputers", Richard Brent, Proc. of Fifth Australian Supercomputer
+Conference, Melbourne, Dec. 1992, pp. 704-706. </blockquote>
+<p><em>注意：</em>此生成器的品质很大程度上取决于参数的选择。用户代码应该使用已经选择好参数的生成
+器，如 <code>lagged_fibonacci607</code>。<br>
+此生成器的状态数组需要的内存是可观的。例如 <code>lagged_fibonacci607</code> 需要约
+4856 bytes 内存，而 <code>lagged_fibonacci44497</code> 需要约 350
+KBytes。</p>
+<h3>构造函数</h3>
+<pre>lagged_fibonacci_01()<br></pre>
+<p><strong>效果：</strong>构造一 <code>lagged_fibonacci</code>_01
+生成器并调用 <code>seed()</code>。</p>
+<pre>explicit lagged_fibonacci_01(uint32_t value)<br></pre>
+<p><strong>效果：</strong>构造一 <code>lagged_fibonacci</code>_01
+生成器并调用 <code>seed(value)</code>。</p>
+<pre>template&lt;class Generator&gt; explicit lagged_fibonacci_01(Generator &amp; gen)<br></pre>
+<p><strong>效果：</strong>构造一 <code>lagged_fibonacci</code>_01
+生成器并调用 <code>seed(gen)</code>。</p>
+<h3>赋种</h3>
+<pre>void seed()<br></pre>
+<p><strong>效果：</strong>调用 <code>seed(331u)</code>。</p>
+<pre>void seed(uint32_t value)<br></pre>
+<p><strong>效果：</strong>用 <code>value</code>
+作参数构造一 <code>minstd_rand0</code>，并用它作参数调用 <code>seed</code>。</p>
+<pre>template&lt;class Generator&gt; void seed(Generator &amp; gen)<br></pre>
+<p><strong>效果：</strong>令 <code>lagged_fibonacci</code>_01
+的状态为对 <code>uniform_01&lt;gen, FloatType&gt;</code>
+的 <code>p</code> 次调用的结果序列。<br>
+<strong>复杂度：</strong>对 <code>gen</code> 的 <code>p</code>
+次调用。</p>
+<h3><a name="lagged_fibonacci_spec" id="lagged_fibonacci_spec"></a>专门化</h3>
+<p>专门化 <code>lagged_fibonacci607</code> ... <code>lagged_fibonacci44497</code>
+(见上) use well tested lags. (参考资料待添加)</p>
+<h2><a name="performance" id="performance">性能</a></h2>
+<p>测试程序 <a href="random_speed.cpp">random_speed.cpp</a>
+用一个紧凑的循环测试 <a href="../../boost/random.hpp">random.hpp</a>
+中上述算法的实现的运行速度。测试环境：Pentium Pro 200 MHz with gcc 2.95.2, Linux 2.2.13,
+glibc 2.1.2。</p>
+<table summary="" border="1">
+<tbody>
+<tr>
+<th>类</th>
+<th>每次调用耗时 [微秒, usec]</th>
+</tr>
+<tr>
+<td>rand48</td>
+<td>0.096</td>
+</tr>
+<tr>
+<td>rand48 run-time configurable</td>
+<td>0.697</td>
+</tr>
+<tr>
+<td>lrand48 glibc 2.1.2</td>
+<td>0.844</td>
+</tr>
+<tr>
+<td>minstd_rand</td>
+<td>0.174</td>
+</tr>
+<tr>
+<td>ecuyer1988</td>
+<td>0.445</td>
+</tr>
+<tr>
+<td>kreutzer1986</td>
+<td>0.249</td>
+</tr>
+<tr>
+<td>hellekalek1995 (inversive)</td>
+<td>4.895</td>
+</tr>
+<tr>
+<td>mt11213b</td>
+<td>0.165</td>
+</tr>
+<tr>
+<td>mt19937</td>
+<td>0.165</td>
+</tr>
+<tr>
+<td>mt19937 original</td>
+<td>0.185</td>
+</tr>
+<tr>
+<td>lagged_fibonacci607</td>
+<td>0.111</td>
+</tr>
+<tr>
+<td>lagged_fibonacci4423</td>
+<td>0.112</td>
+</tr>
+<tr>
+<td>lagged_fibonacci19937</td>
+<td>0.113</td>
+</tr>
+<tr>
+<td>lagged_fibonacci23209</td>
+<td>0.122</td>
+</tr>
+<tr>
+<td>lagged_fibonacci44497</td>
+<td>0.263</td>
+</tr>
+</tbody>
+</table>
+<p>误差范围为 +/- 10 纳秒 (nsec)。</p>
+<hr>
+<p><a href="http://validator.w3.org/check?uri=referer"><img src="http://www.w3.org/Icons/valid-html401" alt="Valid HTML 4.01 Transitional" border="0" height="31" width="88"></a></p>
+<p>Revised<!--webbot bot="Timestamp" s-type="EDITED" s-format="%d %B, %Y" startspan -->
+05 December, 2006<!--webbot bot="Timestamp" endspan i-checksum="38516" --></p>
+<p><i>Copyright © 2000-2005 <a href="http://www.boost.org/people/jens_maurer.htm">Jens
+Maurer</a></i></p>
+<p><i>Distributed under the Boost Software License, Version
+1.0. (See accompanying file <a href="../../LICENSE_1_0.txt">LICENSE_1_0.txt</a>
+or copy at <a href="http://www.boost.org/LICENSE_1_0.txt">http://www.boost.org/LICENSE_1_0.txt</a>)</i></p>
+<p>中文版修订：2008/6/28</p>
+<p><i>Copyright © 2008 <a href="http://wiki.woodpecker.org.cn/moin/XiaoQi">xiaq</a></i></p>
+<p><i>在 Boost Software License, Version 1.0 的条款下发布。(参看文件 <a href="../../LICENSE_1_0.txt">LICENSE_1_0.txt</a> 或在线副本
+<a href="http://www.boost.org/LICENSE_1_0.txt">
+http://www.boost.org/LICENSE_1_0.txt</a>)</i></p>
+</body></html>
