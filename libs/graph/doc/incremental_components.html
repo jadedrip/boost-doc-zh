@@ -48,7 +48,7 @@ alpha(E,V))</i>，其中 <i>E</i> 为图中的总边数(整个过程结束后)�
 
 <p>使用不相交集合数据结构，在往一个图中增加边时，维护其连通分支。该例子的完整源代码可以在 <a href="../example/incremental_components.cpp"><tt>examples/incremental_components.cpp</tt></a> 中找到。
 
-</p><pre>typedef adjacency_list &lt;vecS, vecS, undirectedS&gt; Graph;<br>typedef graph_traits&lt;Graph&gt;::vertex_descriptor Vertex;<br>typedef graph_traits&lt;Graph&gt;::vertices_size_type size_type;<br><br>const int N = 6;<br>Graph G(N);<br><br>std::vector&lt;size_type&gt; rank(num_vertices(G));<br>std::vector&lt;Vertex&gt; parent(num_vertices(G));<br>typedef size_type* Rank;<br>typedef Vertex* Parent;<br>disjoint_sets&lt;Rank, Parent&gt;  ds(&amp;rank[0], &amp;parent[0]);<br><br>initialize_incremental_components(G, ds);<br>incremental_components(G, ds);<br><br>graph_traits&lt;Graph&gt;::edge_descriptor e;<br>bool flag;<br>boost::tie(e,flag) = add_edge(0, 1, G);<br>ds.union_set(0,1);<br><br>boost::tie(e,flag) = add_edge(1, 4, G);<br>ds.union_set(1,4);<br><br>boost::tie(e,flag) = add_edge(4, 0, G);<br>ds.union_set(4,0);<br><br>boost::tie(e,flag) = add_edge(2, 5, G);<br>ds.union_set(2,5);<br><br>cout &lt;&lt; "An undirected graph:" &lt;&lt; endl;<br>print_graph(G, get(vertex_index, G));<br>cout &lt;&lt; endl;<br><br>graph_traits&lt;Graph&gt;::vertex_iterator i,end;<br>for (boost::tie(i, end) = vertices(G); i != end; ++i)<br>  cout &lt;&lt; "representative[" &lt;&lt; *i &lt;&lt; "] = " &lt;&lt; <br>    ds.find_set(*i) &lt;&lt; endl;;<br>cout &lt;&lt; endl;<br><br>typedef component_index&lt;unsigned int&gt; Components;<br>Components components(&amp;parent[0], &amp;parent[0] + parent.size());<br><br>for (Components::size_type c = 0; c &lt; components.size(); ++c) {<br>  cout &lt;&lt; "component " &lt;&lt; c &lt;&lt; " contains: ";<br>  Components::value_type::iterator<br>    j = components[c].begin(),<br>    jend = components[c].end();<br>  for ( ; j != jend; ++j)<br>    cout &lt;&lt; *j &lt;&lt; " ";<br>  cout &lt;&lt; endl;<br>}<br></pre>
+</p><pre>using namespace boost;<br><br>int main(int argc, char* argv[]) <br>{<br>  typedef adjacency_list <vecs ,="" undirecteds="" vecs=""> Graph;<br>  typedef graph_traits<graph>::vertex_descriptor Vertex;<br>  typedef graph_traits<graph>::vertices_size_type VertexIndex;<br><br>  const int VERTEX_COUNT = 6;<br>  Graph graph(VERTEX_COUNT);<br><br>  std::vector<vertexindex> rank(num_vertices(graph));<br>  std::vector<vertex> parent(num_vertices(graph));<br><br>  typedef VertexIndex* Rank;<br>  typedef Vertex* Parent;<br><br>  disjoint_sets<rank ,="" parent=""> ds(&amp;rank[0], &amp;parent[0]);<br><br>  initialize_incremental_components(graph, ds);<br>  incremental_components(graph, ds);<br><br>  graph_traits<graph>::edge_descriptor edge;<br>  bool flag;<br><br>  boost::tie(edge, flag) = add_edge(0, 1, graph);<br>  ds.union_set(0,1);<br><br>  boost::tie(edge, flag) = add_edge(1, 4, graph);<br>  ds.union_set(1,4);<br><br>  boost::tie(edge, flag) = add_edge(4, 0, graph);<br>  ds.union_set(4,0);<br><br>  boost::tie(edge, flag) = add_edge(2, 5, graph);<br>  ds.union_set(2,5);<br>    <br>  std::cout &lt;&lt; "An undirected graph:" &lt;&lt; std::endl;<br>  print_graph(graph, get(boost::vertex_index, graph));<br>  std::cout &lt;&lt; std::endl;<br>    <br>  BOOST_FOREACH(Vertex current_vertex, vertices(graph)) {<br>    std::cout &lt;&lt; "representative[" &lt;&lt; current_vertex &lt;&lt; "] = " &lt;&lt;<br>      ds.find_set(current_vertex) &lt;&lt; std::endl;<br>  }<br><br>  std::cout &lt;&lt; std::endl;<br><br>  typedef component_index<vertexindex> Components;<br><br>  // NOTE: Because we're using vecS for the graph type, we're<br>  // effectively using identity_property_map for a vertex index map.<br>  // If we were to use listS instead, the index map would need to be<br>  // explicity passed to the component_index constructor.<br>  Components components(parent.begin(), parent.end());<br><br>  // Iterate through the component indices<br>  BOOST_FOREACH(VertexIndex current_index, components) {<br>    std::cout &lt;&lt; "component " &lt;&lt; current_index &lt;&lt; " contains: ";<br><br>    // Iterate through the child vertex indices for [current_index]<br>    BOOST_FOREACH(VertexIndex child_index,<br>                  components[current_index]) {<br>      std::cout &lt;&lt; child_index &lt;&lt; " ";<br>    }<br><br>    std::cout &lt;&lt; std::endl;<br>  }<br><br>  return (0);<br>}</vertexindex></graph></rank></vertex></vertexindex></graph></graph></vecs><br></pre>
 
 <p>
 </p><hr>
@@ -180,11 +180,8 @@ alpha(E,V))</i>，其中 <i>E</i> 为图中的总边数(整个过程结束后)�
 </h2>
 
 <p>
-</p><pre>component_index&lt;Index&gt;<br></pre>
-
-<p><b><tt>component_index</tt> 功能在 Boost 1.40 和较早版本中是有问题的(更多信息请见 <a href="https://svn.boost.org/trac/boost/ticket/3250">bug 
-3250</a>)。</b> </p><p>该类为图的分支提供一个类似于STL容器的视图。每个分支是一个类似于容器的对象，<tt>component_index</tt> 对象提供通过 <tt>operator[]</tt>&nbsp;对分支对象的访问。<tt>component_index</tt>
-对象是用从 <tt>incremental_components()</tt> 函数计算得到的不相交集合中的父节点属性进行初始化的。</p><h3>Where Defined 定义于</h3>
+</p><pre>component_index&lt;Index&gt;<br></pre><p>类 <tt>component_index</tt> 为图的分支提供一个类似于STL容器的视图。每个分支是一个类似于容器的对象，<tt>component_index</tt> 对象提供通过 <tt>operator[]</tt>&nbsp;对分支对象的访问。<tt>component_index</tt>
+对象是用从 <tt>incremental_components()</tt> 函数计算得到的不相交集合中的父节点属性进行初始化的。可以可选地传入一个 vertex -&gt; index 属性映射(缺省情况下使用 <tt>identity_property_map</tt>)。 </p><h3>Where Defined 定义于</h3>
 
 <p>
 <a href="../../../boost/graph/incremental_components.hpp"><tt>boost/graph/incremental_components.hpp</tt></a>
@@ -201,72 +198,46 @@ alpha(E,V))</i>，其中 <i>E</i> 为图中的总边数(整个过程结束后)�
 <th>成员</th> <th>说明</th>
 </tr>
 
-<tr>
-<td><tt>size_type</tt></td>
-<td>用于表示分支数量的类型。</td>
-</tr>
+
 
 
 <tr>
-<td><tt>value_type</tt></td>
-<td>分支对象的类型。分支类型具有以下成员。
+<td><tt>value_type/size_type</tt></td>
+<td>分支索引的类型(和 <tt>Index</tt> 相同)。
 </td>
 </tr>
  
+<tr><td><tt>size_type size()</tt></td>
+<td>返回图中的分支数量。 </td></tr>
+
 <tr>
-<td><tt>value_type::value_type</tt></td>
-<td>分支对象的值类型为顶点ID。
+<td><tt>iterator/const_iterator</tt></td>
+<td>迭代器，用于遍历有效的分支索引 [0 to 
+<tt>size()</tt>).
+</td>
+</tr>
+
+
+
+<tr>
+<td><tt>iterator&nbsp;begin() const</tt></td>
+<td>返回一个迭代器，指向开始分支的索引 (0). 
 </td>
 </tr>
 
 <tr>
-<td><tt>value_type::iterator</tt></td>
-<td>该迭代器可用于遍历该分支中的所有顶点。解引用该迭代器得到一个顶点ID。
-</td>
-</tr>
-
-<tr>
-<td><tt>value_type::const_iterator</tt></td>
-<td>常量迭代器。
-</td>
-</tr>
-
-<tr>
-<td><tt>value_type::iterator value_type::begin() const</tt></td>
-<td>返回一个迭代器，指向该分支中的第一个顶点。
-</td>
-</tr>
-
-<tr>
-<td><tt>value_type::iterator value_type::end() const</tt></td>
-<td>返回一个迭代器，指向该分支中最后一个顶点之后。
+<td><tt>iterator&nbsp;end() const</tt></td>
+<td>返回一个迭代器，指向开始分支的索引 (<tt>size()</tt>). 
 </td>
 </tr><tr>
 
-</tr><tr>
-<td>
-<tt>
-template &lt;class ComponentsContainer&gt;
-component_index(const ComponentsContainer&amp; c)
-</tt>
-</td>
-<td>用分支容器 <tt>c</tt> 中的信息构造 <tt>component_index</tt>，<tt>c</tt> 是执行 <tt>connected_components_on_edgelist</tt> 所得到的结果。
-</td>
-</tr>
+</tr><tr><td><tt>std::pair&lt;component_iterator, component_iterator&gt; 
+operator[size_type index] const</tt></td>
+<td>返回一对迭代器，指向索引位于 [0, <tt>size()</tt>) 的分支。 </td></tr>
 
-<tr>
-<td><tt>value_type operator[](size_type i)</tt></td>
-<td>
-返回图中第 <tt>i</tt> 个分支。
-</td>
-</tr>
 
-<tr>
-<td><tt>size_type component_index::size()</tt></td>
-<td>返回图中的分支数量。
-</td>
 
-</tr></tbody></table> 
+</tbody></table> 
 
 <br>
 </p><hr>
