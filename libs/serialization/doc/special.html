@@ -38,7 +38,7 @@ http://www.boost.org/LICENSE_1_0.txt)
 </li>
 </dl>
 </li>
-<li><a href="#dlls">DLLS - 序列化与运行期链接</a></li>
+<li><a href="#static_libraries">静态库与序列化</a></li><li><a href="#dlls">DLLS - 序列化与运行期链接</a></li>
 <li><a href="#plugins">插件</a></li>
 <li><a href="#multi_threading">多线程</a> </li>
 <li><a href="#optimizations">优化</a></li>
@@ -157,14 +157,46 @@ visitor" 模式。不过，XML
 
 <p><code style="white-space: normal;"></code>在包含了任意的存档类头文件的源码模块中的 <code style="white-space: normal;">BOOST_CLASS_EXPORT</code> 将会为了将给定类型的多态指针序列化至所有存档类而实例化所需的代码。如果没有包含存档类头文件，则不会实例化任何代码。 
 </p><p>注意，这一功能的实现要求 <code style="white-space: normal;">BOOST_CLASS_EXPORT</code> 宏要出现在被实例化代码所用的任意存档类头文件<b>之后</b>。因此，使用 <code style="white-space: normal;">BOOST_CLASS_EXPORT</code> 的代码如下： </p><pre><code><br>#include &lt;boost/archive/text_oarchive.hpp&gt;<br>#include &lt;boost/archive/text_oarchive.hpp&gt;<br>... // 其它存档<br><br>#include "a.hpp" // header declaration for class a<br>BOOST_CLASS_EXPORT(a)<br>... // 其它类的头文件和导出<br></code></pre>不论是独立的可执行程序，还是静态库或动态库或共享库，都要这样。 
-<p>注意，在一个 "a.hpp" 头文件本身之中包含 <code style="white-space: normal;">BOOST_CLASS_EXPORT</code>，那么使用其它序列化 traits 就会很难或者不能遵守以上规则，即在执行 <code style="white-space: normal;">BOOST_CLASS_EXPORT</code> 之前包含存档头文件。这与其它序列化 traits 不同，其它 traits 通常会被包含在类声明的同一个文件中。 
+<p>在一个 "a.hpp" 头文件本身之中包含 <code style="white-space: normal;">BOOST_CLASS_EXPORT</code>，那么使用其它序列化 traits 就会很难或者不能遵守以上规则，即在执行 <code style="white-space: normal;">BOOST_CLASS_EXPORT</code> 之前包含存档头文件。最好的解决办法是，在头文件声明中使用
+<code style="white-space: normal;">BOOST_CLASS_EXPORT_KEY</code>，并在类定义文件中使用
+<code style="white-space: normal;">BOOST_CLASS_EXPORT_IMPLEMENT</code>。 
 </p><p>本系统完全可以将代码置于静态或共享库中。将 <code style="white-space: normal;">BOOST_CLASS_EXPORT</code> 
-置于库代码中将没有任何作用，除非同时包含存档类头文件。因此，在构建一个库时，你应该包含可能使用的所有存档类的所有头文件。另外，你也可以只包含 <a href="archive_reference.html#polymorphic">多态存档</a> 的头文件。还有，在构建共享库时有一个限制，只有一个这样的库可以对任意给定类型使用 <code style="white-space: normal;">BOOST_CLASS_EXPORT</code>。所有这样都使得将 <code style="white-space: normal;">BOOST_CLASS_EXPORT</code> 包含在被序列化类的头文件中很不方便。所以，<b>使用 <code style="white-space: normal;">BOOST_CLASS_EXPORT</code> 的最好方法就是将它包含在实现相应类的模块中。</b> 
+置于库代码中将没有任何作用，除非同时包含存档类头文件。因此，在构建一个库时，你应该包含可能使用的所有存档类的所有头文件。另外，你也可以只包含 <a href="archive_reference.html#polymorphic">多态存档</a> 的头文件。<b></b> 
 </p><p>严格来说，如果所有指针的序列化都通过最底层的类来进行，则不需要导出。但是，为了检测出严重的错误，本库捕获所有通过未导出或未登记的多态指针进行的序列化。所以，在实践中，应准备好登记或导出所有的带有一个或多个虚拟函数，且通过指针进行序列化的类。<br></p>注意，这一功能的实现依赖于厂家对C++语言的特殊扩展。所以，不能保证使用了这一功能的程序的可移植性。不过，所有测试过
-boost 的C++编译器均提供所需的扩展。本库包含了这些编译器所要求的额外声明。有理由相信未来的C++编译器会支持这些扩展或相应功能。
-<h3><a name="dlls">DLLS - 序列化与运行期链接</a></h3>序列化代码可以置于运行期链接的库中。即，这些代码可以被置于DLLS(Windows)或共享库(*nix)中，或者是与主执行程序一起的静态库中。在没有使用 <a href="serialization.html#export" target="detail"><code style="white-space: normal;">BOOST_CLASS_EXPORT</code> </a>时，本序列化库不会为了要将代码分到各个模块中而强加特殊的要求。<p>对于静态库，例子为 <a href="../example/demo_pimpl.cpp" target="demo_pimpl"><code style="white-space: normal;">demo_pimpl.cpp</code> </a>,
+boost 的C++编译器均提供所需的扩展。本库包含了这些编译器所要求的额外声明。有理由相信未来的C++编译器会支持这些扩展或相应功能。<h3><a name="static_libraries">静态库与序列化</a></h3>用于数据类型序列化的代码可以保存在库中，就象类型实现的代码那样。这没有问题，而且可以节省大量编译时间。
+<ul><li>仅编译库中的序列化定义。
+</li><li>针对所有你准备要使用该库的存档类，显式实例化序列化代码。
+</li><li>对于被导出的类型，仅在头文件中使用 <code style="white-space: normal;">BOOST_CLASS_EXPORT_KEY</code>。
+</li><li>对于被导出的类型，仅在库中所编译的定义中使用 <code style="white-space: normal;">BOOST_CLASS_EXPORT_IMPLEMENT</code>。对于任一特定类型，只有一个文件包含该类型的
+<code style="white-space: normal;">BOOST_CLASS_EXPORT_IMPLEMENT</code>。这样可确保在程序内只有一份序列化代码的拷贝存在。它避免了空间的浪费，以及在同一程序中有不同版本的序列化代码的可能性。在多个文件中包含
+<code style="white-space: normal;">BOOST_CLASS_EXPORT_IMPLEMENT</code>
+可能会导致因为重复符号的链接失败，或者运行期异常的抛出。
+</li><li>序列化的代码应该仅在库中。
+</li><li>让你自己熟知 <b>PIMPL</b> 惯用法。
+</li></ul>相关例子为 <a href="../example/demo_pimpl.cpp" target="demo_pimpl"><code style="white-space: normal;">demo_pimpl.cpp</code> </a>,
 <a href="../example/demo_pimpl_A.cpp" target="demo_pimpl"><code style="white-space: normal;">demo_pimpl_A.cpp</code> </a>和
-<a href="../example/demo_pimpl_A.hpp" target="demo_pimpl"><code style="white-space: normal;">demo_pimpl_A.hpp</code>&nbsp;</a>，这三个文件实现了序列化代码从主程序的完全分离。</p><p>对于运行期链接的库，有一个测试程序作为示范：<a href="../test/test_dll_simple.cpp" target="test_dll_simple"><code style="white-space: normal;">test_dll_simple</code> </a>, 而 <a href="../test/dll_a.cpp" target="dll_a"><code style="white-space: normal;">dll_a.cpp</code> </a>则是完全从主程序中分离出来的序列化实现，该代码会在运行期装入。在这个例子中，该代码在使用它的程序开始运行时自动装入，不过它也可以通过OS的API调用来装入或卸载。 </p>
+<a href="../example/demo_pimpl_A.hpp" target="demo_pimpl"><code style="white-space: normal;">demo_pimpl_A.hpp</code>&nbsp;</a>，这三个文件实现了序列化代码从主程序的完全分离。
+
+
+<h3><a name="dlls">DLLS - 序列化与运行期链接</a></h3>
+Serialization code can be placed in libraries to be linked at runtime.  That is,
+code can be placed in DLLS(Windows) Shared Libraries(*nix), or static libraries
+as well as the main executable.  The best technique is the
+same as that described above for libraries.  The serialization
+library test suite includes the following programs
+to illustrate how this works:
+<br>序列化代码可以置于运行期链接的库中。即，这些代码可以被置于DLLS(Windows)或共享库(*nix)中，或者是与主执行程序一起的静态库中。最好的方法与以上对库的描述一样。本序列化库的测试套件包含了以下程序，示范了如何工作：<p><a href="../test/test_dll_simple.cpp" target="test_dll_simple"><code style="white-space: normal;">test_dll_simple</code> </a>, 和 <a href="../test/dll_a.cpp" target="dll_a"><code style="white-space: normal;">dll_a.cpp</code>&nbsp;</a>是完全从主程序中分离出来的序列化实现，该代码会在运行期装入。在这个例子中，该代码在使用它的程序开始运行时自动装入，不过它也可以通过OS的API调用来装入或卸载。
+</p><p>
+另外还有
+<a href="http://www.boost.org/doc/libs/1_41_0/libs/serialization/test/test_dll_exported.cpp" target="test_dll_exported">
+<code style="white-space: normal;">test_dll_exported.cpp</code>
+</a>, 和
+<a href="http://www.boost.org/doc/libs/1_41_0/libs/serialization/test/polymorphic_derived2.cpp" target="polymorphic_derived2">
+<code style="white-space: normal;">polymorphic_derived2.cpp</code>
+</a>
+它们与上例类似，不过包含了对导出的测试，以及在DLLS语境中的 no_rtti 工具。
+
+</p><p> </p>
 <h3><a name="plugins">插件</a></h3>为了实现本库，需要几个工具在运行期对类型进行操作。它们是 <a href="extended_type_info.html" target="detail"><code>extended_type_info</code></a>，用于将类关联到外部标识符串(<b>GUID</b>)，以及 <a href="void_cast.html" target="detail"><code>void_cast</code></a>，用于在相关类型的指针间进行转型。为完成 <a href="extended_type_info.html" target="detail"><code>extended_type_info</code></a> 的功能，加入了构造和销毁相应类型的能力。为了使用这些功能，你必须指定各个类型如何创建。这应该在导出一个类时完成。所以，上述代码的一个更为完整的例子如下： <pre><code><br>#include &lt;boost/archive/text_oarchive.hpp&gt;<br>#include &lt;boost/archive/text_oarchive.hpp&gt;<br>... // 其它存档<br><br>#include "a.hpp" // 类 a 的声明头文件<br><br>// 该类有一个缺省构造函数<br>BOOST_SERIALIZATION_FACTORY_0(a)<br>// 和一个带有单个整数参数的构造函数<br>BOOST_SERIALIZATION_FACTORY_1(a, int)<br><br>// 为该类指定 GUID<br>BOOST_CLASS_EXPORT(a)<br>... // 其它类的头文件和导出<br></code></pre>有了这些，你可以在只知道 <b>GUID</b> 和基类的情况下构造、序列化和销毁一个类。 <h3><a name="multi_threading">多线程</a></h3>序列化的基本目的与多线程的并行读/写单个存档实例是相冲突的。本库的实现假设应用程序会避免这种情形。 
 <p>但是，在不同任务中同时读/写不同的存档则是被允许的，就象每个存档实例(几乎)完全独立于其它存档实例。唯一共享的信息是一些类型表，它们的实现使用了一个无锁的线程安全 <a href="singleton.html" target="detail"><code style="white-space: normal;">单件</code></a>，它在本文档的其它地方描述。 
 </p><p>这个单件实现保证了所有的共享信息在包含它们的代码模块被装入时进行初始化。序列化库负责确保这些数据结构不被修改。有可能产生问题的唯一
