@@ -1,8 +1,6 @@
 <!DOCTYPE HTML PUBLIC "-//W3C//DTD HTML 4.01 Transitional//EN">
 <html><head>
-<meta http-equiv="Content-Type" content="text/html; charset=UTF-8"><title>value_initialized</title>
-
-</head>
+<meta http-equiv="Content-Type" content="text/html; charset=UTF-8"><title>value_initialized</title></head>
 <body style="color: rgb(0, 0, 0); background-color: rgb(255, 255, 255);" link="#0000ff" vlink="#800080">
 <h2><img src="../../boost.png" height="86" width="276"> 头文件 &lt;<a href="../../boost/utility/value_init.hpp">boost/utility/value_init.hpp</a>&gt;
 </h2>
@@ -148,7 +146,7 @@ zero-initialized</a> <br>
 <h2><a name="types"></a>类型和对象</h2>
 <h2><a name="val_init"><code>模板类
 value_initialized&lt;T&gt;</code></a></h2>
-<pre>namespace boost {<br><br>template&lt;class T&gt;<br>class value_initialized<br>{<br> public :<br> value_initialized() : x() {}<br> operator T&amp;() const { return x ; }<br> T&amp; data() const { return x ; }<br><br> private :<br> <i>unspecified</i> x ;<br>} ;<br><br>template&lt;class T&gt;<br>T const&amp; get ( value_initialized&lt;T&gt; const&amp; x )<br>{<br> return x.data() ;<br>}<br><br>template&lt;class T&gt;<br>T&amp; get ( value_initialized&lt;T&gt;&amp; x )<br>{<br> return x.data() ;<br>}<br><br>} // namespace boost<br></pre>
+<pre>namespace boost {<br>template&lt;class T&gt;<br>class value_initialized<br>{<br>  public :<br>    value_initialized() : x() {}<br>    operator T const &amp;() const { return x ; }<br>    operator T&amp;() { return x ; }<br>    T const &amp;data() const { return x ; }<br>    T&amp; data() { return x ; }<br>    void swap( value_initialized&lt;T&gt;&amp; );<br><br>  private :<br>    <i>unspecified</i> x ;<br>} ;<br><br>template&lt;class T&gt;<br>T const&amp; get ( value_initialized&lt;T&gt; const&amp; x )<br>{<br>  return x.data() ;<br>}<br><br>template&lt;class T&gt;<br>T&amp; get ( value_initialized&lt;T&gt;&amp; x )<br>{<br>  return x.data() ;<br>}<br><br>} // namespace boost<br></pre>
 <p>该模板类的一个对象是一个可以转换为 'T&amp;' 的 <code>T</code>-包
 装，当该包装类被缺省构造时，被包装的对象(类型为 T 的数据成员<code></code>)可以保证是 <a href="#valueinit">值初始化</a> 的： </p>
 <pre>int zero = 0 ;<br>value_initialized&lt;int&gt; x ;<br>assert ( x == zero ) ;<br><br>std::string def ;<br>value_initialized&lt; std::string &gt; y ;<br>assert ( y == def ) ;<br></pre>
@@ -163,20 +161,12 @@ value_initialized&lt;T&gt;</code></a></h2>
 <code>value_initialized&lt;T&gt;</code> 也是可交换的，调用其
 <code>swap</code> 成员函数相当于调用
 <code>boost::swap</code>.</p><pre>value_initialized&lt;int&gt; x ; <br>static_cast&lt;int&amp;&gt;(x) = 1 ; // OK<br>get(x) = 1 ; // OK<br><br>value_initialized&lt;int const&gt; y ; <br>static_cast&lt;int&amp;&gt;(y) = 1 ; // ERROR: 不能转为 int&amp;<br>static_cast&lt;int const&amp;&gt;(y) = 1 ; // ERROR: 不能修改常量值<br>get(y) = 1 ; // ERROR: 不能修改常量值</pre>
-<h3>警告：</h3>
-<p>转换操作符和 <code>data()</code> 成员函数都是 <code>const</code>
-的，以允许从一个常量的包装器来访问被包装的对象：</p>
-<pre>void foo(int);<br>value_initialized&lt;int&gt; const x ;<br>foo(x);<br></pre>
-<p>但是请注意，转换操作符是转为 <code>T&amp;</code> 的，即使它本身是 <code>const</code>
-的。因此，如果<code> T</code> 是一个非常量类型，你可以通一个常量的包装器对被包装的对象进行修改：</p>
+<h3>警告：</h3><p>Boost 1.40.0及以前的版本中的 <code>value_initialized</code> 实现允许<i>非常量</i>地从一个常量包装访问被包装的对象，用转型操作符或 <code>data()</code> 成员函数都可以。例如：</p>
 <pre>value_initialized&lt;int&gt; const x_c ;<br>int&amp; xr = x_c ; // OK, 可以转换为 int&amp; 即使 x_c 本身是 const 的。<br>xr = 2 ; </pre>
 <p>这种不正常行为的原因是，有些常用的编译器不接受以下代码：</p>
 <pre>struct X<br>{<br> operator int&amp;() ;<br> operator int const&amp;() const ; <br>};<br>X x ;<br>(x == 1 ) ; // ERROR HERE!</pre>
-<p>这些编译器认为两个转换操作符之间有歧义。这是不正确的，但是我所知道的解决办法就是只提供一个转换操作符，这就导致了前面所说的异常
-行为。<br>
-</p>
-<h3>提议的标准：非成员函数 get() 惯用法</h3>
-<p>可以通过一个常量的包装器修改非常量的被包装对象这一异常行为是可以避免的，只要确保总是通过 get() 来访问被包装对象：</p>
+<p>当前版本的 <code>value_initialized</code> 不再有这种不正常的行为。因为当前的编译器已广泛支持常量和非常量的转型操作符的重载，所以我们决定修正这个问题。所以当前的版本支持逻辑常量性的想法。</p><h3>提议的标准：非成员函数 get() 惯用法</h3>
+<p>可以通过一个常量的包装器修改非常量的被包装对象这一异常行为(以前的 <code>value_initialized</code> 版本支持这种行为)是可以避免的，只要确保总是通过 get() 来访问被包装对象：</p>
 <pre>value_initialized&lt;int&gt; x ;<br>get(x) = 1 ; // OK<br><br>value_initialized&lt;int const&gt; cx ;<br>get(x) = 1 ; // ERROR: 不能修改常量对象<br><br>value_initialized&lt;int&gt; const x_c ;<br>get(x_c) = 1 ; // ERROR: 不能修改常量对象<br><br>value_initialized&lt;int const&gt; const cx_c ;<br>get(cx_c) = 1 ; // ERROR: 不能修改常量对象<br></pre>
 <h2><a name="initialized_value"><code>initialized_value</code></a></h2>
 <pre>namespace boost {<br>class initialized_value_t<br>{<br> public :<br> template &lt;class T&gt; operator T() const ;<br>};<br><br>initialized_value_t const initialized_value = {} ;<br><br>} // namespace boost<br></pre>
@@ -218,8 +208,7 @@ workaround to various compiler issues. </p>
 Boost release version 1.36 (2008). </p>
 <p>Developed by <a href="mailto:fernando_cacciola@hotmail.com">Fernando
 Cacciola</a>, the latest version of this file can be found at <a href="http://www.boost.org/">www.boost.org</a>. </p>
-<hr><p>Revised 28 August 2008</p><p>© Copyright Fernando Cacciola, 2002, 2008.</p>
-<p>Distributed under the Boost Software License, Version 1.0. See
-<a href="http://www.boost.org/LICENSE_1_0.txt">www.boost.org/LICENSE_1_0.txt</a></p>
-<br>
+<hr>Revised 03 October 2009
+<p>© Copyright Fernando Cacciola, 2002, 2009.</p>
+<p>Distributed under the Boost Software License, Version 1.0. See <a href="http://www.boost.org/LICENSE_1_0.txt">www.boost.org/LICENSE_1_0.txt</a></p>
 </body></html>
