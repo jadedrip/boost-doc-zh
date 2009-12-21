@@ -26,7 +26,8 @@
 <a name="bbv2.extender"></a>Extender Manual 扩展手册</h2></div></div></div>
 <div class="toc"><dl>
 <dt><span class="section"><a href="extender.html#bbv2.extender.intro">Introduction 简介</a></span></dt>
-<dt><span class="section"><a href="extender.html#bbv2.extending.targets">Target types 目标类型</a></span></dt>
+<dt><span class="section"><a href="extender.html#bbv2.extender.example">Example: 
+1-to-1 generator 例子：1到1生成器</a> </span><span class="section"></span></dt><dt><span class="section"><a href="extender.html#bbv2.extending.targets">Target types 目标类型</a></span></dt>
 <dt><span class="section"><a href="extender.html#bbv2.extending.tools">Tools and generators 工具和生成器</a></span></dt>
 <dt><span class="section"><a href="extender.html#bbv2.extending.features">Features 特性</a></span></dt>
 <dt><span class="section"><a href="extender.html#bbv2.extending.rules">Main target rules 主目标规则</a></span></dt>
@@ -34,11 +35,154 @@
 </dl></div>
 <div class="section" lang="en">
 <div class="titlepage"><div><div><h3 class="title">
-<a name="bbv2.extender.intro"></a>Introduction 简介</h3></div></div></div>
-<p>This document explains how to extend Boost.Build to accomodate
-  your local requirements. Let's start with a simple but
-  realistic example.<br>本文档介绍如何扩展 Boost.Build 以适应你的本地化需求。让我们从一个简单而现实的例子开始。</p>
-<p>Say you're writing an application that generates C++ code. If
+<a name="bbv2.extender.intro"></a>Introduction 简介</h3></div></div></div><div class="section" title="Introduction">
+<div class="toc">
+<dl><dt><span class="section"><a href="extender.html#bbv2.extender.overview.metatargets">Metatargets 元目标</a></span> 
+</dt><dt><span class="section"><a href="extender.html#bbv2.extender.overview.targets">Concrete targets 具体目标</a></span> 
+</dt><dt><span class="section"><a href="extender.html#bbv2.extender.overview.generators">Generators 生成器</a></span> 
+</dt></dl></div>
+<p>This section explains how to extend Boost.Build to accomodate your local 
+requirements—primarily to add support for non-standard tools you have. Before we 
+start, be sure you have read and understoon the concept of metatarget, <a class="xref" title="Concepts" href="overview.html#bbv2.overview.concepts">the 
+section called “Concepts”</a>, which is critical to understanding the remaining 
+material.<br>本节介绍如何扩展 Boost.Build 以适应你本身的要求—主要是增加对你的非标准工具的支持。在我们开始之前，请确认你已经阅读并理解了元目标的概念，见<a class="xref" title="Concepts" href="overview.html#bbv2.overview.concepts"> “概念”一节</a>，它是理解其它东西的关键。 </p>
+<p>The current version of Boost.Build has three levels of targets, listed below.<br>当前版本的 Boost.Build 有三级目标，列出如下。 
+</p>
+<div class="variablelist">
+<dl><dt><span class="term">metatarget 元目标</span> 
+</dt><dd>
+<p>Object that is created from declarations in Jamfiles. May be called with a 
+set of properties to produce concrete targets.<br>从 Jamfiles 中的声明所创建的目标。可以带上一组属性进行调用，以生成具体目标。</p></dd><dt><span class="term">concrete target 具体目标</span> 
+</dt><dd>
+<p>Object that corresponds to a file or an action.<br>与某个文件或动作相对应的对象。</p></dd><dt><span class="term">jam target &nbsp;jam目标</span> 
+</dt><dd>
+<p>Low-level concrete target that is specific to Boost.Jam build engine. 
+Essentially a string—most often a name of file.<br>特定针对 Boost.Jam 构建引擎的低级具体目标。基本上就是一个字符串—通常是一个文件名。</p></dd></dl></div>
+<p>In most cases, you will only have to deal with concrete targets and the 
+process that creates concrete targets from metatargets. Extending metatarget 
+level is rarely required. The jam targets are typically only used inside the 
+command line patterns.<br>在多数情况下，你只需要处理具体目标以及从元目标生成具体目标的过程。极少需要扩展元目标级别。jam目标通常只在命令行模式内部使用。 </p>
+<div class="warning" title="Warning">
+<table summary="Warning" border="0">
+<tbody>
+<tr>
+<td rowspan="2" align="middle" valign="top" width="25"><img alt="[Warning]" src="../../../doc/html/images/warning.png"></td>
+<th align="left">Warning 警告</th></tr>
+<tr>
+<td align="left" valign="top">
+<p>All of the Boost.Jam target-related builtin functions, like <code class="computeroutput">DEPENDS</code> or <code class="computeroutput">ALWAYS</code> 
+operate on jam targets. Applying them to metatargets or concrete targets has no 
+effect.</p><p>所有 Boost.Jam 目标相关的内建函数，如 <code class="computeroutput">DEPENDS</code> 或 <code class="computeroutput">ALWAYS</code> 
+是对jam目标进行操作的。将它们用于元目标或具体目标是没有作用的。</p></td></tr></tbody></table></div>
+<div class="section" title="Metatargets">
+<div class="titlepage">
+<div>
+<div>
+<h4 class="title"><a name="bbv2.extender.overview.metatargets"></a>Metatargets 元目标</h4></div></div></div>
+
+<p>Metatarget is an object that records information specified in Jamfile, such 
+as metatarget kind, name, sources and properties, and can be called with 
+specific properties to generate concrete targets. At the code level it is 
+represented by an instance of class derived from <code class="computeroutput">abstract-target</code>. <sup>[<a class="footnote" href="extender.html#ftn.id2179234" name="id2179234">14</a>]</sup><br>元目标是一个记录了在Jamfile中给定信息的对象，这些信息包括有元目标种类、名字、源和属性，它可以带上指定的属性进行调用，以生成具体目标。在代码级上，它被表示为一个派生自 <code class="computeroutput">abstract-target</code> 的类的实例。<sup>[<a class="footnote" href="#ftn.id2179234" name="id2179234">14</a>]</sup> </p>
+<p>The <code class="computeroutput">generate</code> method takes the build 
+properties (as an instance of the <code class="computeroutput">property-set</code> 
+class) and returns a list containing:<br>方法 <code class="computeroutput">generate</code> 接受一些构建属性(作为 <code class="computeroutput">property-set</code> 
+类的一个实例)并返回一个列表，列表中包含有：</p>
+<div class="itemizedlist">
+<ul class="itemizedlist" type="disc"><li class="listitem">
+<p>As front element—Usage-requirements from this invocation (an instance of 
+<code class="computeroutput">property-set</code>)<br>首元素—此次调用的用法要求(一个 
+<code class="computeroutput">property-set</code> 实例)</p></li><li class="listitem">
+<p>As subsequent elements—created concrete targets ( instances of the <code class="computeroutput">virtual-target</code> class.)<br>后续元素—创建的具体目标(多个 <code class="computeroutput">virtual-target</code> 类的实例)。</p></li></ul></div>
+<p>It's possible to lookup a metataget by target-id using the <code class="computeroutput">targets.resolve-reference</code> function, and the <code class="computeroutput">targets.generate-from-reference</code> function can both 
+lookup and generate a metatarget.<br>可以用 <code class="computeroutput">targets.resolve-reference</code> 函数通过 target-id 查找一个元目标，而 <code class="computeroutput">targets.generate-from-reference</code> 函数则可以同时查找并生成一个元目标。</p>
+<p>The <code class="computeroutput">abstract-target</code> class has three 
+immediate derived classes:<br>类 <code class="computeroutput">abstract-target</code> 有三个直接派生类：</p>
+<div class="itemizedlist">
+<ul class="itemizedlist" type="disc"><li class="listitem">
+<p><code class="computeroutput">project-target</code> that corresponds to a 
+project and is not intended for further subclassing. The <code class="computeroutput">generate</code> method of this class builds all targets in 
+the project that are not marked as explicit.<br><code class="computeroutput">project-target</code> 对应于一个项目，它没有其它子类。该类的 <code class="computeroutput">generate</code> 方法创建项目中所有未显式标出的目标。</p></li><li class="listitem">
+<p><code class="computeroutput">main-target</code> corresponds to a target in a 
+project and contains one or more target alternatives. This class also should not 
+be subclassed. The <code class="computeroutput">generate</code> method of this 
+class selects an alternative to build, and calls the <code class="computeroutput">generate</code> method of that alternative.<br><code class="computeroutput">main-target</code> 对应于项目中的一个目标，可以包含一个或多个可选目标。这个类也不应再派生子类。该类的 <code class="computeroutput">generate</code> 方法选择一个可选目标进行构建，并调用选中目标的 <code class="computeroutput">generate</code> 方法。</p></li><li class="listitem">
+<p><code class="computeroutput">basic-target</code> corresponds to a specific 
+target alternative. This is base class, with a number of derived classes. The 
+<code class="computeroutput">generate</code> method processes the target 
+requirements and requested build properties to determine final properties for 
+the target, builds all sources, and finally calls the abstract <code class="computeroutput">construct</code> method with the list of source virtual 
+targets, and the final properties.<br><code class="computeroutput">basic-target</code> 对应于一个特定的目标选择。这是一个基类，有多个派生类。其
+<code class="computeroutput">generate</code> 方法处理目标要求和被请求的构建属性，以确定该目标的最终属性，然后构建所有源，最后以源虚拟目标的列表和最终属性调用抽象的 <code class="computeroutput">construct</code> 方法。</p></li></ul></div>
+<p>The instances of the <code class="computeroutput">project-target</code> and 
+<code class="computeroutput">main-target</code> classes are created 
+implicitly—when loading a new Jamfiles, or when a new target alternative with 
+as-yet unknown name is created. The instances of the classes derived from <code class="computeroutput">basic-target</code> are typically created when Jamfile 
+calls a <em class="firstterm">metatarget rule</em>, such as such as <code class="computeroutput">exe</code>.<br><code class="computeroutput">project-target</code> 和 
+<code class="computeroutput">main-target</code> 类的实例是隐式创建的—在装入一个新的Jamfiles时，或当一个未知名的新目标被创建时。而派生自 <code class="computeroutput">basic-target</code> 的类的实例则通常在 Jamfile 
+调用一个 <em class="firstterm">元目标规则</em>, 如 <code class="computeroutput">exe</code> 时，被创建。 </p>
+<p>It it permissible to create a custom class derived from <code class="computeroutput">basic-target</code> and create new metatarget rule that 
+creates instance of such target. However, in the majority of cases, a specific 
+subclass of <code class="computeroutput">basic-target</code>— <code class="computeroutput">typed-target</code> is used. That class is associated with 
+a <em class="firstterm">type</em> and relays to <em class="firstterm">generators</em> to construct concrete targets of that type. This 
+process will be explained below. When a new type is declared, a new metatarget 
+rule is automatically defined. That rule creates new instance of type-target, 
+associated with that type.<br>你可从 <code class="computeroutput">basic-target</code> 派生一个客户类，并创建新的元目标规则来创建该目标的实例。不过，在大多数情况下，我们使用 <code class="computeroutput">basic-target</code> 的一个特定子类— <code class="computeroutput">typed-target</code>。这个类与一个 <em class="firstterm">类型type</em> 相关联，并且依赖于 <em class="firstterm">生成器generators</em> 来构造该类型的具体目标。这个过程将在后文中说明。当声明一个新类型时，将自动定义一个新的元目标规则。该规则创建 type-target 的新实例，关联至该类型。 </p></div>
+<div class="section" title="Concrete targets">
+<div class="titlepage">
+<div>
+<div>
+<h4 class="title"><a name="bbv2.extender.overview.targets"></a>Concrete 
+targets 具体目标</h4></div></div></div>
+<p>Concrete targets are represented by instance of classes derived from <code class="computeroutput">virtual-target</code>. The most commonly used subclass is 
+<code class="computeroutput">file-target</code>. A file target is associated with 
+an action that creates it— an instance of the <code class="computeroutput">action</code> class. The action, in turn, hold a list of 
+source targets. It also holds the <code class="computeroutput">property-set</code> 
+instance with the build properties that should be used for the action.<br>具体目标表现为派生处 <code class="computeroutput">virtual-target</code> 的类的实例。最常用的子类是 
+<code class="computeroutput">file-target</code>。文件目标关联于一个创建它的动作—一个 <code class="computeroutput">action</code> 类的实例。反过来，这个动作持有一个源目标列表。它还持有 <code class="computeroutput">property-set</code> 
+实例，其中有用于该动作的相关构建属性。</p>
+<p>Here's an example of creating a target from another target, <code class="computeroutput">source<br></code>以下是一个从某个目标 <code class="computeroutput">source</code> 创建另一个目标的例子：<code class="computeroutput"></code></p><pre class="programlisting">local a = [ new action $(source) : common.copy : $(property-set) ] ;<br>local t = [ new file-target $(name) : CPP : $(project) : $(a) ] ;<br></pre>
+<p>The first line creates an instance of the <code class="computeroutput">action&gt;</code> class. The first parameter is the list of 
+sources. The second parameter is the name a jam-level <a class="link" href="overview.html#bbv2.overview.jam_language.actions">action</a>. The third 
+parameter is the property-set applying to this action. The second line creates a 
+target. We specifie a name, a type and a project. We also pass the action object 
+created earlier. If the action creates several targets, we can repeat the second 
+line several times.<br>第一行创建一个 <code class="computeroutput">action&gt;</code> 类的实例。第一个参数是源列表。第二个参数是一个jam级 <a class="link" href="overview.html#bbv2.overview.jam_language.actions">动作</a> 的名字。第三个参数是应用于该动作的属性集。第二行创建一个目标。我们指定一个名字、一个类型和一个项目。我们同时还传入早前创建的动作对象。如果该动作创建多个目标，我们可以多次重复第二行。</p>
+<p>In some cases, code that creates concrete targets may be invoked more than 
+once with the same properties. Returning to different instance of <code class="computeroutput">file-target</code> that correspond to the same file clearly 
+will result in problems. Therefore, whenever returning targets you should pass 
+them via the <code class="computeroutput">virtual-target.register</code> function, 
+that will replace targets with previously created identical ones, as 
+necessary.<sup>[<a class="footnote" href="extender.html#ftn.id2179576" name="id2179576">15</a>]</sup> Here are a couple of examples:<br>有些情况下，创建具体目标的代码可能以相同的属性多次执行。返回不同的 <code class="computeroutput">file-target</code> 实例，如果它们对应于同一个文件显然是有问题的。因此，每次返回目标时，你应该通过 <code class="computeroutput">virtual-target.register</code> 函数来传递它们，这样将对先前创建的相同目标进行替换，如果需要的话。<sup>[<a class="footnote" href="#ftn.id2179576" name="id2179576">15</a>]</sup> 以下是几个例子： </p><pre class="programlisting">return [ virtual-target.register $(t) ] ;<br>return [ sequence.transform virtual-target.register : $(targets) ] ;<br></pre>
+<p></p></div>
+<div class="section" title="Generators">
+<div class="titlepage">
+<div>
+<div>
+<h4 class="title"><a name="bbv2.extender.overview.generators"></a>Generators 生成器</h4></div></div></div>
+<p>In theory, every kind of metatarget in Boost.Build (like <code class="computeroutput">exe</code>, <code class="computeroutput">lib</code> or <code class="computeroutput">obj</code>) could be implemented by writing a new 
+metatarget class that, independently of the other code, figures what files to 
+produce and what commands to use. However, that would be rather inflexible. For 
+example, adding support for a new compiler would require editing several 
+metatargets.<br>理论上讲，Boost.Build中的每种元目标(如 <code class="computeroutput">exe</code>, <code class="computeroutput">lib</code> 或 <code class="computeroutput">obj</code>)都可以通过编写一个新的元目标类来实现，独立于其它代码，指出要生成哪些文件以及要使用哪些命令。不过，这样很不灵活。例如，增加一个新的编译器的支持将需要编辑多个元目标。 </p>
+<p>In practice, most files have specific types, and most tools consume and 
+produce files of specific type. To take advantage of this fact, Boost.Build 
+defines concept of target type and <a class="indexterm" name="id2179635"></a><em class="firstterm">generators</em>, and has special metatarget class <code class="computeroutput">typed-target</code>. Target type is merely an identifier. 
+It is associated with a set of file extensions that correspond to that type. 
+Generator is an abstraction of a tool. It advertises the types it produces and, 
+if called with a set of input target, tries to construct output targets of the 
+advertised types. Finally, <code class="computeroutput">typed-target</code> is 
+associated with specific target type, and relays the generator (or generators) 
+for that type.<br>在实践中，多数文件具有特定的类型，且多数工具读入并产出特定类型的文件。为了充分利用这一点，Boost.Build 
+定义了目标类型和 <a class="indexterm" name="id2179635"></a><em class="firstterm">生成器generators</em> 的概念，以及特定元目标 <code class="computeroutput">typed-target</code>。目标类型只是一个标识符。它关联至对应于该类型的一组文件扩展名。生成器是工具的一个抽象。它公开宣称其产出的类型，如果以一组输入目标来调用它，它将尝试构造所宣称类型的输出目标。最后，<code class="computeroutput">typed-target</code> 关联至特定的目标类型，以及该类型的生成器。 </p>
+<p>A generator is an instance of a class derived from <code class="computeroutput">generator</code>. The <code class="computeroutput">generator</code> class itself is suitable for common cases. 
+You can define derived classes for custom scenarios.<br>生成器是派生自 <code class="computeroutput">generator</code> 的类的实例。<code class="computeroutput">generator</code> 类本身适用于常见的情形。你可以为特定情形定义派生类。</p></div></div>
+<div class="section" title="Example: 1-to-1 generator">
+<div class="titlepage">
+<div>
+<div>
+<h3 class="title"><a name="bbv2.extender.example"></a>Example: 1-to-1 
+generator</h3></div></div></div></div><p>Say you're writing an application that generates C++ code. If
   you ever did this, you know that it's not nice. Embedding large
   portions of C++ code in string literals is very awkward. A much
   better solution is:<br>假设你正在编写一个生成 C++ 代码的应用。如果你曾经试过，你应该知道那并不好办。将大部分 C++ 代码嵌入到字符串中是非常笨拙的。一个更好的解决方法是：</p>
@@ -695,7 +839,13 @@ we need to modify it to be:<br>由于 msvc.link 动作没有使用 DEF_FILE 变�
           </p></li>
 </ul></div>
 <p>
-    </p>
+    </p><div class="footnote">
+<p><sup>[<a class="para" href="#id2179234" name="ftn.id2179234">14</a>] </sup>This 
+name is historic, and will be eventuall changed to <code class="computeroutput">metatarget<br></code>&nbsp; &nbsp; &nbsp; &nbsp; &nbsp; 这个名字是旧的，将改为 <code class="computeroutput">metatarget</code></p></div>
+<div class="footnote">
+<p><sup>[<a class="para" href="#id2179576" name="ftn.id2179576">15</a>] </sup>This 
+create-then-register pattern is caused by limitations of the Boost.Jam language. 
+Python port is likely to never create duplicate targets.<br>&nbsp; &nbsp; &nbsp; &nbsp; &nbsp; 这种"创建并注册"的模式是由于 Boost.Jam 语言的限制造成的。Python 上的移植很可能不会创建重复的目标。</p></div>
 </div>
 </div>
 <table xmlns:rev="http://www.cs.rpi.edu/~gregod/boost/tools/doc/revision" width="100%"><tbody><tr>
