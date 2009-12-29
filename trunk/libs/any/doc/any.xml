@@ -1,0 +1,571 @@
+<?xml version="1.0" encoding="utf-8"?>
+<!DOCTYPE library PUBLIC "-//Boost//DTD BoostBook XML V1.0//EN"
+  "http://www.boost.org/tools/boostbook/dtd/boostbook.dtd">
+<library name="Any" dirname="any" xmlns:xi="http://www.w3.org/2001/XInclude" 
+         id="any" last-revision="$Date: 2009-07-26 16:11:03 -0400 (Sun, 26 Jul 2009) $">
+  <libraryinfo>
+    <author>
+      <firstname>Kevlin</firstname>
+      <surname>Henney</surname>
+    </author>
+
+    <copyright>
+      <year>2001</year>
+      <holder>Kevlin Henney</holder>
+    </copyright>
+
+    <librarypurpose>
+      Safe, generic container for single values of different value types
+    </librarypurpose> 
+    <librarycategory name="category:data-structures"/>
+
+    <legalnotice>
+      <para>Distributed under the Boost Software License, Version 1.0.
+      (See accompanying file <filename>LICENSE_1_0.txt</filename> or copy at 
+      <ulink
+      url="http://www.boost.org/LICENSE_1_0.txt">http://www.boost.org/LICENSE_1_0.txt</ulink>)
+      </para>
+    </legalnotice>
+  </libraryinfo>
+
+  <title>Boost.Any</title>
+
+  <section>
+    <title>Introduction 简介</title>
+
+    <para>There are times when a generic (in the sense of
+    <emphasis>general</emphasis> as opposed to
+    <emphasis>template-based programming</emphasis>) type is needed:
+    variables that are truly variable, accommodating values of many
+    other more specific types rather than C++'s normal strict and
+    static types. We can distinguish three basic kinds of generic
+    type:<sbr/>
+    我们经常会需要一个泛型(这个<emphasis>泛型</emphasis>可不是
+    <emphasis>模板编程</emphasis>中的泛型)的类型：变量是真正的变量，
+    可以带有多种不同类型的值，而不是象普通的C++静态类型那样。
+    我们可以分出三种基本的泛型类型：</para>
+
+    <itemizedlist>
+      <listitem>
+        <para>Converting types that can hold one of a number of
+        possible value types, e.g. <code>int</code> and
+        <code>string</code>, and freely convert between them, for
+        instance interpreting <code>5</code> as <code>"5"</code> or
+        vice-versa.  Such types are common in scripting and other
+        interpreted
+        languages. 
+        <code><functionname>boost::lexical_cast</functionname></code>
+        supports such conversion functionality.<sbr/>
+        可转换类型，可以是多个可能的值类型之一，如 <code>int</code> 和 
+        <code>string</code>, 可以自由地在两者间转换，例如将 <code>5</code> 
+        解释为 <code>"5"</code>，反之亦然。在脚本或其它解释语言中，
+        这种类型称为通用类。<code><functionname>boost::lexical_cast</functionname></code> 
+        支持这种转型功能。</para>
+      </listitem>
+      <listitem>
+        <para>
+        Discriminated types that contain values of different types but
+        do not attempt conversion between them, i.e. <code>5</code> is
+        held strictly as an <code>int</code> and is not implicitly
+        convertible either to <code>"5"</code> or to
+        <code>5.0</code>. Their indifference to interpretation but
+        awareness of type effectively makes them safe, generic
+        containers of single values, with no scope for surprises from
+        ambiguous conversions.<sbr/>
+        可识别类型，包含了不同类型的值，但不会试图在不同类型间进行转换，
+        即：<code>5</code> 被严格视为一个 <code>int</code> 而不会隐式地转换为 
+        <code>"5"</code> 或 <code>5.0</code>. 它们不关心如何解释，但清楚自己的类型，
+        所以是保存单个值的安全的泛型容器，但不能进行不明确的转换。</para>
+      </listitem>
+      <listitem>
+        <para>
+        Indiscriminate types that can refer to anything but are
+        oblivious to the actual underlying type, entrusting all forms
+        of access and interpretation to the programmer. This niche is
+        dominated by <code>void *</code>, which offers plenty of scope
+        for surprising, undefined behavior.<sbr/>
+        不受限制的类型，可以引向任意物但不了解真实的类型，
+        只能依靠程序员在访问和解释该值所用的形式。这种情形其实是由 
+        <code>void *</code> 实现，可能会发生大量的意外和未定义行为。</para>
+      </listitem>
+    </itemizedlist>
+
+    <para>The <code><classname>boost::any</classname></code> class
+    (based on the class of the same name described in <ulink
+    url="http://www.two-sdg.demon.co.uk/curbralan/papers/ValuedConversions.pdf">"Valued
+    Conversions"</ulink> by Kevlin Henney, <emphasis>C++
+    Report</emphasis> 12(7), July/August 2000) is a variant value type
+    based on the second category. It supports copying of any value
+    type and safe checked extraction of that value strictly against
+    its type. A similar design, offering more appropriate operators,
+    can be used for a generalized function adaptor,
+    <code>any_function</code>, a generalized iterator adaptor,
+    <code>any_iterator</code>, and other object types that need
+    uniform runtime treatment but support only compile-time template
+    parameter conformance.<sbr/>
+    <code><classname>boost::any</classname></code> 类(基于Kevlin Henney在 <ulink
+    url="http://www.two-sdg.demon.co.uk/curbralan/papers/ValuedConversions.pdf">
+    "Valued Conversions"</ulink>中所描述的同名类，<emphasis>C++ Report</emphasis> 
+    12(7), July/August 2000)是一种基于以上第二种类型的泛型类型。
+    它支持任意值类型间的复制，以及带严格类型安全检查的值读取。一个类似的设计，
+    可以提供更多合适的操作符，可用于泛型函数适配器，<code>any_function</code>, 
+    泛型迭代器适配器，<code>any_iterator</code>, 以及其它需要统一的运行时处理，
+    但只支持编译时模板参数一致性的对象类型。</para>
+  </section>
+
+  <section>
+    <title>Examples 例子</title>
+
+    <using-namespace name="boost"/>
+    <using-class name="boost::any"/>
+
+    <para>The following code demonstrates the syntax for using
+    implicit conversions to and copying of any objects:<sbr/>
+    以下代码示范了如何隐式转换并复制一个any对象的方法：</para>
+
+<programlisting name="any.example.first">
+#include &lt;list&gt;
+#include &lt;boost/any.hpp&gt;
+
+using <functionname>boost::any_cast</functionname>;
+typedef std::list&lt;<classname>boost::any</classname>&gt; many;
+
+void append_int(many &amp; values, int value)
+{
+    <classname>boost::any</classname> to_append = value;
+    values.push_back(to_append);
+}
+
+void append_string(many &amp; values, const std::string &amp; value)
+{
+    values.push_back(value);
+}
+
+void append_char_ptr(many &amp; values, const char * value)
+{
+    values.push_back(value);
+}
+
+void append_any(many &amp; values, const <classname>boost::any</classname> &amp; value)
+{
+    values.push_back(value);
+}
+
+void append_nothing(many &amp; values)
+{
+    values.push_back(<classname>boost::any</classname>());
+}
+</programlisting>
+
+    <para>The following predicates follow on from the previous
+    definitions and demonstrate the use of queries on any
+    objects:<sbr/>
+    以下谓词续用前面的定义，示范了查询一个any对象的方法：</para>
+
+<programlisting name="any.example.second">
+bool is_empty(const <classname>boost::any</classname> &amp; operand)
+{
+    return operand.<methodname>empty</methodname>();
+}
+
+bool is_int(const <classname>boost::any</classname> &amp; operand)
+{
+    return operand.<methodname>type</methodname>() == typeid(int);
+}
+
+bool is_char_ptr(const <classname>boost::any</classname> &amp; operand)
+{
+    try
+    {
+        <functionname>any_cast</functionname>&lt;const char *&gt;(operand);
+        return true;
+    }
+    catch(const <classname>boost::bad_any_cast</classname> &amp;)
+    {
+        return false;
+    }
+}
+
+bool is_string(const <classname>boost::any</classname> &amp; operand)
+{
+    return <functionname>any_cast</functionname>&lt;std::string&gt;(&amp;operand);
+}
+
+void count_all(many &amp; values, std::ostream &amp; out)
+{
+    out &lt;&lt; "#empty == "
+        &lt;&lt; std::count_if(values.begin(), values.end(), is_empty) &lt;&lt; std::endl;
+    out &lt;&lt; "#int == "
+        &lt;&lt; std::count_if(values.begin(), values.end(), is_int) &lt;&lt; std::endl;
+    out &lt;&lt; "#const char * == "
+        &lt;&lt; std::count_if(values.begin(), values.end(), is_char_ptr) &lt;&lt; std::endl;
+    out &lt;&lt; "#string == "
+        &lt;&lt; std::count_if(values.begin(), values.end(), is_string) &lt;&lt; std::endl;
+}
+</programlisting>
+
+    <para>The following type, patterned after the OMG's Property Service, defines name-value pairs for arbitrary value types:<sbr/>
+    以下类型，可用于组成 OMG的 Property Service, 定义了任意值类型的名字-值对：</para>
+
+<programlisting>
+struct property
+{
+    property();
+    property(const std::string &amp;, const <classname>boost::any</classname> &amp;);
+
+    std::string name;
+    <classname>boost::any</classname> value;
+};
+
+typedef std::list&lt;property&gt; properties;
+</programlisting>
+
+    <para>The following base class demonstrates one approach to
+    runtime polymorphism based callbacks that also require arbitrary
+    argument types. The absence of virtual member templates requires
+    that different solutions have different trade-offs in terms of
+    efficiency, safety, and generality. Using a checked variant type
+    offers one approach:<sbr/>
+    下面的基类示范了一种实现运行时多态的方法，它基于以任意类型为参数的回调函数。
+    由于没有虚拟模板成员函数，这就要求其它解决方案都会有效率、
+    安全性或通用性方面的代价。使用经检验的可变类型是一种方法：</para>
+
+<programlisting>
+class consumer
+{
+public:
+    virtual void notify(const <classname>any</classname> &amp;) = 0;
+    ...
+};
+</programlisting>
+  </section>
+
+  <library-reference>
+    <section id="any.ValueType">
+      <title><emphasis>ValueType</emphasis> requirements  <emphasis>ValueType</emphasis>的要求</title>
+
+      <para>Values are strongly informational objects for which
+      identity is not significant, i.e. the focus is principally on
+      their state content and any behavior organized around
+      that. Another distinguishing feature of values is their
+      granularity: normally fine-grained objects representing simple
+      concepts in the system such as quantities.<sbr/>
+      值是这样一种对象，它们的个体性并不重要，
+      即主要关注的是它们的状态内容和围绕于此的行为。
+      值的另一个特征是它们的粒度：通常细粒度的对象表示系统中较简单的概念，
+      如数量。</para>
+
+      <para>As the emphasis of a value lies in its state not its
+      identity, values can be copied and typically assigned one to
+      another, requiring the explicit or implicit definition of a
+      public copy constructor and public assignment operator. Values
+      typically live within other scopes, i.e. within objects or
+      blocks, rather than on the heap. Values are therefore normally
+      passed around and manipulated directly as variables or through
+      references, but not as pointers that emphasize identity and
+      indirection.<sbr/>
+      由于值所强调的是它的状态而不是它的个体性，
+      因此值可以被复制或者赋给另一个对象，
+      这需要显式或隐式地定义公有的复制构造函数和公有的赋值操作符。
+      值通常生存于其它的范围中，如在对象中或代码块中，而不是在堆上。
+      因此值通常以变量或通过引用的方式来传递和操作，而不是以指针的方式，
+      指针强调的是个体性和间接性。</para>
+
+      <para>The specific requirements on value types to be used in an
+      <code><classname alt="boost::any">any</classname></code>
+      are:<sbr/>
+      <code><classname alt="boost::any">any</classname></code> 
+      中所使用的值类型(value type)有以下特定要求：</para>
+
+      <itemizedlist spacing="compact">
+        <listitem><simpara>A <emphasis>ValueType</emphasis> is
+          <emphasis>CopyConstructible</emphasis> [20.1.3].<sbr/>
+          <emphasis>ValueType</emphasis> 必须是
+          <emphasis>CopyConstructible</emphasis> [20.1.3]的。</simpara>
+        </listitem>
+        
+        <listitem><simpara>A <emphasis>ValueType</emphasis> is
+        optionally <emphasis>Assignable</emphasis> [23.1]. The strong
+        exception-safety guarantee is required for all forms of
+        assignment.<sbr/>
+        <emphasis>ValueType</emphasis> 不一定要是
+        <emphasis>Assignable</emphasis> [23.1]的。
+        但要求所有形式的赋值都要保证是强异常安全的。</simpara>
+        </listitem>
+        
+        <listitem><simpara>The destructor for a
+        <emphasis>ValueType</emphasis> upholds the no-throw
+        exception-safety guarantee.<sbr/>
+        <emphasis>ValueType</emphasis> 的析构函数要满足不抛出异常的安全保证。</simpara>
+        </listitem>
+      </itemizedlist>
+    </section>
+
+    <header name="boost/any.hpp">
+      <namespace name="boost">
+        <class name="bad_any_cast">
+          <inherit access="public">
+            <classname>std::bad_cast</classname>
+          </inherit>
+          <purpose>The exception thrown in the event of a failed
+          <code><functionname>any_cast</functionname></code> of an
+          <code><classname>any</classname></code> value.<sbr/>
+          在一个 <code><classname>any</classname></code> 值 
+          <code><functionname>any_cast</functionname></code> 
+          失败时抛出的异常类型。</purpose>
+
+          <method name="what" specifiers="virtual" cv="const">
+            <type>const char *</type>
+          </method>
+        </class>
+
+        <class name="any">
+          <purpose>A class whose instances can hold instances of any
+          type that satisfies <link
+          linkend="any.ValueType">ValueType</link>
+          requirements.<sbr/>
+          一个类，其实例可以持有任意满足<link linkend="any.ValueType">ValueType</link>
+          要求的类型的实例。</purpose>
+
+          <constructor>
+            <postconditions><simpara><code>this-&gt;<methodname>empty</methodname>()</code></simpara></postconditions>
+          </constructor>
+
+          <constructor>
+            <parameter name="other">
+              <paramtype>const <classname>any</classname> &amp;</paramtype>
+            </parameter>
+
+            <effects><simpara> Copy constructor that copies content of
+            <code>other</code> into new instance, so that any content
+            is equivalent in both type and value to the content of
+            <code>other</code>, or empty if <code>other</code> is
+            empty. <sbr/>
+            复制构造函数复制 <code>other</code> 的内容到一个新的实例中，
+            因此 any 所含的类型和值都与 <code>other</code> 的一样，
+            如果 <code>other</code> 为空则any也为空。</simpara></effects>
+
+            <throws><simpara>May fail with a
+            <code><classname>std::bad_alloc</classname></code>
+            exception or any exceptions arising from the copy
+            constructor of the contained type.<sbr/>
+            可能会抛出一个 <code><classname>std::bad_alloc</classname></code> 异常，
+            或者从所含类型的复制构造函数抛出的任意异常。</simpara></throws>
+          </constructor>
+
+          <constructor>
+            <template>
+              <template-type-parameter name="ValueType"/>
+            </template>
+
+            <parameter name="value">
+              <paramtype>const ValueType &amp;</paramtype>
+            </parameter>
+
+            <effects><simpara>Makes a copy of <code>value</code>, so
+            that the initial content of the new instance is equivalent
+            in both type and value to
+            <code>value</code>.<sbr/>
+            生成一个 <code>value</code> 的拷贝，因此新实例的初始内容的类型和值与 
+            <code>value</code> 一致。</simpara></effects>
+
+            <throws><simpara><code><classname>std::bad_alloc</classname></code>
+            or any exceptions arising from the copy constructor of the
+            contained type.<sbr/>
+            <code><classname>std::bad_alloc</classname></code> 
+            或者其它从所含类型的复制构造函数抛出的异常。</simpara></throws>
+          </constructor>
+
+          <destructor>
+            <effects><simpara>Releases any and all resources used in
+            management of instance.<sbr/>
+            释放 any 及所有用于实例管理的资源。</simpara></effects>
+            <throws><simpara>Nothing.<sbr/>无。</simpara></throws>
+          </destructor>
+
+          <copy-assignment>
+            <type><classname>any</classname> &amp;</type>
+
+            <parameter name="rhs">
+              <paramtype>const <classname>any</classname> &amp;</paramtype>
+            </parameter>
+
+            <effects><simpara>Copies content of <code>rhs</code> into
+            current instance, discarding previous content, so that the
+            new content is equivalent in both type and value to the
+            content of <code>rhs</code>, or empty if
+            <code>rhs.<methodname>empty</methodname>()</code>.<sbr/>
+            将 <code>rhs</code> 的内容复制到当前实例，放弃之前的内容，
+            因此新内容的类型和值与 <code>rhs</code> 一致，如果 
+            <code>rhs.<methodname>empty</methodname>()</code>, 则也为空。</simpara></effects>
+
+            <throws><simpara><code><classname>std::bad_alloc</classname></code>
+            or any exceptions arising from the copy constructor of the
+            contained type. Assignment satisfies the strong guarantee
+            of exception safety.<sbr/>
+            <code><classname>std::bad_alloc</classname></code> 
+            或者其它从所含类型的复制构造函数抛出的异常。
+            赋值操作应满足强异常安全的保证。</simpara></throws>
+          </copy-assignment>
+
+          <copy-assignment>
+             <template>
+              <template-type-parameter name="ValueType"/>
+            </template>
+
+            <type><classname>any</classname> &amp;</type>
+
+            <parameter name="rhs">
+              <paramtype>const ValueType &amp;</paramtype>
+            </parameter>
+
+            <effects><simpara>Makes a copy of <code>rhs</code>,
+            discarding previous content, so that the new content of is
+            equivalent in both type and value to
+            <code>rhs</code>.<sbr/>
+            生成一个 <code>rhs</code> 的拷贝，放弃之前的内容，
+            因此新内容的类型和值与 <code>rhs</code> 一致。</simpara></effects>
+
+            <throws><simpara><code><classname>std::bad_alloc</classname></code>
+            or any exceptions arising from the copy constructor of the
+            contained type. Assignment satisfies the strong guarantee
+            of exception safety.<sbr/>
+            <code><classname>std::bad_alloc</classname></code> 
+            或者其它从所含类型的复制构造函数抛出的异常。
+            赋值操作应满足强异常安全的保证。</simpara></throws>
+          </copy-assignment>
+
+          <method-group name="modifiers">
+            <method name="swap">
+              <type><classname>any</classname> &amp;</type>
+
+              <parameter name="rhs">
+                <paramtype><classname>any</classname> &amp;</paramtype>
+              </parameter>
+
+              <effects><simpara>Exchange of the contents of
+              <code>*this</code> and
+              <code>rhs</code>.<sbr/>
+              交换 <code>*this</code> 和 <code>rhs</code>的内容</simpara></effects>
+
+              <returns><simpara><code>*this</code></simpara></returns>
+
+              <throws><simpara>Nothing.<sbr/>无。</simpara></throws>
+            </method>
+          </method-group>
+
+          <method-group name="queries">
+            <method name="empty" cv="const">
+              <type>bool</type>
+
+              <returns><simpara><code>true</code> if instance is
+              empty, otherwise <code>false</code>.<sbr/>
+              <code>true</code> 如果实例为空，否则返回 <code>false</code>。</simpara></returns>
+              
+              <throws><simpara>Will not throw.<sbr/>不会抛出异常。</simpara></throws>
+            </method>
+
+            <method name="type" cv="const">
+              <type>const <classname>std::type_info</classname> &amp;</type>
+              
+              <returns><simpara>the <code>typeid</code> of the
+              contained value if instance is non-empty, otherwise
+              <code>typeid(void)</code>.<sbr/>
+              如果实例非空，则返回所含值的 <code>typeid</code>，
+              否则返回 <code>typeid(void)</code>.</simpara></returns>
+
+              <notes><simpara>Useful for querying against types known
+              either at compile time or only at
+              runtime.<sbr/>
+              用于在编译期或运行期查询相应类型。</simpara></notes>
+            </method>
+          </method-group>
+        </class>
+
+        <overloaded-function name="any_cast">
+          <signature>
+            <template>
+              <template-type-parameter name="T"/>
+            </template>
+            
+            <type>T</type>
+            
+            <parameter name="operand">
+              <paramtype><classname>any</classname> &amp;</paramtype>
+            </parameter>
+          </signature>
+          
+          <signature>
+            <template>
+              <template-type-parameter name="T"/>
+            </template>
+            
+            <type>T</type>
+            
+            <parameter name="operand">
+              <paramtype>const <classname>any</classname> &amp;</paramtype>
+            </parameter>
+          </signature>
+          
+          <signature>
+            <template>
+              <template-type-parameter name="ValueType"/>
+            </template>
+            
+            <type>const ValueType *</type>
+            
+            <parameter name="operand">
+              <paramtype>const <classname>any</classname> *</paramtype>
+            </parameter>
+          </signature>
+          
+          <signature>
+            <template>
+              <template-type-parameter name="ValueType"/>
+            </template>
+            
+            <type>ValueType *</type>
+            
+            <parameter name="operand">
+              <paramtype><classname>any</classname> *</paramtype>
+            </parameter>
+          </signature>
+          
+          <purpose><simpara>Custom keyword cast for extracting a value
+          of a given type from an
+          <code><classname>any</classname></code>.<sbr/>
+          定制转型用于从 <code><classname>any</classname></code> 取出给定类型的值。</simpara></purpose>
+
+          <returns><simpara> If passed a pointer, it returns a
+          similarly qualified pointer to the value content if
+	  successful, otherwise null is returned.
+	  If T is ValueType, it returns a copy of the held value, otherwise, if T is a reference 
+	  to (possibly const qualified) ValueType, it returns a reference to the held 
+	  value.<sbr/>
+      如果传入一个指针，则在成功时返回一个具有相同限定的指针，
+      指向所持内容的值，失败则返回null。如果 T 是 ValueType，
+      则返回所持值的拷贝；如果 T 是一个 ValueType引用(可能是 const 限定的)，
+      则返回一个所持值的引用。</simpara></returns>
+
+          <throws><simpara>Overloads taking an
+          <code><classname>any</classname></code> pointer do not
+          throw; overloads taking an
+          <code><classname>any</classname></code> value or reference
+          throws <code><classname>bad_any_cast</classname></code> if
+          unsuccessful.<sbr/>
+          对于 <code><classname>any</classname></code> 指针的重载方式不会抛出异常；
+          而对于 <code><classname>any</classname></code> 值或引用的重载方式则在失败时抛出 
+          <code><classname>bad_any_cast</classname></code>。</simpara></throws>
+
+        </overloaded-function>
+      </namespace>
+    </header>
+  </library-reference>
+
+  <section>
+    <title>Acknowledgements 鸣谢</title>
+
+    <para>Doug Gregor ported the documentation to the BoostBook format.<sbr/>
+    感谢 Doug Gregor 将本文档移植为 BoostBook 格式。</para>
+  </section>
+</library>
