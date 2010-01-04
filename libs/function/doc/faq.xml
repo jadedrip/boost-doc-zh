@@ -9,30 +9,39 @@
 <!DOCTYPE library PUBLIC "-//Boost//DTD BoostBook XML V1.0//EN"
   "http://www.boost.org/tools/boostbook/dtd/boostbook.dtd">
 <section id="function.faq" last-revision="$Date: 2006-11-03 15:41:10 -0400 (Fri, 03 Nov 2006) $">
-  <title>Frequently Asked Questions</title>
+  <title>Frequently Asked Questions 常见问题</title>
 
 <qandaset>
   <qandaentry>
     <question><para>Why can't I compare
     <classname>boost::function</classname> objects with
     <code>operator==</code> or
-    <code>operator!=</code>?</para></question>
+    <code>operator!=</code>?<sbr/>
+    为什么我不能用 <code>operator==</code> 或 <code>operator!=</code> 
+    来比较 <classname>boost::function</classname> 对象？</para></question>
 
     <answer>
       <para>Comparison between <classname>boost::function</classname>
       objects cannot be implemented "well", and therefore will not be
       implemented. The typical semantics requested for <code>f ==
       g</code> given <classname>boost::function</classname> objects
-      <code>f</code> and <code>g</code> are:</para>
+      <code>f</code> and <code>g</code> are:<sbr/>
+      在 <classname>boost::function</classname> 对象之间的比较不能“较好地”实现，因此不再实现。
+      对于 <code>f == g</code> 的典型的语义要求是给定 <classname>boost::function</classname> 对象 
+      <code>f</code> 和 <code>g</code>：</para>
         <itemizedlist>
           <listitem><simpara>If <code>f</code> and <code>g</code>
           store function objects of the same type, use that type's
           <code>operator==</code> to compare
-          them.</simpara></listitem> 
+          them.<sbr/>
+          如果 <code>f</code> 和 <code>g</code> 存储相同类型的函数对象，
+          使用那个类型的 <code>operator==</code> 去比较它们。</simpara></listitem> 
 
           <listitem><simpara>If <code>f</code> and <code>g</code>
           store function objects of different types, return
-          <code>false</code>.</simpara></listitem>
+          <code>false</code>.<sbr/>
+          如果 <code>f</code> 和 <code>g</code> 存储不同的函数对象，
+          返回 <code>false</code>。</simpara></listitem>
         </itemizedlist>
       <para>The problem occurs when the type of the function objects
       stored by both <code>f</code> and <code>g</code> doesn't have an
@@ -49,7 +58,17 @@
       <classname>boost::function</classname> object: you will get an
       error at the assignment operator or constructor, not in
       <code>operator()</code>, because the function-call expression
-      must be bound in the constructor or assignment operator.</para>
+      must be bound in the constructor or assignment operator.<sbr/>
+      当 <code>f</code> 和 <code>g</code> 存储的函数对象都没有 <code>operator==</code> 时就会发生问题：
+      我们想让表达式 <code>f == g</code> 无法编译，这就像在标准容器中发生的事情。
+      然而，对于 <classname>boost::function</classname> 来说这是无法实现的，
+      因为它被赋予一个函数对象后，它不可避免地“抹去”一些类型信息，
+      所以其后它就不能再试图去调用 <code>operator==</code>：
+      它必须既要在现在找到一种调用 <code>operator==</code> 的方法，又要在其后永远不能调用它。
+      注意，举例来说，如果你试图将一个 <code>float</code> 值放入一个 
+      <classname>boost::function</classname> 对象时会发生什么：
+      你将得到一个来自于赋值操作符或构造函数，而不是 <code>operator()</code> 的错误，
+      因为函数调用表达式肯定会进入构造函数或赋值操作符。</para>
 
       <para>The most promising approach is to find a method of
       determining if <code>operator==</code> can be called for a
@@ -58,25 +77,36 @@
       thrown. However, to date there is no known way to detect if an
       arbitrary operator expression <code>f == g</code> is suitably
       defined. The best solution known has the following undesirable
-      qualities:</para>
+      qualities:<sbr/>
+      最有希望的方法是找到一种检测 <code>operator==</code> 是否能被特定类型调用的方法，
+      并仅仅在它可用的时候才支持它；在其它情况下，抛出一个异常。然而，到目前位置，
+      还不知道有什么方法可以检测一个任意的操作符表达式 <code>f == g</code> 是否被合适地定义。
+      已知最好的解决方案有以下这些令人不快的性质：</para>
 
       <orderedlist>
         <listitem><simpara>Fails at compile-time for objects where
         <code>operator==</code> is not accessible (e.g., because it is
-        <code>private</code>).</simpara></listitem>
+        <code>private</code>).<sbr/>
+        对于 <code>operator==</code> 不可访问的对象（例如，因为它是 <code>private</code> 的），
+        会在编译时失败。</simpara></listitem>
 
         <listitem><simpara>Fails at compile-time if calling
-        <code>operator==</code> is ambiguous.</simpara></listitem>
+        <code>operator==</code> is ambiguous.<sbr/>
+        如果调用 <code>operator==</code> 是有歧义的，会在编译时失败。</simpara></listitem>
 
         <listitem><simpara>Appears to be correct if the
         <code>operator==</code> declaration is correct, even though
-        <code>operator==</code> may not compile.</simpara></listitem>
+        <code>operator==</code> may not compile.<sbr/>
+        如果 <code>operator==</code> 的声明是正确的，即使 <code>operator==</code> 
+        可能没有被编译，看上去就是正确的。</simpara></listitem>
       </orderedlist>
 
       <para>All of these problems translate into failures in the
       <classname>boost::function</classname> constructors or
       assignment operator, <emphasis>even if the user never invokes
-      operator==</emphasis>. We can't do that to users.</para>
+      operator==</emphasis>. We can't do that to users.<sbr/>
+      所有这些问题都被转化为 <classname>boost::function</classname> 的构造函数或赋值操作符中的失败，
+      <emphasis>即使，用户从来没有调用过 operator==</emphasis>。我们不能对用户做这样的事。</para>
 
       <para>The other option is to place the burden on users that want
       to use <code>operator==</code>, e.g., by providing an
@@ -89,12 +119,19 @@
       of <code>operator==</code> in the context in which it is most
       desired: multitarget callbacks. The
       <libraryname>Signals</libraryname> library has a way around
-      this.</para>
+      this.<sbr/>
+      另一种选择方案是把负担放到要使用 <code>operator==</code> 的用户身上，
+      例如，通过提供一个他们可以特化的 <code>is_equality_comparable<code> traits。
+      这是一个可用的方案，但实际上是很危险的，因为忘记特化这个 traits 会导致由 
+      <classname>boost::function</classname> 的 <code>operator==</code> 抛出的意想不到的异常。
+      这在本质上否定了 <code>operator==</code> 在它最期望的上下文（多目标回调）中的可用性。
+      <libraryname>Signals</libraryname> 库有一个和它差不多的方法。</para>
     </answer>
   </qandaentry>
 
   <qandaentry>
-    <question><para>I see void pointers; is this [mess] type safe?</para></question>
+    <question><para>I see void pointers; is this [mess] type safe?<sbr/>
+    我看到了 void 指针，这会[扰乱]类型安全吗？</para></question>
     <answer>
 <para>Yes, <computeroutput>boost::function</computeroutput> is type
 safe even though it uses void pointers and pointers to functions
@@ -105,18 +142,29 @@ instantiated with the exact type that is pointed to by the void
 pointer or pointer to void function. The reason that both are required
 is that one may cast between void pointers and object pointers safely
 or between different types of function pointers (provided you don't
-invoke a function pointer with the wrong type).  </para>
+invoke a function pointer with the wrong type).  <sbr/>
+是的，即使 <computeroutput>boost::function</computeroutput> 使用了 void 指针和指向返回 
+void 也没持有参数的函数的指针，它也是类型安全的。实际上，
+所有类型信息都编码在管理和调用函数指针和函数对象的函数中。
+只有这些函数才能被严格的“被 void 指针指向的类型”或“指向 void 函数的指针类型”实例化。
+这两者的前提是需要在 void 指针和对象指针之间或在不同类型的函数指针之间可以安全地转型
+（倘若你没有使用错误的类型调用一个函数指针）。
+</para>
     </answer>
   </qandaentry>
 
   <qandaentry>
-    <question><para>Why are there workarounds for void returns? C++ allows them!</para></question>
-    <answer><para>Void returns are permitted by the C++ standard, as in this code snippet:
+    <question><para>Why are there workarounds for void returns? C++ allows them!<sbr/>
+    为什么会有专门应付空返回的 workarounds，C++ 是允许它们的！</para></question>
+    <answer><para>Void returns are permitted by the C++ standard, as in this code snippet:<sbr/>
+    空返回被 C++ 标准允许，就像下面这样的代码片段：
 <programlisting>void f();
 void g() { return f(); }</programlisting>
     </para>
 
-    <para> This is a valid usage of <computeroutput>boost::function</computeroutput> because void returns are not used. With void returns, we would attempting to compile ill-formed code similar to:
+    <para> This is a valid usage of <computeroutput>boost::function</computeroutput> because void returns are not used. With void returns, we would attempting to compile ill-formed code similar to:<sbr/>
+    这是 <computeroutput>boost::function</computeroutput> 的一个合法使用，因为空返回没有被使用。
+    利用空返回，我们可以企图编译如下病态的代码：
 <programlisting>int f();
 void g() { return f(); }</programlisting>
 </para>
@@ -124,28 +172,39 @@ void g() { return f(); }</programlisting>
 <para> In essence, not using void returns allows
 <computeroutput>boost::function</computeroutput> to swallow a return value. This is
 consistent with allowing the user to assign and invoke functions and
-function objects with parameters that don't exactly match.</para>
+function objects with parameters that don't exactly match.<sbr/>
+实际上，没有使用的空返回允许 <computeroutput>boost::function</computeroutput> 吞下一个返回值。
+这是为了和用户在使用不严格匹配的参数赋值和调用函数与函数对象时保持一致。</para>
 
     </answer>
   </qandaentry>
 
   <qandaentry>
-    <question><para>Why (function) cloning?</para></question>
+    <question><para>Why (function) cloning?<sbr/>
+    （函数）为什么要克隆？</para></question>
     <answer>
       <para>In November and December of 2000, the issue of cloning
       vs. reference counting was debated at length and it was decided
       that cloning gave more predictable semantics. I won't rehash the
       discussion here, but if it cloning is incorrect for a particular
-      application a reference-counting allocator could be used.</para>
+      application a reference-counting allocator could be used.<sbr/>
+      在 2000 年 11 和 12 月，克隆和引用计数的问题争论了很长时间，
+      最终决定克隆提供了更加可预言的语义。我不想对这场争论旧调重弹，
+      但是如果对于一个特定应用来说克隆是不正确的，reference-counting allocator
+      （引用计数分配器）也可以使用。
+</para>
     </answer>
   </qandaentry>
 
   <qandaentry>
-    <question><para>How much overhead does a call through <code><classname>boost::function</classname></code> incur?</para></question>
+    <question><para>How much overhead does a call through <code><classname>boost::function</classname></code> incur?<sbr/>
+    通过 <code><classname>boost::function</classname></code> 进行调用会导致多少代价？</para></question>
     <answer>
       <para>The cost of <code>boost::function</code> can be reasonably
       consistently measured at around 20ns +/- 10 ns on a modern >2GHz
-      platform versus directly inlining the code.</para>
+      platform versus directly inlining the code.<sbr/>
+      <code>boost::function</code> 的成本可以被相当一致地测量，在现代的 >2GHz 
+      的平台上与直接的内联代码相比大约相差 20ns +/- 10 ns。</para>
 
       <para>However, the performance of your application may benefit
       from or be disadvantaged by <code>boost::function</code>
@@ -153,7 +212,11 @@ function objects with parameters that don't exactly match.</para>
       standard function pointer, differences of order of 10% have been
       noted to the benefit or disadvantage of using
       <code>boost::function</code> to call a function that contains a
-      tight loop depending on your compilation circumstances.</para>
+      tight loop depending on your compilation circumstances.<sbr/>
+      然而，你的应用的性能可能会得益于或受损于 <code>boost::function</code>，
+      依赖于你的 C++ 优化器的优化。与一个标准函数指针相比，大约 10% 的差距，
+      相对于使用 <code>boost::function</code> 调用一个包含依赖于你的编码环境
+      的密集循环的函数来说，是无足轻重的。</para>
      
       <para>[Answer provided by Matt Hurd. See <ulink url="http://article.gmane.org/gmane.comp.lib.boost.devel/33278"/>]</para>
     </answer>
