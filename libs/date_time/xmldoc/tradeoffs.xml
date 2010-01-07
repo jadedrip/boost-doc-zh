@@ -8,120 +8,174 @@
 -->
 
 <section id="date_time.tradeoffs">
-  <title>Tradeoffs: Stability, Predictability, and Approximations</title>
+  <title>Tradeoffs: Stability, Predictability, and Approximations 折衷：稳定性、可预言性和近似值</title>
   <bridgehead renderas="sect2">
-    Unavoidable Trade-offs
+    Unavoidable Trade-offs 不可避免的折衷 
   </bridgehead>
   <para>
-    The library does its best to provide everything a user could want, but there are certain inherent constraints that limit what <emphasis>any</emphasis> temporal library can do. Specifically, a user must choose which two of the following three capabilities are desired in any particular application:
+    The library does its best to provide everything a user could want, but there are certain inherent constraints that limit what <emphasis>any</emphasis> temporal library can do. Specifically, a user must choose which two of the following three capabilities are desired in any particular application:<sbr/>
+    本库尽最大努力提供用户可能想要的所有东西，但是还是存在一些任何时间程序库都会遇到的固有的限制。
+    尤其是，用户必须在任何应用都想得到的以下三种能力中选择两个：
     <itemizedlist mark="bullet">
-      <listitem>exact agreement with wall-clock time</listitem>
-      <listitem>accurate math, e.g. duration calculations</listitem>
-      <listitem>ability to handle timepoints in the future</listitem>
+      <listitem>exact agreement with wall-clock time<sbr/>
+      与 wall-clock 时间的精确吻合</listitem>
+      <listitem>accurate math, e.g. duration calculations<sbr/>
+      精确的数学，如：时长计算</listitem>
+      <listitem>ability to handle timepoints in the future<sbr/>
+      处理未来时间点的能力</listitem>
     </itemizedlist>
-    Some libraries may implicitly promise to deliver all three, but if you actually put them to the test, only two can be true at once. This limitation is not a deficiency in the design or implementation of any particular library; rather it is a consequence of the way different time systems are defined by international standards. Let's look at each of the three cases:
+    Some libraries may implicitly promise to deliver all three, but if you actually put them to the test, only two can be true at once. This limitation is not a deficiency in the design or implementation of any particular library; rather it is a consequence of the way different time systems are defined by international standards. Let's look at each of the three cases:<sbr/>
+    有的程序库可能暗中许诺提供所有三种能力，但是如果你真的对它们进行测试，就会发现同时只能有两个为真。
+    这种限制不是任何特定程序库的设计或实现上的不足；而是由国际标准所定义的不同时间系统所造成的结果。
+    我们来看看以下三种情形：
   </para>
   <para>
-    If you want exact agreement with wall-clock time, you must use either UTC or local time. If you compute a duration by subtracting one UTC time from another and you want an answer accurate to the second, the two times must not be too far in the future because leap seconds affect the count but are only determined about 6 months in advance. With local times a future duration calculation could be off by an entire hour, since legislatures can and do change DST rules at will. 
+    If you want exact agreement with wall-clock time, you must use either UTC or local time. If you compute a duration by subtracting one UTC time from another and you want an answer accurate to the second, the two times must not be too far in the future because leap seconds affect the count but are only determined about 6 months in advance. With local times a future duration calculation could be off by an entire hour, since legislatures can and do change DST rules at will. <sbr/>
+    如果你想精确吻合 wall-clock 时间，你就必须使用 UTC 或本地时间。如果你通过将两个 UTC 时间相减来计算得到一个时长，
+    并且希望结果精确到秒，那么这两个时间必须不能是很远的未来，因为闰秒会影响结果而只能确定未来大约6个月的时间。
+    对于本地时间，未来时长的计算应该限制在一个小时内，因为相关机构可以在未来改变 DST 规则。
   </para>
   <para>
-    If you want to handle wall-clock times in the future, you won't be able (in the general case) to calculate exact durations, for the same reasons described above. 
+    If you want to handle wall-clock times in the future, you won't be able (in the general case) to calculate exact durations, for the same reasons described above. <sbr/>
+    如果你想处理未来的 wall-clock 时间，你就不能(一般而言)精确计算时长，原因同上。
   </para>
   <para>
-    If you want accurate calculations with future times, you will have to use TAI or an equivalent, but the mapping from TAI to UTC or local time depends on leap seconds, so you will not have exact agreement with wall-clock time. 
+    If you want accurate calculations with future times, you will have to use TAI or an equivalent, but the mapping from TAI to UTC or local time depends on leap seconds, so you will not have exact agreement with wall-clock time. <sbr/>
+    如果你想精确计算未来时间，你就必须使用 TAI 或其它等价物，但是从 TAI 到 UTC 或本地时间的映射是依赖于闰秒的，
+    所以你无法与 wall-clock 时间精确吻合。
   </para>
   
   <bridgehead renderas="sect2">
-    Stability, Predictability, and Approximations
+    Stability, Predictability, and Approximations 稳定性、可预言性和近似值
   </bridgehead>
   <para>
-    Here is some underlying theory that helps to explain what's going on. Remember that a temporal type, like any abstract data type (ADT), is a set of values together with operations on those values. 
+    Here is some underlying theory that helps to explain what's going on. Remember that a temporal type, like any abstract data type (ADT), is a set of values together with operations on those values. <sbr/>
+    以下是一些基本理论，有助于解释到底发生了什么事。记住，一个表示时间的类型，就象任何抽象数据类型(ADT)一样，
+    是一组值加上在这些值上的操作。
   </para>
   
   <bridgehead renderas="sect3">
-    Stability
+    Stability 稳定性
   </bridgehead>
   <para>
-    The representation of a type is <emphasis>stable</emphasis> if the bit pattern associated with a given value does not change over time. A type with an unstable representation is unlikely to be of much use to anyone, so we will insist that any temporal library use only stable representations. 
+    The representation of a type is <emphasis>stable</emphasis> if the bit pattern associated with a given value does not change over time. A type with an unstable representation is unlikely to be of much use to anyone, so we will insist that any temporal library use only stable representations. <sbr/>
+    如果对应于某个给定值的位组合不会随时间而变化，就说这个类型的表示法是稳定的。
+    一个具有不稳定表示法的类型对于任何人都不会有太大用处，所以我们应该强调，任何时间类的程序库都应该只使用稳定的表示法。
   </para>
   <para>
-    An operation on a type is stable if the result of applying the operation to a particular operand(s) does not change over time. 
+    An operation on a type is stable if the result of applying the operation to a particular operand(s) does not change over time. <sbr/>
+    如果对于特定操作数进行操作所得到的结果不会随时间而变化，就说这个类型的操作是稳定的。 
   </para>
   
   <bridgehead renderas="sect3">
-    Predictability
+    Predictability 可预言性
   </bridgehead>
   <para>
-    Sets are most often classified into two categories: well-defined and ill-defined. Since a type is a set, we can extend these definitions to cover types. For any type T, there must be a predicate <emphasis>is_member( x )</emphasis> which determines whether a value x is a member of type T. This predicate must return <emphasis>true, false,</emphasis> or <emphasis>dont_know</emphasis>. 
+    Sets are most often classified into two categories: well-defined and ill-defined. Since a type is a set, we can extend these definitions to cover types. For any type T, there must be a predicate <emphasis>is_member( x )</emphasis> which determines whether a value x is a member of type T. This predicate must return <emphasis>true, false,</emphasis> or <emphasis>dont_know</emphasis>. <sbr/>
+    集合通常被分为两类：良好定义的和不良定义的。由于类型也是一种集合，所以我们将这些定义扩展用于类型。对于任意类型 T, 
+    必须存在一个谓词 <emphasis>is_member( x )</emphasis> 用于判定某个值 x 是否为类型 T 的成员。这个谓词必须返回 
+    <emphasis>true, false,</emphasis> 或 <emphasis>dont_know</emphasis>. 
   </para>
   <para>
-    If for all x, is_member( x ) returns either true or false, we say the set T is <emphasis>well-defined</emphasis>. 
+    If for all x, is_member( x ) returns either true or false, we say the set T is <emphasis>well-defined</emphasis>. <sbr/>
+    如果对于所有 x, is_member( x ) 的返回值要么是 true 要么是 false, 那么我们就说集合 T 是<emphasis>良好定义的</emphasis>。
   </para>
   <para>
-    If for any x, is_member( x ) returns dont_know, we say the set T is <emphasis>ill-defined</emphasis>. 
+    If for any x, is_member( x ) returns dont_know, we say the set T is <emphasis>ill-defined</emphasis>. <sbr/>
+    如果对于某个 x, is_member( x ) 返回 dont_know, 则我们说集合 T 是<emphasis>不良定义的</emphasis>。 
   </para>
   <para>
-    Those are the rules normally used in math. However, because of the special characteristics of temporal types, it is useful to refine this view and create a third category as follows: 
+    Those are the rules normally used in math. However, because of the special characteristics of temporal types, it is useful to refine this view and create a third category as follows: <sbr/>
+    这些是在数学上常用的规则。但是，由于时间类型的特殊性质，需要改进这一观点并创建以下第三种类别：
   </para>
   <para>
-    For any temporal type T, there must be a predicate <emphasis>is_member( x, t )</emphasis> which determines whether a value x is a member of T. The parameter t represents the time when the predicate is evaluated. For each x<subscript>i</subscript>, there must be a time t<subscript>i</subscript> and a value v such that: 
+    For any temporal type T, there must be a predicate <emphasis>is_member( x, t )</emphasis> which determines whether a value x is a member of T. The parameter t represents the time when the predicate is evaluated. For each x<subscript>i</subscript>, there must be a time t<subscript>i</subscript> and a value v such that: <sbr/>
+    对于时间类型 T, 必须存在一个谓词 <emphasis>is_member( x, t )</emphasis> 用于判定某个值 x 是否为 T 的成员。
+    参数 t 表示对该谓词进行求值时的时间。对于每个 x<subscript>i</subscript>, 必然存在一个时间 t<subscript>i</subscript>
+    和一个值 v 满足：
     <itemizedlist mark="bullet">
       <listitem>v = true or v = false, and</listitem>
       <listitem>for all t &lt; t<subscript>i</subscript>, is_member( x<subscript>i</subscript>, t ) returns dont_know, and</listitem>
       <listitem>for all t >= t<subscript>i</subscript>, is_member( x<subscript>i</subscript>, t ) returns v.</listitem>
     </itemizedlist>
-    t<subscript>i</subscript> is thus the time when we "find out" whether x<subscript>i</subscript> is a member of T. Now we can define three categories of temporal types:
+    t<subscript>i</subscript> is thus the time when we "find out" whether x<subscript>i</subscript> is a member of T. Now we can define three categories of temporal types:<sbr/>
+    t<subscript>i</subscript> 是我们可以“找出” x<subscript>i</subscript> 是否为 T 的成员的时间。
+    现在我们可以为时间类型定义第三种类别：
   </para>
   <para>
-    If for all x<subscript>i</subscript>, t<subscript>i</subscript> = negative infinity, we say the type T is <emphasis>predictable</emphasis>. 
+    If for all x<subscript>i</subscript>, t<subscript>i</subscript> = negative infinity, we say the type T is <emphasis>predictable</emphasis>. <sbr/>
+    如果对于所有 x<subscript>i</subscript>, t<subscript>i</subscript> = 负无限，则我们说类型 T 是<emphasis>可预言的</emphasis>。
   </para>
   <para>
-    If for some x<subscript>i</subscript>, t<subscript>i</subscript> = positive infinity, we say the type T is <emphasis>ill-formed</emphasis>. 
+    If for some x<subscript>i</subscript>, t<subscript>i</subscript> = positive infinity, we say the type T is <emphasis>ill-formed</emphasis>. <sbr/>
+    如果对于某些 x<subscript>i</subscript>, t<subscript>i</subscript> = 正无限，则我们说类型 T 是<emphasis>不良形式的</emphasis>。
   </para>
   <para>
-    Otherwise we say the type T is <emphasis>unpredictable</emphasis> (this implies that for some x<subscript>i</subscript>, t<subscript>i</subscript> is finite). 
+    Otherwise we say the type T is <emphasis>unpredictable</emphasis> (this implies that for some x<subscript>i</subscript>, t<subscript>i</subscript> is finite). <sbr/>
+    否则，我们说类型 T 是<emphasis>不可预言的</emphasis>(这意味着对于某些 x<subscript>i</subscript>, 
+    t<subscript>i</subscript> 是一个有限值)。 
   </para>
   <para>
-    Ill-formed sets are not of much practical use, so we will not discuss them further. In plain english the above simply says that all the values of a predictable type are known ahead of time, but some values of an unpredictable type are not known until some particular time. 
-  </para>
-  
-  <bridgehead renderas="sect3">
-    Stability of Operations
-  </bridgehead>
-  <para>
-    Predictable types have a couple of important properties: 
-    <itemizedlist mark="bullet">
-      <listitem>there is an order-preserving mapping from their elements onto a set of consecutive integers, and</listitem>
-      <listitem>duration operations on their values are stable</listitem>
-    </itemizedlist> 
-  </para>
-  <para>
-    The practical effect of this is that duration calculations can be implemented with simple integer subtraction. Examples of predictable types are TAI timepoints and Gregorian dates.
-  </para>
-  <para>
-    Unpredictable types have exactly the opposite properties: 
-    <itemizedlist mark="bullet">
-      <listitem>there is no order-preserving mapping from their elements onto a set of consecutive integers, and</listitem>
-      <listitem>duration operations on their values are not stable. </listitem>
-    </itemizedlist> 
-  </para>
-  <para>
-    Examples of unpredictable types are UTC timepoints and Local Time timepoints.
-  </para>
-  <para>
-    We can refine this a little by saying that a range within an unpredicatable type can be predictable, and operations performed entirely on values within that range will be stable. For example, the range of UTC timepoints from 1970-01-01 through the present is predictable, so calculations of durations within that range will be stable. 
+    Ill-formed sets are not of much practical use, so we will not discuss them further. In plain english the above simply says that all the values of a predictable type are known ahead of time, but some values of an unpredictable type are not known until some particular time. <sbr/>
+    不良形式的集合实际上没有什么用，所以我们后面将不再讨论它。坦白地说，以上定义表明了，
+    可预言类型的所有值都是提前可知的，而不可预言类型的某些值则在某个特定时间之前是不可知的。
   </para>
   
   <bridgehead renderas="sect3">
-    Approximations
+    Stability of Operations 操作的稳定性
   </bridgehead>
   <para>
-    These limitations are problematical, because important temporal types like UTC and Local Time are in fact unpredictable, and therefore operations on them are sometimes unstable. Yet as a practical matter we often want to perform this kind of operation, such as computing the duration between two timepoints in the future that are specified in Local Time. 
+    Predictable types have a couple of important properties: <sbr/>
+    可预言类型有几个重要的特点：
+    <itemizedlist mark="bullet">
+      <listitem>there is an order-preserving mapping from their elements onto a set of consecutive integers, and<sbr/>
+      它们的元素与连续整数集合之间存在一种顺序不变的映射关系，且</listitem>
+      <listitem>duration operations on their values are stable<sbr/>
+      对它们的值所进行的时长操作是稳定的</listitem>
+    </itemizedlist> 
   </para>
   <para>
-    The best the library can do is to provide an approximation, which is generally possible and for most purposes will be good enough. Of course the documentation must specify when an answer will be approximate (and thus unstable) and how big the error may be. In many respects calculating with unpredictable sets is analogous to the use of floating point numbers, for which results are expected to only be approximately correct. Calculating with predictable sets would then be analogous to the user of integers, where results are expected to be exact. 
+    The practical effect of this is that duration calculations can be implemented with simple integer subtraction. Examples of predictable types are TAI timepoints and Gregorian dates.<sbr/>
+    这些特性的实际效果是，可以用简单的整数减法来实现时长的运算。可预言类型的例子有：TAI 时间点和格里历日期。
   </para>
   <para>
-    For situations where exact answers are required or instability cannot be tolerated, the user must be able to specify this, and then the library should throw an exception if the user requests a computation for which an exact, stable answer is not possible. 
+    Unpredictable types have exactly the opposite properties: <sbr/>
+    不可预言类型则刚好具有相反的特点：
+    <itemizedlist mark="bullet">
+      <listitem>there is no order-preserving mapping from their elements onto a set of consecutive integers, and<sbr/>
+      它们的元素与连续整数集合之间不存在顺序不变的映射关系，且</listitem>
+      <listitem>duration operations on their values are not stable. <sbr/>
+      对它们的值所进行的时长操作是不稳定的。</listitem>
+    </itemizedlist> 
+  </para>
+  <para>
+    Examples of unpredictable types are UTC timepoints and Local Time timepoints.<sbr/>
+    不可预言类型的例子有：UTC 时间点和本地时间时间点。
+  </para>
+  <para>
+    We can refine this a little by saying that a range within an unpredicatable type can be predictable, and operations performed entirely on values within that range will be stable. For example, the range of UTC timepoints from 1970-01-01 through the present is predictable, so calculations of durations within that range will be stable. <sbr/>
+    我们可以进一步说，由不可预言类型组成的区间可以是可预言的，而对于在此区间内的值进行操作也将是稳定的。
+    例如，从1970-01-01到现在的 UTC 时间点所组成的区间就是可预言的，所以在此区间内的时长运算也是稳定的。
+  </para>
+  
+  <bridgehead renderas="sect3">
+    Approximations 近似值
+  </bridgehead>
+  <para>
+    These limitations are problematical, because important temporal types like UTC and Local Time are in fact unpredictable, and therefore operations on them are sometimes unstable. Yet as a practical matter we often want to perform this kind of operation, such as computing the duration between two timepoints in the future that are specified in Local Time. <sbr/>
+    以上限制是一个要解决的问题，因为象 UTC 和本地时间这些时间类型实际上是不可预言的，因而对它们的操作有时候是不稳定的。
+    而实际上我们经常需要执行这类操作，如计算用本地时间表示的未来两个时间点之间的长度。
+  </para>
+  <para>
+    The best the library can do is to provide an approximation, which is generally possible and for most purposes will be good enough. Of course the documentation must specify when an answer will be approximate (and thus unstable) and how big the error may be. In many respects calculating with unpredictable sets is analogous to the use of floating point numbers, for which results are expected to only be approximately correct. Calculating with predictable sets would then be analogous to the user of integers, where results are expected to be exact. <sbr/>
+    本库可以做到的最好情况是提供一个近似值，这一点通常都是可能的，而且对于大多数用途而言也已足够。
+    当然文档中必须要指明什么时候得到的结果是一个近似值(因而是不稳定的)，并说明可能的误差有多大。
+    不可预言类型集合上的运算，在很多方面上类似于浮点数的运算，得到的结果只是精确值的一个近似。
+    而可预言类型集合上的运算则类似于整数运算，其结果总是精确的。
+  </para>
+  <para>
+    For situations where exact answers are required or instability cannot be tolerated, the user must be able to specify this, and then the library should throw an exception if the user requests a computation for which an exact, stable answer is not possible. <sbr/>
+    在需要精确结果或不能容忍不稳定性的情形下，用户必须能够指明这一点，然后程序库会在用户请求一个运算而无法得到精确、
+    稳定的结果时抛出异常。
   </para>
 </section>
