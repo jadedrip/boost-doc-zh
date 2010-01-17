@@ -131,99 +131,79 @@
 
 [endsect]
 
-[section:some_basic_explanations Some basic explanations]
+[section:some_basic_explanations 一些基础说明]
 
-[section:processes_and_threads Processes And Threads]
+[section:processes_and_threads 进程和线程]
 
-[*Boost.Interprocess] does not work only with processes but also with threads.
-[*Boost.Interprocess] synchronization mechanisms can synchronize threads 
-from different processes, but also threads from the same process.
-
-[endsect]
-
-[section:sharing_information Sharing information between processes]
-
-In the traditional programming model an operating system has multiple processes
-running and each process has its own address space. To share information between
-processes we have several alternatives:
-
-* Two processes share information using a [*file]. To access to the data, each
-  process uses the usual file read/write mechanisms. When updating/reading
-  a file shared between processes, we need some sort of synchronization, to
-  protect readers from writers.
-
-* Two processes share information that resides in the [*kernel] of the operating
-  system. This is the case, for example, of traditional message queues. The
-  synchronization is guaranteed by the operating system kernel.
-
-* Two processes can share a [*memory] region. This is the case of classical
-  shared memory or memory mapped files. Once the processes set up the
-  memory region, the processes can read/write the data like any
-  other memory segment without calling the operating system's kernel. This
-  also requires some kind of manual synchronization between processes.
+[*Boost.Interprocess]不仅能用于进程，还可以应用于线程。
+[*Boost.Interprocess]的同步机制可以同步不同进程中的线程，也可以同步同一进程中的线程。
 
 [endsect]
 
-[section:persistence Persistence Of Interprocess Mechanisms]
+[section:sharing_information 进程间信息共享]
 
-One of the biggest issues with interprocess communication mechanisms is the lifetime
-of the interprocess communication mechanism.
-It's important to know when an interprocess communication mechanism disappears from the
-system. In [*Boost.Interprocess], we can have 3 types of persistence:
+传统编程模型里一个操作系统中有多个进程同步运行，而每个进程拥有各自的地址空间。要在进程之间共享信息我们有几种选择：
 
-* [*Process-persistence]: The mechanism lasts until all the processes that have
-  opened the mechanism close it, exit or crash.
+* 利用[*文件]共享信息。每个进程使用普通的文件读写机制来访问数据。
+  当更新/读取进程间共享的文件时，我们需要一些同步来保护完整性。
 
-* [*Kernel-persistence]: The mechanism exists until the kernel of the operating
-  system reboots or the mechanism is explicitly deleted.
+* 进程在操作系统[*内核]共享信息。
+  如传统的消息队列。同步由操作系统内核保证。
 
-* [*Filesystem-persistence]: The mechanism exists until the mechanism is explicitly
-  deleted.
+* 进程共享同一个[*内存]区域。
+  典型的情形是共享内存或内存映射文件。一旦进程设置了这样的内存区后，
+  进程就可以象读写其它普通内存一样读写这块内存，而不用调用系统内核。
+  它同样要有一些进程间同步的方式。
 
-Some native POSIX and Windows IPC mechanisms have different persistence so it's
-difficult to achieve portability between Windows and POSIX native mechanisms. 
-[*Boost.Interprocess] classes have the following persistence:
+[endsect]
 
-[table Boost.Interprocess Persistence Table
-   [[Mechanism] [Persistence]]
-   [[Shared memory]                 [Kernel or Filesystem]]
-   [[Memory mapped file]            [Filesystem]]
-   [[Process-shared mutex types]    [Process]]
-   [[Process-shared semaphore]      [Process]]
-   [[Process-shared condition]      [Process]]
-   [[File lock]                     [Process]]
-   [[Message queue]                 [Kernel or Filesystem]]
-   [[Named mutex]                   [Kernel or Filesystem]]
-   [[Named semaphore]               [Kernel or Filesystem]]
-   [[Named condition]               [Kernel or Filesystem]]
+[section:persistence Interprocess机制的持久性]
+
+进程间通信机制的最大问题之一就是通信机制的生命周期。
+了解一个进程间通信机制何时从系统中消失是重要的。在[*Boost.Interprocess]里，我们有三种持久性：
+
+* [*进程持久性]： 保持存在直到所有打开该机制的进程关闭它，退出或崩溃。
+
+* [*内核持久性]： 保持存在直到操作系统内核重启或该机制被显式地删除。
+
+* [*文件持久性]： 保持存在直到该机制被显式地删除。
+
+一些原生的POSIX和Windows IPC机制有不同的持久在，因此难以在Windows和POSIX原生机制之间移植。
+[*Boost.Interprocess]类对应的持久性：
+
+[table Boost.Interprocess持久性表
+   [[机制] [持久性]]
+   [[共享内存]                      [内核或文件]]
+   [[内存映射文件]                  [文件]]
+   [[进程间共享的互斥类型]          [进程]]
+   [[进程间共享的信号灯]            [进程]]
+   [[进程间共享的条件变量]          [进程]]
+   [[文件锁]                        [进程]]
+   [[消息队列]                      [内核或文件]]
+   [[命名互斥]                      [内核或文件]]
+   [[命名信号灯]                    [内核或文件]]
+   [[命名条件变量]                  [内核或文件]]
 ]
 
-As you can see, [*Boost.Interprocess] defines some mechanisms with "Kernel or Filesystem"
-persistence. This is because POSIX allows this possibility to native interprocess
-communication implementations. One could, for example, implement
-shared memory using memory mapped files and obtain filesystem persistence (for example,
-there is no proper known way to emulate kernel persistence with a user library
-for Windows shared memory using native shared memory,
-or process persistence for POSIX shared memory, so the only portable way is to 
-define "Kernel or Filesystem" persistence).
+如你所见，[*Boost.Interprocess]的一些机制的持久性被界定为"内核或文件"，
+这是因为POSIX允许原生的进程间通信实现。有一个例子，利用内存映射表作为共享内存的实现，
+这时它属于文件持久性（例如，没有已知的方法来模拟Windows用户模式下原生共享内存的内核持久性，
+或POSIX共享内存的进程持久性，因此唯一可移植的方法是界定为"内核或文件"持久性。
 
 [endsect]
 
-[section:names Names Of Interprocess Mechanisms]
+[section:names Interprocess机制的命名]
 
-Some interprocess mechanisms are anonymous objects created in shared memory or
-memory-mapped files but other interprocess mechanisms need a name or identifier
-so that two unrelated processes can use the same interprocess mechanism object.
-Examples of this are shared memory, named mutexes and named semaphores (for example,
-native windows CreateMutex/CreateSemaphore API family).
+一些进程间机制是建立于共享内存或内存映射文件中的匿名对象，
+而其它进程间机制则需要名称或标识，以便两个不相关的进程可以
+使用相同的进程间机制对象。
+这方面的例子有共享内存、命名互斥量和命名信号灯
+（例如，原生的Windows CreateMutex/CreateSemaphore API 家族）。
 
-The name used to identify an interprocess mechanism is not portable, even between
-UNIX systems. For this reason, [*Boost.Interprocess] limits this name to a C++ variable
-identifier or keyword:
+用于标识进程间机制的名称是不可移植的，即使在UNIX系统之间也是如此。为此，[*Boost.Interprocess]将名称限定为C++变量标识符或关键字：
 
-*Starts with a letter, lowercase or uppercase, such as a letter from a to z or from
- A to Z. Examples: ['Sharedmemory, sharedmemory, sHaReDmEmOrY...]
-*Can include letters, underscore, or digits. Examples: ['shm1, shm2and3, ShM3plus4...]
+*以字母开头，小写或大写，即从a到z或从A到Z的字符。例：['Sharedmemory, sharedmemory, sHaReDmEmOrY...]
+*可包含字母、下划线或数字。例：['shm1, shm2and3, ShM3plus4...]
 
 [endsect]
 
