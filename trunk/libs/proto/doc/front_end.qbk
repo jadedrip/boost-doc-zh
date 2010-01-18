@@ -7,61 +7,80 @@
 
 [/================================================================================]
 [section:front_end Fronts Ends:
-    Defining Terminals and Non-Terminals of Your DSEL]
+    Defining Terminals and Non-Terminals of Your DSEL 前端：为你的DSEL定义终结符和非终结符]
 [/================================================================================]
 
-Here is the fun part: designing your own mini-programming language. In this section we'll talk about the nuts and bolts of designing a DSEL interface using Proto. We'll cover the definition of terminals and lazy functions that the users of your DSEL will get to program with. We'll also talk about Proto's expression template-building operator overloads, and about ways to add additional members to expressions within your domain.
+Here is the fun part: designing your own mini-programming language. In this section we'll talk about the nuts and bolts of designing a DSEL interface using Proto. We'll cover the definition of terminals and lazy functions that the users of your DSEL will get to program with. We'll also talk about Proto's expression template-building operator overloads, and about ways to add additional members to expressions within your domain.\n
+以下是比较有趣的部分：设计你自己的小型编程语言。在这一节中，我们将讨论使用 Proto 来设计一个DSEL接口的相关细节。
+我们将涵盖终结符定义和惰性函数，它们是你的DSEL用户要用来写程序的。我们也将讨论 Proto 的表达式模板构建的操作符重载，
+以及为你的领域中的表达式增加成员的方法。
 
 [/=======================]
-[section Making Terminals]
+[section Making Terminals  制造终结符]
 [/=======================]
 
-As we saw with the Calculator example from the Introduction, the simplest way to get a DSEL up and running is simply to define some terminals, as follows.
+As we saw with the Calculator example from the Introduction, the simplest way to get a DSEL up and running is simply to define some terminals, as follows.\n
+正如我们在"简介"中看到的计算器例子，获得一个DSEL并运行它的最简单方法是定义一些终结符，如下。
 
-    // Define a literal integer Proto expression.
+    // Define a literal integer Proto expression. 定义一个字面值整数 Proto 表达式。
     proto::terminal<int>::type i = {0};
 
-    // This creates an expression template.
+    // This creates an expression template. 创建一个表达式模板。
     i + 1;
 
-With some terminals and Proto's operator overloads, you can immediately start creating expression templates. 
+With some terminals and Proto's operator overloads, you can immediately start creating expression templates. \n
+有了一些终结符和 Proto 的操作符重载，你就可以马上开始创建表达式模板了。
 
-Defining terminals -- with aggregate initialization -- can be a little awkward at times. Proto provides an easier-to-use wrapper for literals that can be used to construct Protofied terminal expressions. It's called _literal_.
+Defining terminals -- with aggregate initialization -- can be a little awkward at times. Proto provides an easier-to-use wrapper for literals that can be used to construct Protofied terminal expressions. It's called _literal_.\n
+定义终结符 -- 加上初始化 -- 通常有些难看。Proto 为字面值提供了一个更为易用的包装器，可以用于构造Proto化的终结符表达式工。
+它名为 _literal_。 
 
-    // Define a literal integer Proto expression.
+    // Define a literal integer Proto expression. 定义一个字面值整数 Proto 表达式。
     proto::literal<int> i = 0;
 
     // Proto literals are really just Proto terminal expressions.
     // For example, this builds a Proto expression template:
+    // Proto 字面值其实就是 Proto 终结符表达式工。例如，以下创建一个 Proto 表达式模板：
     i + 1;
 
-There is also a _lit_ function for constructing a _literal_ in-place. The above expression can simply be written as:
+There is also a _lit_ function for constructing a _literal_ in-place. The above expression can simply be written as:\n
+还有一个 _lit_ 函数用于就地构造 _literal_。以上表达式可以简化为：
 
     // proto::lit(0) creates an integer terminal expression
+    // proto::lit(0) 创建一个整数终结符表达式
     proto::lit(0) + 1;
 
 [endsect]
 
 [/=================================]
-[section Proto's Operator Overloads]
+[section Proto's Operator Overloads  Proto的操作符重载]
 [/=================================]
 
-Once we have some Proto terminals, expressions involving those terminals build expression trees for us. Proto defines overloads for each of C++'s overloadable operators in the `boost::proto` namespace. As long as one operand is a Proto expression, the result of the operation is a tree node representing that operation. 
+Once we have some Proto terminals, expressions involving those terminals build expression trees for us. Proto defines overloads for each of C++'s overloadable operators in the `boost::proto` namespace. As long as one operand is a Proto expression, the result of the operation is a tree node representing that operation. \n
+一旦我们有了一些 Proto 终结符之后，包含这些终结符的表达式将会为我们构建相应的表达式树。
+Proto 在 `boost::proto` 名字空间中为C++的每一个可重载的操作符都定义了重载。只要有一个操作数是 Proto 表达式，
+操作的结果就是一个表示该操作的树节点。
 
-[note Proto's operator overloads live in the `boost::proto` namespace and are found via ADL (argument-dependent lookup). That is why expressions must be "tainted" with Proto-ness for Proto to be able to build trees out of expressions.]
+[note Proto's operator overloads live in the `boost::proto` namespace and are found via ADL (argument-dependent lookup). That is why expressions must be "tainted" with Proto-ness for Proto to be able to build trees out of expressions.\n
+Proto 的操作符重载位于 `boost::proto` 名字空间内，要通过ADL(参数依赖查找)来查找。这就是为什么表达式必须要被Proto化对象"感染"，
+Proto 才能构建出表达式树的原因。]
 
-As a result of Proto's operator overloads, we can say:
+As a result of Proto's operator overloads, we can say:\n
+作为 Proto 操作符重载的结果，我们可以写：
 
     -_1;        // OK, build a unary-negate tree node
     _1 + 42;    // OK, build a binary-plus tree node
 
-For the most part, this Just Works and you don't need to think about it, but a few operators are special and it can be helpful to know how Proto handles them.
+For the most part, this Just Works and you don't need to think about it, but a few operators are special and it can be helpful to know how Proto handles them.\n
+大多数情况下，都可以正常工作，你无需担心它，不过有少数的操作符比较特殊，知道 Proto 是如何处理它们的可以有所帮助。
 
 [/=========================================================]
-[heading Assignment, Subscript, and Function Call Operators]
+[heading Assignment, Subscript, and Function Call Operators 赋值、下标和函数调用操作符]
 [/=========================================================]
 
-Proto also overloads `operator=`, `operator[]`, and `operator()`, but these operators are member functions of the expression template rather than free functions in Proto's namespace. The following are valid Proto expressions:
+Proto also overloads `operator=`, `operator[]`, and `operator()`, but these operators are member functions of the expression template rather than free functions in Proto's namespace. The following are valid Proto expressions:\n
+Proto 也重载了 `operator=`, `operator[]`, 和 `operator()`, 不过这些操作符是表达式模板的成员函数，
+而不是 Proto 名字空间下的普通函数。以下是有效的 Proto 表达式：
 
     _1 = 5;     // OK, builds a binary assign tree node
     _1[6];      // OK, builds a binary subscript tree node
@@ -70,9 +89,13 @@ Proto also overloads `operator=`, `operator[]`, and `operator()`, but these oper
     _1(8,9);    // OK, builds a ternary function tree node
     // ... etc.
 
-For the first two lines, assignment and subscript, it should be fairly unsurprising that the resulting expression node should be binary. After all, there are two operands in each expression. It may be surprising at first that what appears to be a function call with no arguments, `_1()`, actually creates an expression node with one child. The child is `_1` itself. Likewise, the expression `_1(7)` has two children: `_1` and `7`.
+For the first two lines, assignment and subscript, it should be fairly unsurprising that the resulting expression node should be binary. After all, there are two operands in each expression. It may be surprising at first that what appears to be a function call with no arguments, `_1()`, actually creates an expression node with one child. The child is `_1` itself. Likewise, the expression `_1(7)` has two children: `_1` and `7`.\n
+头两行，赋值和下标操作，产生的表达式节点是二元的，这应该不足为奇。毕竟，每个表达式都有两个操作数。
+可能会令人惊奇的首先是不带参数的函数调用，`_1()`, 实际上它将创建一个带有一个子节点的表达式节点。这个子节点就是 `_1` 本身。
+同样，表达式 `_1(7)` 有两个子节点：`_1` 和 `7`。
 
-Because these operators can only be defined as member functions, the following expressions are invalid:
+Because these operators can only be defined as member functions, the following expressions are invalid:\n
+因为这些操作符只能被定义为成员函数，所以以下表达式是无效的：
 
     int i;
     i = _1;         // ERROR: cannot assign _1 to an int
@@ -82,17 +105,21 @@ Because these operators can only be defined as member functions, the following e
 
     std::sin(_1);   // ERROR: cannot call std::sin() with _1
 
-Also, C++ has special rules for overloads of `operator->` that make it useless for building expression templates, so Proto does not overload it.
+Also, C++ has special rules for overloads of `operator->` that make it useless for building expression templates, so Proto does not overload it.\n
+还有，C++对于 `operator->` 的重载具有特殊的规则，使得它不能用于构建表达式模板，因此 Proto 没有重载它。
 
 [/==============================]
-[heading The Address-Of Operator]
+[heading The Address-Of Operator 取址操作符]
 [/==============================]
 
-Proto overloads the address-of operator for expression types, so that the following code creates a new unary address-of tree node:
+Proto overloads the address-of operator for expression types, so that the following code creates a new unary address-of tree node:\n
+Proto 为表达式类型重载了取址操作符，以下代码将会创建一个新的单参取址操作的树节点：
 
     &_1;    // OK, creates a unary address-of tree node
 
-It does /not/ return the address of the `_1` object. However, there is special code in Proto such that a unary address-of node is implicitly convertible to a pointer to its child. In other words, the following code works and does what you might expect, but not in the obvious way:
+It does /not/ return the address of the `_1` object. However, there is special code in Proto such that a unary address-of node is implicitly convertible to a pointer to its child. In other words, the following code works and does what you might expect, but not in the obvious way:\n
+它/不是/返回 `_1` 对象的地址。不过，在 Proto 中有特殊的代码，使得一个单参取址节点可以隐式转换为其子节点的指针。
+换言之，以下代码可以工作且结果如你所想，只不过方式不太明显而已：
 
     typedef
         proto::terminal< placeholder<0> >::type
@@ -104,53 +131,73 @@ It does /not/ return the address of the `_1` object. However, there is special c
 [endsect]
 
 [/============================]
-[section Making Lazy Functions]
+[section Making Lazy Functions  制造惰性函数]
 [/============================]
 
-If we limited ourselves to nothing but terminals and operator overloads, our domain-specific embedded languages wouldn't be very expressive. Imagine that we wanted to extend our calculator DSEL with a full suite of math functions like `sin()` and `pow()` that we could invoke lazily as follows.
+If we limited ourselves to nothing but terminals and operator overloads, our domain-specific embedded languages wouldn't be very expressive. Imagine that we wanted to extend our calculator DSEL with a full suite of math functions like `sin()` and `pow()` that we could invoke lazily as follows.\n
+如果我们把自己仅限制在终结符和操作符重载上，那么我们的DSEL不会太有表达力。想象一下，我们想以一整套数学函数，
+如 `sin()` 和 `pow()`，来扩展我们的计算器DSEL，以便我们可以象下面这样对这些函数进行惰性执行。
 
     // A calculator expression that takes one argument
     // and takes the sine of it.
+    // 一个计算器表达式工，带有一个参数和正弦函数。
     sin(_1);
 
-We would like the above to create an expression template representing a function invocation. When that expression is evaluated, it should cause the function to be invoked. (At least, that's the meaning of function invocation we'd like the calculator DSEL to have.) You can define `sin` quite simply as follows.
+We would like the above to create an expression template representing a function invocation. When that expression is evaluated, it should cause the function to be invoked. (At least, that's the meaning of function invocation we'd like the calculator DSEL to have.) You can define `sin` quite simply as follows.\n
+我们希望以上代码可以创建一个表示这次函数调用的表达式模板。当对此表达式进行求值时，将引发对此函数的调用。
+(至少，这是我们所想要的计算器DSEL应具有的函数调用的意义)。你可以象下面这样非常简单地定义 `sin`。  
 
     // "sin" is a Proto terminal containing a function pointer
+    // "sin" 是一个 Proto 终结符，包含一个函数指针
     proto::terminal< double(*)(double) >::type const sin = {&std::sin};
 
-In the above, we define `sin` as a Proto terminal containing a pointer to the `std::sin()` function. Now we can use `sin` as a lazy function. The `default_context` that we saw in the Introduction knows how to evaluate lazy functions. Consider the following:
+In the above, we define `sin` as a Proto terminal containing a pointer to the `std::sin()` function. Now we can use `sin` as a lazy function. The `default_context` that we saw in the Introduction knows how to evaluate lazy functions. Consider the following:\n
+在上述代码中，我们将 `sin` 定义为一个含有一个 `std::sin()` 函数指针的 Proto 终结符。现在我们可以将 `sin` 作为惰性函数来使用。
+我们在"简介"中看到的 `default_context` 知道如何对惰性函数进行求值。考虑以下代码：
 
     double pi = 3.1415926535;
     proto::default_context ctx;
     // Create a lazy "sin" invocation and immediately evaluate it
+    // 创建一个惰性"sin"调用并马上对它求值
     std::cout << proto::eval( sin(pi/2), ctx ) << std::endl;
 
-The above code prints out:
+The above code prints out:\n
+以上代码将打印出：
 
 [pre 1]
 
-It is important to note that there is nothing special about terminals that contain function pointers. /Any/ Proto expression has an overloaded function call operator. Consider:
+It is important to note that there is nothing special about terminals that contain function pointers. /Any/ Proto expression has an overloaded function call operator. Consider:\n
+有一点很重要，含有函数指针的终结符并没有什么特殊。/任何/ Proto 表达式都有一个重载的函数调用操作符。考虑：
 
-    // This compiles!
+    // This compiles! 这是可以编译的！
     proto::lit(1)(2)(3,4)(5,6,7,8);
 
-That may look strange at first. It creates an integer terminal with _lit_, and then invokes it like a function again and again. What does it mean? To be sure, the `default_context` wouldn't know what to do with it. The `default_context` only knows how to evaluate expressions that are sufficiently C++-like. In the case of function call expressions, the left hand side must evaluate to something that can be invoked: a pointer to a function, a reference to a function, or a TR1-style function object. That doesn't stop you from defining your own evaluation context that gives that expression a meaning. But more on that later.
+That may look strange at first. It creates an integer terminal with _lit_, and then invokes it like a function again and again. What does it mean? To be sure, the `default_context` wouldn't know what to do with it. The `default_context` only knows how to evaluate expressions that are sufficiently C++-like. In the case of function call expressions, the left hand side must evaluate to something that can be invoked: a pointer to a function, a reference to a function, or a TR1-style function object. That doesn't stop you from defining your own evaluation context that gives that expression a meaning. But more on that later.\n
+这看起来很怪异。它首先以 _lit_ 创建一个整数终结符，然后一遍一遍地象函数一样调用它。这意味着什么呢？可以肯定的是，
+`default_context` 不知道这要做什么。`default_context` 只知道如何完全按C++的方式来对表达式求值。对于函数调用表达式，
+其左边的操作数必须求值为某种可以调用的东西：函数指针、函数引用或TR1风格的函数对象。不过这并不妨碍你定义自己的求值上下文，
+来给这个表达式赋予某种意义。那是后话。
 
 [/=======================================]
-[heading Making Lazy Functions, Continued]
+[heading Making Lazy Functions, Continued  制造惰性函数(续)]
 [/=======================================]
 
-Now, what if we wanted to add a `pow()` function to our calculator DSEL that users could invoke as follows?
+Now, what if we wanted to add a `pow()` function to our calculator DSEL that users could invoke as follows?\n
+现在，如果我们想把 `pow()` 函数增加到我们的计算器DSEL中，让用户可以象下面那样来调用，又该如何？
 
     // A calculator expression that takes one argument
     // and raises it to the 2nd power
+    // 一个计算器表达式，带有一个参数并计算其平方
     pow< 2 >(_1);
 
-The simple technique described above of making `pow` a terminal containing a function pointer doesn't work here. If `pow` is an object, then the expression `pow< 2 >(_1)` is not valid C++. `pow` needs to be a real function template. But it must be an unusual function; it must return an expression template.
+The simple technique described above of making `pow` a terminal containing a function pointer doesn't work here. If `pow` is an object, then the expression `pow< 2 >(_1)` is not valid C++. `pow` needs to be a real function template. But it must be an unusual function; it must return an expression template.\n
+前面所讲的简单技术，把 `pow` 做成一个含有函数指针的终结符，在这里是不行的。如果 `pow` 是一个对象，则表达式 `pow< 2 >(_1)` 
+不是有效的C++表达式。`pow` 必须是一个真实的函数模板。但是它又必须是一个不平常的函数；它必须返回一个表达式模板。
 
-Before we can write the `pow()` function, we need a function object that wraps an invocation of `std::pow()`. 
+Before we can write the `pow()` function, we need a function object that wraps an invocation of `std::pow()`. \n
+在我们编写 `pow()` 函数之前，我们需要一个函数对象来包装对 `std::pow()` 的调用。
 
-    // Define a pow_fun function object
+    // Define a pow_fun function object 定义一个 pow_fun 函数对象
     template<int Exp>
     struct pow_fun
     {
@@ -161,10 +208,13 @@ Before we can write the `pow()` function, we need a function object that wraps a
         }
     };
 
-Now, let's try to define a function template that returns an expression template. We'll use the _function_ metafunction to calculate the type of a Proto expression that represents a function call. It is analogous to _terminal_. (We'll see a couple of different ways to solve this problem, and each will demonstrate another utility for defining Proto front-ends.)
+Now, let's try to define a function template that returns an expression template. We'll use the _function_ metafunction to calculate the type of a Proto expression that represents a function call. It is analogous to _terminal_. (We'll see a couple of different ways to solve this problem, and each will demonstrate another utility for defining Proto front-ends.)\n
+现在，我们来试一下定义一个返回表达式模板的函数模板。我们将使用 proto::function<> 元函数来计算表示一个函数调用的 Proto 表达式的类型。
+它类似于 _terminal_. (我们将看到解决这一问题的几种不同方法，每一种示范了定义 Proto 前端的不同工具)。
 
     // Define a lazy pow() function for the calculator DSEL.
     // Can be used as: pow< 2 >(_1)
+    // 为计算器DSEL定义一个惰性的 pow() 函数。可以这样来使用：pow<2>(_1)
     template<int Exp, typename Arg>
     typename proto::function<
         typename proto::terminal<pow_fun<Exp> >::type
@@ -183,32 +233,44 @@ Now, let's try to define a function template that returns an expression template
         return result;
     }
 
-In the code above, notice how the _function_ and _terminal_ metafunctions are used to calculate the return type: `pow()` returns an expression template representing a function call where the first child is the function to call and the second is the argument to the function. (Unfortunately, the same type calculation is repeated in the body of the function so that we can initialize a local variable of the correct type. We'll see in a moment how to avoid that.)
+In the code above, notice how the _function_ and _terminal_ metafunctions are used to calculate the return type: `pow()` returns an expression template representing a function call where the first child is the function to call and the second is the argument to the function. (Unfortunately, the same type calculation is repeated in the body of the function so that we can initialize a local variable of the correct type. We'll see in a moment how to avoid that.)\n
+在以上代码中，留意 _function_ 和 _terminal_ 元函数是如何用于计算返回类型的：`pow()` 返回一个表示函数调用的表达式模板，
+其第一个子节点为要调用的函数，第二个为该函数的参数。(不幸的是，在函数体中，为了可以初始化一个正确类型的局部变量，
+我们重复了相同的类型计算。待会我们将看到如何避免这一点)。
 
-[note As with _function_, there are metafunctions corresponding to all of the overloadable C++ operators for calculating expression types.]
+[note As with _function_, there are metafunctions corresponding to all of the overloadable C++ operators for calculating expression types.\n
+跟 _function_ 相似，对于所有可重载的C++操作符，都有相应的元函数用于计算得到表达式的类型。]
 
-With the above definition of the `pow()` function, we can create calculator expressions like the one below and evaluate them using the `calculator_context` we implemented in the Introduction.
+With the above definition of the `pow()` function, we can create calculator expressions like the one below and evaluate them using the `calculator_context` we implemented in the Introduction.\n
+有了以上的 `pow()` 函数定义，我们就可以象下面那样创建计算器表达式，并使用我们在"简介"中实现的 `calculator_context` 来进行求值。
 
-    // Initialize a calculator context
+    // Initialize a calculator context 初始化一个计算器上下文
     calculator_context ctx;
     ctx.args.push_back(3); // let _1 be 3
 
     // Create a calculator expression that takes one argument,
     // adds one to it, and raises it to the 2nd power; and then
     // immediately evaluate it using the calculator_context.
+    // 创建一个带一个参数的计算器表达式，将参数加一，再求平方；然后马上使用
+    // calculator_context 对它进行求值。
     assert( 16 == proto::eval( pow<2>( _1 + 1 ), ctx ) );
 
 [/=========================================]
-[heading Protofying Lazy Function Arguments]
+[heading Protofying Lazy Function Arguments 将惰性函数的参数Proto化]
 [/=========================================]
 
-Above, we defined a `pow()` function template that returns an expression template representing a lazy function invocation. But if we tried to call it as below, we'll run into a problem.
+Above, we defined a `pow()` function template that returns an expression template representing a lazy function invocation. But if we tried to call it as below, we'll run into a problem.\n
+前面，我们定义了一个 `pow()` 函数模板，它返回一个表达式模板，以表示一个惰性函数的调用。
+但是，如果我们试着按以下方式调用它，就是遇到问题。
 
     // ERROR: pow() as defined above doesn't work when
     // called with a non-Proto argument.
+    // 错误：前面所定义的pow()在使用非Proto化的参数时不能工作
     pow< 2 >( 4 );
 
-Proto expressions can only have other Proto expressions as children. But if we look at `pow()`'s function signature, we can see that if we pass it a non-Proto object, it will try to make it a child.
+Proto expressions can only have other Proto expressions as children. But if we look at `pow()`'s function signature, we can see that if we pass it a non-Proto object, it will try to make it a child.\n
+Proto 表达式只能以其它 Proto 表达式作为子节点。但如果我们看一下 `pow()` 的函数签名，我们可以看到，
+如果我们传给它一个非Proto化的对象，它会尝试把它当成子节点。
 
     template<int Exp, typename Arg>
     typename proto::function<
@@ -217,11 +279,15 @@ Proto expressions can only have other Proto expressions as children. But if we l
     >::type const
     pow(Arg const &arg)
 
-What we want is a way to make `Arg` into a Proto terminal if it is not a Proto expression already, and leave it alone if it is. For that, we can use _as_child_. The following implementation of the `pow()` function handles all argument types, expression templates or otherwise.
+What we want is a way to make `Arg` into a Proto terminal if it is not a Proto expression already, and leave it alone if it is. For that, we can use _as_child_. The following implementation of the `pow()` function handles all argument types, expression templates or otherwise.\n
+我们想要的就是，当 `Arg` 不是一个 Proto 表达式时，把它放入一个 Proto 终结符中，而如果它已经是一个 Proto 表达式则保留它。
+为此，我们可以使用 _as_child_。以下的 `pow()` 函数实现可以处理所有参数类型，包括表达式模板或其它类型。
 
     // Define a lazy pow() function for the calculator DSEL. Use
     // proto::as_child() to Protofy the argument, but only if it
     // is not a Proto expression type to begin with!
+    // 为计算器DSEL定义一个惰性pow()函数。用proto::as_child()来对参数
+    // 进行Proto化，仅当参数不是Proto表达式类型时才进行！
     template<int Exp, typename Arg>
     typename proto::function<
         typename proto::terminal<pow_fun<Exp> >::type
@@ -240,76 +306,105 @@ What we want is a way to make `Arg` into a Proto terminal if it is not a Proto e
         return result;
     }
 
-Notice how we use the `proto::result_of::as_child<>` metafunction to calculate the return type, and the `proto::as_child()` function to actually normalize the argument.
+Notice how we use the `proto::result_of::as_child<>` metafunction to calculate the return type, and the `proto::as_child()` function to actually normalize the argument.\n
+留意一下我们是如何使用 `proto::result_of::as_child<>` 元函数来计算返回类型的，以及如何用 `proto::as_child()` 函数来实际地规范参数。
 
 [/=====================================================]
-[heading Lazy Functions Made Simple With [^make_expr()]]
+[heading Lazy Functions Made Simple With [^make_expr()] 用 [^make_expr()] 简化惰性函数]
 [/=====================================================]
 
-The versions of the `pow()` function we've seen above are rather verbose. In the return type calculation, you have to be very explicit about wrapping non-Proto types. Worse, you have to restate the return type calculation in the body of `pow()` itself. Proto provides a helper for building expression templates directly that handles these mundane details for you. It's called _make_expr_. We can redefine `pow()` with it as below.
+The versions of the `pow()` function we've seen above are rather verbose. In the return type calculation, you have to be very explicit about wrapping non-Proto types. Worse, you have to restate the return type calculation in the body of `pow()` itself. Proto provides a helper for building expression templates directly that handles these mundane details for you. It's called _make_expr_. We can redefine `pow()` with it as below.\n
+上面我们看到的这个版本的 `pow()` 函数真的很冗长。在计算返回类型时，你必须非常明确地包装非Proto类型。更糟的是，
+你必须在 `pow()` 的函数体中再计算一次这个返回类型。Proto 提供了一个辅助工具直接构建表达式模板，代你处理这些麻烦的细节。
+这个工具名为 _make_expr_。我们可以如下重新定义 `pow()`。
 
     // Define a lazy pow() function for the calculator DSEL.
     // Can be used as: pow< 2 >(_1)
+    // 为计算器DSEL定义一个惰性pow()函数。可以这样使用它：pow<2>(_1)
     template<int Exp, typename Arg>
     typename proto::result_of::make_expr<
-        proto::tag::function  // Tag type
-      , pow_fun<Exp>          // First child (by value)
-      , Arg const &           // Second child (by reference)
+        proto::tag::function  // Tag type 标签类型
+      , pow_fun<Exp>          // First child (by value) 第一个子节点(传值)
+      , Arg const &           // Second child (by reference) 第二个子节点(传引用)
     >::type const
     pow(Arg const &arg)
     {
         return proto::make_expr<proto::tag::function>(
-            pow_fun<Exp>()    // First child (by value)
-          , boost::ref(arg)   // Second child (by reference)
+            pow_fun<Exp>()    // First child (by value) 第一个子节点(传值) 
+          , boost::ref(arg)   // Second child (by reference) 第二个子节点(传引用) 
         );
     }
 
-There are some things to notice about the above code. We use `proto::result_of::make_expr<>` to calculate the return type. The first template parameter is the tag type for the expression node we're building -- in this case, `proto::tag::function`, which is the tag type Proto uses for function call expressions.
+There are some things to notice about the above code. We use `proto::result_of::make_expr<>` to calculate the return type. The first template parameter is the tag type for the expression node we're building -- in this case, `proto::tag::function`, which is the tag type Proto uses for function call expressions.\n
+以上代码中有一些地方要注意。我们使用了 `proto::result_of::make_expr<>` 来计算返回的类型。
+第一个模板参数是我们要构建的表达式节点的标签类型 -- 在这个例子中是 `proto::tag::function`，它是 Proto 中用于函数调用表达式的标签类型。
 
-Subsequent template parameters to `proto::result_of::make_expr<>` represent children nodes. If a child type is not already a Proto expression, it is made into a terminal with _as_child_. A type such as `pow_fun<Exp>` results in terminal that is held by value, whereas a type like `Arg const &` (note the reference) indicates that the result should be held by reference.
+Subsequent template parameters to `proto::result_of::make_expr<>` represent children nodes. If a child type is not already a Proto expression, it is made into a terminal with _as_child_. A type such as `pow_fun<Exp>` results in terminal that is held by value, whereas a type like `Arg const &` (note the reference) indicates that the result should be held by reference.\n
+`proto::result_of::make_expr<>` 接下来的模板参数代表两个子节点。如果某个子节点类型不是 Proto 表达式，
+那么就用 _as_child_ 将它放入一个终结符中。象 `pow_fun<Exp>` 这样的类型在终结符中会以值的方式保存，
+而象 `Arg const &` (注意这个引用)这样的类型则表示其结果以引用的方式保存。
 
-In the function body is the runtime invocation of _make_expr_. It closely mirrors the return type calculation. _make_expr_ requires you to specify the node's tag type as a template parameter. The arguments to the function become the node's children. When a child should be stored by value, nothing special needs to be done. When a child should be stored by reference, you must use the `boost::ref()` function to wrap the argument. Without this extra information, the _make_expr_ function couldn't know whether to store a child by value or by reference.
+In the function body is the runtime invocation of _make_expr_. It closely mirrors the return type calculation. _make_expr_ requires you to specify the node's tag type as a template parameter. The arguments to the function become the node's children. When a child should be stored by value, nothing special needs to be done. When a child should be stored by reference, you must use the `boost::ref()` function to wrap the argument. Without this extra information, the _make_expr_ function couldn't know whether to store a child by value or by reference.\n
+在函数体中，是 _make_expr_ 的运行期调用。它与返回类型的计算几乎一样。_make_expr_ 要求你将节点的标签类型指定为一个模板参数。
+传递给函数的参数变为节点的子节点。当一个子节点要以值的方式保存时，不需要做特殊处理。当一个子节点要以引用的方式保存时，
+你必须用 `boost::ref()` 函数来包装这个参数。如果没有这些额外的信息，
+_make_expr_ 函数就不可能知道要以值的方式还是引用的方式来保存子节点。 
 
 [endsect]
 
 [/==============================================]
-[section Adding Members by Extending Expressions]
+[section Adding Members by Extending Expressions 通过扩展表达式增加成员]
 [/==============================================]
 
-In this section, we'll see how to associate Proto expressions with a /domain/, how to add members to expressions within a domain, and how to control which operators are overloaded in a domain.
+In this section, we'll see how to associate Proto expressions with a /domain/, how to add members to expressions within a domain, and how to control which operators are overloaded in a domain.\n
+在这一节中，我们将看到如何把 Proto 表达式与一个/领域/关联起来，如果往领域内的表达式增加成员，以及如何一个领域中哪些操作符被重载。
 
 [/==============]
-[section Domains]
+[section Domains 领域]
 [/==============]
 
-In the [link boost_proto.users_guide.getting_started.hello_calculator Hello Calculator] section, we looked into making calculator expressions directly usable as lambda expressions in calls to STL algorithms, as below:
+In the [link boost_proto.users_guide.getting_started.hello_calculator Hello Calculator] section, we looked into making calculator expressions directly usable as lambda expressions in calls to STL algorithms, as below:\n
+在 [link boost_proto.users_guide.getting_started.hello_calculator Hello Calculator] 一节中，
+我们已经看到可以在调用STL算法时直接创建计算器表达式并象 lambda 表达式那样使用它，如下：
 
     double data[] = {1., 2., 3., 4.};
 
     // Use the calculator DSEL to square each element ... HOW?
+    // 使用计算器DSEL对每个元素计算平方 ... 如何？
     std::transform( data, data + 4, data, _1 * _1 );
 
-The difficulty, if you recall, was that by default Proto expressions don't have interesting behaviors of their own. They're just trees. In particular, the expression `_1 * _1` won't have an `operator()` that takes a double and returns a double like `std::transform()` expects -- unless we give it one. To make this work, we needed to define an expression wrapper type that defined the `operator()` member function, and we needed to associate the wrapper with the calculator /domain/.
+The difficulty, if you recall, was that by default Proto expressions don't have interesting behaviors of their own. They're just trees. In particular, the expression `_1 * _1` won't have an `operator()` that takes a double and returns a double like `std::transform()` expects -- unless we give it one. To make this work, we needed to define an expression wrapper type that defined the `operator()` member function, and we needed to associate the wrapper with the calculator /domain/.\n
+如果你还记得，难点在于缺省情况下 Proto 表达式并不关心它们自己的行为。它们仅仅是一些树。具体地说，
+表达式 `_1 * _1` 并不象 `std::transform()` 所期望那样带有一个 `operator()` 来接受一个 double 并返回一个 double -- 除非我们给它一个。
+要让它能用，我们必须定义一个表达式包装器类型，其中定义了 `operator()` 成员函数，然后我们必须把这个包装器关联到这个计算器/领域/。
 
-In Proto, the term /domain/ refers to a type that associates expressions in that domain to an expression /generator/. The generator is just a function object that accepts an expression and does something to it, like wrapping it in an expression wrapper.
+In Proto, the term /domain/ refers to a type that associates expressions in that domain to an expression /generator/. The generator is just a function object that accepts an expression and does something to it, like wrapping it in an expression wrapper.\n
+在 Proto 中，术语 /领域/ 是指一个类型，用于把该领域中的表达式关联至一个表达式/生成器/。这个生成器是一个函数对象，
+它接受一个表达式并对它做一些事情，如把表达式包入一个表达式包装器。
 
-You can also use a domain to associate expressions with a grammar. When you specify a domain's grammar, Proto ensures that all the expressions it generates in that domain conform to the domain's grammar. It does that by disabling any operator overloads that would create invalid expressions.
+You can also use a domain to associate expressions with a grammar. When you specify a domain's grammar, Proto ensures that all the expressions it generates in that domain conform to the domain's grammar. It does that by disabling any operator overloads that would create invalid expressions.\n
+你也可以用一个领域来将表达式与某种语法关联起来。当你指定一个领域语法，Proto 将确保它在此领域中生成的表达式都符合该领域的语法。
+它是通过禁止掉一些可能创建无效表达式的操作符重载来实现这一点的。
 
 [endsect]
 
 [/==================================================]
-[section:extends The [^extends<>] Expression Wrapper]
+[section:extends The [^extends<>] Expression Wrapper [^extends<>]表达式包装器]
 [/==================================================]
 
-The first step to giving your calculator expressions extra behaviors is to define a calculator domain. All expressions within the calculator domain will be imbued with calculator-ness, as we'll see.
+The first step to giving your calculator expressions extra behaviors is to define a calculator domain. All expressions within the calculator domain will be imbued with calculator-ness, as we'll see.\n
+要给你的计算器表达式赋予额外的行为，第一步是定义一个计算器域。在这个计算器域中的所有表达式都将被注入计算器的特征，如后所见。
 
     // A type to be used as a domain tag (to be defined below)
+    // 一个被用作为领域标签的类型(稍后定义)
     struct calculator_domain;
 
-We use this domain type when extending the _expr_ type, which we do with the _extends_ class template. Here is our expression wrapper, which imbues an expression with calculator-ness. It is described below.
+We use this domain type when extending the _expr_ type, which we do with the _extends_ class template. Here is our expression wrapper, which imbues an expression with calculator-ness. It is described below.\n
+当我们用 _extends_ 类模板扩展 _expr_ 类型时，将会使用这个领域类型。。以下是我们的表达式包装器，它向一个表达式注入计算器特征。说明如下。
 
     // The calculator<> expression wrapper makes expressions
     // function objects.
+    // calculator<> 表达式包装器把表达式变为函数对象。
     template< typename Expr >
     struct calculator
       : proto::extends< Expr, calculator< Expr >, calculator_domain >
@@ -324,103 +419,143 @@ We use this domain type when extending the _expr_ type, which we do with the _ex
 
         // This is usually needed because by default, the compiler-
         // generated assignment operator hides extends<>::operator=
+        // 缺省情况下通常都需要这个，因为编译器生成的赋值操作符会隐藏 extends<>::operator= 
         using base_type::operator =;
 
         typedef double result_type;
 
         // Hide base_type::operator() by defining our own which
         // evaluates the calculator expression with a calculator context.
+        // 定义我们自己的 operator() 来隐藏 base_type::operator()，用一个计算器上下文来对计算器表达式求值。
         result_type operator()( double d1 = 0.0, double d2 = 0.0 ) const
         {
             // As defined in the Hello Calculator section.
+            // 和 Hello Calculator 一节中的定义一样。
             calculator_context ctx;
 
             // ctx.args is a vector<double> that holds the values
             // with which we replace the placeholders (e.g., _1 and _2)
             // in the expression.
-            ctx.args.push_back( d1 ); // _1 gets the value of d1
-            ctx.args.push_back( d2 ); // _2 gets the value of d2
+            // ctx.args 是一个 vector<double>，保存了我们用于替换表达式中的占位符(如 _1 和 _2)的值。
+            ctx.args.push_back( d1 ); // _1 gets the value of d1  _1获得d1的值
+            ctx.args.push_back( d2 ); // _2 gets the value of d2  _2获得d2的值
 
-            return proto::eval(*this, ctx ); // evaluate the expression
+            return proto::eval(*this, ctx ); // evaluate the expression 对表达式求值
         }
     };
 
-We want calculator expressions to be function objects, so we have to define an `operator()` that takes and returns doubles. The `calculator<>` wrapper above does that with the help of the _extends_ template. The first template to _extends_ parameter is the expression type we are extending. The second is the type of the wrapped expression. The third parameter is the domain that this wrapper is associated with. A wrapper type like `calculator<>` that inherits from _extends_ behaves just like the expression type it has extended, with any additional behaviors you choose to give it.
+We want calculator expressions to be function objects, so we have to define an `operator()` that takes and returns doubles. The `calculator<>` wrapper above does that with the help of the _extends_ template. The first template to _extends_ parameter is the expression type we are extending. The second is the type of the wrapped expression. The third parameter is the domain that this wrapper is associated with. A wrapper type like `calculator<>` that inherits from _extends_ behaves just like the expression type it has extended, with any additional behaviors you choose to give it.\n
+我们希望计算器表达式是一个函数对象，因此我们必须定义一个 `operator()` 来接受和返回 doubles。上面这个 `calculator<>` 包装器在 
+_extends_ 模板的帮助下完成此事。传给 _extends_ 的第一个模板参数是我们要扩展的表达式类型。第二个是被包装表达式的类型。
+第三个参数是该包装器所关联的领域。象 `calculator<>` 这样的派生自 _extends_ 的包装器类型，
+其行为是与其所扩展的表达式类型一样，再加上你选择给予它的其它行为。
 
-[note [*Why not just inherit from [^proto::expr<>]?]
+[note [*Why not just inherit from [^proto::expr<>]? 为什么不仅仅从 [^proto::expr<>] 继承?]
 
-You might be thinking that this expression extension business is unnecessarily complicated. After all, isn't this why C++ supports inheritance? Why can't [^calculator<Expr>] just inherit from [^Expr] directly? The reason is because [^Expr], which presumably is an instantiation of _expr_, has expression template-building operator overloads that will be incorrect for derived types. They will store `*this` by reference to `proto::expr<>`, effectively slicing off any derived parts. _extends_ gives your derived types operator overloads that don't slice off your additional members.]
+You might be thinking that this expression extension business is unnecessarily complicated. After all, isn't this why C++ supports inheritance? Why can't [^calculator<Expr>] just inherit from [^Expr] directly? The reason is because [^Expr], which presumably is an instantiation of _expr_, has expression template-building operator overloads that will be incorrect for derived types. They will store `*this` by reference to `proto::expr<>`, effectively slicing off any derived parts. _extends_ gives your derived types operator overloads that don't slice off your additional members.\n
+你也许会认为这个表达式扩展有点不必要地复杂化了。毕竟，这难道不是C++要支持继承的的原因吗？为什么 [^calculator<Expr>] 不能仅仅直接从 
+[^Expr] 派生？原因是，因为 [^Expr] 是 _expr_ 的一个实例，它具有表达式模板构建的操作符重载，这对于派生类型是不正确的。
+它们会以引用方式保存 `*this`，指向 `proto::expr<>`，有效地切割掉派生类的其它部分。
+_extends_ 为你的派生类给出了不会切割掉其它成员的操作符重载。]
 
-Although not strictly necessary in this case, we bring `extends<>::operator=` into scope with a `using` declaration. This is really only necessary if you want expressions like `_1 = 3` to create a lazily evaluated assignment. _extends_ defines the appropriate `operator=` for you, but the compiler-generated `calculator<>::operator=` will hide it unless you make it available with the `using` declaration.
+Although not strictly necessary in this case, we bring `extends<>::operator=` into scope with a `using` declaration. This is really only necessary if you want expressions like `_1 = 3` to create a lazily evaluated assignment. _extends_ defines the appropriate `operator=` for you, but the compiler-generated `calculator<>::operator=` will hide it unless you make it available with the `using` declaration.\n
+虽然在这里不是严格必需，但是我们还是用一个 `using` 声明将 `extends<>::operator=` 带入此作用域。实际上，
+只有当你想要象 `_1 = 3` 这样的表达式可以创建一个惰性求值的赋值操作时，才需要这样做。虽然 _extends_ 为你定义了适当的 `operator=`，
+但是编译器所生成的 `calculator<>::operator=` 会隐藏它，除非你用 `using` 声明来使之可见。
 
-Note that in the implementation of `calculator<>::operator()`, we evaluate the expression with the `calculator_context` we defined earlier. As we saw before, the context is what gives the operators their meaning. In the case of the calculator, the context is also what defines the meaning of the placeholder terminals.
+Note that in the implementation of `calculator<>::operator()`, we evaluate the expression with the `calculator_context` we defined earlier. As we saw before, the context is what gives the operators their meaning. In the case of the calculator, the context is also what defines the meaning of the placeholder terminals.\n
+注意，在 `calculator<>::operator()` 的实现中，我们用早先定义的 `calculator_context` 来对表达式进行求值。
+如前所述，上下文是给表达式赋予某种意义的。在这个计算器的例子中，上下文定义了占位符终结符的意义。
 
-Now that we have defined the `calculator<>` expression wrapper, we need to wrap the placeholders to imbue them with calculator-ness:
+Now that we have defined the `calculator<>` expression wrapper, we need to wrap the placeholders to imbue them with calculator-ness:\n
+现在我们已经定义了 `calculator<>` 表达式包装器，我们需要对占位符进行包装，为它们注入计算器特征：
 
     calculator< proto::terminal< placeholder<0> >::type > const _1;
     calculator< proto::terminal< placeholder<1> >::type > const _2;
 
 [/=======================================================]
-[heading Retaining POD-ness with [^BOOST_PROTO_EXTENDS()]]
+[heading Retaining POD-ness with [^BOOST_PROTO_EXTENDS()] 用 [^BOOST_PROTO_EXTENDS()] 保留POD性质]
 [/=======================================================]
 
 To use _extends_, your extension type must derive from _extends_. Unfortunately, that means that your extension type is no longer POD and its instances cannot be /statically initialized/. (See the [link boost_proto.appendices.rationale.static_initialization Static
-Initialization] section in the [link boost_proto.appendices.rationale Rationale] appendix for why this matters.) In particular, as defined above, the global placeholder objects `_1` and `_2` will need to be initialized at runtime, which could lead to subtle order of initialization bugs.
+Initialization] section in the [link boost_proto.appendices.rationale Rationale] appendix for why this matters.) In particular, as defined above, the global placeholder objects `_1` and `_2` will need to be initialized at runtime, which could lead to subtle order of initialization bugs.\n
+要使用 _extends_，你的扩展类型必须派生自 _extends_。不幸的是，这意味着你的扩展类型不再是POD，且其实例不能被/静态初始化/。
+(为什么会这样，请见附录 [link boost_proto.appendices.rationale 原理] 中 
+[link boost_proto.appendices.rationale.static_initialization 静态初始化] 一节)。具体地说，按以上定义，
+全局占位符 `_1` 和 `_2` 必须在运行期初始化，这有可能导致微妙的初始化顺序问题。
 
-There is another way to make an expression extension that doesn't sacrifice POD-ness : the _EXTENDS_ macro. You can use it much like you use _extends_. We can use _EXTENDS_ to keep `calculator<>` a POD and our placeholders statically initialized.
+There is another way to make an expression extension that doesn't sacrifice POD-ness : the _EXTENDS_ macro. You can use it much like you use _extends_. We can use _EXTENDS_ to keep `calculator<>` a POD and our placeholders statically initialized.\n
+有另一个方法可以让表达式扩展无需牺牲POD特性：宏 _EXTENDS_。你可以象使用 _extends_ 那样使用它。
+我们可以用 _EXTENDS_ 来使 `calculator<>` 保持为一个 POD 且我们的占位符可以被静态初始化。
 
     // The calculator<> expression wrapper makes expressions
     // function objects.
+    // calculator<> 表达式包装器把表达式变为函数对象。
     template< typename Expr >
     struct calculator
     {
         // Use BOOST_PROTO_EXTENDS() instead of proto::extends<> to
         // make this type a Proto expression extension.
+        // 使用 BOOST_PROTO_EXTENDS() 代替 proto::extends<> 来让这个类型成为Proto表达式扩展。
         BOOST_PROTO_EXTENDS(Expr, calculator<Expr>, calculator_domain)
 
         typedef double result_type;
 
         result_type operator()( double d1 = 0.0, double d2 = 0.0 ) const
         {
-            /* ... as before ... */
+            /* ... as before 如前 ... */
         }
     };
 
-With the new `calculator<>` type, we can redefine our placeholders to be statically initialized:
+With the new `calculator<>` type, we can redefine our placeholders to be statically initialized:\n
+用这个新的 `calculator<>` 类型，我们可以重新定义我们的占位符，并进行静态初始化：
 
     calculator< proto::terminal< placeholder<0> >::type > const _1 = {{{}}};
     calculator< proto::terminal< placeholder<1> >::type > const _2 = {{{}}};
 
-We need to make one additional small change to accommodate the POD-ness of our expression extension, which we'll describe below in the section on expression generators.
+We need to make one additional small change to accommodate the POD-ness of our expression extension, which we'll describe below in the section on expression generators.\n
+我们还需要一个小的修改来提供我们的表达式扩展的POD性，我们将在本节稍后的表达生成器中描述这一点。
 
-What does _EXTENDS_ do? It defines a data member of the expression type being extended; some nested typedefs that Proto requires; `operator=`, `operator[]` and `operator()` overloads for building expression templates; and a nested `result<>` template for calculating the return type of `operator()`. In this case, however, the `operator()` overloads and the `result<>` template are not needed because we are defining our own `operator()` in the `calculator<>` type. Proto provides additional macros for finer control over which member functions are defined. We could improve our `calculator<>` type as follows:
+What does _EXTENDS_ do? It defines a data member of the expression type being extended; some nested typedefs that Proto requires; `operator=`, `operator[]` and `operator()` overloads for building expression templates; and a nested `result<>` template for calculating the return type of `operator()`. In this case, however, the `operator()` overloads and the `result<>` template are not needed because we are defining our own `operator()` in the `calculator<>` type. Proto provides additional macros for finer control over which member functions are defined. We could improve our `calculator<>` type as follows:\n
+_EXTENDS_ 究竟做了些什么呢？它定义了一个要扩展的表达式类型的数据成员；一些 Proto 所需的嵌套 typedef；重载 `operator=`, `operator[]` 
+和 `operator()` 以构建表达式模板；以及一个嵌套的 `result<>` 模板用于计算 `operator()` 的返回类型。不过在这个例子中，
+并不需要 `operator()` 重载和 `result<>` 模板，因为我们在 `calculator<>` 类型中定义了我们自己的 `operator()`。
+Proto 提供了其它的宏，以便更好地控制哪些成员函数要定义。我们可以如下改进我们的 `calculator<>` 类型：
 
     // The calculator<> expression wrapper makes expressions
     // function objects.
+    // calculator<> 表达式包装器把表达式变为函数对象。
     template< typename Expr >
     struct calculator
     {
         // Use BOOST_PROTO_BASIC_EXTENDS() instead of proto::extends<> to
         // make this type a Proto expression extension:
+        // 使用 BOOST_PROTO_EXTENDS() 代替 proto::extends<> 来让这个类型成为Proto表达式扩展。
         BOOST_PROTO_BASIC_EXTENDS(Expr, calculator<Expr>, calculator_domain)
 
         // Define operator[] to build expression templates:
+        // 定义 operator[] 来构建表达式模板：
         BOOST_PROTO_EXTENDS_SUBSCRIPT()
 
         // Define operator= to build expression templates:
+        // 定义 operator= 来构建表达式模板：
         BOOST_PROTO_EXTENDS_ASSIGN()
 
         typedef double result_type;
 
         result_type operator()( double d1 = 0.0, double d2 = 0.0 ) const
         {
-            /* ... as before ... */
+            /* ... as before 如前 ... */
         }
     };
 
-Notice that we are now using _BASIC_EXTENDS_ instead of _EXTENDS_. This just adds the data member and the nested typedefs but not any of the overloaded operators. Those are added separately with _EXTENDS_ASSIGN_ and _EXTENDS_SUBSCRIPT_. We are leaving out the function call operator and the nested `result<>` template that could have been defined with Proto's _EXTENDS_FUNCTION_ macro.
+Notice that we are now using _BASIC_EXTENDS_ instead of _EXTENDS_. This just adds the data member and the nested typedefs but not any of the overloaded operators. Those are added separately with _EXTENDS_ASSIGN_ and _EXTENDS_SUBSCRIPT_. We are leaving out the function call operator and the nested `result<>` template that could have been defined with Proto's _EXTENDS_FUNCTION_ macro.\n
+注意，现在我们用 _BASIC_EXTENDS_ 来替代 _EXTENDS_。它只增加数据成员和嵌套 typedefs 而不重载任何操作符。
+操作符是通过 _EXTENDS_ASSIGN_ 和 _EXTENDS_SUBSCRIPT_ 单独添加的。我们省去了函数调用操作符和嵌套的 `result<>` 模板，
+它们可以用 Proto 的 _EXTENDS_FUNCTION_ 宏来定义。
 
-In summary, here are the macros you can use to define expression extensions, and a brief description of each.
+In summary, here are the macros you can use to define expression extensions, and a brief description of each.\n
+总之，以下是你可以用来定义表达式扩展的宏，以及各个宏的简要说明。
 
 [def __expression__ [~expression]]
 [def __extension__ [~extension]]
@@ -428,36 +563,43 @@ In summary, here are the macros you can use to define expression extensions, and
 [def __extends__ [macroref BOOST_PROTO_EXTENDS]]
 [def __basic_extends__ [macroref BOOST_PROTO_BASIC_EXTENDS]]
 
-[table Expression Extension Macros
- [[Macro]
-  [Purpose]]
+[table Expression Extension Macros 表达式扩展宏
+ [[Macro 宏]
+  [Purpose 用途]]
  [[``__basic_extends__(
     __expression__
   , __extension__
   , __domain__
 )``]
-  [Defines a data member of type `__expression__` and some nested typedefs that Proto requires.]]
+  [Defines a data member of type `__expression__` and some nested typedefs that Proto requires.\n
+  定义一个类型为 `__expression__` 的数据成员以及 Proto 所需的一些嵌套 typedefs。]]
  [[_EXTENDS_ASSIGN_]
-  [Defines `operator=`. Only valid when preceded by _BASIC_EXTENDS_.]]
+  [Defines `operator=`. Only valid when preceded by _BASIC_EXTENDS_.\n
+  定义 `operator=`。仅当在 _BASIC_EXTENDS_ 之后有效。]]
  [[_EXTENDS_SUBSCRIPT_]
-  [Defines `operator[]`. Only valid when preceded by _BASIC_EXTENDS_.]]
+  [Defines `operator[]`. Only valid when preceded by _BASIC_EXTENDS_.\n
+  定义 `operator[]`。仅当在 _BASIC_EXTENDS_ 之后有效。]]
  [[_EXTENDS_FUNCTION_]
-  [Defines `operator()` and a nested `result<>` template for return type calculation. Only valid when preceded by _BASIC_EXTENDS_.]]
+  [Defines `operator()` and a nested `result<>` template for return type calculation. Only valid when preceded by _BASIC_EXTENDS_.\n
+  定义 `operator()` 和嵌套的 `result<>` 模板用于返回类型计算。仅当在 _BASIC_EXTENDS_ 之后有效。]]
  [[``__extends__(
     __expression__
   , __extension__
   , __domain__
 )``]
-  [Equivalent to:``
+  [Equivalent to:\n
+  相当于：``
 __basic_extends__(__expression__, __extension__, __domain__)
 _EXTENDS_ASSIGN_
 _EXTENDS_SUBSCRIPT_
 _EXTENDS_FUNCTION_``]]
 ]
 
-[warning [*Argument-Dependent Lookup and _EXTENDS_]
+[warning [*Argument-Dependent Lookup and _EXTENDS_  实参依赖查找ADL与 _EXTENDS_]
 
-Proto's operator overloads are defined in the `boost::proto` namespace and are found by argument-dependent lookup (ADL). This usually just works because expressions are made up of types that live in the `boost::proto` namespace. However, sometimes when you use _EXTENDS_ that is not the case. Consider:
+Proto's operator overloads are defined in the `boost::proto` namespace and are found by argument-dependent lookup (ADL). This usually just works because expressions are made up of types that live in the `boost::proto` namespace. However, sometimes when you use _EXTENDS_ that is not the case. Consider:\n
+Proto的操作符重载是定义在 `boost::proto` 名字空间中的，要通过ADL来查找。通常这没问题，因为表达式是由 `boost::proto` 
+名字空间中的类型所组成的。但是，有时当你使用 _EXTENDS_ 时，情况就不是这样了。考虑：
 
 ``    template<class T>
     struct my_complex
@@ -473,13 +615,17 @@ Proto's operator overloads are defined in the `boost::proto` namespace and are f
     {
         my_complex<int> c0, c1;
     
-        c0 + c1; // ERROR: operator+ not found
+        c0 + c1; // ERROR: operator+ not found  错误：operator+未被找到
     }
 ``
 
-The problem has to do with how argument-dependent lookup works. The type `my_complex<int>` is not associated in any way with the `boost::proto` namespace, so the operators defined there are not considered. (Had we inherited from _extends_ instead of used _EXTENDS_, we would have avoided the problem because inheriting from a type in `boost::proto` namespace is enough to get ADL to kick in.)
+The problem has to do with how argument-dependent lookup works. The type `my_complex<int>` is not associated in any way with the `boost::proto` namespace, so the operators defined there are not considered. (Had we inherited from _extends_ instead of used _EXTENDS_, we would have avoided the problem because inheriting from a type in `boost::proto` namespace is enough to get ADL to kick in.)\n
+这个问题必须了解ADL是如何工作的。类型 `my_complex<int>` 与 `boost::proto` 名字空间没有任何关联，所以定义在那里的操作符运算不会被考虑。
+(如果我们从 _extends_ 而不是 _EXTENDS_ 派生，则可以避免这个问题，因为派生自一个位于 `boost::proto` 名字空间的类型，足以让ADL找到它)。
 
-So what can we do? By adding an extra dummy template parameter that defaults to a type in the `boost::proto` namespace, we can trick ADL into finding the right operator overloads. The solution looks like this:
+So what can we do? By adding an extra dummy template parameter that defaults to a type in the `boost::proto` namespace, we can trick ADL into finding the right operator overloads. The solution looks like this:\n
+那么我们可以做什么呢？通过增加一个额外的哑模板参数，该参数缺省为某个位于 `boost::proto` 名字空间的类型，
+我们就可以令ADL找到正确的操作符重载。这个办法就象这样：
 
 ``    template<class T, class Dummy = proto::is_proto_expr>
     struct my_complex
@@ -495,62 +641,85 @@ So what can we do? By adding an extra dummy template parameter that defaults to 
     {
         my_complex<int> c0, c1;
     
-        c0 + c1; // OK, operator+ found now!
+        c0 + c1; // OK, operator+ found now!  好的，现在可以找到operator+了！
     }
 ``
 
-The type [classref boost::proto::is_proto_expr `proto::is_proto_expr`] is nothing but an empty struct, but by making it a template parameter we make `boost::proto` an associated namespace of `my_complex<int>`. Now ADL can successfully find Proto's operator overloads.
+The type [classref boost::proto::is_proto_expr `proto::is_proto_expr`] is nothing but an empty struct, but by making it a template parameter we make `boost::proto` an associated namespace of `my_complex<int>`. Now ADL can successfully find Proto's operator overloads.\n
+类型 [classref boost::proto::is_proto_expr `proto::is_proto_expr`] 只是一个空的结构，但通过将它作为一个模板参数，我们可以令
+`boost::proto` 名字空间与 `my_complex<int>` 联系起来。现在ADL就可以成功地找到Proto的操作符重载了。
 ]
 
 [endsect]
 
 [/============================]
-[section Expression Generators]
+[section Expression Generators 表达式生成器]
 [/============================]
 
-The last thing that remains to be done is to tell Proto that it needs to wrap all of our calculator expressions in our `calculator<>` wrapper. We have already wrapped the placeholders, but we want /all/ expressions that involve the calculator placeholders to be calculators. We can do that by specifying an expression generator when we define our `calculator_domain`, as follows:
+The last thing that remains to be done is to tell Proto that it needs to wrap all of our calculator expressions in our `calculator<>` wrapper. We have already wrapped the placeholders, but we want /all/ expressions that involve the calculator placeholders to be calculators. We can do that by specifying an expression generator when we define our `calculator_domain`, as follows:\n
+最后剩下要做的一件事就是，告知 Proto 它必须将我们所有的计算器表达式包入 `calculator<>` 包装器。我们已经包装了占位符，
+但是我们想要包含了这个计算器占位符的/所有/表达式都是计算器。我们可以通过在定义我们的 `calculator_domain` 
+时指定一个表达式生成器来实现这一点，如下：
 
     // Define the calculator_domain we forward-declared above.
     // Specify that all expression in this domain should be wrapped
     // in the calculator<> expression wrapper.
+    // 定义我们先前已声明的 calculator_domain。指定该领域内的所有表达式都
+    // 要被包入 calculator<> 表达式包装器中。
     struct calculator_domain
       : proto::domain< proto::generator< calculator > >
     {};
 
-The first template parameter to `proto::domain<>` is the generator. "Generator" is just a fancy name for a function object that accepts an expression and does something to it. `proto::generator<>` is a very simple one --- it wraps an expression in the wrapper you specify. `proto::domain<>` inherits from its generator parameter, so all domains are themselves function objects.
+The first template parameter to `proto::domain<>` is the generator. "Generator" is just a fancy name for a function object that accepts an expression and does something to it. `proto::generator<>` is a very simple one --- it wraps an expression in the wrapper you specify. `proto::domain<>` inherits from its generator parameter, so all domains are themselves function objects.\n
+传给 `proto::domain<>` 的第一个模板参数是生成器。"生成器" 是一个函数对象的特别名字，这个函数对象接受一个表达式并对它做一些事情。
+`proto::generator<>` 是一个非常简单的生成器 --- 它把一个表达式包入你指定的某个包装器。`proto::domain<>` 派生自它的生成器参数，
+因此所有领域本身都是函数对象。
 
-If we used _EXTENDS_ to keep our expression extension type POD, then we need to use `proto::pod_generator<>` instead of `proto::generator<>`, as follows:
+If we used _EXTENDS_ to keep our expression extension type POD, then we need to use `proto::pod_generator<>` instead of `proto::generator<>`, as follows:\n
+如果我们使用 _EXTENDS_ 来让我们的表达式扩展类型保持为 POD，则我们需要用 `proto::pod_generator<>` 代替 `proto::generator<>`，如下：
 
     // If calculator<> uses BOOST_PROTO_EXTENDS() instead of 
     // use proto::extends<>, use proto::pod_generator<> instead
     // of proto::generator<>.
+    // 如果 calculator<> 使用 BOOST_PROTO_EXTENDS() 代替 proto::extends()，
+    // 则使用 proto::pod_generator<> 代替 proto::generator<>。
     struct calculator_domain
       : proto::domain< proto::pod_generator< calculator > >
     {};
 
 [def __Domain__ [~Domain]]
 
-After Proto has calculated a new expression type, it checks the domains of the  child expressions. They must match. Assuming they do, Proto creates the new expression and passes it to `__Domain__::operator()` for any additional processing.  If we don't specify a generator, the new expression gets passed through unchanged.  But since we've specified a generator above, `calculator_domain::operator()`  returns `calculator<>` objects.
+After Proto has calculated a new expression type, it checks the domains of the  child expressions. They must match. Assuming they do, Proto creates the new expression and passes it to `__Domain__::operator()` for any additional processing.  If we don't specify a generator, the new expression gets passed through unchanged.  But since we've specified a generator above, `calculator_domain::operator()`  returns `calculator<>` objects.\n
+在 Proto 计算出一个新的表达式类型后，它要检查其子表达式的领域。它们必须相互匹配。如果确实如此，则 Proto 创建新的表达式并将它传递给 
+`__Domain__::operator()` 进行其它处理。如果我们不指定生成器，则新的表达式将被原样传递。不过由于我们指定了上面的生成器，
+所以 `calculator_domain::operator()` 将返回 `calculator<>` 对象。
 
-Now we can use calculator expressions as function objects to STL algorithms, as follows:
+Now we can use calculator expressions as function objects to STL algorithms, as follows:\n
+现在我们可以把计算器表达式作为函数对象用于STL算法了，如下：
 
     double data[] = {1., 2., 3., 4.};
 
     // Use the calculator DSEL to square each element ... WORKS! :-)
+    // 使用计算器DSEL将每个元素求平方 ... 可用！:-)
     std::transform( data, data + 4, data, _1 * _1 );
 
 [endsect]
 
 [/==========================================================]
-[section:inhibiting_overloads Controlling Operator Overloads]
+[section:inhibiting_overloads Controlling Operator Overloads 控制操作符重载]
 [/==========================================================]
 
 By default, Proto defines every possible operator overload for Protofied
-expressions. This makes it simple to bang together a DSEL. In some cases, however, the presence of Proto's promiscuous overloads can lead to confusion or worse. When that happens, you'll have to disable some of Proto's overloaded operators. That is done by defining the grammar for your domain and specifying it as the second parameter of the _domain_ template.
+expressions. This makes it simple to bang together a DSEL. In some cases, however, the presence of Proto's promiscuous overloads can lead to confusion or worse. When that happens, you'll have to disable some of Proto's overloaded operators. That is done by defining the grammar for your domain and specifying it as the second parameter of the _domain_ template.\n
+缺省情况下，Proto 为Proto化的表达式定义了每一个可能的操作符重载。这样可以简化 bang together a DSEL。但是，在某些情况下，
+Proto 的混杂重载可能导致混乱或更糟的结果。这时，你必须禁止 Proto 重载某些操作符。实现的方法是，
+为你的领域定义语法并将该语法指定为 _domain_ 模板的第二个参数。
 
-In the [link boost_proto.users_guide.getting_started.hello_calculator Hello Calculator] section, we saw an example of a Proto grammar, which is repeated here:
+In the [link boost_proto.users_guide.getting_started.hello_calculator Hello Calculator] section, we saw an example of a Proto grammar, which is repeated here:\n
+在 [link boost_proto.users_guide.getting_started.hello_calculator Hello Calculator] 一节中，我们已看过一个 Proto 语法的例子，重复如下：
 
     // Define the grammar of calculator expressions
+    // 定义计算器表达式的语法
     struct calculator_grammar
       : proto::or_<
             proto::plus< calculator_grammar, calculator_grammar >
@@ -561,61 +730,81 @@ In the [link boost_proto.users_guide.getting_started.hello_calculator Hello Calc
         >
     {};
 
-We'll have much more to say about grammars in subsequent sections, but for now, we'll just say that the `calculator_grammar` struct describes a subset of all expression types -- the subset that comprise valid calculator expressions. We would like to prohibit Proto from creating a calculator expression that does not conform to this grammar. We do that by changing the definition of the `calculator_domain` struct.
+We'll have much more to say about grammars in subsequent sections, but for now, we'll just say that the `calculator_grammar` struct describes a subset of all expression types -- the subset that comprise valid calculator expressions. We would like to prohibit Proto from creating a calculator expression that does not conform to this grammar. We do that by changing the definition of the `calculator_domain` struct.\n
+在后续章节中，我们将会讲述关于语法的更多内容，不过现在，我们只讲一下 `calculator_grammar` 结构，它描述了所有表达式类型的一个子集 -- 
+这个子集组成了有效的计算器表达式。我们要禁止 Proto 创建一个不符合该语法的计算器表达式。我们通过修改 `calculator_domain` 
+结构的定义来实现这一点。
 
 [def __calculator_grammar__ [*calculator_grammar]]
 
     // Define the calculator_domain. Expressions in the calculator
     // domain are wrapped in the calculator<> wrapper, and they must
     // conform to the calculator_grammar:
+    // 定义 calculator_domain。计算器领域中的表达式要被包入 calculator<> 包装器，
+    // 且必须符合 calculator_grammar：
     struct calculator_domain
       : proto::domain< proto::generator< calculator >, __calculator_grammar__  >
     {};
 
-The only new addition is `calculator_grammar` as the second template parameter to the _domain_ template. That has the effect of disabling any of Proto's operator overloads that would create an invalid calculator expression.
+The only new addition is `calculator_grammar` as the second template parameter to the _domain_ template. That has the effect of disabling any of Proto's operator overloads that would create an invalid calculator expression.\n
+新增的部分是把 `calculator_grammar` 作为第二个模板参数传给 _domain_ 模板。其结果是禁止任何会创建无效计算器表达式的 Proto 操作符重载。
 
-Another common use for this feature would be to disable Proto's unary `operator&` overload. It may be surprising for users of your DSEL that they cannot take the address of their expressions! You can very easily disable Proto's unary `operator&` overload for your domain with a very simple grammar, as below:
+Another common use for this feature would be to disable Proto's unary `operator&` overload. It may be surprising for users of your DSEL that they cannot take the address of their expressions! You can very easily disable Proto's unary `operator&` overload for your domain with a very simple grammar, as below:\n
+这一特性的另外一个常见用途是，禁止 Proto 的单参数 `operator&` 重载。可能会令你的DSEL用户意外的是，他们不能获得他们的表达式的地址！
+你可以用非常简单的语法很容易地为你的领域禁止掉 Proto 的单参数 `operator&` 重载，如下：
 
     // For expressions in my_domain, disable Proto's
     // unary address-of operator.
+    // 对于 my_domain 中的表达式，禁止 Proto 的单参数求址操作符。
     struct my_domain
       : proto::domain<
             proto::generator< my_wrapper >
             // A simple grammar that matches any expression that
             // is not a unary address-of expression.
+            // 一个简单的语法，匹配所有不是单参数求址表达式的表达式。
           , proto::not_< proto::address_of< _ > >
         >
     {};
 
-The type `proto::not_< proto::address_of< _ > >` is a very simple grammar that matches all expressions except unary address-of expressions. In the section describing Proto's intermediate form, we'll have much more to say about grammars.
+The type `proto::not_< proto::address_of< _ > >` is a very simple grammar that matches all expressions except unary address-of expressions. In the section describing Proto's intermediate form, we'll have much more to say about grammars.\n
+类型 `proto::not_< proto::address_of< _ > >` 是一个非常简单的语法，它匹配除了单参数求址表达式以外的所有表达式。
+在讲述 Proto 中间格式的一节中，我们将讲述关于语法的更多内容。
 
 [endsect]
 
 [endsect]
 
-[section:define_operators Adapting Existing Types to Proto]
+[section:define_operators Adapting Existing Types to Proto 将已有类型适配至Proto]
 
-The preceding discussions of defining Proto front ends have all made a big assumption: that you have the luxury of defining everything from scratch. What happens if you have existing types, say a matrix type and a vector type, that you would like to treat as if they were Proto terminals? Proto usually trades only in its own expression types, but with _DEFINE_OPERATORS_, it can accomodate your custom terminal types, too. 
+The preceding discussions of defining Proto front ends have all made a big assumption: that you have the luxury of defining everything from scratch. What happens if you have existing types, say a matrix type and a vector type, that you would like to treat as if they were Proto terminals? Proto usually trades only in its own expression types, but with _DEFINE_OPERATORS_, it can accomodate your custom terminal types, too. \n
+前面对于定义Proto前端的讨论，有一个很大的假定：你从零开始定义所有的东西。如果你已经有了一些类型，比如说某个矩阵或向量的类型，
+你想将它们视为Proto终结符，要怎么办呢？通常Proto只处理它自己的表达式类型，不过通过 _DEFINE_OPERATORS_, 就可以容纳你的定制类型。
 
-Let's say, for instance, that you have the following types and that you can't modify then to make them ["native] Proto terminal types.
+Let's say, for instance, that you have the following types and that you can't modify then to make them ["native] Proto terminal types.\n
+我们来看一下，例如你有以下类型且不能修改以令它们成为["原生]的Proto终结符类型。
 
     namespace math
     {
-        // A matrix type ...
+        // A matrix type ... 一个矩阵类型
         struct matrix { /*...*/ };
 
-        // A vector type ...
+        // A vector type ... 一个向量类型
         struct vector { /*...*/ };
     }
 
-You can non-intrusively make objects of these types Proto terminals by defining the proper operator overloads using _DEFINE_OPERATORS_. The basic procedure is as follows:
+You can non-intrusively make objects of these types Proto terminals by defining the proper operator overloads using _DEFINE_OPERATORS_. The basic procedure is as follows:\n
+通过用 _DEFINE_OPERATORS_ 定义正确的操作符重载，你可以非介入式地令这些类型的对象成为Proto终结符。基本的过程如下：
 
-# Define a trait that returns true for your types and false for all others.
+# Define a trait that returns true for your types and false for all others.\n
+  定义一个trait，对你的类型返回true而对其它类型返回false。
 # Reopen the namespace of your types and use _DEFINE_OPERATORS_ to define a set of 
   operator overloads, passing the name of the trait as the first macro parameter,
-  and the name of a Proto domain (e.g., _default_domain_) as the second.
+  and the name of a Proto domain (e.g., _default_domain_) as the second.\n
+  重新打开你的类型所在的名字空间，并用 _DEFINE_OPERATORS_ 来定义一组操作符重载，
+  传入这个trait的名字作为第一个宏参数，以及Proto域名(如 _default_domain_)作为第二个参数。
 
-The following code demonstrates how it works.
+The following code demonstrates how it works.\n
+以下代码示范了如何实现。
 
     namespace math
     {
@@ -625,12 +814,14 @@ The following code demonstrates how it works.
         {};
 
         // OK, "matrix" is a custom terminal type
+        // 好的，"matrix"是一个定制的终结符类型
         template<>
         struct is_terminal<matrix>
           : mpl::true_
         {};
 
         // OK, "vector" is a custom terminal type
+        // 好的，"vector"是一个定制的终结符类型
         template<>
         struct is_terminal<vector>
           : mpl::true_
@@ -639,44 +830,56 @@ The following code demonstrates how it works.
         // Define all the operator overloads to construct Proto
         // expression templates, treating "matrix" and "vector"
         // objects as if they were Proto terminals.
+        // 定义所有操作符重载为构造Proto表达式模板，将"matrix"和
+        // "vector"对象视为Proto终结符。
         BOOST_PROTO_DEFINE_OPERATORS(is_terminal, proto::default_domain)
     }
 
-The invocation of the _DEFINE_OPERATORS_ macro defines a complete set of operator overloads that treat `matrix` and `vector` objects as if they were Proto terminals. And since the operators are defined in the same namespace as the `matrix` and `vector` types, the operators will be found by argument-dependent lookup. With the code above, we can now construct expression templates with matrices and vectors, as shown below.
+The invocation of the _DEFINE_OPERATORS_ macro defines a complete set of operator overloads that treat `matrix` and `vector` objects as if they were Proto terminals. And since the operators are defined in the same namespace as the `matrix` and `vector` types, the operators will be found by argument-dependent lookup. With the code above, we can now construct expression templates with matrices and vectors, as shown below.\n
+_DEFINE_OPERATORS_ 宏的调用定义了一组完整的操作符重载，将 `matrix` 和 `vector` 对象视作为Proto终结符。而且由于这些操作符都是定义在与
+`matrix` 和 `vector` 类型同一个的名字空间，所以这些操作符可以被ADL所找到。通过以上代码，我们就可以用矩阵和向量来构建表达式模板了，
+如下所示。
 
     math::matrix m1;
     math::vector v1;
     proto::literal<int> i(0);
     
-    m1 * 1;  // custom terminal and literals are OK
-    m1 * i;  // custom terminal and Proto expressions are OK
-    m1 * v1; // two custom terminals are OK, too.
+    m1 * 1;  // custom terminal and literals are OK 定制的终结符和字面值，可以
+    m1 * i;  // custom terminal and Proto expressions are OK 定制的终结符和Proto表达式，可以
+    m1 * v1; // two custom terminals are OK, too. 两个定制的终结符，也可以
 
 [endsect]
 
 [/=======================================================================]
-[section:code_repetition Generating Repetitive Code with the Preprocessor]
+[section:code_repetition Generating Repetitive Code with the Preprocessor 用预处理器生成重复代码]
 [/=======================================================================]
 
-Sometimes as a DSEL designer, to make the lives of your users easy, you have to make your own life hard. Giving your users natural and flexible syntax often involves writing large numbers of repetitive function overloads. It can be enough to give you repetitive stress injury! Before you hurt yourself, check out the macros Proto provides for automating many repetitive code-generation chores.
+Sometimes as a DSEL designer, to make the lives of your users easy, you have to make your own life hard. Giving your users natural and flexible syntax often involves writing large numbers of repetitive function overloads. It can be enough to give you repetitive stress injury! Before you hurt yourself, check out the macros Proto provides for automating many repetitive code-generation chores.\n
+有时候，作为一个DSEL设计者，为了使你的用户更方便，你必须辛苦一点。为了给予用户自然而灵活的语法，通常需要编写大量重复的函数重载。
+这会给你足够的重复性压力伤害！在你伤害自己之前，看看Proto提供了哪些宏来自动完成重复代码的生成。
 
-Imagine that we are writing a lambda DSEL, and we would like to enable syntax for constructing temporary objects of any type using the following syntax:
+Imagine that we are writing a lambda DSEL, and we would like to enable syntax for constructing temporary objects of any type using the following syntax:\n
+想象我们正在编写一个lambda DSEL，我们希望能够用以下语法构建任意类型的临时对象：
 
     // A lambda expression that takes two arguments and
     // uses them to construct a temporary std::complex<>
+    // 一个带两个参数的lambda表达式，用它们来构建一个临时的 std::complex<>
     construct< std::complex<int> >( _1, _2 )
 
-For the sake of the discussion, imagine that we already have a function object template `construct_impl<>` that accepts arguments and constructs new objects from them. We would want the above lambda expression to be equivalent to the following:
+For the sake of the discussion, imagine that we already have a function object template `construct_impl<>` that accepts arguments and constructs new objects from them. We would want the above lambda expression to be equivalent to the following:\n
+为便于讨论，假设我们已经有一个函数对象模板 `construct_impl<>`，它接受多个参数并从中构建新对象。我们希望以上lambda表达式等同于：
 
     // The above lambda expression should be roughly equivalent
     // to the following:
+    // 以上lambda表达式大致相当于：
     proto::make_expr<proto::tag::function>(
-        construct_impl<std::complex<int> >() // The function to invoke lazily
-      , boost::ref(_1)                       // The first argument to the function
-      , boost::ref(_2)                       // The second argument to the function
+        construct_impl<std::complex<int> >() // The function to invoke lazily 延迟调用的函数
+      , boost::ref(_1)                       // The first argument to the function 传给函数的第一个参数
+      , boost::ref(_2)                       // The second argument to the function 传给函数的第二个参数
     );
 
-We can define our `construct()` function template as follows:
+We can define our `construct()` function template as follows:\n
+我们可以如下定义我们自己的 `construct()` 函数模板：
 
     template<typename T, typename A0, typename A1>
     typename proto::result_of::make_expr<
@@ -694,9 +897,12 @@ We can define our `construct()` function template as follows:
         );
     }
 
-This works for two arguments, but we would like it to work for any number of arguments, up to (_MAX_ARITY_ - 1). (Why "- 1"? Because one child is taken up by the `construct_impl<T>()` terminal leaving room for only (_MAX_ARITY_ - 1) other children.)
+This works for two arguments, but we would like it to work for any number of arguments, up to (_MAX_ARITY_ - 1). (Why "- 1"? Because one child is taken up by the `construct_impl<T>()` terminal leaving room for only (_MAX_ARITY_ - 1) other children.)\n
+它用于两个参数的情况，但我们也希望它可以用于最多 (_MAX_ARITY_ - 1) 个参数的情况。(为什么要 "- 1"？因为 `construct_impl<T>()` 
+已占用了一个子节点，只剩下 (_MAX_ARITY_ - 1) 个空间给其它子节点)。
 
-For cases like this, Proto provides the _REPEAT_ and _REPEAT_FROM_TO_ macros. To use it, we turn the function definition above into a macro as follows:
+For cases like this, Proto provides the _REPEAT_ and _REPEAT_FROM_TO_ macros. To use it, we turn the function definition above into a macro as follows:\n
+对于这种情况，Proto提供了 _REPEAT_ 和 _REPEAT_FROM_TO_ 宏。要使用它们，我们将以上函数定义改为如下的宏：
 
     #define M0(N, typename_A, A_const_ref, A_const_ref_a, ref_a)  \
     template<typename T, typename_A(N)>                           \
@@ -713,22 +919,30 @@ For cases like this, Proto provides the _REPEAT_ and _REPEAT_FROM_TO_ macros. To
         );                                                        \
     }
 
-Notice that we turned the function into a macro that takes 5 arguments. The first is the current iteration number. The rest are the names of other macros that generate different sequences. For instance, Proto passes as the second parameter the name of a macro that will expand to `typename A0, typename A1, ...`.
+Notice that we turned the function into a macro that takes 5 arguments. The first is the current iteration number. The rest are the names of other macros that generate different sequences. For instance, Proto passes as the second parameter the name of a macro that will expand to `typename A0, typename A1, ...`.\n
+注意，我们将函数改为了一个有5个参数的宏。第一个参数是当前的迭代数。剩余的参数是生成不同序列的其它宏的名字。例如，
+Proto作为第二个参数所传入的宏名将扩展为 `typename A0, typename A1, ...`。
 
-Now that we have turned our function into a macro, we can pass the macro to _REPEAT_FROM_TO_. Proto will invoke it iteratively, generating all the function overloads for us.
+Now that we have turned our function into a macro, we can pass the macro to _REPEAT_FROM_TO_. Proto will invoke it iteratively, generating all the function overloads for us.\n
+现在我们已经将我们的函数改为了宏，我们可以将这个宏传给 _REPEAT_FROM_TO_。Proto将反复调用它，为我们生成所有的函数重载。
 
     // Generate overloads of construct() that accept from
     // 1 to BOOST_PROTO_MAX_ARITY-1 arguments:
+    // 生成接受1至BOOST_PROTO_MAX_ARITY-1个参数的 construct() 重载：
     BOOST_PROTO_REPEAT_FROM_TO(1, BOOST_PROTO_MAX_ARITY, M0)
     #undef M0
 
 [/============================]
-[heading Non-Default Sequences]
+[heading Non-Default Sequences 非缺省序列]
 [/============================]
 
-As mentioned above, Proto passes as the last 4 arguments to your macro the names of other macros that generate various sequences. The macros _REPEAT_ and _REPEAT_FROM_TO_ select defaults for these parameters. If the defaults do not meet your needs, you can use _REPEAT_EX_ and _REPEAT_FROM_TO_EX_ and pass different macros that generate different sequences. Proto defines a number of such macros for use as parameters to _REPEAT_EX_ and _REPEAT_FROM_TO_EX_. Check the reference section for [headerref boost/proto/repeat.hpp] for all the details.
+As mentioned above, Proto passes as the last 4 arguments to your macro the names of other macros that generate various sequences. The macros _REPEAT_ and _REPEAT_FROM_TO_ select defaults for these parameters. If the defaults do not meet your needs, you can use _REPEAT_EX_ and _REPEAT_FROM_TO_EX_ and pass different macros that generate different sequences. Proto defines a number of such macros for use as parameters to _REPEAT_EX_ and _REPEAT_FROM_TO_EX_. Check the reference section for [headerref boost/proto/repeat.hpp] for all the details.\n
+如上所述，Proto传给你的宏的后4个参数为生成不同序列的其它宏名。宏 _REPEAT_ 和 _REPEAT_FROM_TO_ 为这些参数选择了缺省值。
+如果缺省值不是你想要的，你可以用 _REPEAT_EX_ 和 _REPEAT_FROM_TO_EX_ 传入不同的宏以生成不同的序列。Proto定义了大量这样的宏，
+以用作 _REPEAT_EX_ 和 _REPEAT_FROM_TO_EX_ 的参数。相关细节请查阅 [headerref boost/proto/repeat.hpp] 的参考章节。
 
-Also, check out _LOCAL_ITERATE_. It works similarly to _REPEAT_ and friends, but it can be easier to use when you want to change one macro argument and accept defaults for the others.
+Also, check out _LOCAL_ITERATE_. It works similarly to _REPEAT_ and friends, but it can be easier to use when you want to change one macro argument and accept defaults for the others.\n
+另外，请查看 _LOCAL_ITERATE_。它类似于 _REPEAT_，不过当你想改变一个宏参数而接受其它缺省值时，它更容易用。
 
 [endsect]
 

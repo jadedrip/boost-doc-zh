@@ -6,29 +6,36 @@
     %entities;
 ]>
 <section id="program_options.overview">
-  <title>Library Overview</title>
+  <title>Library Overview 总述</title>
 
   <para>In the tutorial section, we saw several examples of library usage.
     Here we will describe the overall library design including the primary
-    components and their function.
+    components and their function.<sbr/>
+    在上一节“指南”中，我们看到了几个用例。这一节我们将介绍整个库的设计，
+    包括主要的组件以及它们的作用。
   </para>
 
-  <para>The library has three main components:
+  <para>The library has three main components:<sbr/>
+  本库有三个主要组件：
     <itemizedlist>
       <listitem>
         <para>The options description component, which describes the allowed options
-          and what to do with the values of the options.
+          and what to do with the values of the options.<sbr/>
+          选项描述组件，描述允许的选项及这些选项的值。
         </para>
       </listitem>
       <listitem>
         <para>The parsers component, which uses this information to find option names
-          and values in the input sources and return them. 
+          and values in the input sources and return them. <sbr/>
+          分析器组件，用于从数据输入源中查找选项名字及值，并返回它们。
         </para>
       </listitem>
       <listitem>
         <para>The storage component, which provides the
           interface to access the value of an option. It also converts the string
-          representation of values that parsers return into desired C++ types.
+          representation of values that parsers return into desired C++ types.<sbr/>
+          存储器组件，提供读取选项值的接口，同时负责将分析器所返回的、
+          以字符串方式表示的值转换为需要的C++类型。
         </para>
       </listitem>
     </itemizedlist>
@@ -37,12 +44,17 @@
   <para>To be a little more concrete, the <code>options_description</code>
   class is from the options description component, the
   <code>parse_command_line</code> function is from the parsers component, and the
-  <code>variables_map</code> class is from the storage component. </para>
+  <code>variables_map</code> class is from the storage component. <sbr/>
+  说得具体些，<code>options_description</code> 类即来自于选项描述组件，
+  <code>parse_command_line</code> 函数则来自于分析器组件，而 <code>variables_map</code> 
+  类则来自于存储器组件。</para>
 
   <para>In the tutorial we've learned how those components can be used by the
     <code>main</code> function to parse the command line and config
     file. Before going into the details of each component, a few notes about
-    the world outside of <code>main</code>.
+    the world outside of <code>main</code>.<sbr/>
+    在上一节，我们已经学习了如何在 <code>main</code> 函数中使用这些组件来分析命令行以及配置文件。
+    在进入到这些组件的细节之前，还要注意 <code>main</code> 以外的一些东西。
   </para>
 
   <para>
@@ -54,7 +66,12 @@
     individual program modules to describe their options and pass them to the
     main module, which will merge all options. Of course, this is only
     important when the number of options is large and declaring them in one
-    place becomes troublesome.
+    place becomes troublesome.<sbr/>
+    在 main 以外，存储器组件是最重要的。它提供了一个类，用于保存所有选项值，
+    并且这个类可以自由地从你的程序传递到任何需要访问选项的模块。
+    而其它组件只能在进行分析处理的地方使用。但是，对于独立的程序模块来说，
+    描述它们自己的选项并传递给主模块也是很有意义的。当然，
+    这种做法只有在选项数量太多导致在一个地方声明它们很麻烦时才会显得重要。
   </para>
 
 <!--
@@ -83,7 +100,7 @@
 -->
 
   <section>
-    <title>Options Description Component</title>
+    <title>Options Description Component 选项描述组件</title>
 
     <para>The options description component has three main classes:
       &option_description;, &value_semantic; and &options_description;. The
@@ -91,14 +108,20 @@
       class contains the option's name, description and a pointer to &value_semantic;,
       which, in turn, knows the type of the option's value and can parse the value,
       apply the default value, and so on. The &options_description; class is a
-      container for instances of &option_description;.
+      container for instances of &option_description;.<sbr/>
+      选项描述组件有三个主要的类：&option_description;, &value_semantic; 和 &options_description;。
+      前两个一起用于描述单个选项。&option_description; 类包含选项的名字、描述以及一个指向 &value_semantic; 的指针，
+      后者知道选项值的类型且可以分析该值，或赋予缺省值。&options_description; 类则是包含多个 &option_description; 实例的容器。
     </para>
 
     <para>For almost every library, those classes could be created in a
       conventional way: that is, you'd create new options using constructors and
       then call the <code>add</code> method of &options_description;. However,
       that's overly verbose for declaring 20 or 30 options. This concern led
-      to creation of the syntax that you've already seen:
+      to creation of the syntax that you've already seen:<sbr/>
+      几乎每个库中的类都是以一种常规的方法来创建的：即使用构造函数来创建一个新的选项，
+      然后调用 &options_description; 的 <code>add</code> 方法。但是，如果有20或30个选项要声明，
+      这就显得很冗长了。这导致了你已经见过的另一种创建语法：
 <programlisting>
 options_description desc;
 desc.add_options()
@@ -116,7 +139,12 @@ desc.add_options()
       essentially emulates named parameters of the constructor.) Calls to
       <code>operator()</code> on the object returned by <code>add_options</code>
       forward arguments to the constructor of the <code>option_description</code>
-      class and add the new instance. 
+      class and add the new instance. <sbr/>
+      对 <code>value</code> 函数的调用创建了一个派生自 <code>value_semantic</code> 类的子类：
+      <code>typed_value</code> 的实例。这个类包含了分析一个特定类型的值的代码，
+      以及一组可供用户调用以指定额外信息的方法(实质上它模拟了构造函数的命名参数)。
+      在这样一个对象之上调用其 <code>operator()</code>，将通过 <code>add_options</code> 
+      前转参数至 <code>option_description</code> 类的构造函数，并加入新的实例。
     </para>
 
     <para>
@@ -125,7 +153,10 @@ desc.add_options()
       function, and user can write his own function which will return
       other subclasses of <code>value_semantic</code> with 
       different behaviour. For the remainder of this section, we'll talk only
-      about the <code>value</code> function.
+      about the <code>value</code> function.<sbr/>
+      请注意，除了 <code>value</code>, 库还提供了 <code>bool_switch</code> 函数, 
+      用户可以编写自己的函数来返回 <code>value_semantic</code> 的其它子类，
+      以实现不同的行为。在本节的剩余部分，我们只讨论 <code>value</code> 函数。
     </para>
 
     <para>The information about an option is divided into syntactic and
@@ -135,47 +166,60 @@ desc.add_options()
       where value is just a vector of strings
       (<code>std::vector&lt;std::string&gt;</code>). The semantic layer
       is responsible for converting the value of the option into more usable C++
-      types. 
+      types. <sbr/>
+      一个选项的信息可分为语法和语义两部分。语法信息包含了选项的名字和用于指定其值的记号数量。
+      分析器使用该信息将记号组合为(名字，值)对，其中的值是一个字符串向量 (<code>std::vector&lt;std::string&gt;</code>). 
+      语义层面则负责将选项的值转换为更可用的C++类型。
     </para>
 
     <para>This separation is an important part of library design. The parsers
       use only the syntactic layer, which takes away some of the freedom to
       use overly complex structures. For example, it's not easy to parse
-      syntax like: <screen>calc --expression=1 + 2/3</screen> because it's not
-      possible to parse <screen>1 + 2/3</screen> without knowing that it's a C
+      syntax like: <sbr/>
+      这种分离是库设计的重要部分。分析器只用于语法层面，这样就没有了使用过于复杂的结构的自由。
+      例如，很难分析以下语法：<screen>calc --expression=1 + 2/3</screen> because it's not
+      possible to parse <sbr/>
+      因为无法在不知道它是一个C表达式的前提下分析<screen>1 + 2/3</screen> without knowing that it's a C
       expression. With a little help from the user the task becomes trivial,
-      and the syntax clear: <screen>calc --expression="1 + 2/3"</screen>
+      and the syntax clear: <sbr/>
+      在得到用户的一点帮助后任务会变得容易，语法也更清晰：<screen>calc --expression="1 + 2/3"</screen>
     </para>
 
     <section>
-      <title>Syntactic Information</title>
+      <title>Syntactic Information 语法信息</title>
       <para>The syntactic information is provided by the
         <classname>boost::program_options::options_description</classname> class
         and some methods of the
         <classname>boost::program_options::value_semantic</classname> class
-        and includes:        
+        and includes:        <sbr/>
+        语法信息由 <classname>boost::program_options::options_description</classname> 类和 
+        <classname>boost::program_options::value_semantic</classname> 类的某些方法提供，包括：
         <itemizedlist>
           <listitem>
             <para>
               name of the option, used to identify the option inside the
-              program,
+              program,<sbr/>
+              选项名，用于在程序中标识选项，
             </para>
           </listitem>
           <listitem>
             <para>
-              description of the option, which can be presented to the user,
+              description of the option, which can be presented to the user,<sbr/>
+              选项的描述，用于显示给用户，
             </para>
           </listitem>
           <listitem>
             <para>
               the allowed number of source tokens that comprise options's
-              value, which is used during parsing.
+              value, which is used during parsing.<sbr/>
+              允许的组成选项值的源记号数量，在分析时使用。
             </para>
           </listitem>
         </itemizedlist>
       </para>
 
-      <para>Consider the following example:
+      <para>Consider the following example:<sbr/>
+      考虑以下例子：
       <programlisting>
 options_description desc;
 desc.add_options()
@@ -190,19 +234,25 @@ desc.add_options()
       For the first option, the user must specify a value, using a single
       token. For the third option, the user may either provide a single token
       for the value, or no token at all. For the last option, the value can
-      span several tokens. For example, the following command line is OK:
+      span several tokens. For example, the following command line is OK:<sbr/>
+      在第一个参数中，我们只指定了选项的名字和描述。因此在被分析的源中不能指定选项值。
+      对于第二个选项，用户必须用单个记号指定一个选项值。对于第三个选项，
+      用户可以提供单个记号表示选项值，也可以没有记号。最后一个选项，选项值可以跨越多个记号。
+      例如，如下命令行是可用的：
       <screen>
           test --help --compression 10 --verbose --email beadle@mars beadle2@mars
       </screen>      
       </para>
 
       <section>
-        <title>Description formatting</title>
+        <title>Description formatting 描述格式化</title>
 
         <para>
           Sometimes the description can get rather long, for example, when
           several option's values need separate documentation. Below we
-          describe some simple formatting mechanisms you can use.
+          describe some simple formatting mechanisms you can use.<sbr/>
+          有时选项的描述会很长，例如有几个选项值需要分开描述时。
+          下面我们说明一下你可以使用的一些简单的格式化机制。
         </para>
 
         <para>The description string has one or more paragraphs, separated by
@@ -210,11 +260,14 @@ desc.add_options()
         will compute the indentation for options's description. Each of the
         paragraph is output as a separate line with that intentation. If 
         a paragraph does not fit on one line it is spanned over multiple
-        lines (which will have the same indentation).
+        lines (which will have the same indentation).<sbr/>
+        描述字符串有一个或多个段，以换行符('\n')分隔。在输出一个选项时，程序库将计算选项描述的缩入量。
+        每一段被作为带缩入的单独一行输出。如果一段字符不能在一行内输出，则被分割为多行(各行有相同的缩入量)。 
         </para>
 
         <para>You may specify additional indent for the first specified by
-        inserting spaces at the beginning of a paragraph. For example: 
+        inserting spaces at the beginning of a paragraph. For example: <sbr/>
+        你可以在段的开始插入空格，这样在该段的第一行就会有额外的缩入。例如：
         <programlisting>
 options.add_options()
     ("help", "   A long help msg a long help msg a long help msg a long help
@@ -222,7 +275,8 @@ msg a long help msg a long help msg a long help msg a long help msg ")
     ;  
         </programlisting>
         will specify a four-space indent for the first line. The output will
-        look like:
+        look like:<sbr/>
+        在第一行指定了四个空格的缩入。输出如下：
         <screen>
   --help                    A long help msg a long
                         help msg a long help msg
@@ -237,7 +291,8 @@ msg a long help msg a long help msg a long help msg a long help msg ")
         <para>For the case where line is wrapped, you can want an additional
         indent for wrapped text. This can be done by
         inserting a tabulator character ('\t') at the desired position. For
-        example: 
+        example: <sbr/>
+        在自动换行时，你可能想要额外的缩入。可以通过在指定地方插入制表符('\t')达到效果。例如：
         <programlisting>
 options.add_options()
       ("well_formated", "As you can see this is a very well formatted
@@ -251,7 +306,8 @@ bla bla bla bla bla bla bla bla bla bla bla\n\n"
                         "    This paragraph has a first line indent only,
 bla bla bla bla bla bla bla bla bla bla bla bla bla bla bla");          
         </programlisting>
-        will produce:
+        will produce:<sbr/>
+        将输出：
         <screen>
   --well_formated       As you can see this is a
                         very well formatted
@@ -283,7 +339,9 @@ bla bla bla bla bla bla bla bla bla bla bla bla bla bla bla");
         paragraph is allowed, otherwisee an exception of type
         program_options::error is thrown. Finally, the tabulator is ignored if
         it's is not on the first line of the paragraph or is on the last
-        possible position of the first line.
+        possible position of the first line.<sbr/>
+        制表符在输出前会被删除。每段只允许一个制表符，否则将抛出 program_options::error 异常。
+        最后，如果制表符不是在段中的第一行或者第一行最后的可能位置上，则将被忽略。
         </para>
 
       </section>
@@ -291,11 +349,12 @@ bla bla bla bla bla bla bla bla bla bla bla bla bla bla bla");
     </section>
       
     <section>
-      <title>Semantic Information</title>
+      <title>Semantic Information 语义信息</title>
       
       <para>The semantic information is completely provided by the 
         <classname>boost::program_options::value_semantic</classname> class. For
-        example:
+        example:<sbr/>
+        语义信息完全由 <classname>boost::program_options::value_semantic</classname> 类提供。例如：
 <programlisting>
 options_description desc;
 desc.add_options()
@@ -308,28 +367,35 @@ desc.add_options()
         that the second option can appear several times and all instances should
         be merged, and that after parsing is done, the library will  call
         function <code>&amp;your_function</code>, passing the value of the
-        "email" option as argument.      
+        "email" option as argument.      <sbr/>
+        这个声明为第一个选项指定了缺省值10，而第二个选项则可以多次出现且所有实例会被合并，
+        然后进行分析，程序库会调用函数 <code>&amp;your_function</code>, 把 "email" 选项的值作为参数传入。
       </para>
     </section>
     
     <section>
-      <title>Positional Options</title>
+      <title>Positional Options 位置选项</title>
       
       <para>Our definition of option as (name, value) pairs is simple and
         useful, but in one special case of the command line, there's a
         problem. A command line can include a <firstterm>positional option</firstterm>,
-        which does not specify any name at all, for example:
+        which does not specify any name at all, for example:<sbr/>
+        我们把选项定义为 (name, value) 对，这很简单也有用，但是在命令行的一种特列情形下，会有问题。
+        命令行可以包含 <firstterm>位置选项</firstterm>, 该选项不需指定名字，例如：
         <screen>
           archiver --compression=9 /etc/passwd
         </screen>
-        Here, the "/etc/passwd" element does not have any option name.
+        Here, the "/etc/passwd" element does not have any option name.<sbr/>
+        在此，"/etc/passwd" 并没有选项名。
       </para>
       
       <para>One solution is to ask the user to extract positional options
         himself and process them as he likes. However, there's a nicer approach
         -- provide a method to automatically assign the names for positional
         options, so that the above command line can be interpreted the same way
-        as:
+        as:<sbr/>
+        一种解决方案是让用户自己取出位置选项并处理。但是我们有更好的办法 -- 
+        提供一个方法自动给位置选项赋上一个名字，即上述命令行可以解释为：
         <screen>
           archiver --compression=9 --input-file=/etc/passwd
         </screen>
@@ -337,27 +403,34 @@ desc.add_options()
       
       <para>The &positional_options_desc; class allows the command line
         parser to assign the names. The class specifies how many positional options
-        are allowed, and for each allowed option, specifies the name. For example:
+        are allowed, and for each allowed option, specifies the name. For example:<sbr/>
+        &positional_options_desc; 类允许命令行分析器自动赋上这个名字。
+        该类指定了可以有多少个位置选项，以及对每个选项指定名字。例如：
 <programlisting>
 positional_options_description pd; pd.add("input-file", 1);
 </programlisting> specifies that for exactly one, first, positional
-        option the name will be "input-file".
+        option the name will be "input-file".<sbr/>
+        指定只有一个位置选项，名字为 "input-file". 
       </para>
       
       <para>It's possible to specify that a number, or even all positional options, be
-        given the same name.
+        given the same name.<sbr/>
+        可以指定一定数量的，或者所有的位置选项给予相同名字。
 <programlisting>
 positional_options_description pd;
 pd.add("output-file", 2).add("input-file", -1);
 </programlisting>
         In the above example, the first two positional options will be associated
-        with name "output-file", and any others with the name "input-file".
+        with name "output-file", and any others with the name "input-file".<sbr/>
+        上例中，头两个位置选项与名字 "output-file" 关联，其余则与名字 "input-file" 关联。
       </para>
 
     <warning>
       <para>The &positional_options_desc; class only specifies translation from
       position to name, and the option name should still be registered with
-      an instance of the &options_description; class.</para>
+      an instance of the &options_description; class.<sbr/>
+      &positional_options_desc; 类只是指定了从位置到名字的翻译，
+      该选项名还需要通过某个 &options_description; 实例来登记。</para>
     </warning>
 
       
@@ -368,7 +441,7 @@ pd.add("output-file", 2).add("input-file", -1);
   </section>
 
   <section>
-    <title>Parsers Component</title>
+    <title>Parsers Component 分析器组件</title>
 
     <para>The parsers component splits input sources into (name, value) pairs.
       Each parser looks for possible options and consults the options
@@ -381,7 +454,13 @@ pd.add("output-file", 2).add("input-file", -1);
       the value cannot be specified by the user, but the presence of the
       option implies some value (for example, <code>true</code>). So, the
       parser checks that the value is specified when needed and not specified
-      when not needed, and returns new (name, value) pair.
+      when not needed, and returns new (name, value) pair.<sbr/>
+      分析器组件将输入源分解为 (name, value) 对。每个分析器查找可能的选项，
+      参考选项描述以确定选项是否可知及如何确定它的值。在最简单的情况下，
+      选项名是显式给出的，这允许程序库确定选项是否可知的。如果是可知的，
+      则 value_semantic 实例决定如何得到它的值。(如果不是可知的，则抛出异常)。
+      一般的情况是，用户显式指定了该值，或者用户没有指定值，但该选项的存在暗示了某个值
+      (如 <code>true</code>)。因此，分析器按需要检查选项值并返回新的 (name, value) 对。
     </para>
 
     <para>
@@ -390,20 +469,27 @@ pd.add("output-file", 2).add("input-file", -1);
       The results of parsing are returned as an instance of the &parsed_options;
       class. Typically, that object is passed directly to the storage
       component. However, it also can be used directly, or undergo some additional
-      processing. 
+      processing. <sbr/>
+      调用分析器时，你要调用一个函数，传入选项描述及命令行或配置文件或其它东西。
+      分析的结果被作为 parsed_options 类的一个实例返回。典型地，这个对象被直接传递给存储器组件。
+      但是，也可以直接使用它，或者执行另外的处理。
     </para>
 
     <para>
       There are three exceptions to the above model -- all related to
       traditional usage of the command line. While they require some support
       from the options description component, the additional complexity is
-      tolerable.
+      tolerable.<sbr/>
+      以上模型有三个例外 -- 都与命令行的传统用法相关。它们需要选项描述组件的支持，
+      增加的复杂度是可接受的。
       <itemizedlist>
         <listitem>
           <para>The name specified on the command line may be
             different from the option name -- it's common to provide a "short option
             name" alias to a longer name. It's also common to allow an abbreviated name
-            to be specified on the command line.
+            to be specified on the command line.<sbr/>
+            在命令行中指定的名字可能与选项名不同 -- 通常会为一个较长的名字提供一个 "短选项名"。
+            同样常见的是在命令行中使用缩写名。
           </para>
         </listitem>
         <listitem>
@@ -411,14 +497,18 @@ pd.add("output-file", 2).add("input-file", -1);
           tokens. For example, an option "--email-recipient" may be followed
           by several emails, each as a separate command line token. This
           behaviour is supported, though it can lead to parsing ambiguities
-          and is not enabled by default.
+          and is not enabled by default.<sbr/>
+          有时候需要用多个记号来指定选项值。例如，选项 "--email-recipient" 可能会后跟多个 emails,
+          每个都是一个单独的命令行记号。这种行为是被支持的，但是它可能导致分析歧义，缺省是不激活的。
           </para>
         </listitem>
         <listitem>
           <para>The command line may contain positional options -- elements
             which don't have any name. The command line parser provides a
             mechanism to guess names for such options, as we've seen in the
-            tutorial.
+            tutorial.<sbr/>
+            命令行可能包含位置选项 -- 即没有名字的选项。
+            命令行分析器提供了一种机制来猜测这些选项的名字，正如我们在指南中看到的那样。
           </para>
         </listitem>
       </itemizedlist>
@@ -428,26 +518,31 @@ pd.add("output-file", 2).add("input-file", -1);
 
 
   <section>
-    <title>Storage Component</title>
+    <title>Storage Component 存储器组件</title>
 
-    <para>The storage component is responsible for:
+    <para>The storage component is responsible for:<sbr/>
+    存储器组件负责：
       <itemizedlist>
         <listitem>
           <para>Storing the final values of an option into a special class and in
-            regular variables</para>
+            regular variables<sbr/>
+            将选项的最终值保存在一个特定类或普通变量中</para>
         </listitem>
         <listitem>
-          <para>Handling priorities among different sources.</para>
+          <para>Handling priorities among different sources.<sbr/>
+          处理不同源的优先级</para>
         </listitem>
 
         <listitem>
           <para>Calling user-specified <code>notify</code> functions with the final
-         values of options.</para>
+         values of options.<sbr/>
+         以选项的最终值调用用户指定的 <code>notify</code> 函数</para>
         </listitem>
       </itemizedlist>
     </para>
 
-    <para>Let's consider an example:
+    <para>Let's consider an example:<sbr/>
+    我们来看看以下例子：
 <programlisting>
 variables_map vm;
 store(parse_command_line(argc, argv, desc), vm);
@@ -458,57 +553,71 @@ notify(vm);
       values. The two calls to the <code>store</code> function add values
       found on the command line and in the config file. Finally the call to
       the <code>notify</code> function runs the user-specified notify
-      functions and stores the values into regular variables, if needed.
+      functions and stores the values into regular variables, if needed.<sbr/>
+      <code>variables_map</code> 类用于保存选项值。对 <code>store</code> 函数的两次调用将命令行和配置文件中找到的选项值相加。
+      最后一个对 <code>notify</code> 函数的调用则运行用户指定的通知函数，按照需要将选项值保存到普通变量中。
     </para>
 
     <para>The priority is handled in a simple way: the <code>store</code>
       function will not change the value of an option if it's already
       assigned. In this case, if the command line specifies the value for an
-      option, any value in the config file is ignored.
+      option, any value in the config file is ignored.<sbr/>
+      优先级的处理很简单：<code>store</code> 函数不会改变已赋值的选项的值。
+      在以上例子，对于在命令行有指定值的选项，将在配置文件中忽略。
     </para>
 
     <warning>
       <para>Don't forget to call the <code>notify</code> function after you've
-      stored all parsed values.</para>
+      stored all parsed values.<sbr/>
+      在保存了所有分析值后，不要忘记调用 <code>notify</code> 函数。
+</para>
     </warning>
 
   </section>
 
   <section>
-    <title>Specific parsers</title>
+    <title>Specific parsers 特定分析器</title>
 
     <section>
-      <title>Configuration file parser</title>
+      <title>Configuration file parser 配置文件分析器</title>
 
       <para>The &parse_config_file; function implements parsing
       of simple INI-like configuration files. Configuration file
-      syntax is line based:
+      syntax is line based:<sbr/>
+      &parse_config_file; 函数实现了简单的类INI配置文件的分析。配置文件的语法是以基于行的：
       </para>
       <itemizedlist>
-        <listitem><para>A line in the form:</para>
+        <listitem><para>A line in the form: <sbr/>
+        形如这样的行：</para>
         <screen>
 <replaceable>name</replaceable>=<replaceable>value</replaceable>
         </screen>
-        <para>gives a value to an option.</para>
+        <para>gives a value to an option.<sbr/>
+        将一个值赋于一个选项。</para>
         </listitem>
-        <listitem><para>A line in the form:</para>
+        <listitem><para>A line in the form:<sbr/>
+        形如这样的行：</para>
         <screen>
 [<replaceable>section name</replaceable>]
         </screen>
-        <para>introduces a new section in the configuration file.</para>
+        <para>introduces a new section in the configuration file.<sbr/>
+        在配置文件中引入一个新的节。</para>
         </listitem>
         <listitem><para>The <literal>#</literal> character introduces a
-        comment that spans until the end of the line.</para>
+        comment that spans until the end of the line.<sbr/>
+        字符 <literal>#</literal> 引入一段注释，直至行末。</para>
         </listitem>
       </itemizedlist>
 
       <para>The option names are relative to the section names, so
-      the following configuration file part:</para>
+      the following configuration file part:<sbr/>
+      选项名与节名相关，所以以下配置文件部分：</para>
       <screen>
 [gui.accessibility]
 visual_bell=yes
       </screen>
-      <para>is equivalent to</para>
+      <para>is equivalent to<sbr/>
+      等同于</para>
       <screen>
 gui.accessibility.visual_bell=yes
       </screen>
@@ -516,7 +625,7 @@ gui.accessibility.visual_bell=yes
     </section>
 
     <section>
-      <title>Environment variables parser</title>
+      <title>Environment variables parser 环境变量</title>
 
       <para><firstterm>Environment variables</firstterm> are string variables
       which are available to all programs via the <code>getenv</code> function
@@ -528,7 +637,12 @@ gui.accessibility.visual_bell=yes
       dialog, and on Unix &#x2014;, the <filename>/etc/profile</filename>,
       <filename>~/.profile</filename> and <filename>~/.bash_profile</filename>
       files. Because environment variables can be set for the entire system,
-      they are particularly suitable for options which apply to all programs.
+      they are particularly suitable for options which apply to all programs.<sbr/>
+      <firstterm>环境变量</firstterm> 是一种字符串变量，它可以在所有程序中通过 C 运行时库中的 <code>getenv</code> 函数取得。
+      操作系统允许为给定用户设置初始值，也可以在命令行上修改该值。例如，在 Windows 上你可以用 <filename>autoexec.bat</filename> 
+      文件或(在较新版本中) <filename>Control Panel/System/Advanced/Environment Variables</filename> 对话框，
+      而在 Unix 上则是 <filename>/etc/profile</filename>, <filename>~/.profile</filename> 和 
+      <filename>~/.bash_profile</filename> 文件。因为环境变量可以对整个系统设置，它们特别适用于对所有程序有效的选项。
       </para>
 
       <para>The environment variables can be parsed with the
@@ -537,7 +651,10 @@ gui.accessibility.visual_bell=yes
       instance, and the second specifies what variables must be processed, and
       what option names must correspond to it. To describe the second
       parameter we need to consider naming conventions for environment
-      variables.</para>
+      variables.<sbr/>
+      环境变量可通过 &parse_environment; 函数来分析。该函数有几个重载版本。
+      第一个参数都是一个 &options_description; 实例，而第二个参数则指定哪个要处理以及对应于哪个选项名。
+      描述第二个参数时我们需要考虑环境变量的命名习惯。</para>
       
       <para>If you have an option that should be specified via environment
       variable, you need make up the variable's name. To avoid name clashes,
@@ -551,7 +668,13 @@ gui.accessibility.visual_bell=yes
       Say, if you pass <literal>BOOST_</literal> as the prefix, and there are
       two variables, <envar>CVSROOT</envar> and <envar>BOOST_PROXY</envar>, the
       first variable will be ignored, and the second one will be converted to
-      option <literal>proxy</literal>. 
+      option <literal>proxy</literal>. <sbr/>
+      如果你有一个选项是由环境变量指定的，你需要起一个变量名。为避免名字冲突，
+      我们建议你为环境变量加一个足够独特的前缀。另外，选项名通常用小写，而环境变量通常用大写。
+      因此，对于选项名 <literal>proxy</literal>，对应的环境变量可以叫 <envar>BOOST_PROXY</envar>. 
+      在分析时，我们需要执行相反方向的名字转换。这通过将选定的前缀作为第二个参数传递到 &parse_environment; 函数来完成。
+      也就是说，如果你将 <literal>BOOST_</literal> 作为前缀传递，且有两个环境变量, <envar>CVSROOT</envar> 
+      和 <envar>BOOST_PROXY</envar>, 则第一个变量将被略过，而第二个会转换为选项 <literal>proxy</literal>.
       </para>
       
       <para>The above logic is sufficient in many cases, but it is also
@@ -559,17 +682,21 @@ gui.accessibility.visual_bell=yes
       function, any function taking a <code>std::string</code> and returning
       <code>std::string</code>. That function will be called for each
       environment variable and should return either the name of the option, or
-      empty string if the variable should be ignored.
+      empty string if the variable should be ignored.<sbr/>
+      以上逻辑对于多数情况已经足够，但是也可以将一个接受 <code>std::string</code> 
+      且返回 <code>std::string</code> 的函数作为第二参数传递给 parse_environment 函数。
+      对于每个环境变量，传入的函数将被调用以返回对应的选项名，或者在要忽略变量时返回空串。
       </para>
             
     </section>
   </section>
 
   <section>
-    <title>Annotated List of Symbols</title>
+    <title>Annotated List of Symbols 符号列表</title>
     
     <para>The following table describes all the important symbols in the
-      library, for quick access.</para>
+      library, for quick access.<sbr/>
+      下表给出了本库所有的重要符号，便于你快速查找。</para>
     
     <informaltable pgwide="1">
         
@@ -579,58 +706,58 @@ gui.accessibility.visual_bell=yes
         <thead>
           
           <row>            
-            <entry>Symbol</entry>
-            <entry>Description</entry>
+            <entry>Symbol 符号</entry>
+            <entry>Description 描述</entry>
           </row>
         </thead>
         
         <tbody>
           
           <row>            
-            <entry namest='c1' nameend='c2'>Options description component</entry>
+            <entry namest='c1' nameend='c2'>Options description component 选项描述组件</entry>
           </row>
           
           <row>
             <entry>&options_description;</entry>
-            <entry>describes a number of options</entry>
+            <entry>describes a number of options 描述选项的数量</entry>
           </row>
           <row>
             <entry>&value;</entry>
-            <entry>defines the option's value</entry>
+            <entry>defines the option's value 定义选项的值</entry>
           </row>
 
           <row>            
-            <entry namest='c1' nameend='c2'>Parsers component</entry>
+            <entry namest='c1' nameend='c2'>Parsers component 分析器组件</entry>
           </row>
           
           <row>
             <entry>&parse_command_line;</entry>
-            <entry>parses command line (simpified interface)</entry>
+            <entry>parses command line (simpified interface) 分析命令行(简单接口)</entry>
           </row>
 
           <row>
             <entry>&basic_command_line_parser;</entry>
-            <entry>parses command line (extended interface)</entry>
+            <entry>parses command line (extended interface) 分析命令行(扩展接口)</entry>
           </row>
 
 
           <row>
             <entry>&parse_config_file;</entry>
-            <entry>parses config file</entry>
+            <entry>parses config file 分析配置文件</entry>
           </row>
 
           <row>
             <entry>&parse_environment;</entry>
-            <entry>parses environment</entry>
+            <entry>parses environment 分析环境变量</entry>
           </row>
 
           <row>            
-            <entry namest='c1' nameend='c2'>Storage component</entry>
+            <entry namest='c1' nameend='c2'>Storage component 存储器组件</entry>
           </row>
 
           <row>
             <entry>&variables_map;</entry>
-            <entry>storage for option values</entry>
+            <entry>storage for option values 选项值的存储</entry>
           </row>
    
         </tbody>
