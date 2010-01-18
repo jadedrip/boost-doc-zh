@@ -10,7 +10,8 @@
   <title>How To</title>
 
   <para>This section describes how the library can be used in specific
-  situations.</para>
+  situations.<sbr/>
+  本节描述本库如何在特定情况下使用。</para>
 
 <!--
 
@@ -20,11 +21,13 @@ options groups/hidden options
 
 -->
   <section>
-    <title>Non-conventional Syntax</title>
+    <title>Non-conventional Syntax 非传统语法</title>
     
     <para>Sometimes, standard command line syntaxes are not enough. For
     example, the gcc compiler has "-frtti" and -fno-rtti" options, and this
-    syntax is not directly supported.
+    syntax is not directly supported.<sbr/>
+    有时候，标准的命令行语法是不够的。例如，gcc 编译器有 "-frtti" 和 -fno-rtti" 选项，
+    这种语法不能直接支持。
     </para>
 
     <indexterm><primary>additional parser</primary></indexterm>
@@ -33,7 +36,10 @@ options groups/hidden options
     command line element, before any processing by the library. If the
     additional parser recognises the syntax, it returns the option name and
     value, which are used directly. The above example can be handled by the
-    following code:
+    following code:<sbr/>
+    对于这种情况，程序库允许用户提供一个 <firstterm>附加分析器</firstterm> -- 
+    一个在每个命令行元素被程序库处理之前就调用的函数。如果附加分析器认可该语法，
+    则返回选项名和选项值。上述例子可以用以下代码处理：
     </para>
 
     <para>
@@ -51,18 +57,20 @@ pair&lt;string, string&gt; reg_foo(const string&amp; s)
 }
 </programlisting>
       Here's the definition of the additional parser. When parsing the command
-      line, we pass the additional parser:
+      line, we pass the additional parser:<sbr/>
+      这就是附加分析器的定义。在分析命令行时，我们这样传递附加分析器：
 <programlisting>
 store(command_line_parser(ac, av).options(desc).extra_parser(reg_foo)
         .run(), vm);
 </programlisting>
       The complete example can be found in the "example/custom_syntax.cpp"
-      file.                
+      file.                <sbr/>
+      完整的例子请见 "example/custom_syntax.cpp" 文件。
     </para>
   </section>
 
   <section>
-    <title>Response Files</title>
+    <title>Response Files 响应文件</title>
 
     <indexterm><primary>response files</primary></indexterm> 
 
@@ -73,11 +81,15 @@ store(command_line_parser(ac, av).options(desc).extra_parser(reg_foo)
       the command line specifies a name of response file to use, it's loaded
       and parsed in addition to the command line.  The library does not
       provide direct support for response files, so you'll need to write some
-      extra code.
+      extra code.<sbr/>
+      有些操作系统对于命令行长度只有很低的限制。对付这些限制的常用方法是使用 <firstterm>响应文件</firstterm>。
+      响应文件是采用与命令行相同语法的配置文件。如果命令行指定了响应文件的名字，则导入该文件并进行命令行分析。
+      程序库没有提供对响应文件的直接支持，所以你需要编写额外的代码。
     </para>
 
     <para>
-      First, you need to define an option for the response file:
+      First, you need to define an option for the response file:<sbr/>
+      首先，你需要为响应文件定义一个选项：
 <programlisting>
 ("response-file", value&lt;string&gt;(), 
      "can be specified with '@name', too")
@@ -85,7 +97,8 @@ store(command_line_parser(ac, av).options(desc).extra_parser(reg_foo)
     </para>
 
     <para>Second, you'll need an additional parser to support the standard syntax
-    for specifying response files: "@file":
+    for specifying response files: "@file":<sbr/>
+    其次，你需要一个附加分析器，以支持指定响应文件的标准语法: "@file": 
 <programlisting><![CDATA[
 pair<string, string> at_option_parser(string const&s)
 {
@@ -101,36 +114,40 @@ pair<string, string> at_option_parser(string const&s)
     <para>Finally, when the "response-file" option is found, you'll have to
     load that file and pass it to the command line parser. This part is the
     hardest. We'll use the Boost.Tokenizer library, which works but has some
-    limitations. You might also consider Boost.StringAlgo. The code is:
+    limitations. You might also consider Boost.StringAlgo. The code is:<sbr/>
+    最后，如果找到了 "response-file" 选项，你需要导入文件并将它传给命令行分析器。
+    这部分是最难的。我们要使用 Boost.Tokenizer 库，该库可用但有点限制。
+    你也可考虑 Boost.StringAlgo. 代码如下：
 <programlisting><![CDATA[
 if (vm.count("response-file")) {
-     // Load the file and tokenize it
+     // Load the file and tokenize it 导入文件并分解记号
      ifstream ifs(vm["response-file"].as<string>().c_str());
      if (!ifs) {
          cout << "Could no open the response file\n";
          return 1;
      }
-     // Read the whole file into a string
+     // Read the whole file into a string 将整个文件读入到 string
      stringstream ss;
      ss << ifs.rdbuf();
-     // Split the file content
+     // Split the file content 分解文件内容
      char_separator<char> sep(" \n\r");
      tokenizer<char_separator<char> > tok(ss.str(), sep);
      vector<string> args;
      copy(tok.begin(), tok.end(), back_inserter(args));
-     // Parse the file and store the options
+     // Parse the file and store the options 分析文件并保存选项
      store(command_line_parser(args).options(desc).run(), vm);     
 }
 ]]>
 </programlisting>
       The complete example can be found in the "example/response_file.cpp"
-      file.                
+      file.                <sbr/>
+      完整的例子请见 "example/response_file.cpp" 文件。
     </para>
  
   </section>
 
   <section>
-    <title>Winmain Command Line</title>
+    <title>Winmain Command Line  Winmain命令行</title>
 
     <para>On the Windows operating system, GUI applications receive the
     command line as a single string, not split into elements. For that reason,
@@ -139,34 +156,44 @@ if (vm.count("response-file")) {
     the split command line, but it's not clear if all compilers support the
     same mechanism on all versions of the operating system. The
     <code>split_winmain</code> function is a portable mechanism provided
-    by the library.</para>
+    by the library.<sbr/>
+    在 Windows 操作系统，GUI 应用以单个字符串接收命令行，而不分解为多个元素。
+    由于这个原因，命令行分析器不能直接使用。有一些编译器可以得到分解的命令行，
+    但不清楚是否所有编译器在所有版本的操作系统上都支持相同的机制。
+    <code>split_winmain</code> 函数是本库提供的可移植方案。</para>
 
-    <para>Here's an example of use:
+    <para>Here's an example of use:<sbr/>
+    下面是一个用例：
 <programlisting>
 vector&lt;string&gt; args = split_winmain(lpCmdLine);
 store(command_line_parser(args).options(desc).run(), vm);
 </programlisting>      
       The function is an overload for <code>wchar_t</code> strings, so can
-      also be used in Unicode applications.
+      also be used in Unicode applications.<sbr/>
+      该函数有一个对于 <code>wchar_t</code> 字符串的重载，因此也可用于 Unicode 应用。
     </para>
 
   </section>
 
   <section>
-    <title>Option Groups and Hidden Options</title>
+    <title>Option Groups and Hidden Options 选项组和隐藏选项</title>
 
     <para>Having a single instance of the &options_description; class with all
-    the program's options can be problematic:
+    the program's options can be problematic:<sbr/>
+    用单个 &options_description; 实例处理所有程序选项有以下问题：
       <itemizedlist>
         <listitem>
           <para>Some options make sense only for specific source, for example,
-          configuration files.</para>
+          configuration files.<sbr/>
+          有些选项只用于特定的源，如配置文件。</para>
         </listitem>
         <listitem>
-          <para>The user would prefer some structure in the generated help message.</para>
+          <para>The user would prefer some structure in the generated help message.<sbr/>
+          用户倾向于生成结构化的帮助信息。</para>
         </listitem>
         <listitem>
-          <para>Some options shouldn't appear in the generated help message at all.</para>
+          <para>Some options shouldn't appear in the generated help message at all.<sbr/>
+          有些选项不应出现在生成的帮助信息中。</para>
         </listitem>
       </itemizedlist>
     </para>
@@ -175,11 +202,15 @@ store(command_line_parser(args).options(desc).run(), vm);
       instances of the &options_description; class, which can be merged in
       different combinations. The following example will define three groups of
       options: command line specific, and two options group for specific program
-      modules, only one of which is shown in the generated help message.
+      modules, only one of which is shown in the generated help message.<sbr/>
+      为了解决以上问题，本库允许程序员创建多个 &options_description; 实例，并合并为不同的组合。
+      在以下例子中定义了三组选项：一个用于命令行指定，另两个用于特定的程序模块，
+      其中只有一个会在生成的帮助信息中显示。
     </para>
 
     <para>Each group is defined using standard syntax. However, you should
-      use reasonable names for each &options_description; instance:
+      use reasonable names for each &options_description; instance:<sbr/>
+      每个组都使用标准语法定义。但是，你应为每个 &options_description; 实例取一个合理的名字：
 <programlisting><![CDATA[
 options_description general("General options");
 general.add_options()
@@ -203,21 +234,26 @@ backend.add_options()
 
     <para>After declaring options groups, we merge them in two
       combinations. The first will include all options and be used for parsing. The
-      second will be used for the "--help" option.
+      second will be used for the "--help" option.<sbr/>
+      声明了选项组之后，我们把它们合并为两个组合。第一个包含所有选项，用于分析。
+      第二个则用于 "--help" 选项。
 <programlisting>
 // Declare an options description instance which will include
 // all the options
+// 声明一个选项描述实例，包含所有选项
 options_description all("Allowed options");
 all.add(general).add(gui).add(backend);
 
 // Declare an options description instance which will be shown
 // to the user
+// 声明一个选项描述实例，包含显示给用户的选项
 options_description visible("Allowed options");
 visible.add(general).add(gui);
 </programlisting>
     </para>
 
-    <para>What is left is to parse and handle the options:
+    <para>What is left is to parse and handle the options:<sbr/>
+    剩下就是分析和处理选项：
 <programlisting><![CDATA[
 variables_map vm;
 store(parse_command_line(ac, av, all), vm);
@@ -250,30 +286,37 @@ if (vm.count("num-threads")) {
       options in that group are hidden. The user can explicitly force the
       display of that options group by passing "--help-module backend"
       option. The complete example can be found in the
-      "example/option_groups.cpp" file.
+      "example/option_groups.cpp" file.<sbr/>
+      在分析命令行时，所有选项都可用。但是 "--help" 信息不包含 "Backend options" 组 -- 
+      该组中的选项被隐藏。用户可以通过传入 "--help-module backend" 选项来显式强制选项组的显示。
+      完整的例子请见 "example/option_groups.cpp" 文件。
     </para>
   
   </section>
 
   <section>
-    <title>Custom Validators</title>
+    <title>Custom Validators 定制验证器</title>
 
     <para>By default, the conversion of option's value from string into C++
       type is done using iostreams, which sometimes is not convenient. The
       library allows the user to customize the conversion for specific
       classes. In order to do so, the user should provide suitable overload of
-      the <code>validate</code> function.
+      the <code>validate</code> function.<sbr/>
+      缺省地，选项值从字符串到C++类型的转换使用 iostreams 来执行，但有时候会不太方便。
+      本库允许用户为特定类定制转换的方法。用户要提供 <code>validate</code> 函数的合适重载。
     </para>
 
     <para>
-      Let's first define a simple class:
+      Let's first define a simple class:<sbr/>
+      我们首先定义一个简单的类：
 <programlisting><![CDATA[
 struct magic_number {
 public:
     magic_number(int n) : n(n) {}
     int n;
 };
-]]></programlisting> and then overload the <code>validate</code> function:
+]]></programlisting> and then overload the <code>validate</code> function:<sbr/>
+然后重载 <code>validate</code> 函数：
 <programlisting><![CDATA[
 void validate(boost::any& v, 
               const std::vector<std::string>& values,
@@ -284,13 +327,16 @@ void validate(boost::any& v,
     using namespace boost::program_options;
 
     // Make sure no previous assignment to 'a' was made.
+    // 确定之前没有对 'a' 赋值
     validators::check_first_occurrence(v);
     // Extract the first string from 'values'. If there is more than
     // one string, it's an error, and exception will be thrown.
+    // 从 'values' 提取第一个串。如果有多于一个串则为错误，抛出异常
     const string& s = validators::get_single_string(values);
 
     // Do regex match and convert the interesting part to 
     // int.
+    // 进行 regex 匹配并将相应部分转换为 int.
     smatch match;
     if (regex_match(s, match, r)) {
         v = any(magic_number(lexical_cast<int>(match[1])));
@@ -304,39 +350,50 @@ void validate(boost::any& v,
       the <code>magic_number</code> class. The second is the list of strings
       found in the next occurrence of the option. The remaining two parameters
       are needed to workaround the lack of partial template specialization and
-      partial function template ordering on some compilers.
+      partial function template ordering on some compilers.<sbr/>
+      该函数带四个参数。第一个为选项值的存储，本例中要么为空，要么包含一个 <code>magic_number</code> 实例。
+      第二个为下一个选项的字符串列表。剩下的两个参数对于缺乏模板偏特化和函数模板部分分类的编译器是需要的。
     </para>
 
     <para>The function first checks that we don't try to assign to the same
       option twice. Then it checks that only a single string was passed
       in. Next the string is verified with the help of the Boost.Regex
       library. If that test is passed, the parsed value is stored into the
-      <code>v</code> variable.
+      <code>v</code> variable.<sbr/>
+      函数首先检查我们是否试图对同一个选项重复赋值。然后检查传入的单个字符串。
+      接着字符串在 Boost.Regex 库的帮助下进行验证。如果测试通过，
+      分析得到的值被保存在变量 <code>v</code> 中。
     </para>
 
-    <para>The complete example can be found in the "example/regex.cpp" file.
+    <para>The complete example can be found in the "example/regex.cpp" file.<sbr/>
+    完整的例子请见 "example/regex.cpp" 文件。
     </para>
 
 
   </section>
 
   <section>
-    <title>Unicode Support</title>
+    <title>Unicode Support  Unicode支持</title>
 
-    <para>To use the library with Unicode, you'd need to:
+    <para>To use the library with Unicode, you'd need to:<sbr/>
+    将本库使用于 Unicode, 你需要：
       <itemizedlist>
         <listitem>
-          <para>Use Unicode-aware parsers for Unicode input</para>
+          <para>Use Unicode-aware parsers for Unicode input<sbr/>
+          对 Unicode 输入使用 Unicode-aware 的分析器</para>
         </listitem>
         <listitem>
-          <para>Require Unicode support for options which need it</para>
+          <para>Require Unicode support for options which need it<sbr/>
+          要求选项在需要时支持 Unicode</para>
         </listitem>
       </itemizedlist>
     </para>
 
     <para>Most of the parsers have Unicode versions. For example, the
       &parse_command_line; function has an overload which takes
-      <code>wchar_t</code> strings, instead of ordinary <code>char</code>.
+      <code>wchar_t</code> strings, instead of ordinary <code>char</code>.<sbr/>
+      多数分析器都有 Unicode 版本。例如，&parse_command_line; 函数有一个重载接受 
+      <code>wchar_t</code> 字符串，替代原先的 <code>char</code>. 
     </para>
 
     <para>Even if some of the parsers are Unicode-aware, it does not mean you
@@ -346,43 +403,57 @@ void validate(boost::any& v,
     ordinary options in that they accept <code>wstring</code> input, and
     process it using wide character streams. Creating an Unicode-aware option
     is easy: just use the the <code>wvalue</code> function instead of the
-    regular <code>value</code>.
+    regular <code>value</code>.<sbr/>
+    即使有些分析器是 Unicode-aware 的，但并不意味你需要修改所有选项的定义。
+    事实上，对于多数选项，如整型的，并不影响。要使用 Unicode 你需要<emphasis>一些</emphasis> Unicode-aware 选项。
+    这些选项与原先的不同在于它们接受 <code>wstring</code> 输入，并使用宽字符流来处理它。
+    创建一个 Unicode-aware 选项非常容易：只要使用 <code>wvalue</code> 函数替代通常 <code>value</code> 就行了。
     </para>
 
     <para>When an ascii parser passes data to an ascii option, or a Unicode
       parser passes data to a Unicode option, the data are not changed at
       all. So, the ascii option will see a string in local 8-bit encoding, and
       the Unicode option will see whatever string was passed as the Unicode
-      input.
+      input.<sbr/>
+      当一个 ascii 分析器传递数据给一个 ascii 选项时，或一个 Unicode 分析器传递数据给一个 Unicode 选项时，
+      数据不会改变。即 ascii 选项将看到一个本地8位编码的字符串，而 Unicode 选项将看到 Unicode 输入的字符串。
     </para>
 
     <para>What happens when Unicode data is passed to an ascii option, and
       vice versa? The library automatically performs the conversion from
       Unicode to local 8-bit encoding. For example, if command line is in
       ascii, but you use <code>wstring</code> options, then the ascii input
-      will be converted into Unicode.
+      will be converted into Unicode.<sbr/>
+      如果将 Unicode 数据传递给 ascii 选项或反之，会如何？本库会自动执行从 Unicode 到本地8位编码的转换。
+      例如：如果命令行是 ascii 的，而你使用 <code>wstring</code> 选项，则 ascii 输入将被转换为 Unicode. 
     </para>
 
     <para>To perform the conversion, the library uses the <code>codecvt&lt;wchar_t,
     char&gt;</code> locale facet from the global locale. If
     you want to work with strings that use local 8-bit encoding (as opposed to
-    7-bit ascii subset), your application should start with:
+    7-bit ascii subset), your application should start with:<sbr/>
+    为了执行转换，本库使用了来自于 global locale 的 <code>codecvt&lt;wchar_t, char&gt;</code> locale facet。
+    如果你想处理使用本地8位编码(不要使用 7-bit ascii 字集)的字符串，你的应用程序要以这样开始：
       <programlisting>
 locale::global(locale(""));
       </programlisting>
       which would set up the conversion facet according to the user's selected
-      locale. 
+      locale. <sbr/>
+      这就设置了转换 facet 依照于用户选择的 locale. 
     </para>
 
     <para>It's wise to check the status of the C++ locale support on your
-      implementation, though. The quick test involves three steps:
+      implementation, though. The quick test involves three steps:<sbr/>
+      明智的做法是检查一下在你的实现上对 C++ locale 的支持状态。快速的测试包括以下三步：
       <orderedlist>
         <listitem>
-          <para>Go the the "test" directory and build the "test_convert" binary.</para>
+          <para>Go the the "test" directory and build the "test_convert" binary.<sbr/>
+          进入 "test" 目录，构建 "test_convert" 程序。</para>
         </listitem>
         <listitem>
           <para>Set some non-ascii locale in the environmemt. On Linux, one can
-          run, for example: <screen>
+          run, for example: <sbr/>
+          在环境中设置某个非-ascii locale. 例如在 Linux 上，你可执行: <screen>
 $ export LC_CTYPE=ru_RU.KOI8-R
 </screen>
           </para>
@@ -391,7 +462,9 @@ $ export LC_CTYPE=ru_RU.KOI8-R
           <para>Run the "test_convert" binary with any non-ascii string in the
             selected encoding as its parameter. If you see a list of Unicode codepoints,
             everything's OK. Otherwise, locale support on your system might be
-            broken.</para>
+            broken.<sbr/>
+            运行 "test_convert" 程序，以一些选定编码的非-ascii 字符串作为参数。
+            如果你看到一串 Unicode 编码，则一切OK。否则，表示你的系统上的 locale 支持可能已被破坏。</para>
         </listitem>
       </orderedlist>
     </para>
@@ -399,17 +472,22 @@ $ export LC_CTYPE=ru_RU.KOI8-R
     </section>
 
     <section>
-      <title>Allowing Unknown Options</title>
+      <title>Allowing Unknown Options 允许未知选项</title>
 
       <para>Usually, the library throws an exception on unknown option names. This 
       behaviour can be changed. For example, only some part of your application uses 
       <libraryname>Program_options</libraryname>, and you wish to pass unrecognized options to another part of
-      the program, or even to another application.</para>
+      the program, or even to another application.<sbr/>
+      通常，本库在遇到未知选项时会抛出异常。这种行为可以被改变。例如，你的程序中只有一部分使用 
+      <libraryname>Program_options</libraryname>, 而你希望将未能识别的选项传递给程序的其它部分，
+      或者甚至是其它程序。</para>
 
       <para>To allow unregistered options on the command line, you need to use 
       the &basic_command_line_parser; class for parsing (not &parse_command_line;)
       and call the <methodname alt="boost::program_options::basic_command_line_parser::allow_unregistered">allow_unregistered</methodname> 
-      method of that class:
+      method of that class:<sbr/>
+      要允许在命令行中使用未登记的选项，你需要使用 &basic_command_line_parser; 类来分析 (而不是 &parse_command_line;)，
+      并且调用该类的 <methodname alt="boost::program_options::basic_command_line_parser::allow_unregistered">allow_unregistered</methodname> 方法：
       <programlisting>
 parsed_options parsed = 
     command_line_parser(argc, argv).options(desc).allow_unregistered().run();      
@@ -419,13 +497,21 @@ parsed_options parsed =
       an instance of &basic_option; will be added to the result. 
       The <code>string_key</code> and <code>value</code> fields of the instance will contain results 
       of syntactic parsing of the token, the <code>unregistered</code> field will be set to <code>true</code>,
-      and the <code>original_tokens</code> field will contain the token as it appeared on the command line.
+      and the <code>original_tokens</code> field will contain the token as it appeared on the command line.<sbr/>
+      对于每一个看起来象选项，但又没有已知名字的记号，将产生一个 &basic_option; 实例并增加到结果中。
+      该实例的 <code>string_key</code> 和 <code>value</code> 域中包含了对该记号进行语法分析的结果，
+      <code>unregistered</code> 域将被设置为 <code>true</code>, 而 <code>original_tokens</code> 
+      域则包含出现在命令行中的记号。
       </para>
 
       <para>If you want to pass the unrecognized options further, the 
       <functionname alt="boost::program_options::collect_unrecognized">collect_unrecognized</functionname> function can be used.
       The function will collect original tokens for all unrecognized values, and optionally, all found positional options.
-      Say, if your code handles a few options, but does not handles positional options at all, you can use the function like this:
+      Say, if your code handles a few options, but does not handles positional options at all, you can use the function like this:<sbr/>
+      如果你想进一步传递这个未能识别的选项，可以使用 
+      <functionname alt="boost::program_options::collect_unrecognized">collect_unrecognized</functionname> 函数。
+      该函数收集所有未能识别的原始记号，以及所有位置选项(可选)。即是说，如果你的代码只处理少数选项，
+      而不处理位置选项，则你可以这样使用函数：
       <programlisting>
 vector&lt;string&gt; to_pass_further = collect_unrecognized(parsed.options, include_positional);
       </programlisting>

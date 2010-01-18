@@ -16,21 +16,26 @@ larger expressions, and how to define an evaluation context so that your
 expressions can do useful work. When we're done, we'll have a mini-language that 
 will allow us to declare a lazily-evaluated arithmetic expression, such as 
 `(_2 - _1) / _2 * 100`, where `_1` and `_2` are placeholders for values to be 
-passed in when the expression is evaluated.
+passed in when the expression is evaluated.\n
+"Hello, world" 的例子不错，不过它没有把你带得很远。下面我们用 Proto 来为惰性求值计算器构建一个 DSEL (领域专用嵌入式语言)。
+我们将看到如何定义你的小型语言中的终结符，如何用它们来组成更大的表达式，以及如何定义一个求值上下文使得你的表达式可以做一些有用的事。
+在我们完成了以上工作后，我们就有了一个小型语言，可以让我们声明一个惰性求值的算术计算器，如 `(_2 - _1) / _2 * 100`，
+其中 `_1` 和 `_2` 为数值占位符，在对该表达式进行求值将传入这些数值。
 
 [/=========================]
-[heading Defining Terminals]
+[heading Defining Terminals 定义终结符]
 [/=========================]
 
 The first order of business is to define the placeholders `_1` and `_2`. For that, 
-we'll use the _terminal_ metafunction.
+we'll use the _terminal_ metafunction.\n
+要做的第一件事是定义占位符 `_1` 和 `_2`。为此，我们要使用 _terminal_ 元函数。
 
-    // Define a placeholder type
+    // Define a placeholder type 定义一个占位符类型
     template<int I>
     struct placeholder
     {};
 
-    // Define the Protofied placeholder terminals
+    // Define the Protofied placeholder terminals 定义Proto化的占位符终结符
     proto::terminal<placeholder<0> >::type const _1 = {{}};
     proto::terminal<placeholder<1> >::type const _2 = {{}};
 
@@ -40,46 +45,59 @@ run-time construction -- they are ['statically initialized], which means they
 are essentially initialized at compile time. See the
 [link boost_proto.appendices.rationale.static_initialization Static
 Initialization] section in the [link boost_proto.appendices.rationale Rationale]
-appendix for more information.
+appendix for more information.\n
+乍一看，这个初始化有些奇怪，不过这样做是有很好的理由的。这里的对象 `_1` 和 `_2` 
+不需要运行期的构造 -- 它们是 ['静态初始化的]，即本质上它们是在编译期初始化的。
+更多信息请见 [link boost_proto.appendices.rationale 基本原理] 附录中的 
+[link boost_proto.appendices.rationale.static_initialization 静态初始化] 一节。
 
 [/====================================]
-[heading Constructing Expression Trees]
+[heading Constructing Expression Trees 构造表达式树]
 [/====================================]
 
 Now that we have terminals, we can use Proto's operator overloads to combine
 these terminals into larger expressions. So, for instance, we can immediately
-say things like:
+say things like:\n
+现在我们有终结符了，我们可以用 Proto 的操作符重载来把这些终结符组合成更大的表达式。
+例如，我们可以马上写出：
 
-    // This builds an expression template
+    // This builds an expression template 构建一个表达式模板
     (_2 - _1) / _2 * 100;
 
 This creates an expression tree with a node for each operator. The type of the
-resulting object is large and complex, but we are not terribly interested in it right now.
+resulting object is large and complex, but we are not terribly interested in it right now.\n
+这将构建一个表达式树，其中每个操作符一个节点。结果对象的类型很长很复杂，不过我们现在还不需要过于担心。
 
 So far, the object is just a tree representing the expression. It has no
 behavior. In particular, it is not yet a calculator. Below we'll see how
-to make it a calculator by defining an evaluation context.
+to make it a calculator by defining an evaluation context.\n
+到目前为止，这个对象只是代表这个表达式的一棵树。它没有行为。具体地说，它还不是一个计算器。
+下面我们将看到如何通过定义一个求值上下文使它变为一个计算器。
 
 [/==================================]
-[heading Evaluating Expression Trees]
+[heading Evaluating Expression Trees 对表达式树求值]
 [/==================================]
 
 No doubt you want your expression templates to actually /do/ something. One
 approach is to define an ['evaluation context]. The context is like a function
 object that associates behaviors with the node types in your expression tree.
-The following example should make it clear. It is explained below.
+The following example should make it clear. It is explained below.\n
+毫无疑问，你希望你的表达式模板可以真真正正地/做些/什么。一个方法是定义一个 ['求值上下文]。
+这个上下文类似于一个函数对象，把行为关联到你的表达式树中的节点类型上。以下例子可以清楚地说明这一点。
+我们在后面再作解释。
 
     struct calculator_context
       : proto::callable_context< calculator_context const >
     {
-        // Values to replace the placeholders
+        // Values to replace the placeholders 用于替换占位符的值
         std::vector<double> args;
         
         // Define the result type of the calculator.
         // (This makes the calculator_context "callable".)
+        // 定义计算器的结果类型。使calculator_context变成"可调用"的。
         typedef double result_type;
 
-        // Handle the placeholders:
+        // Handle the placeholders: 对占位符进行处理：
         template<int I>
         double operator()(proto::tag::terminal, placeholder<I>) const
         {
@@ -93,27 +111,34 @@ For any other nodes in the expression tree (e.g., arithmetic operations or
 non-placeholder terminals), Proto will evaluate the expression in the "default"
 way. For example, a binary plus node is evaluated by first evaluating the left
 and right operands and adding the results. Proto's default evaluator uses the
-_typeof_ library to compute return types.
+_typeof_ library to compute return types.\n
+在 `calculator_context` 中，我们通过定义合适的函数调用操作符重载，指定 Proto 应如何对占位符终结符进行求值。
+对于表达式树中的其它节点(如算术操作或非占位符的终结符)，Proto 将以"缺省"的方式对表达式进行求值。
+例如，一个二元加法节点的求值方式为，首先求出左、右操作数的值，然后相加得到结果。
+Proto 的缺省求值器使用了 Boost.Typeof 库来计算返回类型。
 
 Now that we have an evaluation context for our calculator, we can use it to
-evaluate our arithmetic expressions, as below:
+evaluate our arithmetic expressions, as below:\n
+现在我们有一个求值上下文，可用于我们的计算器，我们可以用它来对我们的算术表达式进行求值，如下：
 
     calculator_context ctx;
     ctx.args.push_back(45); // the value of _1 is 45
     ctx.args.push_back(50); // the value of _2 is 50
 
     // Create an arithmetic expression and immediately evaluate it
+    // 创建一个算术表达式并立即对它求值
     double d = proto::eval( (_2 - _1) / _2 * 100, ctx );
 
-    // This prints "10"
+    // This prints "10" 打印"10"
     std::cout << d << std::endl;
 
 Later, we'll see how to define more interesting evaluation contexts and
 expression transforms that give you total control over how your expressions
-are evaluated.
+are evaluated.\n
+稍后，我们将看到如何定义更多有趣的求值上下文和表达式变换，让你可以完全地控制如何对你的表达式进行求值。
 
 [/===================================]
-[heading Customizing Expression Trees]
+[heading Customizing Expression Trees 定制表达式树]
 [/===================================]
 
 Our calculator DSEL is already pretty useful, and for many DSEL scenarios, no more 
@@ -121,15 +146,21 @@ would be needed. But let's keep going. Imagine how much nicer it would be if all
 calculator expressions overloaded `operator()` so that they could be used as 
 function objects. We can do that by creating a calculator /domain/ and telling 
 Proto that all expressions in the calculator domain have extra members. Here is how 
-to define a calculator domain:
+to define a calculator domain:\n
+我们的计算器DSEL已经相当有用，对于多数的DSEL情形，没有更多要做的事情。不过让我们继续前进。
+想象一下，如果所有计算器表达式都重载了 `operator()` 以便可以它们可以象函数对象那样来使用，
+这该多好。我们可以做到这一点，方法是创建一个计算器/域/并告诉 Proto 计算器域中的所有表达式都有额外的成员。
+以下是如何定义一个计算器域的方法：
 
-    // Forward-declare an expression wrapper
+    // Forward-declare an expression wrapper 前向声明一个表达式包装器
     template<typename Expr>
     struct calculator;
     
     // Define a calculator domain. Expression within
     // the calculator domain will be wrapped in the
     // calculator<> expression wrapper.
+    // 定义一个计算器域。在此计算器域中的表达式都将被包装在
+    // calculator<> 表达式包装器中。
     struct calculator_domain
       : proto::domain< proto::generator<calculator> >
     {};
@@ -137,11 +168,15 @@ to define a calculator domain:
 The `calculator<>` type will be an expression wrapper. It will behave just like the 
 expression that it wraps, but it will have extra member functions that we will 
 define. The `calculator_domain` is what informs Proto about our wrapper. It is used 
-below in the definition of `calculator<>`. Read on for a description.
+below in the definition of `calculator<>`. Read on for a description.\n
+类型 `calculator<>` 是一个表达式包装器。其行为与所包裹的表达式一样，不过它多了一个我们将要定义的成员函数。
+`calculator_domain` 则用于将我们的包装器告知 Proto。它将在下面的 `calculator<>` 定义中使用。继续看下去。
 
     // Define a calculator expression wrapper. It behaves just like
     // the expression it wraps, but with an extra operator() member
     // function that evaluates the expression.    
+    // 定义一个计算器表达式的包装器。其行为与所包裹的表达式一样，不过它多了一个
+    // 对表达式进行求值的 operator() 成员函数
     template<typename Expr>
     struct calculator
       : proto::extends<Expr, calculator<Expr>, calculator_domain>
@@ -158,6 +193,7 @@ below in the definition of `calculator<>`. Read on for a description.
 
         // Overload operator() to invoke proto::eval() with
         // our calculator_context.
+        // 重载 operator()，以我们的 calculator_context 调用 proto::eval()
         double operator()(double a1 = 0, double a2 = 0) const
         {
             calculator_context ctx;
@@ -168,21 +204,29 @@ below in the definition of `calculator<>`. Read on for a description.
         }
     };
 
-The `calculator<>` struct is an expression /extension/. It uses `proto::extends<>` to effectively add additional members to an expression type. When composing larger expressions from smaller ones, Proto notes what domain the smaller expressions are in. The larger expression is in the same domain and is automatically wrapped in the domain's extension wrapper.
+The `calculator<>` struct is an expression /extension/. It uses `proto::extends<>` to effectively add additional members to an expression type. When composing larger expressions from smaller ones, Proto notes what domain the smaller expressions are in. The larger expression is in the same domain and is automatically wrapped in the domain's extension wrapper.\n
+结构 `calculator<>` 是一个表达式 扩展。它用 `proto::extends<>` 来高效地将额外成员添加到一个表达式类型中。
+当从较小的表达式组成较大的表达式时，Proto 会留意到小表达式是属于哪个域的。
+这样，大表达式将被置于同一个域并自动被包装到该域的扩展包装器中。
 
-All that remains to be done is to put our placeholders in the calculator domain. We do that by wrapping them in our `calculator<>` wrapper, as below:
+All that remains to be done is to put our placeholders in the calculator domain. We do that by wrapping them in our `calculator<>` wrapper, as below:\n
+剩下要做的就是将我们的占位符也放入这个计算器域中。我们通过将它们包进我们的 `calculator<>` 包装器中来做到这一点，如下：
 
     // Define the Protofied placeholder terminals, in the
     // calculator domain.
+    // 在计算器域中定义Proto化的占位符终结符。
     calculator<proto::terminal<placeholder<0> >::type> const _1;
     calculator<proto::terminal<placeholder<1> >::type> const _2;
 
-Any larger expression that contain these placeholders will automatically be wrapped in the `calculator<>` wrapper and have our `operator()` overload. That means we can use them as function objects as follows.
+Any larger expression that contain these placeholders will automatically be wrapped in the `calculator<>` wrapper and have our `operator()` overload. That means we can use them as function objects as follows.\n
+任何含有这些占位符的较大表达式都将自动被包进 `calculator<>` 包装器中，并且带有我们的 `operator()` 重载。
+这意味着我们可以象下面那样把它们当作函数对象为使用。
 
     double result = ((_2 - _1) / _2 * 100)(45.0, 50.0);
     assert(result == (50.0 - 45.0) / 50.0 * 100));
 
-Since calculator expressions are now valid function objects, we can use them with standard algorithms, as shown below:
+Since calculator expressions are now valid function objects, we can use them with standard algorithms, as shown below:\n
+由于计算器表达式现在已经是有效的函数对象了，所以我们可以将它们用于标准算法，示范如下：
 
     double a1[4] = { 56, 84, 37, 69 };
     double a2[4] = { 65, 120, 60, 70 };
@@ -190,12 +234,14 @@ Since calculator expressions are now valid function objects, we can use them wit
 
     // Use std::transform() and a calculator expression
     // to calculate percentages given two input sequences:
+    // 使用 std::transform() 和一个计算器表达式来计算给定的两个输入序列的百分比：
     std::transform(a1, a1+4, a2, a3, (_2 - _1) / _2 * 100);
 
-Now, let's use the calculator example to explore some other useful features of Proto.
+Now, let's use the calculator example to explore some other useful features of Proto.\n
+现在，我们用这个计算器例子来展示 Proto 的其它一些有用的特性。
 
 [/====================================]
-[heading Detecting Invalid Expressions]
+[heading Detecting Invalid Expressions 检测无效表达式]
 [/====================================]
 
 You may have noticed that you didn't have to define an overloaded `operator-()` or 
@@ -203,14 +249,19 @@ You may have noticed that you didn't have to define an overloaded `operator-()` 
 operators for you, even though they may not mean anything in your domain-specific 
 language. That means it may be possible to create expressions that are invalid in 
 your domain. You can detect invalid expressions with Proto by defining the 
-/grammar/ of your domain-specific language.
+/grammar/ of your domain-specific language.\n
+你可能已经注意到，你并不需要定义重载的 `operator-()` 或 `operator/()` -- Proto 已经为你定义了。
+实际上，Proto 为你重载了所有的 操作符，即使是它们在你的领域专用语言中并没有意义。
+这意味着有可能创建一些在你的问题域中是无效的表达式。你可以通过定义你的领域专用语言的语法来让 Proto 检测无效的表达式。
 
 For simplicity, assume that our calculator DSEL should only allow addition, 
 subtraction, multiplication and division. Any expression involving any other 
 operator is invalid. Using Proto, we can state this requirement by defining the 
-grammar of the calculator DSEL. It looks as follows:
+grammar of the calculator DSEL. It looks as follows:\n
+为简单起见，假设我们的计算器DSEL只允许加、减、乘、除。任何涉及其它操作符的表达式都是无效的。
+使用 Proto，我们可以通过定义这个计算器DSEL的语法来声明这些要求。如下：
 
-    // Define the grammar of calculator expressions
+    // Define the grammar of calculator expressions 定义计算器表达式的语法
     struct calculator_grammar
       : proto::or_<
             proto::plus< calculator_grammar, calculator_grammar >
@@ -221,11 +272,18 @@ grammar of the calculator DSEL. It looks as follows:
         >
     {};
 
-You can read the above grammar as follows: an expression tree conforms to the calculator grammar if it is a binary plus, minus, multiplies or divides node, where both child nodes also conform to the calculator grammar; or if it is a terminal. In a Proto grammar, _wild_ is a wildcard that matches any type, so `proto::terminal< proto::_ >` matches any terminal, whether it is a placeholder or a literal.
+You can read the above grammar as follows: an expression tree conforms to the calculator grammar if it is a binary plus, minus, multiplies or divides node, where both child nodes also conform to the calculator grammar; or if it is a terminal. In a Proto grammar, _wild_ is a wildcard that matches any type, so `proto::terminal< proto::_ >` matches any terminal, whether it is a placeholder or a literal.\n
+你可以这样来读以上语法：一个表达式树符合这个计算器语法，如果它是一个二元加法、减法、乘法或除法，且它的两个子树都符合这个计算器语法；
+或者如果它是一个终结符。在 Proto 语法中，_wild_ 是一个匹配任何类型的通配符，所以 `proto::terminal< proto::_ >` 匹配任何终结符，
+无论它是一个占位符或字面值。
 
-[note This grammar is actually a little looser than we would like. Only placeholders and literals that are convertible to doubles are valid terminals. Later on we'll see how to express things like that in Proto grammars.]
+[note This grammar is actually a little looser than we would like. Only placeholders and literals that are convertible to doubles are valid terminals. Later on we'll see how to express things like that in Proto grammars.\n
+这个语法实际上比我们想要的稍微宽松了一些。只有可以转换为 double 的占位符和字面值才是有效的终结符。
+稍后我们将看到如何在 Proto 语法中来表示这样的情况。]
 
-Once you have defined the grammar of your DSEL, you can use the _matches_ metafunction to check whether a given expression type conforms to the grammar. For instance, we might add the following to our `calculator::operator()` overload:
+Once you have defined the grammar of your DSEL, you can use the _matches_ metafunction to check whether a given expression type conforms to the grammar. For instance, we might add the following to our `calculator::operator()` overload:\n
+一旦你定义了你的DSEL语法，你就可以使用 _matches_ 元函数来检测一个给定的表达式类型是否符合该语法。例如，
+我们可以将以下代码增加到我们的 `calculator::operator()` 重载中：
 
     template<typename Expr>
     struct calculator
@@ -236,6 +294,7 @@ Once you have defined the grammar of your DSEL, you can use the _matches_ metafu
         {
             // Check here that the expression we are about to
             // evaluate actually conforms to the calculator grammar.
+            // 这里检测我们要求值的表达式实际上是否符合计算器语法。
             BOOST_MPL_ASSERT((proto::matches<Expr, calculator_grammar>));
             /* ... */
         }
@@ -245,13 +304,17 @@ The addition of the `BOOST_MPL_ASSERT()` line enforces at compile time that we o
 evaluate expressions that conform to the calculator DSEL's grammar. With Proto 
 grammars, `proto::matches<>` and `BOOST_MPL_ASSERT()` it is very easy to give the 
 users of your DSEL short and readable compile-time errors when they accidentally 
-misuse your DSEL.
+misuse your DSEL.\n
+这行新增的 `BOOST_MPL_ASSERT()` 在编译期确定我们只能对符合计算器DSEL语法的表达式进行求值。
+通过使用 Proto 语法，`proto::matches<>` 和 `BOOST_MPL_ASSERT()`，可以很容易地在你的DSEL用户不小心误用了你的DSEL时，
+给出简短易读的编译期错误。
 
 [note `BOOST_MPL_ASSERT()` is part of the Boost Metaprogramming Library. To use it, 
-just `#include <boost/mpl/assert.hpp>`.]
+just `#include <boost/mpl/assert.hpp>`.\n
+`BOOST_MPL_ASSERT()` 是 Boost Metaprogramming 库的一部分。要使用它，只要 `#include <boost/mpl/assert.hpp>`.]
 
 [/=====================================]
-[heading Controlling Operator Overloads]
+[heading Controlling Operator Overloads 控制操作符的重载]
 [/=====================================]
 
 Grammars and `proto::matches<>` make it possible to detect when a user has created 
@@ -259,7 +322,11 @@ an invalid expression and issue a compile-time error. But what if you want to
 prevent users from creating invalid expressions in the first place? By using 
 grammars and domains together, you can disable any of Proto's operator overloads 
 that would create an invalid expression. It is as simple as specifying the DSEL's 
-grammar when you define the domain, as shown below:
+grammar when you define the domain, as shown below:\n
+语法和 `proto::matches<>` 可以在用户创建一个无效表达式时进行检查并引发编译期错误。
+不过，如果你想在第一时间阻止用户创建无效的表达式工，又应如何呢？通过合用语法和领域，
+你可以禁止任何可能创建无效表达式的 Proto 操作符重载。这很简单，只要在你定义领域时指定DSEL的语法就行了，
+示范如下：
 
     // Define a calculator domain. Expression within
     // the calculator domain will be wrapped in the
@@ -267,6 +334,8 @@ grammar when you define the domain, as shown below:
     // NEW: Any operator overloads that would create an
     //      expression that does not conform to the
     //      calculator grammar is automatically disabled.
+    // 定义一个计算器域。在该计算器域中的表达式将被包进 calculator<> 表达式包装器中。
+    // 新增：任何会创建一个不符合计算器语法的操作符重载都会被自动禁止。
     struct calculator_domain
       : proto::domain< proto::generator<calculator>, calculator_grammar >
     {};
@@ -274,16 +343,21 @@ grammar when you define the domain, as shown below:
 The only thing we changed is we added `calculator_grammar` as the second template 
 parameter to the `proto::domain<>` template when defining `calculator_domain`. With 
 this simple addition, we disable any of Proto's operator overloads that would 
-create an invalid calculator expression.
+create an invalid calculator expression.\n
+我们唯一修改的地方是，在定义 `calculator_domain` 时增加了 `calculator_grammar` 作为 `proto::domain<>` 模板的第二个模板参数。
+通过这一个简单的添加，我们禁止了任何会创建出无效的计算器表达式的 Proto 操作符重载。
 
 [/========================]
-[heading ... And Much More]
+[heading ... And Much More ... 还有更多]
 [/========================]
 
 Hopefully, this gives you an idea of what sorts of things Proto can do for you. But 
 this only scratches the surface. The rest of this users' guide will describe all 
-these features and others in more detail.
+these features and others in more detail.\n
+我们希望，以上可以使你了解 Proto 可以为你做什么样的事情。不过，这只仅仅触及到表面。
+这个用户指南的其余部分将讲述所有这些特性以及其它更多细节。
 
-Happy metaprogramming!
+Happy metaprogramming!\n
+元编程快乐！
 
 [endsect]

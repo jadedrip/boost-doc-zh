@@ -20,33 +20,40 @@
 
 [/================================================================================]
 [section:intermediate_form Intermediate Form:
-    Understanding and Introspecting Expressions]
+    Understanding and Introspecting Expressions 中间格式：理解和窥探表达式]
 [/================================================================================]
 
-By now, you know a bit about how to build a front-end for your DSEL "compiler" -- you can define terminals and functions that generate expression templates. But we haven't said anything about the expression templates themselves. What do they look like? What can you do with them? In this section we'll see.
+By now, you know a bit about how to build a front-end for your DSEL "compiler" -- you can define terminals and functions that generate expression templates. But we haven't said anything about the expression templates themselves. What do they look like? What can you do with them? In this section we'll see.\n
+现在，你已经知道如何为你的DSEL"编译器"构建一个前端 -- 你可以定义终结符和生成表达式模板的函数。
+不过我们还没有讲到关于表达式模板本身的东西。它们看起来是怎样的呢？你可以对它们做些什么呢？在本节中，我们将会看到这些内容。
 
 [/=========================]
-[heading The [^expr<>] Type]
+[heading The [^expr<>] Type  类型[^expr<>]]
 [/=========================]
 
-All Proto expressions are an instantiation of a template called _expr_ (or a wrapper around such an instantiation). When we define a terminal as below, we are really initializing an instance of the _expr_ template.
+All Proto expressions are an instantiation of a template called _expr_ (or a wrapper around such an instantiation). When we define a terminal as below, we are really initializing an instance of the _expr_ template.\n
+所有 Proto 表达式都是一个名为 _expr_ 的模板的实例(或是包含该实例的一个包装器)。当我们如下定义一个终结符时，
+我们实际上是初始化了一个 _expr_ 模板的实例。
 
-    // Define a placeholder type
+    // Define a placeholder type 定义一个占位符类型
     template<int I>
     struct placeholder
     {};
 
-    // Define the Protofied placeholder terminal
+    // Define the Protofied placeholder terminal 定义Proto化的占位符终结符
     proto::terminal< placeholder<0> >::type const _1 = {{}};
 
-The actual type of `_1` looks like this:
+The actual type of `_1` looks like this:\n
+`_1` 的实际类型如下：
 
     proto::expr< proto::tag::terminal, proto::term< placeholder<0> >, 0 >
 
 The _expr_ template is the most important type in Proto. Although you will
 rarely need to deal with it directly, it's always there behind the scenes
 holding your expression trees together. In fact, _expr_ /is/ the expression
-tree -- branches, leaves and all.
+tree -- branches, leaves and all.\n
+_expr_ 模板是 Proto 中最重要的类型。虽然你很少要直接处理它，但是它总是在幕后把你的表达式树保持在一起。
+事实上，_expr_ /就是/表达式树 -- 分支、叶子和所有。
 
 The _expr_ template makes up the nodes in expression trees. The first template
 parameter is the node type; in this case, `proto::tag::terminal`. That means
@@ -54,9 +61,14 @@ that `_1` is a leaf-node in the expression tree. The second template parameter
 is a list of child types, or in the case of terminals, the terminal's value
 type. Terminals will always have only one type in the type list. The last 
 parameter is the arity of the expression. Terminals have arity 0, unary 
-expressions have arity 1, etc.
+expressions have arity 1, etc.\n
+_expr_ 模板负责拼凑表达式树中的节点。第一个模板参数是节点的类型；在这个例子中是 `proto::tag::terminal`。
+这意味着 `_1` 是表达式树中的一个叶节点。第二个模板参数是一个子节点类型的列表，或者在终结符的情况下，
+为终结符的值类型。在这个类型列表中，终结符永远只有一个类型。最后一个参数是表达式的arity。
+终结符的arity为0，单参数表达式的arity为1，等等。
 
-The _expr_ struct is defined as follows:
+The _expr_ struct is defined as follows:\n
+_expr_ 结构定义如下： 
 
     template< typename Tag, typename Args, long Arity = Args::arity >
     struct expr;
@@ -75,10 +87,14 @@ prevent static initialization. All _expr_ objects are initialized using
 initialized with the initializer `{{}}`. The outer braces are the initializer
 for the _expr_ struct, and the inner braces are for the member `_1.child0` which
 is of type `placeholder<0>`. Note that we use braces to initialize `_1.child0`
-because `placeholder<0>` is also an aggregate.
+because `placeholder<0>` is also an aggregate.\n
+_expr_ 结构没有定义构造函数，或其它任何东西，以防止被静态初始化。所有 _expr_ 对象都使用带花括号的 ['聚集初始化] 来初始化。
+在我们的例子中，`_1` 用初始化器 `{{}}` 来初始化。外面一层花括号是用于 _expr_ 结构的初始化器，
+里面一层花括号则是用于成员 `_1.child0`，其类型为 `placeholder<0>`。注意，我们使用花括号来初始化 `_1.child0`，
+因为 `placeholder<0>` 也是一个聚集。
 
 [/================================]
-[heading Building Expression Trees]
+[heading Building Expression Trees 构建表达式树]
 [/================================]
 
 The `_1` node is an instantiation of _expr_, and expressions containing
@@ -86,9 +102,13 @@ The `_1` node is an instantiation of _expr_, and expressions containing
 won't have to bother yourself with the actual types that Proto generates.
 These are details, but you're likely to encounter these types in compiler
 error messages, so it's helpful to be familiar with them. The types look
-like this:
+like this:\n
+节点 `_1` 是 _expr_ 的一个实例，包含 `_1` 的表达式也是 _expr_ 的实例。
+要有效地使用 Proto，你并不必操心 Proto 生成的实际类型。 它们只是实现细节而已，
+不过你很可能会在编译器的错误信息中碰到这些类型，所以，熟悉一下它们也是很有用的。
+这些类型就象以下这样：
 
-    // The type of the expression -_1
+    // The type of the expression -_1 表达式 -_1 的类型
     typedef
         proto::expr<
             proto::tag::negate
@@ -105,7 +125,7 @@ like this:
     
     negate_placeholder_type x = -_1;
 
-    // The type of the expression _1 + 42
+    // The type of the expression _1 + 42 表达式 _1 + 42 的类型
     typedef
         proto::expr<
             proto::tag::plus
@@ -127,22 +147,31 @@ like this:
     
     placeholder_plus_int_type y = _1 + 42;
 
-There are a few things to note about these types:
+There are a few things to note about these types:\n
+对于这些类型，有几点要注意：
 
 * Terminals have arity zero, unary expressions have arity one and binary
-  expressions have arity two.
+  expressions have arity two.\n
+  终结符的arity为0，单参数表达式的arity为1，二元表达式的arity为2。
 * When one Proto expression is made a child node of another Proto expression,
   it is held by reference, ['even if it is a temporary object]. This last
-  point becomes important later.
+  point becomes important later.\n
+  当一个 Proto 表达式作为另一个 Proto 表达式的子节点时，它是以引用方式被持有的，
+  ['即使它是一个临时对象]。最后一点很重要。
 * Non-Proto expressions, such as the integer literal, are turned into Proto
   expressions by wrapping them in new `expr<>` terminal objects. These new
   wrappers are not themselves held by reference, but the object wrapped /is/.
   Notice that the type of the Protofied `42` literal is `int const &` -- held
-  by reference.
+  by reference.\n
+  非 Proto 表达式，如整数字面值，通过把它们包入一个新的 `expr<>` 终结符对象变为 Proto 表达式。
+  这些新的包装器本身不是以引用方式持有的，但被包装的对象/是/。注意，Proto化的 `42` 
+  字面值的类型是 `int const &` -- 是以引用方式持有的。
 
 The types make it clear: everything in a Proto expression tree is held by
 reference. That means that building an expression tree is exceptionally cheap.
-It involves no copying at all.
+It involves no copying at all.\n
+很显然：在一个 Proto 表达式树中的任何东西都是以引用方式持有的。
+这意味着构建一个表达式树代价非常低。它根本不进行复制。
 
 [note An astute reader will notice that the object `y` defined above will be
 left holding a dangling reference to a temporary int. In the sorts of 
@@ -151,27 +180,35 @@ evaluate an expression tree before any temporary objects go out of scope, so
 this dangling reference situation often doesn't arise, but it is certainly
 something to be aware of. Proto provides utilities for deep-copying expression
 trees so they can be passed around as value types without concern for dangling
-references.]
+references.\n
+聪明的读者可能会注意到，上面所定义的对象 `y` 会持有一个对临时 int 的悬空引用。
+在各种使用 Proto 的高性能应用程序中，典型的方法是在任何一个临时对象离开其范围之前，
+对一个表达式树构建并求值完成，所以这种悬空引用的情形通常不会发生，但这一点还是必须要知道的。
+Proto 提供了对表达式树进行深复制的工具，所以表达式树可以作为值类型进行传递而无需担心悬空的引用。]
 
 [/========================================================]
-[section:left_right_child Accessing Parts of an Expression]
+[section:left_right_child Accessing Parts of an Expression 访问子节点]
 [/========================================================]
 
 After assembling an expression into a tree, you'll naturally want to be
 able to do the reverse, and access a node's children. You may even want
 to be able to iterate over the children with algorithms from the
-Boost.Fusion library. This section shows how.
+Boost.Fusion library. This section shows how.\n
+把一个表达式组装成一棵树之后，很自然你会想能够做相反的动作，访问某个子节点。
+甚至你可能会想能够用 Boost.Fusion 库的算法来遍历子节点。本节将展示如何实现这一点。
 
 [/==========================================]
-[heading Getting Expression Tags and Arities]
+[heading Getting Expression Tags and Arities 获取表达式的标签和Arity]
 [/==========================================]
 
-Every node in an expression tree has both a /tag/ type that describes the node, and an /arity/ corresponding to the number of child nodes it has. You can use the _tag_of_ and _arity_of_ metafunctions to fetch them. Consider the following:
+Every node in an expression tree has both a /tag/ type that describes the node, and an /arity/ corresponding to the number of child nodes it has. You can use the _tag_of_ and _arity_of_ metafunctions to fetch them. Consider the following:\n
+表达式树中每个节点都有一个用于描述该节点的 /标签/ 类型，以及一个对应于其子节点数量的 /arity/。你可以用 _tag_of_ 和 _arity_of_ 
+元函数来获得它们。如：
 
     template<typename Expr>
     void check_plus_node(Expr const &)
     {
-        // Assert that the tag type is proto::tag::plus
+        // Assert that the tag type is proto::tag::plus 标签类型应为 proto::tab::plus
         BOOST_STATIC_ASSERT((
             boost::is_same<
                 typename proto::tag_of<Expr>::type
@@ -179,38 +216,48 @@ Every node in an expression tree has both a /tag/ type that describes the node, 
             >::value
         ));
 
-        // Assert that the arity is 2
+        // Assert that the arity is 2  arity应为2
         BOOST_STATIC_ASSERT( proto::arity_of<Expr>::value == 2 );
     }
 
     // Create a binary plus node and use check_plus_node()
     // to verify its tag type and arity:
+    // 创建一个二元加节点并用 check_plus_node() 来验证它的标签类型和arity：
     check_plus_node( proto::lit(1) + 2 );
 
-For a given type `Expr`, you could access the tag and arity directly as `Expr::proto_tag` and `Expr::proto_arity`, where `Expr::proto_arity` is an MPL Integral Constant.
+For a given type `Expr`, you could access the tag and arity directly as `Expr::proto_tag` and `Expr::proto_arity`, where `Expr::proto_arity` is an MPL Integral Constant.\n
+对于一个给定的类型 `Expr`，你可以直接通过 `Expr::proto_tag` 和 `Expr::proto_arity` 访问它的标签和arity，其中 `Expr::proto_arity` 
+是一个MPL整型常量。
 
 [/==============================]
-[heading Getting Terminal Values]
+[heading Getting Terminal Values 获取终结符的值]
 [/==============================]
 
-There is no simpler expression than a terminal, and no more basic operation than extracting its value. As we've already seen, that is what _value_ is for.
+There is no simpler expression than a terminal, and no more basic operation than extracting its value. As we've already seen, that is what _value_ is for.\n
+没有比终结符更简单的表达式，也没有比获取终结符的值更基本的操作。正如我们已经看到的，这正是 _value_ 的作用。
 
     proto::terminal< std::ostream & >::type cout_ = {std::cout};
 
-    // Get the value of the cout_ terminal:
+    // Get the value of the cout_ terminal: 获取 cout_ 终结符的值：
     std::ostream & sout = proto::value( cout_ );
 
-    // Assert that we got back what we put in:
+    // Assert that we got back what we put in: 我们取回的与放入的应该一致：
     assert( &sout == &std::cout );
 
-To compute the return type of the _value_ function, you can use _result_of_value_. When the parameter to _result_of_value_ is a non-reference type, the result type of the metafunction is the type of the value as suitable for storage by value; that is, top-level reference and qualifiers are stripped from it. But when instantiated with a reference type, the result type has a reference /added/ to it, yielding a type suitable for storage by reference. If you want to know the actual type of the terminal's value including whether it is stored by value or reference, you can use `fusion::result_of::value_at<Expr, 0>::type`.
+To compute the return type of the _value_ function, you can use _result_of_value_. When the parameter to _result_of_value_ is a non-reference type, the result type of the metafunction is the type of the value as suitable for storage by value; that is, top-level reference and qualifiers are stripped from it. But when instantiated with a reference type, the result type has a reference /added/ to it, yielding a type suitable for storage by reference. If you want to know the actual type of the terminal's value including whether it is stored by value or reference, you can use `fusion::result_of::value_at<Expr, 0>::type`.\n
+要计算 _value_ 函数的返回类型，你可以用 _result_of_value_。如果 _result_of_value_ 的参数是一个非引用类型，
+则该元函数的结果类型为该值的类型，适合以值方式保存；即顶层引用和限定符将被剥除。但如果是以一个引用类型实例化的，
+则结果类型也带有/所添加的/引用，以得到一个适合以引用方式保存的类型。如果你想知道终结符值的真实类型，
+包括它是以值方式还是引用方式保存的，你可以用 `fusion::result_of::value_at<Expr, 0>::type`。
 
-The following table summarizes the above paragraph.
+The following table summarizes the above paragraph.\n
+下表总结了以上内容。
 
-[def _unless_ [footnote If `T` is a reference-to-function type, then the result type is simply `T`.]]
+[def _unless_ [footnote If `T` is a reference-to-function type, then the result type is simply `T`.\n
+如果`T`是函数引用类型，则结果类型就是`T`。]]
 
-[table Accessing Value Types
-    [[Metafunction Invocation][When the Value Type Is ...][The Result Is ...]]
+[table Accessing Value Types  访问值类型
+    [[Metafunction Invocation 元函数调用][When the Value Type Is ... 值类型为...][The Result Is ... 结果为...]]
     [[`proto::result_of::value<Expr>::type`][`T`][``typename boost::remove_const<
     typename boost::remove_reference<T>::type
 >::type _unless_``]]
@@ -222,20 +269,24 @@ The following table summarizes the above paragraph.
 ]
 
 [/================================]
-[heading Getting Child Expressions]
+[heading Getting Child Expressions 获取子表达式]
 [/================================]
 
-Each non-terminal node in an expression tree corresponds to an operator in an expression, and the children correspond to the operands, or arguments of the operator. To access them, you can use the _child_c_ function template, as demonstrated below:
+Each non-terminal node in an expression tree corresponds to an operator in an expression, and the children correspond to the operands, or arguments of the operator. To access them, you can use the _child_c_ function template, as demonstrated below:\n
+表达式树中的每一个非终结符节点对应于表达式中的一个操作符，而子节点则对应于操作数或操作符的参数。要访问它们，
+你可以用 _child_c_ 函数模板，示范如下：
 
     proto::terminal<int>::type i = {42};
 
-    // Get the 0-th operand of an addition operation:
+    // Get the 0-th operand of an addition operation: 取出加法操作的第0个操作数：
     proto::terminal<int>::type &ri = proto::child_c<0>( i + 2 );
 
-    // Assert that we got back what we put in:
+    // Assert that we got back what we put in: 断言我们取回了所放入的：
     assert( &i == &ri );
 
-You can use the _result_of_child_c_ metafunction to get the type of the Nth child of an expression node. Usually you don't care to know whether a child is stored by value or by reference, so when you ask for the type of the Nth child of an expression `Expr` (where `Expr` is not a reference type), you get the child's type after references and cv-qualifiers have been stripped from it.
+You can use the _result_of_child_c_ metafunction to get the type of the Nth child of an expression node. Usually you don't care to know whether a child is stored by value or by reference, so when you ask for the type of the Nth child of an expression `Expr` (where `Expr` is not a reference type), you get the child's type after references and cv-qualifiers have been stripped from it.\n
+你可以用 _result_of_child_c_ 元函数取出某个表达式节点的第N个子节点的类型。通常你不必关心一个子节点是以值方式还是以引用方式保存的，
+因此当你询问一个表达式 `Expr` (其中 `Expr` 不是引用类型)的第N个子节点的类型时，你所得到的子节点类型是在引用和cv限定符被摘取之后的类型。
 
     template<typename Expr>
     void test_result_of_child_c(Expr const &expr)
@@ -245,6 +296,8 @@ You can use the _result_of_child_c_ metafunction to get the type of the Nth chil
         // Since Expr is not a reference type,
         // result_of::child_c<Expr, 0>::type is a
         // non-cv qualified, non-reference type:
+        // 因为Expr不是引用类型，所以result_of::child_c<Expr, 0>::type
+        // 是一个非cv限定的非引用类型：
         BOOST_MPL_ASSERT((
             boost::is_same< type, proto::terminal<int>::type >
         ));
@@ -259,10 +312,13 @@ However, if you ask for the type of the Nth child of `Expr &` or `Expr const &`
 the child is actually stored by reference or not. If you need to know exactly
 how the child is stored in the node, whether by reference or by value, you can
 use `fusion::result_of::value_at<Expr, N>::type`. The following table summarizes
-the behavior of the _result_of_child_c_ metafunction.
+the behavior of the _result_of_child_c_ metafunction.\n
+但是，如果你询问的是 `Expr &` 或 `Expr const &` (留意其中的引用)的第N个子节点的类型，则结果类型将会是一个引用，
+无论这个子节点实际上是否以引用的方式保存。如果你需要精确地知道子节点是如何保存的，是值方式还是引用方式，
+你可以用 `fusion::result_of::value_at<Expr, N>::type`。下表总结了 _result_of_child_c_ 元函数的行为。
 
-[table Accessing Child Types
-    [[Metafunction Invocation][When the Child Is ...][The Result Is ...]]
+[table Accessing Child Types  访问子节点的类型
+    [[Metafunction Invocation 元函数调用][When the Child Is ... 子节点为...][The Result Is ... 结果为...]]
     [[`proto::result_of::child_c<Expr, N>::type`][`T`][``typename boost::remove_const<
     typename boost::remove_reference<T>::type
 >::type``]]
@@ -274,71 +330,93 @@ the behavior of the _result_of_child_c_ metafunction.
 ]
 
 [/=======================]
-[heading Common Shortcuts]
+[heading Common Shortcuts 常用缩写]
 [/=======================]
 
-Most operators in C++ are unary or binary, so accessing the only operand, or the left and right operands, are very common operations. For this reason, Proto provides the _child_, _left_, and _right_ functions. _child_ and _left_ are synonymous with `proto::child_c<0>()`, and _right_ is synonymous with `proto::child_c<1>()`.
+Most operators in C++ are unary or binary, so accessing the only operand, or the left and right operands, are very common operations. For this reason, Proto provides the _child_, _left_, and _right_ functions. _child_ and _left_ are synonymous with `proto::child_c<0>()`, and _right_ is synonymous with `proto::child_c<1>()`.\n
+C++中的多数操作符都是单参数或双参数的。因此，访问唯一的操作数，或访问左、右操作数，是非常常见的操作。为此，Proto 提供了 _child_, 
+_left_, 和 _right_ 函数。_child_ 和 _left_ 相当于 `child_c<0>()`，而 _right_ 则相当于 `child_c<1>()`。
 
-There are also _result_of_child_, _result_of_left_, and _result_of_right_ metafunctions that merely forward to their _result_of_child_c_ counterparts.
+There are also _result_of_child_, _result_of_left_, and _result_of_right_ metafunctions that merely forward to their _result_of_child_c_ counterparts.\n
+还有，_result_of_child_, _result_of_left_, and _result_of_right_ 元函数只是前转至相应的 _result_of_child_c_。
 
 [endsect]
 
 [/===============================]
-[section Deep-copying Expressions]
+[section Deep-copying Expressions 表达式的深拷贝]
 [/===============================]
 
-When you build an expression template with Proto, all the intermediate child nodes are held /by reference/. The avoids needless copies, which is crucial if you want your DSEL to perform well at runtime. Naturally, there is a danger if the temporary objects go out of scope before you try to evaluate your expression template. This is especially a problem in C++0x with the new `decltype` and `auto` keywords. Consider:
+When you build an expression template with Proto, all the intermediate child nodes are held /by reference/. The avoids needless copies, which is crucial if you want your DSEL to perform well at runtime. Naturally, there is a danger if the temporary objects go out of scope before you try to evaluate your expression template. This is especially a problem in C++0x with the new `decltype` and `auto` keywords. Consider:\n
+当你用Proto构建一个表达式模板时，所有中间的子节点都是/以引用方式/持有的。这避免了不必要的复制，如果你希望你的DSEL运行得好，
+这是至关重要的。当然，如果临时对象在你尝试对表达式模板进行求值之前超出了范围，就会有危险。在带有新的 `decltype` 和 `auto` 
+关键字的C++0x中尤其成问题。考虑：
 
-    // OOPS: "ex" is left holding dangling references
+    // OOPS: "ex" is left holding dangling references  哎呀："ex"将持有悬空引用
     auto ex = proto::lit(1) + 2;
 
-The problem can happen in today's C++ also if you use `BOOST_TYPEOF()` or `BOOST_AUTO()`, or if you try to pass an expression template outside the scope of its constituents.
+The problem can happen in today's C++ also if you use `BOOST_TYPEOF()` or `BOOST_AUTO()`, or if you try to pass an expression template outside the scope of its constituents.\n
+如果你使用 `BOOST_TYPEOF()` 或 `BOOST_AUTO()`，或者如果你试图传送一个表达式模板到它的组成成份的范围之外，
+这个问题也会发生在当前的C++中。
 
-In these cases, you want to deep-copy your expression template so that all intermediate nodes and the terminals are held /by value/. That way, you can safely assign the expression template to a local variable or return it from a function without worrying about dangling references. You can do this with _deep_copy_ as fo
-llows:
+In these cases, you want to deep-copy your expression template so that all intermediate nodes and the terminals are held /by value/. That way, you can safely assign the expression template to a local variable or return it from a function without worrying about dangling references. You can do this with _deep_copy_ as follows:\n
+在这种情况下，你希望对表达式模板进行深拷贝，令所有中间节点和终结符/以值方式/持有。这样，你就可以安全地将表达式模板赋值到局部变量，
+或者从某个函数返回它，而无须担心悬空引用。你可以如下进行 _deep_copy_：
 
-    // OK, "ex" has no dangling references
+    // OK, "ex" has no dangling references  好的，"ex"没有悬空引用
     auto ex = proto::deep_copy( proto::lit(1) + 2 );
 
-If you are using _typeof_, it would look like this:
+If you are using _typeof_, it would look like this:\n
+如果你使用 _typeof_，看起来就象这样：
 
     // OK, use BOOST_AUTO() and proto::deep_copy() to
     // store an expression template in a local variable 
+    // 好的，使用 BOOST_AUTO() 和 proto::deep_copy() 来
+    // 将一个表达式模板保存在局部变量中
     BOOST_AUTO( ex, proto::deep_copy( proto::lit(1) + 2 ) );
 
-For the above code to work, you must include the [headerref boost/proto/proto_typeof.hpp] header, which also defines the _AUTO_ macro which automatically deep-copies its argument. With _AUTO_, the above code can be writen as:
+For the above code to work, you must include the [headerref boost/proto/proto_typeof.hpp] header, which also defines the _AUTO_ macro which automatically deep-copies its argument. With _AUTO_, the above code can be writen as:\n
+为了使以上代码可以工作，你必须包含 [headerref boost/proto/proto_typeof.hpp] 头文件，其中还将定义 _AUTO_ 宏以自动对参数进行深拷贝。
+有了 _AUTO_，以上代码可以写为：
 
     // OK, BOOST_PROTO_AUTO() automatically deep-copies
     // its argument: 
+    // 好的，BOOST_PROTO_AUTO() 自动对参数进行深拷贝：
     BOOST_PROTO_AUTO( ex, proto::lit(1) + 2 );
 
-When deep-copying an expression tree, all intermediate nodes and all terminals are stored by value. The only exception is terminals that are function references, which are left alone.
+When deep-copying an expression tree, all intermediate nodes and all terminals are stored by value. The only exception is terminals that are function references, which are left alone.\n
+当深拷贝一个表达式树时，所有中间节点以及所有终结符都以值方式保存。唯一的例外是函数引用终结符，它们会单独保留。
 
-[note _deep_copy_ makes no exception for arrays, which it stores by value. That can potentially cause a large amount of data to be copied.]
+[note _deep_copy_ makes no exception for arrays, which it stores by value. That can potentially cause a large amount of data to be copied.\n
+_deep_copy_ 对于以值方式保存的数组可能并不适用。这有可能引起大量数据的复制。]
 
 [endsect]
 
 [/============================]
-[section Debugging Expressions]
+[section Debugging Expressions 调试表达式]
 [/============================]
 
-Proto provides a utility for pretty-printing expression trees that comes in very handy when you're trying to debug your DSEL. It's called _display_expr_, and you pass it the expression to print and optionally, an `std::ostream` to which to send the output. Consider:
+Proto provides a utility for pretty-printing expression trees that comes in very handy when you're trying to debug your DSEL. It's called _display_expr_, and you pass it the expression to print and optionally, an `std::ostream` to which to send the output. Consider:\n
+Proto提供了一个整齐地打印表达式树的工具，在你想调试你的DSEL时非常适用。它叫 _display_expr_，你向它传入要打印的表达式，
+以及一个可选的用于输出的 `std::ostream`。考虑：
 
-    // Use display_expr() to pretty-print an expression tree
+    // Use display_expr() to pretty-print an expression tree 使用display_expr()来打印表达式树
     proto::display_expr(
         proto::lit("hello") + 42
     );
 
-The above code writes this to `std::cout`:
+The above code writes this to `std::cout`:\n
+上述代码将以下内容写至 `std::cout`：
 
 [pre plus(
     terminal(hello)
   , terminal(42)
 )]
 
-In order to call _display_expr_, all the terminals in the expression must be Streamable (that is, they can be written to a `std::ostream`). In addition, the tag types must all be Streamable as well. Here is an example that includes a custom terminal type and a custom tag:
+In order to call _display_expr_, all the terminals in the expression must be Streamable (that is, they can be written to a `std::ostream`). In addition, the tag types must all be Streamable as well. Here is an example that includes a custom terminal type and a custom tag:\n
+为了调用 _display_expr_，表达式中的所有终结符都必须是可流的(即它们可被写出至某个 `std::ostream`)。另外，标签类型必须也都是可流的。
+以下是一个例子，包含了一个定制的终结符类型和一个定制的标签：
 
-    // A custom tag type that is Streamable
+    // A custom tag type that is Streamable 定制标签类型是可流的
     struct MyTag
     {
         friend std::ostream &operator<<(std::ostream &s, MyTag)
@@ -347,7 +425,7 @@ In order to call _display_expr_, all the terminals in the expression must be Str
         }
     };
 
-    // Some other Streamable type
+    // Some other Streamable type 一些其它的可流类型
     struct MyTerminal
     {
         friend std::ostream &operator<<(std::ostream &s, MyTerminal)
@@ -360,12 +438,14 @@ In order to call _display_expr_, all the terminals in the expression must be Str
     {
         // Display an expression tree that contains a custom
         // tag and a user-defined type in a terminal
+        // 显示一棵包含有定制标签和用户自定义类型终结符的表达式树
         proto::display_expr(
             proto::make_expr<MyTag>(MyTerminal()) + 42
         );
     }
 
-The above code prints the following:
+The above code prints the following:\n
+上述代码输出如下：
 
 [pre plus(
     MyTag(
@@ -377,15 +457,17 @@ The above code prints the following:
 [endsect]
 
 [/=============================================================]
-[section:tags_and_metafunctions Operator Tags and Metafunctions]
+[section:tags_and_metafunctions Operator Tags and Metafunctions 操作符标签和元函数]
 [/=============================================================]
 
-The following table lists the overloadable C++ operators, the Proto tag types for  each, and the name of the metafunctions for generating the corresponding Proto  expression types. And as we'll see later, the metafunctions are also usable as  grammars for matching such nodes, as well as pass-through transforms.
+The following table lists the overloadable C++ operators, the Proto tag types for  each, and the name of the metafunctions for generating the corresponding Proto  expression types. And as we'll see later, the metafunctions are also usable as  grammars for matching such nodes, as well as pass-through transforms.\n
+下表列出了可重载的C++操作符、各个 Proto 标签类型，以及生成相应的 Proto 表达式类型的元函数名字。我们稍后将看到，
+这些元函数也可用作匹配这些节点的语法，以及传递给变换操作。
 
-[table Operators, Tags and Metafunctions
-    [[Operator]
-    [Proto Tag]
-    [Proto Metafunction]]
+[table Operators, Tags and Metafunctions 操作符，标签和元函数
+    [[Operator 操作符]
+    [Proto Tag  Proto标签]
+    [Proto Metafunction  Proto元函数]]
 
     [[unary `+`]
     [`proto::tag::unary_plus`]
@@ -567,10 +649,14 @@ The following table lists the overloadable C++ operators, the Proto tag types fo
 [endsect]
 
 [/======================================]
-[section Expressions as Fusion Sequences]
+[section Expressions as Fusion Sequences 作为Fusion序列的表达式]
 [/======================================]
 
-Boost.Fusion is a library of iterators, algorithms, containers and adaptors for manipulating heterogeneous sequences. In essence, a Proto expression is just a heterogeneous sequence of its child expressions, and so Proto expressions are valid Fusion random-access sequences. That means you can apply Fusion algorithms to them, transform them, apply Fusion filters and views to them, and access their elements using `fusion::at()`. The things Fusion can do to heterogeneous sequences are beyond the scope of this users' guide, but below is a simple example. It takes a lazy function invocation like `fun(1,2,3,4)` and uses Fusion to print the function arguments in order.
+Boost.Fusion is a library of iterators, algorithms, containers and adaptors for manipulating heterogeneous sequences. In essence, a Proto expression is just a heterogeneous sequence of its child expressions, and so Proto expressions are valid Fusion random-access sequences. That means you can apply Fusion algorithms to them, transform them, apply Fusion filters and views to them, and access their elements using `fusion::at()`. The things Fusion can do to heterogeneous sequences are beyond the scope of this users' guide, but below is a simple example. It takes a lazy function invocation like `fun(1,2,3,4)` and uses Fusion to print the function arguments in order.\n
+Boost.Fusion 是一个迭代器、算法、容器和适配器的库，用于对异类型序列进行操作。本质上，Proto 表达式节点也是其子节点的一个异类型序列，
+所以Proto表达式是有效 Fusion 随机访问序列。这意味着你可以对它们应用 Fusion 算法、转换它们，应用 Fusion 过滤器和查看它们，
+以及使用 `fusion::at()` 访问它们的元素。这些 Fusion 可以对异类型序列的事情已经超出本用户指南的讨论范围，下面给出一个简单的例子。
+该例子接受一个类似于 `fun(1,2,3,4)` 的惰性函数调用，并使用 Fusion 来按顺序打印函数的参数。
 
     struct display
     {
@@ -599,7 +685,10 @@ Recall from the Introduction that types in the `proto::functional` namespace
 define function objects that correspond to Proto's free functions. So 
 `proto::functional::value()` creates a function object that is equivalent to
 the `proto::value()` function. The above invocation of `fusion::for_each()`
-displays the following:
+displays the following:\n
+回想一下"简介"中的介绍，`proto::functional` 名字空间中的类型定义了与 Proto 普通函数相对应的函数对象。
+因此 `proto::functional::value()` 创建一个等价于 `proto::value()` 函数的函数对象。
+以上 `fusion::for_each()` 调用将显示以下内容：
 
 [pre
 1
@@ -608,17 +697,19 @@ displays the following:
 4
 ]
 
-Terminals are also valid Fusion sequences. They contain exactly one element: their value.
+Terminals are also valid Fusion sequences. They contain exactly one element: their value.\n
+终结符也是有效的 Fusion 序列。它们包含恰好一个元素：它们的值。
 
 [/========================================]
-[heading Flattening Proto Expression Tress]
+[heading Flattening Proto Expression Tress 将 Proto 表达式树摊平]
 [/========================================]
 
-Imagine a slight variation of the above example where, instead of iterating over the arguments of a lazy function invocation, we would like to iterate over the terminals in an addition expression:
+Imagine a slight variation of the above example where, instead of iterating over the arguments of a lazy function invocation, we would like to iterate over the terminals in an addition expression:\n
+想象一下以上例子的轻微变化，不遍历惰性函数调用的参数，而是遍历另一个表达式中的终结符：
 
     proto::terminal<int>::type const _1 = {1};
 
-    // ERROR: this doesn't work! Why?
+    // ERROR: this doesn't work! Why? 错误：不能这样做！为什么？
     fusion::for_each(
         fusion::transform(
             _1 + 2 + 3 + 4
@@ -627,11 +718,15 @@ Imagine a slight variation of the above example where, instead of iterating over
       , display()
     );
 
-The reason this doesn't work is because the expression `_1 + 2 + 3 + 4` does not describe a flat sequence of terminals --- it describes a binary tree. We can treat it as a flat sequence of terminals, however, using Proto's _flatten_ function. _flatten_ returns a view which makes a tree appear as a flat Fusion sequence. If the top-most node has a tag type `T`, then the elements of the flattened sequence are the child nodes that do /not/ have tag type `T`. This process is evaluated recursively. So the above can correctly be written as:
+The reason this doesn't work is because the expression `_1 + 2 + 3 + 4` does not describe a flat sequence of terminals --- it describes a binary tree. We can treat it as a flat sequence of terminals, however, using Proto's _flatten_ function. _flatten_ returns a view which makes a tree appear as a flat Fusion sequence. If the top-most node has a tag type `T`, then the elements of the flattened sequence are the child nodes that do /not/ have tag type `T`. This process is evaluated recursively. So the above can correctly be written as:\n
+不能这样做的原因是，因为表达式 `_1 + 2 + 3 + 4` 并不表示为各个终结符的一个扁平序列 --- 它表示为一个二叉树。不过，
+我们可以通过用 Proto 的 _flatten_ 函数将它视为终结符的扁平序列。_flatten_ 返回一个视图，使一棵树看起来象一个扁平的 Fusion 序列。
+如果最顶部的节点具有标签类型 `T`，则扁平化序列的元素为那些/不/具有标签类型 `T` 的子节点。这个过程是递归进行的。
+所以以上例子可以正确地写为：
 
     proto::terminal<int>::type const _1 = {1};
 
-    // OK, iterate over a flattened view
+    // OK, iterate over a flattened view  好的，遍历一个扁平视图
     fusion::for_each(
         fusion::transform(
             proto::flatten(_1 + 2 + 3 + 4)
@@ -640,7 +735,8 @@ The reason this doesn't work is because the expression `_1 + 2 + 3 + 4` does not
       , display()
     );
 
-The above invocation of `fusion::for_each()` displays the following:
+The above invocation of `fusion::for_each()` displays the following:\n
+以上 `fusion::for_each()` 调用将显示如下：
 
 [pre
 1
@@ -652,25 +748,34 @@ The above invocation of `fusion::for_each()` displays the following:
 [endsect]
 
 [/============================================================================]
-[section:expression_introspection Expression Introspection: Defining a Grammar]
+[section:expression_introspection Expression Introspection: Defining a Grammar 表达式的内部：定义一个语法]
 [/============================================================================]
 
-Expression trees can have a very rich and complicated structure. Often, you need to know some things about an expression's structure before you can process it. This section describes the tools Proto provides for peering inside an expression tree and discovering its structure. And as you'll see in later sections, all the really interesting things you can do with Proto begin right here.
+Expression trees can have a very rich and complicated structure. Often, you need to know some things about an expression's structure before you can process it. This section describes the tools Proto provides for peering inside an expression tree and discovering its structure. And as you'll see in later sections, all the really interesting things you can do with Proto begin right here.\n
+表达式树可以具有非常大而复杂的结构。通常，在你可以处理一个表达式结构之前，你需要了解关于它的一些事情。本节描述 Proto 所提供的一些工具，
+用于窥探表达式树的内部和发现其结构。在后面的章节中你将看到，你可以用 Proto 所做的真正有趣的事情从这里才开始。
 
 [/===============================================]
-[section:patterns Finding Patterns in Expressions]
+[section:patterns Finding Patterns in Expressions 发现表达式中的模式]
 [/===============================================]
 
-Imagine your DSEL is a miniature I/O facility, with iostream operations that execute lazily. You might want expressions representing input operations to be processed by one function, and output operations to be processed by a different function. How would you do that?
+Imagine your DSEL is a miniature I/O facility, with iostream operations that execute lazily. You might want expressions representing input operations to be processed by one function, and output operations to be processed by a different function. How would you do that?\n
+想象你的DSEL是一个微型的I/O工具，可以延迟执行 iostream 操作。你可能想让表示输入操作的表达式可以被某个函数处理，
+而表示输出操作的则被另一个函数处理。你要怎样做呢？
 
-The answer is to write patterns (a.k.a, /grammars/) that match the structure of input and output expressions. Proto provides utilities for defining the grammars, and the _matches_ template for checking whether a given expression type matches the grammar.
+The answer is to write patterns (a.k.a, /grammars/) that match the structure of input and output expressions. Proto provides utilities for defining the grammars, and the _matches_ template for checking whether a given expression type matches the grammar.\n
+答案是编写匹配输入和输出表达式结构的模式(也称/语法/)。Proto 提供了定义语法的工具，
+以及用于检查一个给定的表达式类型是否匹配该语法的 _matches_ 模板。
 
-First, let's define some terminals we can use in our lazy I/O expressions:
+First, let's define some terminals we can use in our lazy I/O expressions:\n
+首先，我们来定义一些要在我们的惰性I/O表达式中使用的终结符：
 
     proto::terminal< std::istream & >::type cin_ = { std::cin };
     proto::terminal< std::ostream & >::type cout_ = { std::cout };
 
-Now, we can use `cout_` instead of `std::cout`, and get I/O expression trees that we can execute later. To define grammars that match input and output expressions of the form `cin_ >> i` and `cout_ << 1` we do this:
+Now, we can use `cout_` instead of `std::cout`, and get I/O expression trees that we can execute later. To define grammars that match input and output expressions of the form `cin_ >> i` and `cout_ << 1` we do this: \n
+现在，我们可以用 `cout_` 替代 `std::cout`，并得到可以延迟执行的I/O表达式树。要定义匹配形如 `cin_ >> i` 和 `cout_ << 1` 
+的输入输出表达式的语法，我们可以这样做：
 
     struct Input
       : proto::shift_right< proto::terminal< std::istream & >, proto::_ >
@@ -685,11 +790,17 @@ without accessing the nested `::type`. When used like this, it is a very simple
 grammar, as are `proto::shift_right<>` and `proto::shift_left<>`. The newcomer
 here is `_` in the `proto` namespace. It is a wildcard that matches anything.
 The `Input` struct is a grammar that matches any right-shift expression that
-has a `std::istream` terminal as its left operand.
+has a `std::istream` terminal as its left operand.\n
+之前我们已见过模板 `proto::terminal<>`，但是我们在这里使用它并没有访问嵌套的 `::type`。
+象这样使用时，语法非常简单，如 `proto::shift_right<>` 和 `proto::shift_left<>`。
+这里新出现的是位于 `proto` 名字空间中的 `_`。它是一个可以匹配任何东西的通配符。
+结构 `Input` 就是一个可以匹配任何以一个 `std::istream` 终结符作为左操作数的右移表达式的语法。
 
 We can use these grammars together with the _matches_ template to query at
 compile time whether a given I/O expression type is an input or output
-operation. Consider the following:
+operation. Consider the following:\n
+我们可以将这些语法和 _matches_ 模板一起使用，在编译期查询一个给定的I/O表达式类型是否为输入或输出操作。
+考虑以下代码：
 
     template< typename Expr >
     void input_output( Expr const & expr )
@@ -714,14 +825,16 @@ operation. Consider the following:
         return 0;
     }
 
-This program prints the following:
+This program prints the following:\n
+该程序输出如下：
 
 [pre
 Output!
 Input!
 ]
 
-If we wanted to break the `input_output()` function into two functions, one that handles input expressions and one for output expressions, we can use `boost::enable_if<>`, as follows:
+If we wanted to break the `input_output()` function into two functions, one that handles input expressions and one for output expressions, we can use `boost::enable_if<>`, as follows:\n
+如果我们想将 `input_output()` 函数分开为两个函数，一个处理输入表达式，另一个处理输出表达式，我们可以用 `boost::enable_if<>`，如下：
 
     template< typename Expr >
     typename boost::enable_if< proto::matches< Expr, Input > >::type
@@ -737,13 +850,18 @@ If we wanted to break the `input_output()` function into two functions, one that
         std::cout << "Output!\n";
     }
 
-This works as the previous version did. However, the following does not compile at all:
+This works as the previous version did. However, the following does not compile at all:\n
+这一个和前一个版本结果一样。不过，以下代码就不能通过编译：
 
     input_output( cout_ << 1 << 2 ); // oops!
 
-What's wrong? The problem is that this expression does not match our grammar. The expression groups as if it were written like `(cout_ << 1) << 2`. It will not match the `Output` grammar, which expects the left operand to be a terminal, not another left-shift operation. We need to fix the grammar.
+What's wrong? The problem is that this expression does not match our grammar. The expression groups as if it were written like `(cout_ << 1) << 2`. It will not match the `Output` grammar, which expects the left operand to be a terminal, not another left-shift operation. We need to fix the grammar.\n
+有什么错吗？问题在于，这个表达式不能匹配我们的语法。这个表达式组和以下写法一样：`(cout_ << 1) << 2`。它不能匹配 `Output` 语法，
+后者要求左操作数是一个终结符，而不是另一个左移操作。我们要修正这个语法。
 
-We notice that in order to verify an expression as input or output, we'll need to recurse down to the bottom-left-most leaf and check that it is a `std::istream` or `std::ostream`. When we get to the terminal, we must stop recursing. We can express this in our grammar using _or_. Here are the correct `Input` and `Output` grammars:
+We notice that in order to verify an expression as input or output, we'll need to recurse down to the bottom-left-most leaf and check that it is a `std::istream` or `std::ostream`. When we get to the terminal, we must stop recursing. We can express this in our grammar using _or_. Here are the correct `Input` and `Output` grammars:\n
+我们注意到，为了检验一个表达式是输入还是输出，我们需要向下递归至最左下方的叶子并检查它是 `std::istream` 还是 `std::ostream`。
+当我们得到终结符时，我们必须停止递归。我们可以在我们的语法中用 _or_ 来表示这一点。以下是正确的 `Input` 和 `Output` 语法：
 
     struct Input
       : proto::or_<
@@ -759,37 +877,56 @@ We notice that in order to verify an expression as input or output, we'll need t
         >
     {};
 
-This may look a little odd at first. We seem to be defining the `Input` and `Output` types in terms of themselves. This is perfectly OK, actually. At the point in the grammar that the `Input` and `Output` types are being used, they are /incomplete/, but by the time we actually evaluate the grammar with _matches_, the types will be complete. These are recursive grammars, and rightly so because they must match a recursive data structure!
+This may look a little odd at first. We seem to be defining the `Input` and `Output` types in terms of themselves. This is perfectly OK, actually. At the point in the grammar that the `Input` and `Output` types are being used, they are /incomplete/, but by the time we actually evaluate the grammar with _matches_, the types will be complete. These are recursive grammars, and rightly so because they must match a recursive data structure!\n
+乍一看，这有点怪。看起来，我们是在用 `Input` 和 `Output` 类型来定义它们本身。事实上这是完全可以的。在这个语法中，
+到使用 `Input` 和 `Output` 类型的地方为止，它们还是/不完整/的，但是到我们使用 _matches_ 对该语法进行求值时，
+这两个类型已经是完整的了。这是递归语法，也是正确的，因为它们必须匹配一个递归的数据结构！
 
-Matching an expression such as `cout_ << 1 << 2` against the `Output` grammar procedes as follows:
+Matching an expression such as `cout_ << 1 << 2` against the `Output` grammar procedes as follows:\n
+用 `Output` 语法匹配形如 `cout_ << 1 << 2` 的表达式，过程如下：
 
 # The first alternate of the _or_ is tried first. It will fail, because the 
   expression `cout_ << 1 << 2` does not match the grammar `proto::shift_left< 
-  proto::terminal< std::ostream & >, proto::_ >`.
+  proto::terminal< std::ostream & >, proto::_ >`.\n
+  首先尝试 _or_ 的第一个选择。这会失败，因为表达式 `cout_ << 1 << 2` 不能匹配语法 
+  `proto::shift_left< proto::terminal< std::ostream & >, proto::_ >`。
 # Then the second alternate is tried next. We match the expression against 
   `proto::shift_left< Output, proto::_ >`. The expression is a left-shift, so we 
-  next try to match the operands.
-# The right operand `2` matches `proto::_` trivially.
+  next try to match the operands.\n
+  然后尝试第二个选择。我们用 `proto::shift_left< Output, proto::_ >` 来匹配这个表达式。
+  这个表达式是一个左移操作，所以我们先尝试操作数。
+# The right operand `2` matches `proto::_` trivially.\n
+  右操作数 `2` 可以匹配 `proto::_`。
 # To see if the left operand `cout_ << 1` matches `Output`, we must recursively 
   evaluate the `Output` grammar. This time we succeed, because `cout_ << 1` will 
-  match the first alternate of the _or_.
+  match the first alternate of the _or_.\n
+  现在看左操作数 `cout_ << 1` 是否能匹配 `Output`，我们必须递归求值 `Output` 语法。
+  这一次我们成功了，因为 `cout_ << 1` 将匹配 _or_ 的第一个选择。
 
-We're done -- the grammar matches successfully.
+We're done -- the grammar matches successfully.\n
+匹配完成 -- 这个语法可以成功地匹配。
 
 [endsect]
 
 [/===========================================]
-[section Fuzzy and Exact Matches of Terminals]
+[section Fuzzy and Exact Matches of Terminals 终结符的模糊匹配和精确匹配]
 [/===========================================]
 
-The terminals in an expression tree could be const or non-const references, or they might not be references at all. When writing grammars, you usually don't have to worry about it because _matches_ gives you a little wiggle room when matching terminals. A grammar such as `proto::terminal<int>` will match a terminal of type `int`, `int &`, or `int const &`.
+The terminals in an expression tree could be const or non-const references, or they might not be references at all. When writing grammars, you usually don't have to worry about it because _matches_ gives you a little wiggle room when matching terminals. A grammar such as `proto::terminal<int>` will match a terminal of type `int`, `int &`, or `int const &`.\n
+一棵表达式树中的终结符可以是const的或非const的引用，或者根本不是引用。在编写语法时，你通常不需要担心这一点，
+因为 _matches_ 在匹配终结符时给了你一点宽松的空间。一个形如 `proto::terminal<int>` 的语法可以匹配类型为 
+`int`, `int &`, 或 `int const &` 的终结符。
 
-You can explicitly specify that you want to match a reference type. If you do, the type must match exactly. For instance, a grammar such as `proto::terminal<int &>` will only match an `int &`. It will not match an `int` or an `int const &`.
+You can explicitly specify that you want to match a reference type. If you do, the type must match exactly. For instance, a grammar such as `proto::terminal<int &>` will only match an `int &`. It will not match an `int` or an `int const &`.\n
+你可以明确指定你要匹配的引用类型。如果你这样做了，类型将必须精确匹配。例如，一个形如 `proto::terminal<int &>` 的语法只能匹配一个 
+`int &`。它不能匹配 `int` 或 `int const &`。
 
-The table below shows how Proto matches terminals. The simple rule is: if you want to match only reference types, you must specify the reference in your grammar. Otherwise, leave it off and Proto will ignore const and references.
+The table below shows how Proto matches terminals. The simple rule is: if you want to match only reference types, you must specify the reference in your grammar. Otherwise, leave it off and Proto will ignore const and references.\n
+下表展示了 Proto 是如何匹配终结符的。简单的规则是：如果你想只匹配引用类型，你必须在你的语法中指定引用。否则，不用指定它，
+而 Proto 将忽略 const 和引用。
 
-[table proto::matches<> and Reference / CV-Qualification of Terminals
-    [[Terminal]     [Grammar]       [Matches?]]
+[table proto::matches<> and Reference / CV-Qualification of Terminals  proto::matches<>和终结符的引用/CV限定
+    [[Terminal 终结符]     [Grammar 语法]       [Matches? 是否匹配？]]
     [[T]            [T]             [yes]]
     [[T &]          [T]             [yes]]
     [[T const &]    [T]             [yes]]
@@ -801,9 +938,15 @@ The table below shows how Proto matches terminals. The simple rule is: if you wa
     [[T const &]    [T const &]     [yes]]
 ]
 
-This begs the question: What if you want to match an `int`, but not an `int &` or an `int const &`? For forcing exact matches, Proto provides the _exact_ template. For instance, `proto::terminal< proto::exact<int> >` would only match an `int` held by value.
+This begs the question: What if you want to match an `int`, but not an `int &` or an `int const &`? For forcing exact matches, Proto provides the _exact_ template. For instance, `proto::terminal< proto::exact<int> >` would only match an `int` held by value.\n
+这里回避了一个问题：如果你想匹配一个 `int`，而不匹配 `int &` 或 `int const &`，该怎么办？为了强制精确的匹配，
+Proto 提供了 _exact_ 模板。例如，`proto::terminal< proto::exact<int> >` 将只匹配一个以值方式保存的 `int`。
 
-Proto gives you extra wiggle room when matching array types. Array types match themselves or the pointer types they decay to. This is especially useful with character arrays. The type returned by `proto::as_expr("hello")` is `proto::terminal<char const[6]>::type`. That's a terminal containing a 6-element character array. Naturally, you can match this terminal with the grammar `proto::terminal<char const[6]>`, but the grammar `proto::terminal<char const *>` will match it as well, as the following code fragment illustrates.
+Proto gives you extra wiggle room when matching array types. Array types match themselves or the pointer types they decay to. This is especially useful with character arrays. The type returned by `proto::as_expr("hello")` is `proto::terminal<char const[6]>::type`. That's a terminal containing a 6-element character array. Naturally, you can match this terminal with the grammar `proto::terminal<char const[6]>`, but the grammar `proto::terminal<char const *>` will match it as well, as the following code fragment illustrates.\n
+在匹配数组类型时，Proto 为你提供了更为宽松的空间。数组类型可以匹配它们本身或它们退化的指针类型。这对于字符数组尤其有用。
+由 `proto::as_expr("hello")` 所返回的类型为 `proto::terminal<char const[6]>::type`。这是一个包含6个元素的字符数组的终结符。
+自然，你可以用语法 `proto::terminal<char const[6]>` 来匹配这个终结符，不过语法 `proto::terminal<char const *>` 也可以匹配它，
+如以下代码片断所示。 
 
     struct CharString
       : proto::terminal< char const * >
@@ -813,7 +956,8 @@ Proto gives you extra wiggle room when matching array types. Array types match t
 
     BOOST_MPL_ASSERT(( proto::matches< char_array, CharString > ));
 
-What if we only wanted `CharString` to match terminals of exactly the type `char const *`? You can use _exact_ here to turn off the fuzzy matching of terminals, as follows:
+What if we only wanted `CharString` to match terminals of exactly the type `char const *`? You can use _exact_ here to turn off the fuzzy matching of terminals, as follows:\n
+如果我们想 `CharString` 只精确匹配类型为 `char const *` 的终结符，该如何？你可以用 _exact_ 来关闭对终结符的模糊匹配，如下：
 
     struct CharString
       : proto::terminal< proto::exact< char const * > >
@@ -825,19 +969,28 @@ What if we only wanted `CharString` to match terminals of exactly the type `char
     BOOST_MPL_ASSERT(( proto::matches< char_string, CharString > ));
     BOOST_MPL_ASSERT_NOT(( proto::matches< char_array, CharString > ));
 
-Now, `CharString` does not match array types, only character string pointers.
+Now, `CharString` does not match array types, only character string pointers.\n
+现在，`CharString` 将不能匹配数组类型，只能匹配字符串指针。
 
-The inverse problem is a little trickier: what if you wanted to match all character  arrays, but not character pointers? As mentioned above, the expression `as_expr("hello")` has the type `proto::terminal< char const[ 6 ] >::type`. If you wanted to match character arrays of arbitrary size, you could use `proto::N`, which is an array-size wildcard. The following grammar would match any string literal: `proto::terminal< char const[ proto::N ] >`.
+The inverse problem is a little trickier: what if you wanted to match all character  arrays, but not character pointers? As mentioned above, the expression `as_expr("hello")` has the type `proto::terminal< char const[ 6 ] >::type`. If you wanted to match character arrays of arbitrary size, you could use `proto::N`, which is an array-size wildcard. The following grammar would match any string literal: `proto::terminal< char const[ proto::N ] >`.\n
+相反的问题则有点微妙：如果你想匹配所有字符数组而不想匹配字符指针呢？如上所述，表达式 `as_expr("hello")` 具有 
+`proto::terminal< char const[ 6 ] >::type` 的类型。如果你想匹配任意大小的字符数组，你可以用 `proto::N`，它是一个数组大小通配符。
+以下语法将匹配任何字符串字面值：`proto::terminal< char const[ proto::N ] >`。
 
-Sometimes you need even more wiggle room when matching terminals. For example, maybe you're building a calculator DSEL and you want to allow any terminals that are convertible to `double`. For that, Proto provides the _convertible_to_ template. You can use it as: `proto::terminal< proto::convertible_to< double > >`.
+Sometimes you need even more wiggle room when matching terminals. For example, maybe you're building a calculator DSEL and you want to allow any terminals that are convertible to `double`. For that, Proto provides the _convertible_to_ template. You can use it as: `proto::terminal< proto::convertible_to< double > >`.\n
+有时候，在匹配终结符时你需要更多的空间。例如，也许你正在构建一个计算器DSEL，你想允许任何可以转换为 `double` 的终结符。为此，Proto 提供了 _convertible_to_ 模板。你可以这样来使用它：`proto::terminal< proto::convertible_to< double > >`。 
 
-There is one more way you can perform a fuzzy match on terminals. Consider the problem of trying to match a `std::complex<>` terminal. You can easily match a `std::complex<float>` or a `std::complex<double>`, but how would you match any instantiation of `std::complex<>`? You can use `proto::_` here to solve this problem. Here is the grammar to match any `std::complex<>` instantiation:
+There is one more way you can perform a fuzzy match on terminals. Consider the problem of trying to match a `std::complex<>` terminal. You can easily match a `std::complex<float>` or a `std::complex<double>`, but how would you match any instantiation of `std::complex<>`? You can use `proto::_` here to solve this problem. Here is the grammar to match any `std::complex<>` instantiation:\n
+你还有一个方法可以对终结符执行模糊匹配。考虑这样一个问题，你尝试匹配一个 `std::complex<>` 终结符。
+你可以很容易地匹配一个 `std::complex<float>` 或 `std::complex<double>`，但是你如何匹配任意的 `std::complex<>` 实例呢？
+你可以用 `proto::_` 来解决这个问题。以下是匹配任意的 `std::complex<>` 实例：
 
     struct StdComplex
       : proto::terminal< std::complex< proto::_ > >
     {};
 
-When given a grammar like this, Proto will deconstruct the grammar and the terminal it is being matched against and see if it can match all the constituents.
+When given a grammar like this, Proto will deconstruct the grammar and the terminal it is being matched against and see if it can match all the constituents.\n
+当给出这样一个语法时，Proto 将解构要匹配的语法和终结符，看看它是否可以匹配所有要素。
 
 [endsect]
 
@@ -845,13 +998,19 @@ When given a grammar like this, Proto will deconstruct the grammar and the termi
 [section:if_and_not [^if_<>], [^and_<>], and [^not_<>]]
 [/====================================================]
 
-We've already seen how to use expression generators like `proto::terminal<>` and `proto::shift_right<>` as grammars. We've also seen _or_, which we can use to express a set of alternate grammars. There are a few others of interest; in particular, _if_, _and_ and _not_.
+We've already seen how to use expression generators like `proto::terminal<>` and `proto::shift_right<>` as grammars. We've also seen _or_, which we can use to express a set of alternate grammars. There are a few others of interest; in particular, _if_, _and_ and _not_.\n
+我们已经看到如何把象 `proto::terminal<>` 和 `proto::shift_right<>` 这样的表达式生成器作为语法使用。我们也看到了 _or_，
+我们可以用它来表达一组N选1的语法。还有另外几个有趣的模板：_if_, _and_ 和 _not_。
 
-The _not_ template is the simplest. It takes a grammar as a template parameter and logically negates it; `not_<Grammar>` will match any expression that `Grammar` does /not/ match.
+The _not_ template is the simplest. It takes a grammar as a template parameter and logically negates it; `not_<Grammar>` will match any expression that `Grammar` does /not/ match.\n
+_not_ 模板最为简单。它接受一个语法作为模板参数，并在逻辑上否定它；`not_<Grammar>` 将匹配 `Grammar` /不能/匹配的任意表达式。
 
-The _if_ template is used together with a Proto transform that is evaluated against expression types to find matches. (Proto transforms will be described later.)
+The _if_ template is used together with a Proto transform that is evaluated against expression types to find matches. (Proto transforms will be described later.)\n
+_if_ 模板与一个 Proto 变换一起使用，该变换对表达式类型进行求值以发现匹配(Proto 变换将在稍后讨论)。
 
-The _and_ template is like _or_, except that each argument of the _and_ must match in order for the _and_ to match. As an example, consider the definition of `CharString` above that uses _exact_. It could have been written without _exact_ as follows:
+The _and_ template is like _or_, except that each argument of the _and_ must match in order for the _and_ to match. As an example, consider the definition of `CharString` above that uses _exact_. It could have been written without _exact_ as follows:\n
+_and_ 模板类似于 _or_，不过 _and_ 的每个参数必须都匹配，_and_ 才能匹配。例如，考虑前面那个使用 _exact_ 的 `CharString` 定义。
+它可以不用 _exact_，改写为：
 
     struct CharString
       : proto::and_<
@@ -860,21 +1019,31 @@ The _and_ template is like _or_, except that each argument of the _and_ must mat
         >
     {};
 
-This says that a `CharString` must be a terminal, /and/ its value type must be the same as `char const *`. Notice the template argument of _if_: `boost::is_same< proto::_value, char const * >()`. This is Proto transform that compares the value type of a terminal to `char const *`.
+This says that a `CharString` must be a terminal, /and/ its value type must be the same as `char const *`. Notice the template argument of _if_: `boost::is_same< proto::_value, char const * >()`. This is Proto transform that compares the value type of a terminal to `char const *`.\n
+这是说，一个 `CharString` 必须是一个终结符，/且/它的值类型必须与 `char const *` 相同。注意，_if_ 的模板参数：
+`boost::is_same< proto::_value, char const * >()`。这是一个 Proto 变换，它将一个终结符的值类型与 `char const *` 进行比较。
 
-The _if_ template has a couple of variants. In addition to `if_<Condition>` you can also say `if_<Condition, ThenGrammar>` and `if_<Condition, ThenGrammar, ElseGrammar>`. These let you select one sub-grammar or another based on the `Condition`.
+The _if_ template has a couple of variants. In addition to `if_<Condition>` you can also say `if_<Condition, ThenGrammar>` and `if_<Condition, ThenGrammar, ElseGrammar>`. These let you select one sub-grammar or another based on the `Condition`.\n
+_if_ 模板有几个变体。除了 `if_<Condition>`，你还可以用 `if_<Condition, ThenGrammar>` 和 `if_<Condition, ThenGrammar, ElseGrammar>`。
+它们让你基于 `Condition` 选择某个子语法或另一个子语法。
 
 [endsect]
 
 [/=======================================================]
-[section:switch Improving Compile Times With [^switch_<>]]
+[section:switch Improving Compile Times With [^switch_<>] 用[^switch_<>]改进编译时间]
 [/=======================================================]
 
-When your Proto grammar gets large, you'll start to run into some scalability problems with _or_, the construct you use to specify alternate sub-grammars. First, due to limitations in C++, _or_ can only accept up to a certain number of sub-grammars, controlled by the `BOOST_PROTO_MAX_LOGICAL_ARITY` macro. This macro defaults to eight, and you can set it higher, but doing so will aggravate another scalability problem: long compile times. With _or_, alternate sub-grammars are tried in order -- like a series of cascading `if`'s -- leading to lots of unnecessary template instantiations. What you would prefer instead is something like `switch` that avoids the expense of cascading `if`'s. That's the purpose of _switch_; although less convenient than _or_, it improves compile times for larger grammars and does not have an arbitrary fixed limit on the number of sub-grammars. 
+When your Proto grammar gets large, you'll start to run into some scalability problems with _or_, the construct you use to specify alternate sub-grammars. First, due to limitations in C++, _or_ can only accept up to a certain number of sub-grammars, controlled by the `BOOST_PROTO_MAX_LOGICAL_ARITY` macro. This macro defaults to eight, and you can set it higher, but doing so will aggravate another scalability problem: long compile times. With _or_, alternate sub-grammars are tried in order -- like a series of cascading `if`'s -- leading to lots of unnecessary template instantiations. What you would prefer instead is something like `switch` that avoids the expense of cascading `if`'s. That's the purpose of _switch_; although less convenient than _or_, it improves compile times for larger grammars and does not have an arbitrary fixed limit on the number of sub-grammars. \n
+当你的 Proto 语法变大时，你将会开始陷入到 _or_ 所带来的一些可扩展性问题，它是你用于指定可选子语法的结构。首先，由于C++的限制，
+_or_ 最多只能接受某个特定数量的子语法，这个数量由 `BOOST_PROTO_MAX_LOGICAL_ARITY` 宏控制。这个宏缺省为8，你可以设高一点，
+但是这样做会加剧另一个可扩展性问题：更长的编译时间。使用 _or_ 时，侯选的子语法是按顺序尝试的 -- 就象一系列层叠的 `if` -- 
+导致了大量无用的模板实例化。你应该用一些类似于 `switch` 的东西来避免这些层叠 `if` 的代价。这正是 _switch_ 的目的；
+虽然它不如 _or_ 方便，但是它在使用大量语法时改进了编译的时间，而且对于子语法的数量也没有一个固定的限制。
 
-Let's illustrate how to use _switch_ by first writing a big grammar with _or_ and then translating it to an equivalent grammar using _switch_:
+Let's illustrate how to use _switch_ by first writing a big grammar with _or_ and then translating it to an equivalent grammar using _switch_:\n
+我们来示范一下如何使用 _switch_，首先写用 _or_ 写一个大语法，然后将它翻译为使用 _switch_ 等价语法：
 
-    // Here is a big, inefficient grammar
+    // Here is a big, inefficient grammar 以下是一个大的、低效的语法
     struct ABigGrammar
       : proto::or_<
             proto::terminal<int>
@@ -892,23 +1061,27 @@ Let's illustrate how to use _switch_ by first writing a big grammar with _or_ an
         >
     {};
 
-The above might be the grammar to a more elaborate calculator DSEL. Notice that since there are more than eight sub-grammars, we had to chain the sub-grammars with a nested _or_ -- not very nice.
+The above might be the grammar to a more elaborate calculator DSEL. Notice that since there are more than eight sub-grammars, we had to chain the sub-grammars with a nested _or_ -- not very nice.\n
+以上是为一个更为精细的计算器DSEL所编写的语法。注意，由于超过了8个子语法，所以我们必须用嵌套的 _or_ 来串起这些子语法 -- 不够漂亮。
 
-The idea behind _switch_ is to dispatch based on an expression's tag type to a sub-grammar that handles expressions of that type. To use _switch_, you define a struct with a nested `case_<>` template, specialized on tag types. The above grammar can be expressed using _switch_ as follows. It is described below.
+The idea behind _switch_ is to dispatch based on an expression's tag type to a sub-grammar that handles expressions of that type. To use _switch_, you define a struct with a nested `case_<>` template, specialized on tag types. The above grammar can be expressed using _switch_ as follows. It is described below.\n
+在 _switch_ 背后的想法是，基于一个表达式的标签类型来分派到处理该类型的表达式的子语法。要使用 _switch_，你要定义一个结构，
+该结构要有一个以标签类型作为参数的嵌套 `case_<>` 模板。上述语法可以用 _switch_ 表示如下。后面我们再讨论它。
 
     // Redefine ABigGrammar more efficiently using proto::switch_<>
+    // 用 proto::switch_<> 重新定义一个更高效的 ABigGrammar
     struct ABigGrammar;
 
     struct ABigGrammarCases
     {
-        // The primary template matches nothing:
+        // The primary template matches nothing: 主模板不匹配东西：
         template<typename Tag>
         struct case_
           : proto::not_<_>
         {};
     };
 
-    // Terminal expressions are handled here
+    // Terminal expressions are handled here 终结符表达式在此处理
     template<>
     struct ABigGrammarCases::case_<proto::tag::terminal>
       : proto::or_<
@@ -917,7 +1090,7 @@ The idea behind _switch_ is to dispatch based on an expression's tag type to a s
         >
     {};
 
-    // Non-terminals are handled similarly
+    // Non-terminals are handled similarly 非终结符类似地处理
     template<>
     struct ABigGrammarCases::case_<proto::tag::unary_plus>
       : proto::unary_plus<ABigGrammar>
@@ -960,15 +1133,20 @@ The idea behind _switch_ is to dispatch based on an expression's tag type to a s
 
     // Define ABigGrammar in terms of ABigGrammarCases
     // using proto::switch_<>
+    // 用 proto::switch_<> 根据 ABigGrammarCases 定义 ABigGrammar
     struct ABigGrammar
       : proto::switch_<ABigGrammarCases>
     {};
 
-Matching an expression type `E` against `proto::switch_<C>` is equivalent to matching it against `C::case_<E::proto_tag>`. By dispatching on the expression's tag type, we can jump to the sub-grammar that handles expressions of that type, skipping over all the other sub-grammars that couldn't possibly match. If there is no specialization of `case_<>` for a particular tag type, we select the primary template. In this case, the primary template inherits from `proto::not_<_>` which matches no expressions.
+Matching an expression type `E` against `proto::switch_<C>` is equivalent to matching it against `C::case_<E::proto_tag>`. By dispatching on the expression's tag type, we can jump to the sub-grammar that handles expressions of that type, skipping over all the other sub-grammars that couldn't possibly match. If there is no specialization of `case_<>` for a particular tag type, we select the primary template. In this case, the primary template inherits from `proto::not_<_>` which matches no expressions.\n
+用 `proto::switch_<C>` 匹配某个表达式类型 `E`，相当于用 `C::case_<E::proto_tag>` 来匹配它。通过按表达式的标签类型来分派，
+我们可以跳至处理该类型的表达式的子语法，跳过其它所有不可能匹配的子语法。如果某个特定标签类型没有相应的 `case_<>` 特化，
+则我们选择主模板。在这个例子中，主模板派生自 `proto::not_<_>`，它不匹配任何表达式。
 
-Notice the specialization that handles terminals:
+Notice the specialization that handles terminals:\n
+留意处理终结符的特化：
 
-    // Terminal expressions are handled here
+    // Terminal expressions are handled here 终结符表达式在此处理
     template<>
     struct ABigGrammarCases::case_<proto::tag::terminal>
       : proto::or_<
@@ -977,9 +1155,11 @@ Notice the specialization that handles terminals:
         >
     {};
 
-The `proto::tag::terminal` type by itself isn't enough to select an appropriate sub-grammar, so we use _or_ to list the alternate sub-grammars that match terminals.
+The `proto::tag::terminal` type by itself isn't enough to select an appropriate sub-grammar, so we use _or_ to list the alternate sub-grammars that match terminals.\n
+类型 `proto::tag::terminal` 本身不足以选择一个合适的子语法，所以我们用 _or_ 来列出匹配终结符的候选子语法。
 
-[note You might be tempted to define your `case_<>` specializations /in situ/ as follows:
+[note You might be tempted to define your `case_<>` specializations /in situ/ as follows:\n
+你可能会象下面这样/在原地/定义你的 `case_<>` 特化：
 
 ``
     struct ABigGrammarCases
@@ -987,62 +1167,75 @@ The `proto::tag::terminal` type by itself isn't enough to select an appropriate 
         template<typename Tag>
         struct case_ : proto::not_<_> {};
 
-        // ERROR: not legal C++
+        // ERROR: not legal C++ 错误：不是合法的C++
         template<>
         struct case_<proto::tag::terminal>
           /* ... */
     };
 ``
 
-Unfortunately, for arcane reasons, it is not legal to define an explicit nested specialization /in situ/ like this. It is, however, perfectly legal to define /partial/ specializations /in situ/, so you can add a extra dummy template parameter that has a default, as follows:
+Unfortunately, for arcane reasons, it is not legal to define an explicit nested specialization /in situ/ like this. It is, however, perfectly legal to define /partial/ specializations /in situ/, so you can add a extra dummy template parameter that has a default, as follows:\n
+不幸的是，由于某些原因，象这样/在原地/定义一个显式的嵌套特化是不合法的。但是，/在原地/定义/偏/特化则是合法的，
+所以你可以象下面这样增加一个有缺省值的哑模板参数：
 
 ``
     struct ABigGrammarCases
     {
         // Note extra "Dummy" template parameter here:
+        // 注意这里加了一个"哑"的模板参数：
         template<typename Tag, int Dummy = 0>
         struct case_ : proto::not_<_> {};
 
         // OK: "Dummy" makes this a partial specialization
         // instead of an explicit specialization.
+        // 可以："哑"参数使得这是一个偏特化而不是显式特化。
         template<int Dummy>
         struct case_<proto::tag::terminal, Dummy>
           /* ... */
     };
 ``
 
-You might find this cleaner than defining explicit `case_<>` specializations outside of their enclosing struct.
+You might find this cleaner than defining explicit `case_<>` specializations outside of their enclosing struct.\n
+也许你会发现这种方法比在结构外部定义显式的 `case_<>` 特化更为清晰。
 ]
 
 [endsect]
 
 [/==================================]
-[section Matching Vararg Expressions]
+[section Matching Vararg Expressions 匹配可变参数的表达式]
 [/==================================]
 
-Not all of C++'s overloadable operators are unary or binary. There is the oddball `operator()` -- the function call operator -- which can have any number of arguments. Likewise, with Proto you may define your own "operators" that could also take more that two arguments. As a result, there may be nodes in your Proto expression tree that have an arbitrary number of children (up to _MAX_ARITY_, which is configurable). How do you write a grammar to  match such a node?
+Not all of C++'s overloadable operators are unary or binary. There is the oddball `operator()` -- the function call operator -- which can have any number of arguments. Likewise, with Proto you may define your own "operators" that could also take more that two arguments. As a result, there may be nodes in your Proto expression tree that have an arbitrary number of children (up to _MAX_ARITY_, which is configurable). How do you write a grammar to  match such a node?\n
+并非所有的C++可重载操作符都是单参数或双参数的。有一个奇特的 `operator()` -- 函数调用操作符 -- 它可以带有任意数量的参数。同样，
+在 Proto 中你可以定义你自己的"操作符"来接受两个以上的参数。因此，在你的 Proto 表达式树中可能有某些节点带有任意数量的子节点
+(最多为 _MAX_ARITY_ 个，这是可配置的)。你如何编写一个可以匹配此类节点的语法呢？
 
-For such cases, Proto provides the _vararg_ class template. Its template argument is a grammar, and the _vararg_ will match the grammar zero or more times. Consider a Proto lazy function called `fun()` that can take zero or more characters as arguments, as follows:
+For such cases, Proto provides the _vararg_ class template. Its template argument is a grammar, and the _vararg_ will match the grammar zero or more times. Consider a Proto lazy function called `fun()` that can take zero or more characters as arguments, as follows:\n
+对于这种情况，Proto 提供了 _vararg_ 类模板。它的模板参数是一个语法，而且 _vararg_ 可以零次或多次匹配该语法。
+考虑一个名为 `fun()` 的 Proto 惰性函数，它可以接受零个或多个字符作为参数，如下：
 
     struct fun_tag {};
     struct FunTag : proto::terminal< fun_tag > {};
     FunTag::type const fun = {{}};
 
-    // example usage:
+    // example usage: 用例：
     fun();
     fun('a');
     fun('a', 'b');
     ...
 
-Below is the grammar that matches all the allowable invocations of `fun()`:
+Below is the grammar that matches all the allowable invocations of `fun()`:\n
+以下是可以匹配所有可允许的 `fun()` 调用的语法：
 
     struct FunCall
       : proto::function< FunTag, proto::vararg< proto::terminal< char > > >
     {};
 
-The `FunCall` grammar uses _vararg_ to match zero or more character literals as arguments of the `fun()` function.
+The `FunCall` grammar uses _vararg_ to match zero or more character literals as arguments of the `fun()` function.\n
+语法 `FunCall` 使用 _vararg_ 来匹配零个或多个作为 `fun()` 函数的参数的字符字面值。
 
-As another example, can you guess what the following grammar matches?
+As another example, can you guess what the following grammar matches?\n
+作为另一个例子，你能猜出以下语法匹配什么吗？
 
     struct Foo
       : proto::or_<
@@ -1051,40 +1244,52 @@ As another example, can you guess what the following grammar matches?
         >
     {};
 
-Here's a hint: the first template parameter to `proto::nary_expr<>` represents the node type, and any additional template parameters represent child nodes. The answer  is that this is a degenerate grammar that matches every possible expression tree,  from root to leaves.
+Here's a hint: the first template parameter to `proto::nary_expr<>` represents the node type, and any additional template parameters represent child nodes. The answer  is that this is a degenerate grammar that matches every possible expression tree,  from root to leaves.\n
+有一个提示：`proto::nary_expr<>` 的第一个模板参数表示节点的类型，其它参数则表示子节点。答案是，这是一个退化的语法，
+匹配任意一个可能的表达式树，从根到叶子。
 
 [endsect]
 
 [/=============================]
-[section Defining DSEL Grammars]
+[section Defining DSEL Grammars 定义DSEL语法]
 [/=============================]
 
-In this section we'll see how to use Proto to define a grammar for your DSEL and  use it to validate expression templates, giving short, readable compile-time errors  for invalid expressions.
+In this section we'll see how to use Proto to define a grammar for your DSEL and  use it to validate expression templates, giving short, readable compile-time errors  for invalid expressions.\n
+在本节中，我们将看到如何使用 Proto 来为你的DSEL定义一个语法，并用它来验证表达式模板，为无效的表达式给出简短可读的编译期错误。
 
 [tip You might think that this is a backwards way of doing things. ["If Proto let 
 me select which operators to overload, my users wouldn't be able to create invalid 
 expressions in the first place, and I wouldn't need a grammar at all!] That may be 
-true, but there are reasons for preferring to do things this way.
+true, but there are reasons for preferring to do things this way.\n
+你可能会认为这是一个倒退的处理方式。["如果 Proto 让我选择哪个重载哪个操作符，那么我的用户一开始就不能创建无效的表达式，
+我也就根本不需要什么语法了！]这也许是对的，不过也有其它理由要这样做。
 
 First, it lets you develop your DSEL rapidly -- all the operators are there for you 
-already! -- and worry about invalid syntax later.
+already! -- and worry about invalid syntax later.\n
+首先，它可以让你快速地开发你的DSEL -- 所有操作符都已经为你准备好了！ -- 只需要关心无效的语法就可以了。
 
 Second, it might be the case that some operators are only allowed in certain 
 contexts within your DSEL. This is easy to express with a grammar, and hard to do 
-with straight operator overloading.
+with straight operator overloading.\n
+其次，有可能在你的DSEL中有些操作符只在特定的上下文中可用。这一点用语法可以很容易表达，而直接用操作符重载则很难。
 
 Third, using a DSEL grammar to flag invalid expressions can often yield better 
-errors than manually selecting the overloaded operators.
+errors than manually selecting the overloaded operators.\n
+第三，用DSEL语法来标示无效表达式通常可以产生比手工选择操作符重载更好的错误提示。
 
 Fourth, the grammar can be used for more than just validation. You can use your 
 grammar to define ['tree transformations] that convert expression templates into 
-other more useful objects.
+other more useful objects.\n
+第四，语法可以不仅用于验证。你可以用你的语法来定义['树变换]，将表达式模板转换为更为有用的对象。
 
 If none of the above convinces you, you actually /can/ use Proto to control which 
 operators are overloaded within your domain. And to do it, you need to define a 
-grammar!]
+grammar!\n
+如果以上理由都不能说服你，那么实际上你/可以/用 Proto 来控制在你的领域中重载哪些操作符。而要实现这一点，你需要定义一个语法！]
 
-In a previous section, we used Proto to define a DSEL for a lazily evaluated calculator that allowed any combination of placeholders, floating-point literals, addition, subtraction, multiplication, division and grouping. If we were to write the grammar for this DSEL in [@http://en.wikipedia.org/wiki/Extended_Backus_Naur_Form EBNF], it might look like this:
+In a previous section, we used Proto to define a DSEL for a lazily evaluated calculator that allowed any combination of placeholders, floating-point literals, addition, subtraction, multiplication, division and grouping. If we were to write the grammar for this DSEL in [@http://en.wikipedia.org/wiki/Extended_Backus_Naur_Form EBNF], it might look like this:\n
+在上一节中，我们用 Proto 为一个惰性求值计算器下定义了一个DSEL，这个DSEL允许占位符、浮点字面值、加法、减法、乘法、除法和分组的任意组合。
+如果我们要用 [@http://en.wikipedia.org/wiki/Extended_Backus_Naur_Form EBNF] 为这个DSEL写一个语法，它看起来会是这样：
 
 [pre
 group       ::= '(' expression ')'
@@ -1098,14 +1303,19 @@ Writing the grammar for our calculator DSEL using Proto is /even simpler/.
 Since we are using C++ as the host language, we are bound to the associativity
 and precedence rules for the C++ operators. Our grammar can assume them. Also,
 in C++ grouping is already handled for us with the use of parenthesis, so we
-don't have to code that into our grammar.
+don't have to code that into our grammar.\n
+这里包括了一个计算器的语法、结合律和优先级。用 Proto 编写我们的计算器DSEL语法/更加简单/。因为我们以C++为宿主语言，
+所以我们绑定了C++操作符的结合律和优先级。我们的语法可以以此为前提。此外，在C++中，使用括号进行分组也已经为我们准备好了，
+因此我们不需要为这些在我们的语法中编写代码。
 
-Let's begin our grammar for forward-declaring it:
+Let's begin our grammar for forward-declaring it:\n
+我们从语法的前向声明开始：
 
     struct CalculatorGrammar;
 
 It's an incomplete type at this point, but we'll still be able to use it to
-define the rules of our grammar. Let's define grammar rules for the terminals:
+define the rules of our grammar. Let's define grammar rules for the terminals:\n
+此刻，它是一个不完整的类型，不过我们还是可以用它来定义我们的语法规则。让我们来定义终结符的语法规则：
 
     struct Double
       : proto::terminal< proto::convertible_to< double > >
@@ -1126,7 +1336,9 @@ define the rules of our grammar. Let's define grammar rules for the terminals:
 Now let's define the rules for addition, subtraction, multiplication and division. 
 Here, we can ignore issues of associativity and precedence -- the C++ compiler will 
 enforce that for us. We only must enforce that the arguments to the operators must 
-themselves conform to the `CalculatorGrammar` that we forward-declared above.
+themselves conform to the `CalculatorGrammar` that we forward-declared above.\n
+现在我们来定义加法、减法、乘法和除法的规则。这里，我们可以忽略结合律和优先级的问题 -- C++编译器会为我们强制执行它。
+我们只需规定操作符的参数必须符合我们前面所声明的 `CalculatorGrammar` 就可以了。
 
     struct Plus
       : proto::plus< CalculatorGrammar, CalculatorGrammar >
@@ -1145,7 +1357,8 @@ themselves conform to the `CalculatorGrammar` that we forward-declared above.
     {};
 
 Now that we've defined all the parts of the grammar, we can define
-`CalculatorGrammar`:
+`CalculatorGrammar`:\n
+现在我们已经定义了这个语法的全部，我们可以定义 `CalculatorGrammar` 了：
 
     struct CalculatorGrammar
       : proto::or_<
@@ -1159,7 +1372,9 @@ Now that we've defined all the parts of the grammar, we can define
 
 That's it! Now we can use `CalculatorGrammar` to enforce that an expression
 template conforms to our grammar. We can use _matches_ and `BOOST_MPL_ASSERT()`
-to issue readable compile-time errors for invalid expressions, as below:
+to issue readable compile-time errors for invalid expressions, as below:\n
+这就是它了！现在我们可以用 `CalculatorGrammar` 来强制某个表达式模板符合我们的语法。
+我们可以用 _matches_ 和 `BOOST_MPL_ASSERT()` 来对无效表达式生成可读的编译期错误，如下：
 
     template< typename Expr >
     void evaluate( Expr const & expr )

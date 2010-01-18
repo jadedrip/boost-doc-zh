@@ -5,26 +5,32 @@
  / file LICENSE_1_0.txt or copy at http://www.boost.org/LICENSE_1_0.txt)
  /]
 
-[section:implementation Appendix C: Implementation Notes]
+[section:implementation Appendix C: Implementation Notes 附录C：实现说明]
 
-[section:sfinae Quick-n-Dirty Type Categorization]
+[section:sfinae Quick-n-Dirty Type Categorization 快速而难看的类型分类]
 
 Much has already been written about dispatching on type traits using
 SFINAE (Substitution Failure Is Not An Error) techniques in C++. There
 is a Boost library, Boost.Enable_if, to make the technique idiomatic.
 Proto dispatches on type traits extensively, but it doesn't use
 `enable_if<>` very often. Rather, it dispatches based on the presence
-or absence of nested types, often typedefs for void.
+or absence of nested types, often typedefs for void.\n
+很多人都写过使用C++中的SFINAE(替换失败并非错误)技术按类型traits进行分派的代码。
+有一个Boost库，Boost.Enable_if，使这一技术成为惯用法。Proto大量地使用了按类型traits进行分派，
+但是它并不经常使用 `enable_if<>`。相以，它基于嵌套类型的存在与否来进行分派，
+这个嵌套类型通常被 typedef 为 void。 
 
 Consider the implementation of `is_expr<>`. It could have been written
-as something like this:
+as something like this:\n
+想一下 `is_expr<>` 的实现。它可以写成象以下这样：
 
     template<typename T>
     struct is_expr
       : is_base_and_derived<proto::some_expr_base, T>
     {};
 
-Rather, it is implemented as this:
+Rather, it is implemented as this:\n
+更好的方法是实现为这样：
 
     template<typename T, typename Void = void>
     struct is_expr
@@ -38,29 +44,39 @@ Rather, it is implemented as this:
 
 This relies on the fact that the specialization will be preferred
 if `T` has a nested `proto_is_expr_` that is a typedef for `void`.
-All Proto expression types have such a nested typedef.
+All Proto expression types have such a nested typedef.\n
+这依赖于一个事实，即如果 `T` 带有一个嵌套的 `proto_is_expr_`，它可以 typedef 为 `void`，
+则会优选模板的特化版。所有Proto表达式类型都带有这样的一个嵌套typedef。 
 
 Why does Proto do it this way? The reason is because, after running
 extensive benchmarks while trying to improve compile times, I have
 found that this approach compiles faster. It requires exactly one
 template instantiation. The other approach requires at least 2:
 `is_expr<>` and `is_base_and_derived<>`, plus whatever templates
-`is_base_and_derived<>` may instantiate.
+`is_base_and_derived<>` may instantiate.\n
+为什么Proto要以这种方法来实现呢？原因是，在进行了旨在改进编译时间的性能测试后，
+我发现这种方式的编译更快。它只需要一个模板实例化。另外一种方法则至少需要2个：
+`is_expr<>` 和 `is_base_and_derived<>`，而且模板 `is_base_and_derived<>` 还可能进行其它的实例化。
 
 [endsect]
 
-[section:function_arity Detecting the Arity of Function Objects]
+[section:function_arity Detecting the Arity of Function Objects 检测函数对象的arity]
 
 In several places, Proto needs to know whether or not a function
 object `Fun` can be called with certain parameters and take a
 fallback action if not. This happens in _callable_context_ and
 in the _call_ transform. How does Proto know? It involves some
-tricky metaprogramming. Here's how.
+tricky metaprogramming. Here's how.\n
+Proto的多处地方需要知道一个函数对象 `Fun` 是否可以用指定的参数来调用，
+如果不行的话则需要进行回退。这在 _callable_context_ 和 _call_ 变换中都有发生。
+Proto是如何知道的呢？这里有一些巧妙的元编程。下面来说一下。
 
 Another way of framing the question is by trying to implement
 the following `can_be_called<>` Boolean metafunction, which
 checks to see if a function object `Fun` can be called with
-parameters of type `A` and `B`:
+parameters of type `A` and `B`:\n
+构思这一问题的另一个方法是，尝试实现以下 `can_be_called<>` 布尔元函数，
+它检查某个函数对象 `Fun` 是否可以用类型为 `A` 和 `B` 的参数来调用：
 
     template<typename Fun, typename A, typename B>
     struct can_be_called;
@@ -68,7 +84,9 @@ parameters of type `A` and `B`:
 First, we define the following `dont_care` struct, which has an
 implicit conversion from anything. And not just any implicit
 conversion; it has a ellipsis conversion, which is the worst possible
-conversion for the purposes of overload resolution:
+conversion for the purposes of overload resolution:\n
+首先，我们定义以下 `dont_care` 结构，它带有一个自任何类型的隐式转换。
+而且不仅是任意的隐式转换；它还有一个带省略号的转换，这是在重载解析中最坏情况下的可选转换：
 
     struct dont_care
     {
@@ -77,7 +95,9 @@ conversion for the purposes of overload resolution:
 
 We also need some private type known only to us with an overloaded
 comma operator (!), and some functions that detect the presence of
-this type and return types with different sizes, as follows:
+this type and return types with different sizes, as follows:\n
+我们还需要一些东西，只有我们自己知道的带有一个逗号操作符重载(!)的私有类型，
+一些函数用于检测该类型是否出现并返回不同大小的类型，如下：
 
     struct private_type
     {
@@ -93,7 +113,8 @@ this type and return types with different sizes, as follows:
     yes_type is_private_type(private_type const &);
 
 Next, we implement a binary function object wrapper with a very
-strange conversion operator, whose meaning will become clear later.
+strange conversion operator, whose meaning will become clear later.\n
+接着，我们实现一个二元函数包装器，它带有一个非常奇特的转换操作符，其意义稍后就会弄清楚。
 
     template<typename Fun>
     struct funwrap2 : Fun
@@ -104,7 +125,8 @@ strange conversion operator, whose meaning will become clear later.
     };
 
 With all of these bits and pieces, we can implement `can_be_called<>` as
-follows:
+follows:\n
+有了所有这些东西，我们就可以如下实现 `can_be_called<>` 了：
 
     template<typename Fun, typename A, typename B>
     struct can_be_called
@@ -124,13 +146,19 @@ The idea is to make it so that `fun(a,b)` will always compile by adding
 our own binary function overload, but doing it in such a way that we can
 detect whether our overload was selected or not. And we rig it so that
 our overload is selected if there is really no better option. What follows
-is a description of how `can_be_called<>` works.
+is a description of how `can_be_called<>` works.\n
+其中的思想是，通过增加我们自己的二元函数重载，使得 `fun(a,b)` 总是可以被编译，不过，
+这样一来我们就可以检测到我们的重载是否被选中。而我们把它装配成只有在没有更好的选择时，
+才选中我们的重载。以下说明 `can_be_called<>` 如何工作。
 
 We wrap `Fun` in a type that has an implicit conversion to a pointer to
 a binary function. An object `fun` of class type can be invoked as
 `fun(a, b)` if it has such a conversion operator, but since it involves
 a user-defined conversion operator, it is less preferred than an
-overloaded `operator()`, which requires no such conversion.
+overloaded `operator()`, which requires no such conversion.\n
+我们将 `Fun` 包入一个类型，该类型带有一个到二元函数指针的隐式转换。如果一个类类型带有这样的一个转换操作符，
+则这个类类型的对象 `fun` 就可以用 `fun(a, b)` 来调用，不过，由于其中包含了一次用户自定义的转换操作符，
+所以它不如一个重载的 `operator()` 优先，因为后者不需要转换。 
 
 The function pointer can accept any two arguments by virtue
 of the `dont_care` type. The conversion sequence for each argument is
@@ -138,28 +166,42 @@ guaranteed to be the worst possible conversion sequence: an implicit
 conversion through an ellipsis, and a user-defined conversion to
 `dont_care`. In total, it means that `funwrap2<Fun>()(a, b)` will
 always compile, but it will select our overload only if there really is
-no better option.
+no better option.\n
+由于 `dont_care` 类型，这个函数指针可以接受任意类型的两个参数。每个参数的转换序列都可以保证是最坏情况下的可选转换序列：
+一个通过省略号进行的隐式转换，和一个到 `dont_care` 的用户自定义转换。总的来说，这意味着 `funwrap2<Fun>()(a, b)` 总是可以被编译，
+不过仅当没有更好的选择时，它才会选择我们的重载。
 
 If there is a better option --- for example if `Fun` has an overloaded
 function call operator such as `void operator()(A a, B b)` --- then
 `fun(a, b)` will resolve to that one instead. The question now is how
-to detect which function got picked by overload resolution.
+to detect which function got picked by overload resolution.\n
+如果有一个更好的选择 --- 例如，如果 `Fun` 带有一个重载的函数调用操作符，
+如 `void operator()(A a, B b)` --- 则 `fun(a, b)` 将被决议为那个选择。
+现在的问题是，如何通过重载决议来检测哪一个函数被选中。
 
 Notice how `fun(a, b)` appears in `can_be_called<>`: `(fun(a, b), 0)`.
 Why do we use the comma operator there? The reason is because we are
 using this expression as the argument to a function. If the return type
 of `fun(a, b)` is `void`, it cannot legally be used as an argument to
-a function. The comma operator sidesteps the issue.
+a function. The comma operator sidesteps the issue.\n
+留意在 `can_be_called<>` 中的 `fun(a, b)` 是如何出现的：`(fun(a, b), 0)`。
+为什么我们要用逗号操作符？原因是，我们要把这个表达式作为一个函数的参数来使用。 
+如果 `fun(a, b)` 的返回类型为 `void`，它就不能合法地作为一个函数的参数来使用。
+逗号操作符回避了这个问题。
 
 This should also make plain the purpose of the overloaded comma operator
 in `private_type`. The return type of the pointer to function is
 `private_type`. If overload resolution selects our overload, then the
 type of `(fun(a, b), 0)` is `private_type`. Otherwise, it is `int`.
 That fact is used to dispatch to either overload of `is_private_type()`,
-which encodes its answer in the size of its return type.
+which encodes its answer in the size of its return type.\n
+在 `private_type` 中重载逗号操作符的目的就很显而易见了。这个函数指针的返回类型是 `private_type`。
+如果重载决议选中了我们的重载，则 `(fun(a, b), 0)` 的类型为 `private_type`。否则，其类型为 `int`。
+这一事实用于分派 `is_private_type()` 的重载，后者将答案写在返回类型的大小中。
 
 That's how it works with binary functions. Now repeat the above process
-for functions up to some predefined function arity, and you're done.
+for functions up to some predefined function arity, and you're done.\n
+以上就是如何使用这一方法对二元函数进行判断。现在，可以重复以上过程直至某个预定义的函数airty为止。
 
 [endsect]
 
