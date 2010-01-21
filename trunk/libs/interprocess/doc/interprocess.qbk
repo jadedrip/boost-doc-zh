@@ -142,7 +142,7 @@
 
 [section:sharing_information 进程间信息共享]
 
-传统编程模型里一个操作系统中有多个进程同步运行，而每个进程拥有各自的地址空间。要在进程之间共享信息我们有几种选择：
+传统编程模型里一个操作系统中有多个进程在运行，而每个进程拥有各自的地址空间。要在进程之间共享信息我们有几种选择：
 
 * 利用[*文件]共享信息。每个进程使用普通的文件读写机制来访问数据。
   当更新/读取进程间共享的文件时，我们需要一些同步来保护完整性。
@@ -209,91 +209,74 @@
 
 
 [section:constructors_destructors_and_resource_lifetime
-   Constructors, destructors and lifetime of Interprocess named resources]
+   Interprocess命名资源的构造函数、析构函数及其生命周期]
 
-Named [*Boost.Interprocess] resources (shared memory, memory mapped files,
-named mutexes/conditions/semaphores) have kernel or filesystem persistency.
-This means that even if all processes that have opened those resources
-end, the resource will still be accessible to be opened again and the resource
-can only be destructed via an explicit to their static member `remove` function.
-This behavior can be easily understood, since it's the same mechanism used
-by functions controlling file opening/creation/erasure:
+[*Boost.Interprocess]的命名资源（共享内存、内存映射文件、命名互斥/条件变量/信号灯）
+有内核或文件持久性。这意味着即使所有打开这些资源的进程结束，这些资源仍能再次打开访问，
+只有显式地调用它们的静态成员函数`remove`来析构它们。
+这个行为很容易理解，所使用的机制与函数控制文件打开/建立/删除相同。
 
-[table Boost.Interprocess-Filesystem Analogy
-   [[Named Interprocess resource] [Corresponding std file]  [Corresponding POSIX operation]]
-   [[Constructor]                 [std::fstream constructor][open]]
-   [[Destructor]                  [std::fstream destructor] [close]]
-   [[Member `remove`]             [None. `std::remove`]     [unlink]]
+[table Boost.Interprocess-文件系统 类比
+   [[命名Interprocess资源] [对应的std文件]  [对应的POSIX操作]]
+   [[构造函数]                 [std::fstream构造函数][open]]
+   [[析构函数]                  [std::fstream析构函数] [close]]
+   [[`remove`成员函数]             [无. `std::remove`]     [unlink]]
 ]
 
-Now the correspondence between POSIX and Boost.Interprocess
-regarding shared memory and named semaphores:
+POSIX与Boost.Interprocess的共享内存和命名信号灯相应对照：
 
-[table Boost.Interprocess-POSIX shared memory
-   [[`shared_memory_object` operation] [POSIX operation]]
-   [[Constructor]                      [shm_open]]
-   [[Destructor]                       [close]]
-   [[Member `remove`]                  [shm_unlink]]
+[table Boost.Interprocess-POSIX 共享内存
+   [[`shared_memory_object`操作] [POSIX操作]]
+   [[构造函数]                      [shm_open]]
+   [[析构函数]                       [close]]
+   [[`remove`成员函数]                  [shm_unlink]]
 ]
 
-[table Boost.Interprocess-POSIX named semaphore
-   [[`named_semaphore` operation]      [POSIX operation]]
-   [[Constructor]                      [sem_open]]
-   [[Destructor]                       [close]]
-   [[Member `remove`]                  [sem_unlink]]
+[table Boost.Interprocess-POSIX 命名信号灯
+   [[`named_semaphore`操作]      [POSIX操作]]
+   [[构造函数]                      [sem_open]]
+   [[析构函数]                       [close]]
+   [[`remove`成员函数]                  [sem_unlink]]
 ]
 
-The most important property is that [*destructors of named resources
-don't remove the resource from the system], they only liberate resources
-allocated by the system for use by the process for the named resource.
-[*To remove the resource from the system the programmer must use
-`remove`].
+最重要的特性是[*命名资源的构造函数不会从系统中删除该资源]，它只是释放系统为进程分配的命名资源。
+[*要从系统中删除，编程者必须使用`remove`]。
 
 [endsect]
 
 [endsect]
 
-[section:sharedmemorybetweenprocesses Sharing memory between processes]
+[section:sharedmemorybetweenprocesses 进程之间共享内存]
 
-[section:sharedmemory Shared memory]
+[section:sharedmemory 共享内存]
 
-[section:shared_memory_what_is What is shared memory?]
+[section:shared_memory_what_is 什么是共享内存？]
 
-Shared memory is the fastest interprocess communication mechanism.
-The operating system maps a memory segment in the address space of several
-processes, so that several processes can read and write in that memory segment 
-without calling operating system functions. However, we need some kind of 
-synchronization between processes that read and write shared memory.
+共享内存是最快的进程间通信机制。操作系统在某几个进程的地址空间里映射一个内存段，
+这几个进程就可以直接读写这个内存段而不用调用操作系统函数。不管怎样，
+我们需要一些方法同步读写共享内存的进程。
 
-Consider what happens when a server process wants to send an HTML file to a client process
-that resides in the same machine using network mechanisms:
+考虑一下，当一个服务端进程要通过网络机制发送一个HTML文件给位于本机的客户端进程时会发生什么：
 
-* The server must read the file to memory and pass it to the network functions, that
-  copy that memory to the OS's internal memory.
+* 服务端必须把文件读入内存并传递给网络函数，网络函数复制这块内存到操作系统内部内存空间中。
 
-* The client uses the network functions to copy the data from the OS's internal memory
-  to its own memory.
+* 客户端用网络函数从操作系统内部内存空间中把数据拷贝到自己的内存中。
 
-As we can see, there are two copies, one from memory to the network and another one
-from the network to memory. And those copies are made using operating system calls
-that normally are expensive. Shared memory avoids this overhead, but we need to 
-synchronize both processes:
+我们看到，这里有两次拷贝，一次从内存到网络，另一次从网络到内存。
+并且这些拷贝操作引起的操作系统调用往往开销较大。共享内存避免了这种开销，
+不过我们需要同步这两个进程：
 
-* The server maps a shared memory in its address space and also gets access to a
-  synchronization mechanism. The server obtains exclusive access to the memory using
-  the synchronization mechanism and copies the file to memory.
+* 服务端在其地址空间中映射一块共享内存并启用一个同步机制。利用同步机制独占内存并把文件复制到内存中。
 
-* The client maps the shared memory in its address space. Waits until the server releases
-  the exclusive access and uses the data.
+* 客户端在自己的地址空间中映射共享内存。等待直到服务端释放同步机制，开始使用数据。
 
-Using shared memory, we can avoid two data copies, but we have to synchronize the access
-to the shared memory segment.
+利用共享内存我们可以避免两次数据拷贝，但我们也不得不同步访问共享内存段。
 
 [endsect]
 
-[section:shared_memory_steps Creating memory segments that can be shared between processes]
+[section:shared_memory_steps 建立可在进程之间共享的内存段]
 
-To use shared memory, we have to perform 2 basic steps:
+要使用共享内存，我们要执行二个基本步骤：
 
 * Request to the operating system a memory segment that can be shared between
 processes. The user can create/destroy/open this memory using a [*shared memory object]:
