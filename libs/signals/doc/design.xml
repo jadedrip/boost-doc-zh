@@ -2,13 +2,13 @@
 <!DOCTYPE section PUBLIC "-//Boost//DTD BoostBook XML V1.0//EN"
   "http://www.boost.org/tools/boostbook/dtd/boostbook.dtd">
 <section last-revision="$Date: 2007-11-25 13:38:02 -0500 (Sun, 25 Nov 2007) $">
-  <title>Design Overview</title>
+  <title>Design Overview 设计概览</title>
 
   <using-namespace name="boost"/>
   <using-namespace name="boost::signals"/>
 
   <section>
-    <title>Type Erasure</title>
+    <title>Type Erasure 类型删除</title>
 
     <para>"Type erasure", where static type information is eliminated
     by the use of dynamically dispatched interfaces, is used
@@ -19,7 +19,12 @@
     their associated connections. However, instantiating this map for
     every token type, and perhaps within each translation unit (for
     some popular template instantiation strategies) increase compile
-    time overhead and space overhead.</para>
+    time overhead and space overhead.<sbr/>
+    “类型删除”是通过动态分派的接口消除静态类型信息，它在 Boost.Signals 库中广泛使用， 
+    以减少模板实例化所产生的代码总数。每个信号必须管理一序列插槽及其相关的连接， 
+    还有一个 <code>std::map</code>，从编组标识符映射到它们相关的连接。然而， 
+    为每个标记类型实例化该映射，并且可能在每个翻译单元中都要实例化 
+    （因为某些流行的模板实例化策略），增加了编译的时间开销和空间开销。</para>
 
     <para> To combat this so-called "template bloat", we use
     Boost.Function and Boost.Any to store unknown types and
@@ -32,11 +37,16 @@
     actual <code><classname>signalN</classname></code> class templates
     deal only with code that will change depending on the number of
     arguments or which is inherently template-dependent (such as
-    connection).</para>
+    connection).<sbr/>
+    为了防止这种所谓的“模板膨胀”， 我们使用了 Boost.Function 和 Boost.Any 来保存未知的类型和操作。 
+    然后，处理插槽链表和插槽标识符到连接的映射的所有代码都移到了 <code><classname>signal_base</classname></code> 类中， 
+    它专门处理 <code>any</code> 和 <code><classname>function</classname></code> 对象，使用著名的 pimpl 惯用法隐藏了实际的实现。 
+    实际的 <code><classname>signalN</classname></code> 类模板仅处理根据参数个数而变化的代码， 
+    或本来就是模板相关的代码（如连接）。</para>
   </section>
 
   <section>
-    <title><code>connection</code> class</title>
+    <title><code>connection</code> class  <code>connection</code>类</title>
 
     <para> The <code><classname>connection</classname></code> class is
     central to the behavior of the Boost.Signals library. It is the
@@ -45,7 +55,11 @@
     specific, the <code><classname>connection</classname></code> class
     itself is merely a thin wrapper over a
     <code><classname>shared_ptr</classname></code> to a
-    <code>basic_connection</code> object.</para>
+    <code>basic_connection</code> object.<sbr/>
+    <code><classname>connection</classname></code> 类是 Boost.Signals 库行为的中心。 
+    它是 Boost.Signals 系统中的唯一的实体，知道与特定连接相关联的所有对象。
+    确切地说，<code><classname>connection</classname></code> 类本身只是指向 
+    <code>basic_connection</code> 对象的 <code><classname>shared_ptr</classname></code> 之上的薄封装。</para>
 
     <para> <code><classname>connection</classname></code> objects are
     stored by all participants in the Signals system: each
@@ -59,11 +73,17 @@
     to slots is based on the key value in a
     <code><classname>std::multimap</classname></code> (the stored data
     in the <code><classname>std::multimap</classname></code> is the
-    slot pair).</para>
+    slot pair).<sbr/>
+    <code><classname>connection</classname></code> 对象被信号系统中所有参与者保存： 
+    每个 <code><classname>trackable</classname></code> 对象包含一个 <code><classname>connection</classname></code> 对象链表， 
+    该链表描述了包含这个可跟踪对象的所有连接；同样，所有信号包含一组定义插槽的配对（pair）。 
+    该配对由插槽函数对象（一般是 Boost.Function 对象）和 <code><classname>connection</classname></code> 对象
+    （析构时会断开）所组成。最后，从插槽组到插槽的映射是基于 <code><classname>std::multimap</classname></code> 中的键值
+    （保存于 <code><classname>std::multimap</classname></code> 中的数据即插槽配对）。 </para>
   </section>
 
   <section>
-    <title>Slot Call Iterator</title>
+    <title>Slot Call Iterator 插槽调用迭代器</title>
 
     <para> The slot call iterator is conceptually a stack of iterator
     adaptors that modify the behavior of the underlying iterator
@@ -72,68 +92,90 @@
     only a conceptual model: the implementation collapses all these
     layers into a single iterator adaptor because several popular
     compilers failed to compile the implementation of the conceptual
-    model.</para>
+    model.<sbr/>
+    插槽调用迭代器概念上是一堆迭代器适配器， 它们会更改底层插槽链表迭代器的行为。 
+    下表描述了每个迭代器所要求的类型和行为。注意这仅仅是个概念模型： 
+    实现时所有这些层次合并为单个迭代器适配器，因为有些流行的编译器无法编译概念模型的实现。</para>
 
     <informaltable>
       <tgroup cols="2" align="left">
         <thead>
           <row>
-            <entry>Iterator Adaptor</entry>
-            <entry>Purpose</entry>
+            <entry>Iterator Adaptor 迭代器适配器</entry>
+            <entry>Purpose 目的</entry>
           </row>
         </thead>
         <tbody>
           <row>
-            <entry><para>Slot List Iterator</para></entry>
+            <entry><para>Slot List Iterator<sbr/>
+            插槽链表迭代器</para></entry>
             <entry><para>An iterator through the list of slots
             connected to a signal. The <code>value_type</code> of this
             iterator will be
             <code><classname>std::pair</classname>&lt;any,
             connection&gt;</code>, where the
             <code><classname>any</classname></code> contains an
-            instance of the slot function type.</para></entry>
+            instance of the slot function type.<sbr/>
+            连接到信号的插槽链表的迭代器。该迭代器的 <code>value_type</code> 是 
+            <code><classname>std::pair</classname>&lt;any, connection&gt;</code>， 
+            其中 <code><classname>any</classname></code> 包含插槽函数类型的一个实例。</para></entry>
           </row>
           <row>
-            <entry><para>Filter Iterator Adaptor</para></entry>
+            <entry><para>Filter Iterator Adaptor<sbr/>
+            过滤迭代器适配器</para></entry>
             <entry><para>This filtering iterator adaptor filters out
             slots that have been disconnected, so we never see a
-            disconnected slot in later stages.</para></entry>
+            disconnected slot in later stages.<sbr/>
+            这个过滤迭代器适配器过滤掉已断开的插槽，因此我们在后面的阶段不会见到已断开的插槽。</para></entry>
           </row>
           <row>
-            <entry><para>Projection Iterator Adaptor</para></entry>
+            <entry><para>Projection Iterator Adaptor 投影迭代器适配器</para></entry>
             <entry><para>The projection iterator adaptor returns a
             reference to the first member of the pair that constitutes
             a connected slot (e.g., just the
             <code><classname>boost::any</classname></code> object that
-            holds the slot function).</para></entry>
+            holds the slot function).<sbr/>
+            投影迭代器适配器返回一个引用，指向构成一个已连接插槽的 pair 的第一个成员 
+            （例如保存插槽函数的 <code><classname>boost::any</classname></code> 对象）。</para></entry>
           </row>
           <row>
-            <entry><para>Transform Iterator Adaptor</para></entry>
+            <entry><para>Transform Iterator Adaptor 转换迭代器适配器</para></entry>
             <entry><para>This transform iterator adaptor performs an
             <code><functionname>any_cast</functionname></code> to
             extract a reference to the slot function with the
-            appropriate slot function type.</para></entry>
+            appropriate slot function type.<sbr/>
+            这个转换迭代器适配器执行 <code><functionname>any_cast</functionname></code>，
+            以提取一个插槽函数的引用， 并具有适当的插槽函数类型。</para></entry>
           </row>
           <row>
-            <entry><para>Transform Iterator Adaptor</para></entry>
+            <entry><para>Transform Iterator Adaptor<sbr/>
+            转换迭代器适配器</para></entry>
             <entry><para>This transform iterator adaptor calls the
             function object returned by dereferencing the underlying
             iterator with the set of arguments given to the signal
             itself, and returns the result of that slot
-            call.</para></entry>
+            call.<sbr/>
+            这个转换迭代器适配器调用底层迭代器解引用所返回的函数对象， 
+            参数为输入信号本身的那组参数，并返回那个插槽调用的结果。</para></entry>
           </row>          
           <row>
-            <entry><para>Input Caching Iterator Adaptor</para></entry>
+            <entry><para>Input Caching Iterator Adaptor<sbr/>
+            输入缓存迭代器适配器</para></entry>
             <entry><para>This iterator adaptor caches the result of
             dereferencing the underlying iterator. Therefore,
             dereferencing this iterator multiple times will only
             result in the underlying iterator being dereferenced once;
             thus, a slot can only be called once but its result can be
-            used multiple times.</para></entry>
+            used multiple times.<sbr/>
+            这个迭代器适配器缓存底层迭代器解引用的结果。 因此，
+            该迭代器多次解引用将只会引起底层迭代器的一次解引用；
+            这样，插槽可以一次调用但其结果可多次使用。</para></entry>
           </row>
           <row>
-            <entry><para>Slot Call Iterator</para></entry>
-            <entry><para>Iterates over calls to each slot.</para></entry>
+            <entry><para>Slot Call Iterator<sbr/>
+            插槽调用迭代器</para></entry>
+            <entry><para>Iterates over calls to each slot.<sbr/>
+            迭代调用每个插槽。</para></entry>
           </row>
         </tbody>
       </tgroup>
@@ -141,14 +183,17 @@
   </section>
 
   <section>
-    <title><code>visit_each</code> function template</title>
+    <title><code>visit_each</code> function template  <code>visit_each</code>函数模板</title>
     
     <para> The <code><functionname>visit_each</functionname></code>
     function template is a mechanism for discovering objects that are
     stored within another object. Function template
     <code><functionname>visit_each</functionname></code> takes three
     arguments: an object to explore, a visitor function object that is
-    invoked with each subobject, and the <code>int</code> 0. </para>
+    invoked with each subobject, and the <code>int</code> 0. <sbr/>
+    <code><functionname>visit_each</functionname></code> 函数模板是一种机制，
+    用于发现保存于另一个对象中的对象。<code><functionname>visit_each</functionname></code> 有三个参数：
+    待探测的对象、对每个子对象进行调用的访问者函数和 <code>int</code> 0。</para>
 
     <para> The third parameter is merely a temporary solution to the
     widespread lack of proper function template partial ordering. The
@@ -163,7 +208,14 @@
     <code>long</code>. The ordering determined by this conversion thus
     achieves partial ordering of the function templates in a limited,
     but successful, way. The following example illustrates the use of
-    this technique:</para>
+    this technique:<sbr/>
+    第三个参数仅仅是个临时的解决方案，针对普遍缺乏正确的函数模板特化次序这一问题。 
+    <code><functionname>visit_each</functionname></code> 函数主模板指定这个第三个参数类型为 <code>long</code>，
+    而任何用户特化必须指定他们的第三个参数类型为 <code>int</code>。这样，
+    即使不合标准的编译器不能例如在匹配参数 <code>T</code> 和参数 <code>A&lt;T&gt;</code> 之间判断次序， 
+    它也可以决定从整数 0 到 <code>int</code> 的转换比到 <code>long</code> 的转换更好。 
+    这个转换所决定的次序就这样做到了函数模板特化的次序化，以一种有限的但是成功的方式。 
+    下面的例子显示了该技术的使用：</para>
 
     <programlisting>
 template&lt;typename&gt; class A {};
@@ -179,6 +231,9 @@ foo(at, 0);
     cannot be ordered based on that parameter. Then the conversion
     from 0 to <code>int</code> is better than the conversion from 0 to
     <code>long</code>, and the second function template is
-    chosen. </para>
+    chosen. <sbr/>
+    在本例中，我们假定我们的编译器不能判断 <code>A&lt;T&gt;</code> 比 <code>T</code> 更匹配，
+    并因此假定函数模板不能基于那个参数排序。于是从 0 到 <code>int</code> 的转换比从 0 到 <code>long</code> 的转换更好，
+    并且第二个函数模板被选中。</para>
   </section>
 </section>
