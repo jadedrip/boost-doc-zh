@@ -278,26 +278,19 @@ POSIX与Boost.Interprocess的共享内存和命名信号灯相应对照：
 
 要使用共享内存，我们要执行二个基本步骤：
 
-* Request to the operating system a memory segment that can be shared between
-processes. The user can create/destroy/open this memory using a [*shared memory object]:
-['An object that represents memory that can be mapped concurrently into the 
-  address space of more than one process.].
+* 向操作系统申请可用于进程间共享的内存段。用户能用[*共享内存对象]创建/销毁/打开这块内存。
+['可并行映射入多个进程地址空间的内存对象]。
 
-* Associate a part of that memory or the whole memory with the address space of the
-  calling process. The operating system looks for a big enough memory address range
-  in the calling process' address space and marks that address range as an
-  special range. Changes in that address range are automatically seen
-  by other process that also have mapped the same shared memory object.
+* 将一部分或整块内存与调用进程的地址空间关联起来。操作系统在调用进程的地址空间中寻找一块足够大的内存区间并标记为特殊区间。在这个区间内的改变会自动被其它映射相同共享内存对象的进程看见。
 
-Once the two steps have been successfully completed, the process can start writing to
-and reading from the address space to send to and receive data from other processes.
-Now, let's see how can we do this using [*Boost.Interprocess]:
+一旦两个步骤完成，进程可以在这个地址空间中读写，以此发送和接收其它进程的数据。
+现在，我们来看看如何利用[*Boost.Interprocess]做到这一点:
 
 [endsect]
 
-[section:shared_memory_header Header]
+[section:shared_memory_header 头文件]
 
-To manage shared memory, you just need to include the following header:
+要管理共享内存，你只需包含下面的头文件：
 
 [c++]
 
@@ -305,14 +298,11 @@ To manage shared memory, you just need to include the following header:
 
 [endsect]
 
-[section:shared_memory_creating_shared_memory_segments Creating shared memory segments]
+[section:shared_memory_creating_shared_memory_segments 建立共享内存段]
 
-As we've mentioned we have to use the `shared_memory_object` class to create, open
-and destroy shared memory segments that can be mapped by several processes. We can
-specify the access mode of that shared memory object (read only or read-write),
-just as if it was a file:
+正如我们所说，我们必须使用`shared_memory_object`类来创建、打开和销毁共享内存段。我们可以指定共享内存对象的访问模式（只读或读写），就像文件那样：
 
-* Create a shared memory segment. Throws if already created:
+* 创建一个共享内存段，如果已创建则抛出异常：
 
 [c++]
 
@@ -323,7 +313,7 @@ just as if it was a file:
          ,read_write                   //read-write mode
          );
 
-* To open or create a shared memory segment:
+* 打开或创建一个共享内存段：
 
 [c++]
 
@@ -334,7 +324,7 @@ just as if it was a file:
          ,read_only                    //read-only mode
          );
 
-* To only open a shared memory segment. Throws if does not exist:
+* 仅仅打开一个共享内存段。如果不存在则抛出异常：
 
 [c++]
 
@@ -345,18 +335,13 @@ just as if it was a file:
          ,read_write                   //read-write mode
          );
 
-When a shared memory object is created, its size is 0.
-To set the size of the shared memory, the user must use the `truncate` function
-call, in a shared memory that has been opened with read-write attributes:
+共享内存对象创建后，它的大小为0。要设置共享内存的大小，用户必须调用`truncate`函数于以读写属性打开的共享内存：
 
 [c++]
 
       shm_obj.truncate(10000);
 
-As shared memory has kernel or filesystem persistence, the user must explicitly
-destroy it. The `remove` operation might fail returning
-false if the shared memory does not exist, the file is open or the file is 
-still memory mapped by other processes:
+由于共享内存有内核或文件持久性，用户必须显式地销毁它。`remove`操作可能会失败，如果共享内存不存在、文件已打开或文件仍被其它进程映射，这时会返回false。
 
 [c++]
 
@@ -364,20 +349,17 @@ still memory mapped by other processes:
       shared_memory_object::remove("shared_memory");
 
 
-For more details regarding `shared_memory_object` see the 
-[classref boost::interprocess::shared_memory_object] class reference.
+关于`shared_memory_object`的更多细节，请参见
+[classref boost::interprocess::shared_memory_object]类参考。
 
 [endsect]
 
-[section:shared_memory_mapping_shared_memory_segments Mapping Shared Memory Segments]
+[section:shared_memory_mapping_shared_memory_segments 映射共享内存段]
 
-Once created or opened, a process just has to map the shared memory object in the process'
-address space. The user can map the whole shared memory or just part of it. The
-mapping process is done using the `mapped_region` class. The class represents
-a memory region that has been mapped from a shared memory or from other devices
-that have also mapping capabilities (for example, files). A `mapped_region` can be
-created from any `memory_mappable` object and as you might imagine, `shared_memory_object`
-is a `memory_mappable` object:
+一旦创建或打开共享内存对象，进程只需映射到本进程地址空间。
+用户可以映射整个共享内存或只是其中一部分。映射工作由`mapped_region`类完成。
+这个类代表一块从共享内存或同样具有映射功能的其它设备（如文件）映射而来的内存区域。
+`mapped_region`可以由一些`memory_mappable`对象创建，而你可能已经想到了，`shared_memory_object`是一个`memory_mappable`对象：
 
 [c++]
 
@@ -398,23 +380,20 @@ is a `memory_mappable` object:
       //Get the size of the region
       region.get_size();
 
-The user can specify the offset from the mappable object where the mapped region
-should start and the size of the mapped region. If no offset or size is specified,
-the whole mappable object (in this case, shared memory) is mapped. If the offset
-is specified, but not the size, the mapped region covers from the offset until
-the end of the mappable object.
+用户可以指定映射区域的偏移位置（从哪里开始），以及映射区域的大小。
+如果不指定偏移值和大小，那么表示映射整个可映射对象（在这里，为共享内存）。
+如果指定了偏移值而没有大小，则映射区域将从偏移值开始覆盖到可映射对象尾部。
 
-For more details regarding `mapped_region` see the 
-[classref boost::interprocess::mapped_region] class reference.
+关于`mapped_region`的更多细节请参看 
+[classref boost::interprocess::mapped_region]类参考。
 
 [endsect]
 
-[section:shared_memory_a_simple_example A Simple Example]
+[section:shared_memory_a_simple_example 一个简单的例子]
 
-Let's see a simple example of shared memory use. A server process creates a
-shared memory object, maps it and initializes all the bytes to a value. After that, 
-a client process opens the shared memory, maps it, and checks
-that the data is correctly initialized:
+让我们来看一个应用共享内存的简单例子。
+一个服务进程创建一个共享内存对象，映射之并把所有的字节初始化为一个数值。
+之后，一个客户进程打开这个共享内存，映射之并检查数据是否被正确初始化：
 
 [import ../example/doc_shared_memory.cpp]
 [doc_shared_memory]
