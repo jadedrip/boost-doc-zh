@@ -5,33 +5,44 @@
   http://www.boost.org/LICENSE_1_0.txt).
 ]
 
-[section Thread Local Storage]
+[section:thread_local_storage Thread Local Storage 线程局部存储]
 
-[heading Synopsis]
+[heading Synopsis 概述]
 
 Thread local storage allows multi-threaded applications to have a separate instance of a given data item for each thread. Where a
 single-threaded application would use static or global data, this could lead to contention, deadlock or data corruption in a
 multi-threaded application. One example is the C `errno` variable, used for storing the error code related to functions from the
 Standard C library. It is common practice (and required by POSIX) for compilers that support multi-threaded applications to provide
-a separate instance of `errno` for each thread, in order to avoid different threads competing to read or update the value.
+a separate instance of `errno` for each thread, in order to avoid different threads competing to read or update the value.\n
+线程局部存储允许多个线程对象拥有特定数据的独立拷贝。 单线程程序通常使用的的静态数据和全局数据在多线程程序中会引发访问竞争、死锁，
+或者数据破坏。一个例子就是C运行库中的 `errno` 变量, 该变量用于存放C标准库中函数的错误代码。对于支持多线程的编译器来说，
+为每个线程提供一个独立的 `errno` 是常见的做法，以此避免多个线程竞争对它的访问和更新(这也是POSIX标准要求的)。
 
 Though compilers often provide this facility in the form of extensions to the declaration syntax (such as `__declspec(thread)` or
 `__thread` annotations on `static` or namespace-scope variable declarations), such support is non-portable, and is often limited in
-some way, such as only supporting POD types.
+some way, such as only supporting POD types.\n
+尽管编译器通常提供一些形式的语法扩展来方便标记线程局部存储(比如用于 `static` 或名字空间内变量声明前的 `__declspec(thread)` 
+或 `__thread` 标记), 但是这些支持是不可移植的, 也仅限于某些用途, 比如只支持 POD 类型。 
 
-[heading Portable thread-local storage with `boost::thread_specific_ptr`]
+[heading Portable thread-local storage with `boost::thread_specific_ptr` 由`boost::thread_specific_ptr`实现的可移植的线程本地化存储]
 
 `boost::thread_specific_ptr` provides a portable mechanism for thread-local storage that works on all compilers supported by
 __boost_thread__. Each instance of `boost::thread_specific_ptr` represents a pointer to an object (such as `errno`) where each
 thread must have a distinct value. The value for the current thread can be obtained using the `get()` member function, or by using
 the `*` and `->` pointer deference operators. Initially the pointer has a value of `NULL` in each thread, but the value for the
-current thread can be set using the `reset()` member function.
+current thread can be set using the `reset()` member function.\n
+`boost::thread_specific_ptr` 提供了一个线程本地化存储机制的可移植实现，在支持 __boost_thread__ 的所有平台上适用。
+每个 `boost::thread_specific_ptr` 实例表示指向一个对象(比如 `errno`)的指针，这些对象要求在不同的线程间有不同的值。
+当前线程对应的对象的值可以通过成员函数 `get()` 成员函数来获取，或是通过 `*` 和 `->` 指针提领操作符。在每个线程中，
+这些对象的初始值为 `NULL`，而当前线程的值可以通过 `reset()` 成员函数来设置。
 
 If the value of the pointer for the current thread is changed using `reset()`, then the previous value is destroyed by calling the
 cleanup routine. Alternatively, the stored value can be reset to `NULL` and the prior value returned by calling the `release()`
-member function, allowing the application to take back responsibility for destroying the object.
+member function, allowing the application to take back responsibility for destroying the object.\n
+如果通过 `reset()` 修改了当前线程的指针值，那么在此之前的值会被清理。另外, 存储的值可以通过成员函数 `release()` 置为 `NULL`, 
+该函数同时返回先前值, 这样应用程序可以有机会销毁这个值关联的对象。
 
-[heading Cleanup at thread exit]
+[heading Cleanup at thread exit 线程退出时清理]
 
 When a thread exits, the objects associated with each `boost::thread_specific_ptr` instance are destroyed. By default, the object
 pointed to by a pointer `p` is destroyed by invoking `delete p`, but this can be overridden for a specific instance of
@@ -39,7 +50,11 @@ pointed to by a pointer `p` is destroyed by invoking `delete p`, but this can be
 `func(p)` where `func` is the cleanup routine supplied to the constructor. The cleanup functions are called in an unspecified
 order. If a cleanup routine sets the value of associated with an instance of `boost::thread_specific_ptr` that has already been
 cleaned up, that value is added to the cleanup list. Cleanup finishes when there are no outstanding instances of
-`boost::thread_specific_ptr` with values.
+`boost::thread_specific_ptr` with values.\n
+当一个线程退出, `boost::thread_specific_ptr` 实例所关联的对象会被销毁。缺省情况下，指针 `p` 所指向的对象通过调用 `delete p` 来销毁, 
+不过这个行为也可以通过向 `boost::thread_specific_ptr` 对象构造时传递一个清理函数 `func()` 来覆写。此时, 通过调用 `func(p)` 来销毁对象，
+其中 `func` 为提供给构造函数的清理函数。这些清理函数的调用顺序是不确定的。如果一个清理函数将一个 `boost::thread_specific_ptr` 
+实例所关联的值设置为已被清理, 这个值会被添加到清理列表中。当所有 `boost::thread_specific_ptr` 对象被置为空时，清理过程结束。
 
 
 [section:thread_specific_ptr Class `thread_specific_ptr`]
@@ -66,13 +81,17 @@ cleaned up, that value is added to the cleanup list. Cleanup finishes when there
 
 [variablelist
 
-[[Requires:] [`delete this->get()` is well-formed.]]
+[[Requires:] [`delete this->get()` is well-formed.\n
+`delete this->get()` 有意义。]]
 
 [[Effects:] [Construct a `thread_specific_ptr` object for storing a pointer to an object of type `T` specific to each thread. The
 default `delete`-based cleanup function will be used to destroy any thread-local objects when `reset()` is called, or the thread
-exits.]]
+exits.\n
+构造一个 `thread_specific_ptr` 对象，存储一个 `T` 类型的指针，指向线程局部对象。在函数 `reset()` 被调用, 或者线程退出时，
+默认基于 `delete` 的清理函数会被调用来销毁线程本地的对象。]]
 
-[[Throws:] [`boost::thread_resource_error` if an error occurs.]]
+[[Throws:] [`boost::thread_resource_error` if an error occurs.\n
+如果出错，抛出 `boost::thread_resource_error` 异常。]]
 
 ]
 
@@ -82,12 +101,16 @@ exits.]]
 
 [variablelist
 
-[[Requires:] [`cleanup_function(this->get())` does not throw any exceptions.]]
+[[Requires:] [`cleanup_function(this->get())` does not throw any exceptions.\n
+`cleanup_function(this->get())` 调用不抛出异常。]]
 
 [[Effects:] [Construct a `thread_specific_ptr` object for storing a pointer to an object of type `T` specific to each thread. The
-supplied `cleanup_function` will be used to destroy any thread-local objects when `reset()` is called, or the thread exits.]]
+supplied `cleanup_function` will be used to destroy any thread-local objects when `reset()` is called, or the thread exits.\n
+构造一个 `thread_specific_ptr` 对象，存储一个T类型的指针，指向线程局部对象。在函数 `reset()` 被调用, 或者线程退出时，
+基于 `cleanup_function` 的清理函数会被调用来销毁线程本地的对象.]]
 
-[[Throws:] [`boost::thread_resource_error` if an error occurs.]]
+[[Throws:] [`boost::thread_resource_error` if an error occurs.\n
+如果出错，抛出 `boost::thread_resource_error` 异常。]]
 
 ]
 
@@ -97,14 +120,19 @@ supplied `cleanup_function` will be used to destroy any thread-local objects whe
 
 [variablelist
 
-[[Effects:] [Calls `this->reset()` to clean up the associated value for the current thread, and destroys `*this`.]]
+[[Effects:] [Calls `this->reset()` to clean up the associated value for the current thread, and destroys `*this`.\n
+调用函数 `this->reset()` 清理当前线程相关本地存储对象, 并销毁 `*this`。 
 
-[[Throws:] [Nothing.]]
+]]
+
+[[Throws:] [Nothing.\n
+无。]]
 
 ]
 
 [note Care needs to be taken to ensure that any threads still running after an instance of `boost::thread_specific_ptr` has been
-destroyed do not call any member functions on that instance.]
+destroyed do not call any member functions on that instance.\n
+必须小心确保 `boost::thread_specific_ptr` 对象销毁后，线程不再调用该对象的函数。]
 
 [endsect]
 
@@ -112,13 +140,16 @@ destroyed do not call any member functions on that instance.]
 
 [variablelist
 
-[[Returns:] [The pointer associated with the current thread.]]
+[[Returns:] [The pointer associated with the current thread.\n
+当前线程相关本地存储对象的指针。]]
 
-[[Throws:] [Nothing.]]
+[[Throws:] [Nothing.\n
+无。]]
 
 ]
 
-[note The initial value associated with an instance of `boost::thread_specific_ptr` is `NULL` for each thread.]
+[note The initial value associated with an instance of `boost::thread_specific_ptr` is `NULL` for each thread.\n
+对于每个线程，和 `boost::thread_specific_ptr` 关联对象初始值为 `NULL`。]
 
 [endsect]
 
@@ -128,7 +159,8 @@ destroyed do not call any member functions on that instance.]
 
 [[Returns:] [`this->get()`]]
 
-[[Throws:] [Nothing.]]
+[[Throws:] [Nothing.\n
+无。]]
 
 ]
 
@@ -138,11 +170,13 @@ destroyed do not call any member functions on that instance.]
 
 [variablelist
 
-[[Requires:] [`this->get` is not `NULL`.]]
+[[Requires:] [`this->get` is not `NULL`.\n
+`this->get` 不为 `NULL`。]]
 
 [[Returns:] [`*(this->get())`]]
 
-[[Throws:] [Nothing.]]
+[[Throws:] [Nothing.\n
+无。]]
 
 ]
 
@@ -153,11 +187,14 @@ destroyed do not call any member functions on that instance.]
 [variablelist
 
 [[Effects:] [If `this->get()!=new_value` and `this->get()` is non-`NULL`, invoke `delete this->get()` or
-`cleanup_function(this->get())` as appropriate. Store `new_value` as the pointer associated with the current thread.]]
+`cleanup_function(this->get())` as appropriate. Store `new_value` as the pointer associated with the current thread.\n
+如果 `this->get()!=new_value` 并且 `this->get()` 为非 `NULL`, 调用相应的 `delete this->get()` 或者 `cleanup_function(this->get())`。
+将 `new_value` 保存为和当前线程关联的指针。]]
 
 [[Postcondition:] [`this->get()==new_value`]]
 
-[[Throws:] [`boost::thread_resource_error` if an error occurs.]]
+[[Throws:] [`boost::thread_resource_error` if an error occurs.\n
+如果出错，抛出 `boost::thread_resource_error` 异常。]]
 
 ]
 
@@ -168,11 +205,13 @@ destroyed do not call any member functions on that instance.]
 [variablelist
 
 [[Effects:] [Return `this->get()` and store `NULL` as the pointer associated with the current thread without invoking the cleanup
-function.]]
+function.\n
+返回 `this->get()`，将当前线程关联的指针置为 `NULL`，不调用清理函数。]]
 
 [[Postcondition:] [`this->get()==0`]]
 
-[[Throws:] [Nothing.]]
+[[Throws:] [Nothing.\n
+无。]]
 
 ]
 

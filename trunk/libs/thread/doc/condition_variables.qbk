@@ -5,9 +5,9 @@
   http://www.boost.org/LICENSE_1_0.txt).
 ]
 
-[section:condvar_ref Condition Variables]
+[section:condvar_ref Condition Variables 条件变量]
 
-[heading Synopsis]
+[heading:synopsis Synopsis 概述]
 
 The classes `condition_variable` and `condition_variable_any` provide a
 mechanism for one thread to wait for notification from another thread that a
@@ -17,7 +17,11 @@ thread locks a mutex and then calls `wait` on an instance of
 the wait, then it checks to see if the appropriate condition is now true, and
 continues if so. If the condition is not true, then the thread then calls `wait`
 again to resume waiting. In the simplest case, this condition is just a boolean
-variable:
+variable:\n
+类型 `condition_variable` 和 `condition_variable_any` 提供一个种机制，一个线程可以等待另外一个线程内某个事件发生的通知。 
+通常的应用模式是一个线程锁定一个互斥量，然后通过函数 `wait` 等待一个 `condition_variable` 或 `condition_variable_any` 实例，
+当线程从等待中被唤醒激活时，检查特定的条件是否满足，如果满足，线程继续执行。如果不满足，线程则再次调用 `wait` 以继续等待。
+最简单的情况下，这个条件只是一个布尔变量。
 
     boost::condition_variable cond;
     boost::mutex mut;
@@ -40,11 +44,14 @@ thread to the set of threads waiting on the condition variable, and unlock the
 mutex. When the thread is woken, the mutex will be locked again before the call
 to `wait` returns. This allows other threads to acquire the mutex in order to
 update the shared data, and ensures that the data associated with the condition
-is correctly synchronized.
+is correctly synchronized.\n
+请注意 `lock` 对象会传递给 `wait` 函数: `wait` 函数会自动将线程添加到等待条件变量的线程集合中，并且解锁传递进来的互斥量。
+当线程被唤醒，`wait` 退出前互斥量会再次被锁定。这样允许其他线程获取互斥量来更新共享的数据，确保条件变量关联的数据被正确同步。
 
 In the mean time, another thread sets the condition to `true`, and then calls
 either `notify_one` or `notify_all` on the condition variable to wake one
-waiting thread or all the waiting threads respectively.
+waiting thread or all the waiting threads respectively.\n
+同时，另外的线程将这个条件置为 `true`，然后对条件变量调用函数 `notify_one` 或 `notify_all` 来唤醒等待该条件变量的一个或多个线程。
 
     void retrieve_data();
     void prepare_data();
@@ -61,7 +68,8 @@ waiting thread or all the waiting threads respectively.
     }
 
 Note that the same mutex is locked before the shared data is updated, but that
-the mutex does not have to be locked across the call to `notify_one`.
+the mutex does not have to be locked across the call to `notify_one`.\n
+注意，同一个互斥量在共享数据被更新前被锁定，但是这个互斥量锁定范围不需要包含函数 `notify_one` 调用。
 
 This example uses an object of type `condition_variable`, but would work just as
 well with an object of type `condition_variable_any`: `condition_variable_any`
@@ -70,7 +78,10 @@ is more general, and will work with any kind of lock or mutex, whereas
 `boost::unique_lock<boost::mutex>`. This enables `condition_variable` to make
 optimizations in some cases, based on the knowledge of the mutex type;
 `condition_variable_any` typically has a more complex implementation than
-`condition_variable`.
+`condition_variable`.\n
+这个例子使用一个 `condition_variable` 对象，如果换成 `condition_variable_any` 对象也是同样适用：`condition_variable_any` 更加通用，
+支持和其他类型的互斥量和锁定类型，而 `condition_variable` 要求传递给函数 `wait` 的是 `boost::unique_lock<boost::mutex>` 对象。
+这样在已知互斥量的条件下，`condition_variable` 可以做适当的优化；`condition_variable_any` 类型的实现比 `condition_variable` 复杂许多。
 
 [section:condition_variable Class `condition_variable`]
 
@@ -116,9 +127,11 @@ optimizations in some cases, based on the knowledge of the mutex type;
 
 [variablelist
 
-[[Effects:] [Constructs an object of class `condition_variable`.]]
+[[Effects:] [Constructs an object of class `condition_variable`.\n
+创建一个 `condition_variable` 对象。]]
 
-[[Throws:] [__thread_resource_error__ if an error occurs.]]
+[[Throws:] [__thread_resource_error__ if an error occurs.\n
+如果出现错误，抛出异常 __thread_resource_error__。]]
 
 ]
 
@@ -130,11 +143,15 @@ optimizations in some cases, based on the knowledge of the mutex type;
 
 [[Precondition:] [All threads waiting on `*this` have been notified by a call to
 `notify_one` or `notify_all` (though the respective calls to `wait` or
-`timed_wait` need not have returned).]]
+`timed_wait` need not have returned).\n
+所有等待 `*this` 的线程得到通知通过调用函数 `notify_one` 或 `notify_all`
+（尽管不是每个独立的函数调用 `wait` 或 `timed_wait` 都返回)。]]
 
-[[Effects:] [Destroys the object.]]
+[[Effects:] [Destroys the object.\n
+销毁条件变量。]]
 
-[[Throws:] [Nothing.]]
+[[Throws:] [Nothing.\n
+无。]]
 
 ]
 
@@ -145,9 +162,11 @@ optimizations in some cases, based on the knowledge of the mutex type;
 [variablelist
 
 [[Effects:] [If any threads are currently __blocked__ waiting on `*this` in a call
-to `wait` or `timed_wait`, unblocks one of those threads.]]
+to `wait` or `timed_wait`, unblocks one of those threads.\n
+如果有线程当前因为等待 `*this` 而在 `wait` 或 `timed_wait` 中 __blocked__，这个函数调用会解除一个线程的阻塞状态。]]
 
-[[Throws:] [Nothing.]]
+[[Throws:] [Nothing.\n
+无。]]
 
 ]
 
@@ -158,9 +177,11 @@ to `wait` or `timed_wait`, unblocks one of those threads.]]
 [variablelist
 
 [[Effects:] [If any threads are currently __blocked__ waiting on `*this` in a call
-to `wait` or `timed_wait`, unblocks all of those threads.]]
+to `wait` or `timed_wait`, unblocks all of those threads.\n
+如果有线程当前因为等待 `*this` 而在 `wait` 或 `timed_wait` 中 __blocked__，这个函数调用会解除所有这些线程的阻塞状态。]]
 
-[[Throws:] [Nothing.]]
+[[Throws:] [Nothing.\n
+无。]]
 
 ]
 
@@ -174,20 +195,27 @@ to `wait` or `timed_wait`, unblocks all of those threads.]]
 thread is currently waiting on `*this`, or the execution of the `mutex()` member
 function on the `lock` objects supplied in the calls to `wait` or `timed_wait`
 in all the threads currently waiting on `*this` would return the same value as
-`lock->mutex()` for this call to `wait`.]]
+`lock->mutex()` for this call to `wait`.\n
+`lock` 对象被当前线程锁定, 并且要么没有其它线程正在等待 `*this`，要么在所有当前正在等待 `*this` 的线程中调用 `wait` 或 `timed_wait` 所给定的 `lock` 对象执行 `mutex()` 成员函数, 返回与本 `wait` 调用中的 `lock->mutex()` 相同的值。]]
 
 [[Effects:] [Atomically call `lock.unlock()` and blocks the current thread. The
 thread will unblock when notified by a call to `this->notify_one()` or
 `this->notify_all()`, or spuriously. When the thread is unblocked (for whatever
 reason), the lock is reacquired by invoking `lock.lock()` before the call to
 `wait` returns. The lock is also reacquired by invoking `lock.lock()` if the
-function exits with an exception.]]
+function exits with an exception.\n
+自动调用 `lock.unlock()` 并且阻塞当前线程。线程在 `this->notify_one()` 或 `this->notify_all()` 调用通知后解除阻塞状态。
+当线程被解除阻塞(不论任何原因)时，在 `wait` 函数退出前调用 `lock.lock()` 来加锁。
+如果这个函数因为异常退出，退出前也会调用 `lock.lock()`。]]
 
-[[Postcondition:] [`lock` is locked by the current thread.]]
+[[Postcondition:] [`lock` is locked by the current thread.\n
+当前线程锁定 `lock`。]]
 
 [[Throws:] [__thread_resource_error__ if an error
 occurs. __thread_interrupted__ if the wait was interrupted by a call to
-__interrupt__ on the __thread__ object associated with the current thread of execution.]]
+__interrupt__ on the __thread__ object associated with the current thread of execution.\n
+如果出错则抛出异常 __thread_resource_error__。如果对线程执行体关联的 __thread__ 对象调用 __interrupt__， 
+抛出 __thread_interrupted__ 异常。]]
 
 ]
 
@@ -197,7 +225,8 @@ __interrupt__ on the __thread__ object associated with the current thread of exe
 
 [variablelist
 
-[[Effects:] [As-if ``
+[[Effects:] [As-if\n
+相当于 ``
 while(!pred())
 {
     wait(lock);
@@ -216,7 +245,8 @@ while(!pred())
 thread is currently waiting on `*this`, or the execution of the `mutex()` member
 function on the `lock` objects supplied in the calls to `wait` or `timed_wait`
 in all the threads currently waiting on `*this` would return the same value as
-`lock->mutex()` for this call to `wait`.]]
+`lock->mutex()` for this call to `wait`.\n
+`lock` 对象被当前线程锁定, 并且要么没有其它线程正在等待 `*this`，要么在所有当前正在等待 `*this` 的线程中调用 `wait` 或 `timed_wait` 所给定的 `lock` 对象执行 `mutex()` 成员函数, 返回与本 `wait` 调用中的 `lock->mutex()` 相同的值。]]
 
 [[Effects:] [Atomically call `lock.unlock()` and blocks the current thread. The
 thread will unblock when notified by a call to `this->notify_one()` or
@@ -224,16 +254,24 @@ thread will unblock when notified by a call to `this->notify_one()` or
 would be equal to or later than the specified `abs_time`, or spuriously. When
 the thread is unblocked (for whatever reason), the lock is reacquired by
 invoking `lock.lock()` before the call to `wait` returns. The lock is also
-reacquired by invoking `lock.lock()` if the function exits with an exception.]]
+reacquired by invoking `lock.lock()` if the function exits with an exception.\n
+自动调用 `lock.unlock()` 并且阻塞当前线程。线程在 `this->notify_one()` 或 `this->notify_all()` 调用通知后，
+或当 `boost::get_system_time()` 所报告的时间等于或后于给定的 `abs_time` 时解除阻塞状态。
+当线程被解除阻塞(不论任何原因)时，在 `wait` 函数退出前调用 `lock.lock()` 来加锁。
+如果这个函数因为异常退出，退出前也会调用 `lock.lock()`。]]
 
 [[Returns:] [`false` if the call is returning because the time specified by
-`abs_time` was reached, `true` otherwise.]]
+`abs_time` was reached, `true` otherwise.\n
+如果函数因为 `abs_time` 到达而退出，返回 `false`，否则 `true`。]]
 
-[[Postcondition:] [`lock` is locked by the current thread.]]
+[[Postcondition:] [`lock` is locked by the current thread.\n
+当前线程锁定 `lock`。]]
 
 [[Throws:] [__thread_resource_error__ if an error
 occurs. __thread_interrupted__ if the wait was interrupted by a call to
-__interrupt__ on the __thread__ object associated with the current thread of execution.]]
+__interrupt__ on the __thread__ object associated with the current thread of execution.\n
+如果出错则抛出异常 __thread_resource_error__。如果对线程执行体关联的 __thread__ 对象调用 __interrupt__， 
+抛出 __thread_interrupted__ 异常。]]
 
 ]
 
@@ -247,7 +285,8 @@ __interrupt__ on the __thread__ object associated with the current thread of exe
 thread is currently waiting on `*this`, or the execution of the `mutex()` member
 function on the `lock` objects supplied in the calls to `wait` or `timed_wait`
 in all the threads currently waiting on `*this` would return the same value as
-`lock->mutex()` for this call to `wait`.]]
+`lock->mutex()` for this call to `wait`.\n
+`lock` 对象被当前线程锁定, 并且要么没有其它线程正在等待 `*this`，要么在所有当前正在等待 `*this` 的线程中调用 `wait` 或 `timed_wait` 所给定的 `lock` 对象执行 `mutex()` 成员函数, 返回与本 `wait` 调用中的 `lock->mutex()` 相同的值。]]
 
 [[Effects:] [Atomically call `lock.unlock()` and blocks the current thread. The
 thread will unblock when notified by a call to `this->notify_one()` or
@@ -255,20 +294,28 @@ thread will unblock when notified by a call to `this->notify_one()` or
 argument has elapsed, or spuriously. When the thread is unblocked (for whatever
 reason), the lock is reacquired by invoking `lock.lock()` before the call to
 `wait` returns. The lock is also reacquired by invoking `lock.lock()` if the
-function exits with an exception.]]
+function exits with an exception.\n
+自动调用 `lock.unlock()` 并且阻塞当前线程。线程在 `this->notify_one()` 或 `this->notify_all()` 调用通知后，
+或当 `rel_time` 所表示的时间已过去时解除阻塞状态。当线程被解除阻塞(不论任何原因)时，在 `wait` 函数退出前调用 `lock.lock()` 来加锁。
+如果这个函数因为异常退出，退出前也会调用 `lock.lock()`。]]
 
 [[Returns:] [`false` if the call is returning because the time period specified
-by `rel_time` has elapsed, `true` otherwise.]]
+by `rel_time` has elapsed, `true` otherwise.\n
+如果函数因为 `rel_time` 过去而退出，返回 `false`，否则 `true`。]]
 
-[[Postcondition:] [`lock` is locked by the current thread.]]
+[[Postcondition:] [`lock` is locked by the current thread.\n
+当前线程锁定 `lock`。]]
 
 [[Throws:] [__thread_resource_error__ if an error
 occurs. __thread_interrupted__ if the wait was interrupted by a call to
-__interrupt__ on the __thread__ object associated with the current thread of execution.]]
+__interrupt__ on the __thread__ object associated with the current thread of execution.\n
+如果出错则抛出异常 __thread_resource_error__。如果对线程执行体关联的 __thread__ 对象调用 __interrupt__， 
+抛出 __thread_interrupted__ 异常。]]
 
 ]
 
-[note The duration overload of timed_wait is difficult to use correctly. The overload taking a predicate should be preferred in most cases.]
+[note The duration overload of timed_wait is difficult to use correctly. The overload taking a predicate should be preferred in most cases.\n
+使用时间段参数的 timed_wait 函数难以正确使用，通常情况下带断言的重载比较容易使用。]
 
 [endsect]
 
@@ -276,7 +323,8 @@ __interrupt__ on the __thread__ object associated with the current thread of exe
 
 [variablelist
 
-[[Effects:] [As-if ``
+[[Effects:] [As-if \n
+相当于 ``
 while(!pred())
 {
     if(!timed_wait(lock,abs_time))
@@ -341,9 +389,11 @@ return true;
 
 [variablelist
 
-[[Effects:] [Constructs an object of class `condition_variable_any`.]]
+[[Effects:] [Constructs an object of class `condition_variable_any`.\n
+创建一个 `condition_variable_any` 对象。]]
 
-[[Throws:] [__thread_resource_error__ if an error occurs.]]
+[[Throws:] [__thread_resource_error__ if an error occurs.\n
+如果出错则抛出 __thread_resource_error__ 异常。]]
 
 ]
 
@@ -355,11 +405,15 @@ return true;
 
 [[Precondition:] [All threads waiting on `*this` have been notified by a call to
 `notify_one` or `notify_all` (though the respective calls to `wait` or
-`timed_wait` need not have returned).]]
+`timed_wait` need not have returned).\n
+所有等待 `*this` 的线程得到通知，通过调用函数 `notify_one` 或 `notify_all`，
+(尽管不是每个独立的函数调用 `wait` 或 `timed_wait` 都返回)。]]
 
-[[Effects:] [Destroys the object.]]
+[[Effects:] [Destroys the object.\n
+销毁这个对象。]]
 
-[[Throws:] [Nothing.]]
+[[Throws:] [Nothing.\n
+无。]]
 
 ]
 
@@ -370,9 +424,11 @@ return true;
 [variablelist
 
 [[Effects:] [If any threads are currently __blocked__ waiting on `*this` in a call
-to `wait` or `timed_wait`, unblocks one of those threads.]]
+to `wait` or `timed_wait`, unblocks one of those threads.\n
+如果有线程当前因在 `wait` 或 `timed_wait` 中等待 `*this` 而 __blocked__，这个函数调用会解除一个线程的阻塞状态。]]
 
-[[Throws:] [Nothing.]]
+[[Throws:] [Nothing.\n
+无。]]
 
 ]
 
@@ -383,9 +439,11 @@ to `wait` or `timed_wait`, unblocks one of those threads.]]
 [variablelist
 
 [[Effects:] [If any threads are currently __blocked__ waiting on `*this` in a call
-to `wait` or `timed_wait`, unblocks all of those threads.]]
+to `wait` or `timed_wait`, unblocks all of those threads.\n
+如果有线程当前因在 `wait` 或 `timed_wait` 中等待 `*this` 而 __blocked__，这个函数调用会解除所有这些线程的阻塞状态。]]
 
-[[Throws:] [Nothing.]]
+[[Throws:] [Nothing.\n
+无。]]
 
 ]
 
@@ -400,13 +458,19 @@ thread will unblock when notified by a call to `this->notify_one()` or
 `this->notify_all()`, or spuriously. When the thread is unblocked (for whatever
 reason), the lock is reacquired by invoking `lock.lock()` before the call to
 `wait` returns. The lock is also reacquired by invoking `lock.lock()` if the
-function exits with an exception.]]
+function exits with an exception.\n
+自动调用 `lock.unlock()` 并且阻塞当前线程。线程在 `this->notify_one()` 或 `this->notify_all()` 调用通知后解除阻塞状态。
+当线程被解除阻塞(不论任何原因)时，在 `wait` 函数退出前调用 `lock.lock()` 来加锁。
+如果这个函数因为异常退出，退出前也会调用 `lock.lock()`。]]
 
-[[Postcondition:] [`lock` is locked by the current thread.]]
+[[Postcondition:] [`lock` is locked by the current thread.\n
+当前线程锁定 `lock`。]]
 
 [[Throws:] [__thread_resource_error__ if an error
 occurs. __thread_interrupted__ if the wait was interrupted by a call to
-__interrupt__ on the __thread__ object associated with the current thread of execution.]]
+__interrupt__ on the __thread__ object associated with the current thread of execution.\n
+如果出错则抛出异常 __thread_resource_error__。如果对线程执行体关联的 __thread__ 对象调用 __interrupt__， 
+抛出 __thread_interrupted__ 异常。]]
 
 ]
 
@@ -416,7 +480,8 @@ __interrupt__ on the __thread__ object associated with the current thread of exe
 
 [variablelist
 
-[[Effects:] [As-if ``
+[[Effects:] [As-if \n
+相当于 ``
 while(!pred())
 {
     wait(lock);
@@ -437,16 +502,24 @@ thread will unblock when notified by a call to `this->notify_one()` or
 would be equal to or later than the specified `abs_time`, or spuriously. When
 the thread is unblocked (for whatever reason), the lock is reacquired by
 invoking `lock.lock()` before the call to `wait` returns. The lock is also
-reacquired by invoking `lock.lock()` if the function exits with an exception.]]
+reacquired by invoking `lock.lock()` if the function exits with an exception.\n
+自动调用 `lock.unlock()` 并且阻塞当前线程。线程在 `this->notify_one()` 或 `this->notify_all()` 调用通知后，
+或当 `boost::get_system_time()` 所报告的时间等于或后于给定的 `abs_time` 时解除阻塞状态。
+当线程被解除阻塞(不论任何原因)时，在 `wait` 函数退出前调用 `lock.lock()` 来加锁。
+如果这个函数因为异常退出，退出前也会调用 `lock.lock()`。]]
 
 [[Returns:] [`false` if the call is returning because the time specified by
-`abs_time` was reached, `true` otherwise.]]
+`abs_time` was reached, `true` otherwise.\n
+如果函数因为 `abs_time` 到达而退出，返回 `false`，否则 `true`。]]
 
-[[Postcondition:] [`lock` is locked by the current thread.]]
+[[Postcondition:] [`lock` is locked by the current thread.\n
+当前线程锁定 `lock`。]]
 
 [[Throws:] [__thread_resource_error__ if an error
 occurs. __thread_interrupted__ if the wait was interrupted by a call to
-__interrupt__ on the __thread__ object associated with the current thread of execution.]]
+__interrupt__ on the __thread__ object associated with the current thread of execution.\n
+如果出错则抛出异常 __thread_resource_error__。如果对线程执行体关联的 __thread__ 对象调用 __interrupt__， 
+抛出 __thread_interrupted__ 异常。]]
 
 ]
 
@@ -462,20 +535,28 @@ thread will unblock when notified by a call to `this->notify_one()` or
 argument has elapsed, or spuriously. When the thread is unblocked (for whatever
 reason), the lock is reacquired by invoking `lock.lock()` before the call to
 `wait` returns. The lock is also reacquired by invoking `lock.lock()` if the
-function exits with an exception.]]
+function exits with an exception.\n
+自动调用 `lock.unlock()` 并且阻塞当前线程。线程在 `this->notify_one()` 或 `this->notify_all()` 调用通知后，
+或当 `rel_time` 所表示的时间已过去时解除阻塞状态。当线程被解除阻塞(不论任何原因)时，在 `wait` 函数退出前调用 `lock.lock()` 来加锁。
+如果这个函数因为异常退出，退出前也会调用 `lock.lock()`。]]
 
 [[Returns:] [`false` if the call is returning because the time period specified
-by `rel_time` has elapsed, `true` otherwise.]]
+by `rel_time` has elapsed, `true` otherwise.\n
+如果函数因为 `rel_time` 过去而退出，返回 `false`，否则 `true`。]]
 
-[[Postcondition:] [`lock` is locked by the current thread.]]
+[[Postcondition:] [`lock` is locked by the current thread.\n
+当前线程锁定 `lock`。]]
 
 [[Throws:] [__thread_resource_error__ if an error
 occurs. __thread_interrupted__ if the wait was interrupted by a call to
-__interrupt__ on the __thread__ object associated with the current thread of execution.]]
+__interrupt__ on the __thread__ object associated with the current thread of execution.\n
+如果出错则抛出异常 __thread_resource_error__。如果对线程执行体关联的 __thread__ 对象调用 __interrupt__， 
+抛出 __thread_interrupted__ 异常。]]
 
 ]
 
-[note The duration overload of timed_wait is difficult to use correctly. The overload taking a predicate should be preferred in most cases.]
+[note The duration overload of timed_wait is difficult to use correctly. The overload taking a predicate should be preferred in most cases.\n
+使用时间段参数的 timed_wait 函数难以正确使用，通常情况下带断言的重载比较容易使用。]
 
 [endsect]
 
@@ -483,7 +564,8 @@ __interrupt__ on the __thread__ object associated with the current thread of exe
 
 [variablelist
 
-[[Effects:] [As-if ``
+[[Effects:] [As-if \n
+相当于 ``
 while(!pred())
 {
     if(!timed_wait(lock,abs_time))
@@ -506,7 +588,8 @@ return true;
 
     typedef condition_variable_any condition;
 
-The typedef `condition` is provided for backwards compatibility with previous boost releases.
+The typedef `condition` is provided for backwards compatibility with previous boost releases.\n
+typedef `condition` 提供对以前版本的兼容。
 
 [endsect]
 
