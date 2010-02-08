@@ -1,5 +1,5 @@
 
-// Copyright 2005-2008 Daniel James.
+// Copyright 2005-2009 Daniel James.
 // Distributed under the Boost Software License, Version 1.0. (See accompanying
 // file LICENSE_1_0.txt or copy at http://www.boost.org/LICENSE_1_0.txt)
 
@@ -20,6 +20,7 @@ int main()
 
     boost::hash<library::book> book_hasher;
     std::size_t knife_hash_value = book_hasher(knife);
+    (void)knife_hash_value; // suppress unused variable warning
 
     // If std::unordered_set was available:
     //
