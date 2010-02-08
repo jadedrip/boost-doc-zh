@@ -1,0 +1,1212 @@
+<!DOCTYPE html PUBLIC "-//W3C//DTD HTML 4.01 Transitional//EN">
+<html><head>
+
+  <meta http-equiv="Content-Language" content="en-us">
+
+  <meta http-equiv="Content-Type" content="text/html; charset=UTF-8">
+
+  <meta name="GENERATOR" content="Microsoft FrontPage 6.0">
+
+  <meta name="ProgId" content="FrontPage.Editor.Document">
+
+  <link rel="stylesheet" type="text/css" href="../../../boost.css">
+  <title>The Boost Statechart Library - Overview</title></head>
+<body link="#0000ff" vlink="#800080">
+
+<table summary="header" border="0" cellpadding="7" cellspacing="0" width="100%">
+
+  <tbody>
+
+    <tr>
+
+      <td valign="top" width="300">
+      <h3><a href="../../../index.htm"><img alt="C++ Boost" src="../../../boost.png" border="0" height="86" width="277"></a></h3>
+
+      </td>
+
+      <td valign="top">
+      <h1 align="center">Boost Statechart 库</h1>
+
+      <h2 align="center">Future &amp; History 未来与历史</h2>
+
+      </td>
+
+    </tr>
+
+  </tbody>
+</table>
+
+<hr>
+<h2>Contents 目录</h2>
+
+<dl class="index">
+
+  <dt><a href="#ToDoList">To-do list 待办事项列表</a></dt>
+
+  <dt><a href="#ChangeHistory">Change history 变更历史</a></dt>
+
+</dl>
+
+<hr>
+<h2><a name="ToDoList" id="ToDoList">To-do
+list 待办事项列表</a></h2>
+
+<p>The library is mostly complete. However, there is some work
+left (<font color="#ff0000">red</font> = added as a
+result of the formal review):<br>
+
+本库已基本完成。不过，还有一些工作要做(<span style="color: rgb(255, 0, 0);">红色</span>
+= 作为正式审查的结果被添加)</p>
+
+<ol>
+
+  <li>Implement a choice-point-like class, as discussed in <a href="http://thread.gmane.org/gmane.comp.lib.boost.devel/164460">this
+thread</a><br>
+实现类似于选择点的类，正如在 <a href="http://thread.gmane.org/gmane.comp.lib.boost.devel/164460">这
+个帖子中</a> 所讨论</li>
+
+  <li>Optimize state-entry and state-exit for speed and
+code-size<br>
+
+优化状态进入和状态退出的速度和代码大小</li>
+
+  <li>Implement <code>simple_state::triggering_event()</code>,
+which returns a pointer to the event that triggered the action
+currently being executed. This is useful for the rare cases when an
+entry or exit action needs to access the event that triggered the
+execution of the action. <code>triggering_event()</code>
+returns a <code>const event_base *</code> due to the fact
+that entry and exit actions can be triggered by events of any type or
+no event at all (<code>state_machine&lt;&gt;::initiate()</code>
+&amp; <code>state_machine::terminate()</code>). The
+caller thus needs to make a type check or cast the return value. The
+use of <code>triggering_event</code>() therefore often
+indicates a problem in the state machine design and should be avoided
+whenever possible<br>
+
+实现 <code>simple_state::triggering_event()</code>，
+返回一个指针，指向触发当前正在执行的动作的事件。这在某些较罕见的情形中是有用的，如当一个进入或退出动作需要访问触发该动作的事件时。<code>triggering_event()</code>
+返回一个 <code>const event_base *</code>，由于进入和退出动作可以由任意类型的事件触发，
+或者根本没有事件(<code>state_machine&lt;&gt;::initiate()</code>
+&amp; <code>state_machine::terminate()</code>)。因此调用者需要进
+行类型的检查，或者对返回值进行转型。所以 <code>triggering_event</code>()
+的使用通常表示状态机的设计存在问题，应该尽可能避免</li>
+
+  <li>Reimplement <code>fifo_scheduler&lt;&gt;::processor_handle</code>
+so that <code>fifo_scheduler&lt;&gt;::create_processor&lt;&gt;()</code>
+and <code>fifo_scheduler&lt;&gt;::destroy_processor()</code>
+no longer make (indirect) calls to global <code>operator new()</code>
+and <code>operator delete()</code><br>
+
+重新实现 <code>fifo_scheduler&lt;&gt;::processor_handle</code>，
+以使得 <code>fifo_scheduler&lt;&gt;::create_processor&lt;&gt;()</code>
+和 <code>fifo_scheduler&lt;&gt;::destroy_processor()</code>
+不再(间拉)调用全局的 <code>operator new()</code> 和 <code>operator
+delete()</code></li>
+
+  <li>Ensure that everything is compileable with C++ RTTI support
+turned off (this requires currently lacking support in Boost.Config and
+probably a patch for <code>shared_ptr</code>)<br>
+
+确保所有东西兼容于 C++
+RTTI 被关闭的情况(当前这一要求缺乏 Boost.Config 的支持，并可能需要 <code>shared_ptr</code>
+的一个补丁)</li>
+
+  <li>Issue an error if <code>BOOST_STATECHART_USE_NATIVE_RTTI</code>
+is defined when C++ RTTI is turned off<br>
+
+当 C++ RTTI 被关闭时，如果定义了 <code>BOOST_STATECHART_USE_NATIVE_RTTI</code>
+则产生一个错误</li>
+
+  <li>The current requirement to pass an <code>mpl::list&lt;&gt;</code>
+to specify inner initial states and reactions is too strict. Check the
+requirements on the sequences and document them accordingly (David
+Abrahams)<br>
+
+当前要求传递一个 <code>mpl::list&lt;&gt;</code>
+来指定内层初始状态和反应，这有点过于严格。检查对该序列的相关要求，并把它们形成文档(David
+Abrahams)</li>
+
+  <li>Make compilation performance measurements with mpl::vector
+and mpl::deque instead of mpl::list to find out which is fastest.
+Document a recommendation for the fastest container and change all
+examples accordingly (David Abrahams)<br>
+
+以 mpl::vector 和 mpl::deque 替代
+mpl::list 并进行编译性能的测量，确定哪一个更快。把最快的容器作为推荐写进文档，并据此修改所有的例子(David Abrahams)</li>
+
+  <li>Investigate how a state machine could be serialized. A
+first glance at the serialization library revealed that there currently
+(1.33) is no support for types that overload <code>operator new</code>
+(suitable code is already present in the serialization library but it
+is currently commented out due to incompatibilities with certain
+compilers). Such support would be essential for Boost.Statechart
+serialization<br>
+
+研究如何对状态机进行序列化。对 serialization 库的初步研究表明，当前版本(1.33)不支持重载了 <code>operator
+new</code>
+的类型(适当的代码在 serialization 库已经可用，但由于与某些编译器的不兼容，所以这些代码被注释掉了)。这个特性的支持对于
+Boost.Statechart
+的序列化是最基本的</li>
+
+  <li><font color="#ff0000">Implement a switch-like
+reaction (Simon Gittins, Darryl Green)</font><br>
+
+    <font color="#ff0000">实现一个类似于 switch
+的反应(Simon Gittins, Darryl Green)</font></li>
+
+  <li>Link incomplete code-snippets in the tutorial to complete
+example code where available<br>
+
+将"指南"中的不完整代码片断合并为可用的完整代码</li>
+
+  <li>Where appropriate, link the reference documentation to
+examples<br>
+
+在适当的地方，将引用的文档链接到例子中</li>
+
+  <li><font color="#ff0000">Add a description of the
+implementation and better explain performance trade-offs (Jonathan
+Turkanis)</font><br>
+
+    <font color="#ff0000">为本实现增加说明，更好地解释性
+能上的妥协(Jonathan
+Turkanis)</font></li>
+
+  <li><font color="#ff0000">Add links to
+descriptions of alternate implementations and discuss performance
+trade-offs (Jonathan Turkanis)</font><br>
+
+    <font color="#ff0000">为
+其它实现的说明增加链接，讨论它们的性能妥协(Jonathan Turkanis)</font></li>
+
+  <li><font color="#ff0000">Add a list of
+applications that use Boost.Statechart (Paul A. Bristow)</font><br>
+
+    <font color="#ff0000">增加一个使用 Boost.Statechart
+的应用程序的列表(Paul A. Bristow)</font></li>
+
+  <li>Refactor the <code>state_machine</code> class
+template to reduce code size in applications with many different state
+machines<br>
+
+重构 <code>state_machine</code>
+类模板，以减少带有多个不同状态机的应用程序的代码大小</li>
+
+  <li>Add a diagram that helps to understand what an unstable
+state machine is<br>
+
+增加一个图，帮助理解什么是不稳定状态机</li>
+
+  <li>Comment MPL-heavy code<br>
+
+注释掉过度使用MPL的代码</li>
+
+  <li>Add examples of often made mistakes<br>
+
+增加一些通常会出错的例子</li>
+
+  <li>Implement <code>priority_scheduler&lt;&gt;</code><br>
+
+实
+现 <code>priority_scheduler&lt;&gt;</code></li>
+
+  <li>Eliminate code-duplication in <code>fifo_scheduler</code>
+with PP code submitted by Pavel Vozenilek<br>
+
+消除 <code>fifo_scheduler</code>
+和 Pavel Vozenilek 提交的 PP 代码之间的重复代码</li>
+
+  <li>Add number and label to all diagrams in docs<br>
+
+为文档中的图增加编码和标题</li>
+
+  <li>Add <code>#pragma once</code> to all headers
+(speeds up compilation with MS-compatible compilers)<br>
+
+为所有头文件增加 <code>#pragma
+once</code> (可以提高在MS兼容的编译器中的编译速度)</li>
+
+  <li>Investigate whether and how <code>fifo_worker&lt;&gt;</code>
+should accept a policy parameter defining how to lock and wait<br>
+
+研究 <code>fifo_worker&lt;&gt;</code>
+是否应该以及如何接受一个策略参数来定义如何进行锁定和等待</li>
+
+</ol>
+
+<h2><a name="ChangeHistory" id="ChangeHistory">Change
+history 变更历史</a></h2>
+
+<p>(<font color="#ff0000">red</font> = points
+raised during formal review)<br>
+
+(<span style="color: rgb(255, 0, 0);">红色</span>
+= 在正式审查过程中发现的点)</p>
+
+<p>1.40.0</p>
+<ul><li>Fixed a bug that prevented the use of boost::ref() with 
+fifo_scheduler&lt;&gt;::create_processor&lt;&gt;, reported by Steve Hawkes<code></code><br>修正了 boost::ref() 无法与 
+fifo_scheduler&lt;&gt;::create_processor&lt;&gt; 共用的缺陷，由&nbsp;Steve Hawkes 报告 
+</li><li>Fixed bug #3092 (regression test failures in VC10 beta 1), reported by 
+Richard Webb<code></code><br>修正缺陷 #3092 (在 VC10 beta 1 中回归测试失败)，由&nbsp;Richard Webb 报告 </li></ul><p>1.38.0</p>
+<ul><li>Fixed gcc-4.3 warning in state_machine.hpp (ticket #2389), reported by Bryan 
+Silverthorn<code></code><br>修正 gcc-4.3 在 state_machine.hpp 中的告警(ticket #2389)，由 Bryan Silverthorn 报告 </li></ul><p>1.36.0</p>
+<ul><li>Removed all permanent warning suppressions from library headers and avoided 
+the resulting warnings with other means (suggested by Steven Watanabe; thanks to 
+Peter Dimov and Yuval Ronen for insight into when C4511 &amp; C4512 are issued)<code></code><br>从库的头文件中删除所有永久性警告禁止，以其它方式避免得到警告(由 Steven Watanabe 建议；感谢 
+Peter Dimov 和 Yuval Ronen 发现 C4511 &amp; C4512 的问题) 
+</li><li>Added the FAQ item <a href="faq.html#AssertInStateDestructor">Why do I get 
+an assert when I access the state machine from a state destructor?</a> (due to 
+feedback from Jiang Miao)<code></code><br>增加 FAQ 项 <a href="faq.html#AssertInStateDestructor">为什么从 state 的析构函数中访问状态机会得到一个断言?</a> (来自 Jiang Miao 的回应)<code></code>&nbsp; 
+</li><li>Added defaults for the last two template parameters of <a href="reference.html#ClassTemplatein_state_reaction">in_state_reaction&lt;&gt;</a> 
+(due to feedback from Sean Kelly)<code></code><br>
+
+为 <a href="reference.html#ClassTemplatein_state_reaction">in_state_reaction&lt;&gt;</a> 
+的后两个模板参数增加缺省值(来自 Sean Kelly 的回应) 
+</li><li>Adapted fifo_scheduler&lt;&gt; to the changed allocator interface of 
+boost::function<code></code><br>让&nbsp;fifo_scheduler&lt;&gt; 适合于已改变的 
+boost::function 的分配器接口 
+</li><li>Changed the PingPong example to demonstrate how the inner workings of an 
+asynchronous_state_machine&lt;&gt; subclass can be hidden<code></code><br>
+
+修改例子 PingPong，以示范一个 
+asynchronous_state_machine&lt;&gt; 子类的内部工作如何被隐藏 </li></ul><p>1.35.0</p>
+<ul>
+
+  <li>Added placement new overload to <code>event&lt;&gt;</code><br>
+
+为 <code>event&lt;&gt;</code> 增加定位 new 的重载<code></code></li>
+
+  <li>Made <code>event&lt;&gt;</code>
+copy-assignabley<br>
+
+使得 <code>event&lt;&gt;</code>
+成为可复制赋值</li>
+
+</ul>
+
+<p>1.34.0</p>
+
+<ul>
+
+  <li>Fixed a bug that prevented compilation of
+exception_translator.hpp (reported by Oliver Kowalke) and adapted
+TransitionTest.cpp to also test the exception_translator class<br>
+
+修正
+exception_translator.hpp 不能编译的 bug (由 Oliver Kowalke 报告)，并个性
+TransitionTest.cpp 以增加对 exception_translator 类的测试</li>
+
+  <li>Fixed an allocator-related bug that led to compiler errors
+in many tests on GCC &gt;= 4.0<br>
+
+修正一个分配器相关的 bug，该 bug 在 GCC &gt;=
+4.0 中导致多个测试编译失败</li>
+
+  <li>Fixed a number of issues that led to compile-time failures
+on Intel 9.0 and Code Warrior<br>
+
+修正了多个在 Intel 9.0 和 Code Warrior 上导致编译期错误的问题</li>
+
+  <li>Added compile-link tests for all examples<br>
+
+为所有例子增加编译-链接测试</li>
+
+  <li>Documented <code>state_machine&lt;&gt;::post_event</code>
+and added a <code>const event_base &amp;</code>
+overload<br>
+
+为 <code>state_machine&lt;&gt;::post_event</code>
+提供文档并增加一个 <code>const event_base &amp;</code> 重载</li>
+
+  <li>example/Jamfile.v2 now also stages the dlls necessary to
+launch the multithreaded PingPong examples<br>
+
+例子/Jamfile.v2 现在也适用于执行多线程
+PingPong 例子时对 dlls 的需要</li>
+
+  <li>Added a FAQ item regarding UML2.0
+conformance<br>
+
+增加一个FAQ项，关于对UML2.0的符合性</li>
+
+  <li>Made the documentation of <code>unconsumed_event</code>
+more visible<br>
+
+让 <code>unconsumed_event</code>
+的文档更可读</li>
+
+  <li>Declared <code>state_base::~state_base virtual</code>
+for GCC. This makes state exit slightly slower but does away with loads
+of "has virtual functions but non-virtual destructor" warnings<br>
+
+对GCC声明了 <code>state_base::~state_base
+virtual</code>。这使得状态退出稍微慢了一点，但不会出现"has virtual functions but
+non-virtual destructor"的告警</li>
+
+  <li>Made transitions to history UML2.0 compliant, see <a href="faq.html#Uml2">here</a> for more
+information<br>
+
+让转换符合 UML2.0，更多信息请见 <a href="faq.html#Uml2">这里</a></li>
+
+  <li>Tidied all html files &amp; validated them with <a href="http://validator.w3.org/">http://validator.w3.org/</a><br>
+
+整
+理所有html文件，并用 <a href="http://validator.w3.org/">http://validator.w3.org/</a>
+确认它们</li>
+
+  <li>Fixed broken links<br>
+
+修复破坏的链接</li>
+
+  <li>Fixed a few conformance problems that led to errors on HP
+compilers<br>
+
+修正了在HP编译器上导致错误的一些符合性问题</li>
+
+  <li>Corrected documentation regarding allocation of states and
+events<br>
+
+修改了有关状态和事件分配的文档</li>
+
+</ul>
+
+<p>17 December, 2005</p>
+
+<ul>
+
+  <li>Added detailed performance data to the performance
+document<br>
+
+为性能文档增加详细的性能数据</li>
+
+  <li>Added the Performance "example" and the associated
+Performance.xls, which were used to perform the more detailed
+measurements and draw the associated charts that can now be found in
+the performance document<br>
+
+增加 Performance 例子以及相关的
+Performance.xls，用于执行更为详细的测量以及画出相关图表，这些图表可以在性能文档中找到</li>
+
+  <li>Simplified the BitMachine example (the performance
+measurement functions are no longer needed)<br>
+
+简化 BitMachine
+例子(不再需要其中的性能测量函数)</li>
+
+  <li><font color="#ff0000">Removed the to-do item
+"Investigate how constant-time dispatch for non-orthogonal state
+machines can be implemented" suggested by David Abrahams, Jonathan
+Turkanis, Rob Steward and Dave Gomboc. The more detailed performance
+measurements have shown that the time spent for event dispatch is
+almost always small compared to the time spent for state-entry and
+state-exit. See <a href="performance.html#SpeedVersusScalabilityTradeoffs">Speed
+versus scalability tradeoffs</a> in the performance document for
+more information<br>
+
+删除待办事项</font><font color="#ff0000">"研
+究如何实现非正交状态机的常量时间分派"，该建议由 David Abrahams, Jonathan
+Turkanis, Rob Steward 和 Dave Gomboc
+提出。更为详细的性能测量显示，花在事件分派上的时间总是远小于花在状态进入和状态退出上的时间。更多的信息请见"性能"文档中的 <a href="performance.html#SpeedVersusScalabilityTradeoffs">速度与可扩
+展性的折衷</a></font></li>
+
+  <li>Fixed an order of declaration bug which caused a
+compile-time error in event_base.hpp when compiled with GCC3.4.2 on
+HP-UX (the error neither showed up on GCC3.4.2 on MinGW nor on
+MSVC7.1)<br>
+
+修正了一类声明的 bug，这个 bug 引起在 GCC3.4.2 和 HP-UX 上编译 event_base.hpp
+会出现编译期错误(这个错误不会出现在 MinGW 的 GCC3.4.2 以及 MSVC7.1 上)</li>
+
+  <li>Tested with 1.33.1 version of the boost distribution<br>
+
+与
+1.33.1 版本的 boost 发布版进行测试</li>
+
+</ul>
+
+<p>14 August, 2005</p>
+
+<ul>
+
+  <li><b>This release will only work with the 1.33.0
+version of the boost distribution<br>
+
+这个发布版只能与 1.33.0 版本的 boost 发行版共同使用</b></li>
+
+  <li><font color="#ff0000"><b>B</b></font><b><font color="#ff0000">reaking change:</font></b> <font color="#ff0000">Added <code>simple_state&lt;&gt;::operator
+new</code> &amp; <code>simple_state&lt;&gt;::operator
+delete</code> forwarding to the allocator passed to <code>state_machine</code>
+(Peter Petrov). This considerably simplifies memory management
+customization. A user now only needs to pass his own allocator to <code>state_machine&lt;&gt;</code>
+and no longer has to separately overload <code>operator new</code>/<code>delete</code>
+for his state classes. Existing state classes for which memory
+management is not customized will thus automatically use the allocator
+passed to <code>state_machine&lt;&gt;</code>.
+Existing state classes for which <code>operator new</code>/<code>delete</code>
+is overloaded <b>directly</b> will continue to work as
+before. The only case where existing code will refuse to compile is
+when a state class inherits from an additional base with overloaded <code>operator
+new</code>/<code>delete</code> (leading to ambiguous
+call errors). Forwarding functions need to be added to such state
+classes (see BitMachine for an example)<br>
+
+    <b>破坏性的变更：</b></font><font color="#ff0000">增
+加的 <code>simple_state&lt;&gt;::operator
+new</code> &amp; <code>simple_state&lt;&gt;::operator
+delete</code> 前转至传给 <code>state_machine</code>
+的分配器(Peter Petrov)。这样简化了内存管理的定制。用户现在只需将他自己的分配器传递给 <code>state_machine&lt;&gt;</code>
+就可以了，无需为他的状态类分别重载 <code>operator new</code>/<code>delete</code>。
+已有的未定制内存管理的状态类将自动使用传给 <code>state_machine&lt;&gt;</code>
+的分配器。而已有的重载了 <code>operator new</code>/<code>delete</code>
+的状态类则<span style="font-weight: bold;">直接</span>继续如前使
+用。已有代码不能编译的唯一可能的情形是，状态类派生自另一个重载了 <code>operator
+new</code>/<code>delete</code>
+的基类(导致不明确调用的错误)。需要为这些状态类增加前转函数(举例请见 BitMachine)</font></li>
+
+  <li><b>Breaking change</b>: Added an Allocator
+parameter to the <code>event</code> class template and
+added <code>event&lt;&gt;::operator new</code>/<code>delete</code>.
+This makes customizing memory management easier but could also break
+existing code (see previous point)<br>
+
+    <b>破坏性的变更：</b>增加一个
+Allocator
+参数到 <code>event</code> 类模板，并增加 <code>event&lt;&gt;::operator
+new</code>/<code>delete</code>.
+这样定制内存管理更为容易，但也会破坏已有的代码(请见前一点)</li>
+
+  <li>Added Jamfile.v2 files<br>
+
+增加 Jamfile.v2 文件</li>
+
+  <li>Added <code>event_base</code> specializations
+to all reactions and updated the reference accordingly. This allows to
+implement reactions triggered by an event of any type<br>
+
+增加 <code>event_base</code>
+特化到所有反应中，并更新相关的引用。这样可以实现由任意类型的事件触发反应</li>
+
+  <li>Added a facility allowing to specially handle events that
+did not trigger a reaction. See point 10 of <a href="reference.html#process_event">process_event</a>()
+effects for more information. Updated tests and docs accordingly<br>
+
+增加一个方法允许
+对不触发反应的事件进行特殊处理。更多信息请见 <a href="reference.html#process_event">process_event</a>()
+的第10点。更新相关的测试和文档</li>
+
+  <li><font color="#ff0000">Added a FAQ item
+explaining how to trouble-shoot compile-time errors (John Spalding)</font><br>
+
+    <font color="#ff0000">增加一个FAQ项，解释如何检查编译期错误(John
+Spalding)</font></li>
+
+  <li><font color="#ff0000">Added a FAQ item that
+presents code for a StopWatch variant that does not use state-local
+storage and explains the drawbacks of that approach (Jeff Garland, Rob
+Steward)</font><br>
+
+    <font color="#ff0000">增加一个FAQ项，给出
+StopWatch 的一个变体代码，不使用状态局部存储，并解释这种方法的缺点(Jeff Garland, Rob
+Steward)</font></li>
+
+  <li>Added a FAQ item explaining the pitfalls of dynamically
+linked state-machines. Also added associated tests to find out whether
+and how FSMs can be put into DLLs<br>
+
+增加一个FAQ项，解释动态链接的状态机的缺陷。同时增加相关的测试以找出FSM是
+否可以和如何放入DLL中</li>
+
+  <li><font color="#ff0000">Removed the to-do item
+"Eliminate the need to wrap a single templated inner initial state into
+an <code>mpl::list&lt;&gt;</code>" suggested by
+Jonathan Turkanis because I don't currently see how this can be
+implemented without big ugly workarounds. A description of the problem
+can be found here: <a href="http://thread.gmane.org/gmane.comp.lib.boost.devel/128741">http://thread.gmane.org/gmane.comp.lib.boost.devel/128741</a><br>
+
+删
+除待办事项"去掉将单个模板化内层状态放入 <code>mpl::list&lt;&gt;</code>
+的需要"，由
+Jonathan Turkanis 建议，因为当前我还看不到如何用不那么难看的方法实现它。有关这个问题的说明请见这里：<a href="http://thread.gmane.org/gmane.comp.lib.boost.devel/128741">http://thread.gmane.org/gmane.comp.lib.boost.devel/128741</a></font></li>
+
+  <li><font color="#ff0000">Put all remarks about
+code as comments inside the code (Pavel Vozenilek, Augustus Saunders)</font><br>
+
+    <font color="#ff0000">将所有关于代码的说明以注释方式放入代码中(Pavel
+Vozenilek,
+Augustus Saunders)</font></li>
+
+  <li>On suitable platforms the library should now be compileable
+with exception support turned off (untested due to lacking access to
+such a platform)<br>
+
+在合适的平台上，本库现在可以以关闭异常支持的方式进行编译(由于没有这个的平台，所以未进行测试)</li>
+
+  <li>Added allocator support for broken std libs. Thanks to
+Joaquín M López Muñoz for adding his
+allocator workarounds to boost/detail<br>
+
+为有问题的 std 库增加分配器支持。感谢
+Joaquín M López Muñoz 增加他的分配器到
+boost/detail</li>
+
+</ul>
+
+<p>19 June, 2005</p>
+
+<ul>
+
+  <li>Updated the documentation for the new reaction
+specification interface<br>
+
+为新的反应规范接口更新文档</li>
+
+  <li><font color="#ff0000">Invalid calls to
+reaction functions now always lead to a failing runtime assert
+(Jonathan Turkanis). In debug mode the <code>result</code>
+type is a class with destructive copy semantics, enabling the detection
+of a wider range of reaction function abuses. Added appropriate tests
+and updated the documentation</font><br>
+
+    <font color="#ff0000">对
+反应函数的无效调用现在总是引起失败的运行期断言(Jonathan Turkanis)。在调试模式中，<code>result</code>
+类型是一个具有破坏性复制语义的类，可以检测到更广范围的反应函数滥用。增加相应的测试以及更新文档</font></li>
+
+  <li><font color="#ff0000">Separated
+performance-related docs from the rationale into a page of its own
+(Pavel Vozenilek)<br>
+
+将与性能相关的文档从"原理"中分离到它自己的页面中</font><font color="#ff0000">(Pavel
+Vozenilek)</font></li>
+
+  <li><font color="#ff0000">Added clone
+functionality to events so that stack-allocated events can now be
+deferred and posted. Updated the documentation and tests accordingly
+(Jonathan Turkanis)</font><br>
+
+    <font color="#ff0000">为事件增加
+克隆功能，使得栈分配的事件现在可以延迟和发送。更新相关的文档和测试(Jonathan Turkanis)</font></li>
+
+  <li><font color="#ff0000">Clarified the definition
+of context (John Spalding)</font><br>
+
+    <font color="#ff0000">澄
+清上下文的定义(John Spalding)</font></li>
+
+  <li><font color="#ff0000">Implemented <code>in_state_reaction&lt;&gt;</code>.
+Updated the documentation and tests accordingly (Darryl Green)<br>
+
+实现</font><font color="#ff0000"> <code>in_state_reaction&lt;&gt;</code>.
+更新相关文档和测试(Darryl Green)</font></li>
+
+</ul>
+
+<p>12 May, 2005</p>
+
+<ul>
+
+  <li><font color="#ff0000"><b>Breaking change</b>:
+Changed the library namespace from <code>fsm</code> to <code>statechart</code>
+(Alexander Nasonov, David Abrahams)</font><font color="#ff0000"><br>
+
+    <b>破坏性的变更：</b></font><font color="#ff0000">将
+本库的名字空间由 <code>fsm</code> 改为 <code>statechart</code>
+(Alexander Nasonov, David Abrahams)</font></li>
+
+  <li><font color="#ff0000"><b>Breaking change</b>:
+Changed the library name from boost::fsm to Boost.Statechart (Alexander
+Nasonov, David Abrahams)</font><font color="#ff0000"><br>
+
+    <b>破坏性的变更：</b></font><font color="#ff0000">将
+本库的名字由</font><font color="#ff0000"> boost::fsm 改为
+Boost.Statechart</font><font color="#ff0000">
+(Alexander Nasonov, David Abrahams)</font></li>
+
+  <li><font color="#ff0000"><b>Breaking change</b>:
+Reactions are now specified with a <code>reactions</code>
+member typedef in a state class declaration instead of a template
+parameter (Alexander Nasonov), not yet documented.</font><font color="#ff0000"><br>
+
+    <b>破坏性的变更：</b></font><font color="#ff0000">现
+在反应是以 state 类声明中的一个 <code>reactions</code>
+成员 typedef 来指定的，取替了原来的模板参数 (Alexander Nasonov)，但尚未写入文档</font></li>
+
+</ul>
+
+<p>03 May, 2005</p>
+
+<ul>
+
+  <li>Removed the to-do item for the <code>std::type_info</code>
+replacement. Thanks to Jody Hagins for taking care of that!<br>
+
+删除有关替代 <code>std::type_info</code> 的待办事项。感谢 Jody Hagins
+对此的关心</li>
+
+  <li>Added to-do items for the issues uncovered during the review<br>
+
+增加了一些待办事项，有关在审查时未涉及的问题</li>
+
+  <li>Fixed documentation bugs in the effects descriptions for <code>state_machine::initiate()</code>,
+    <code>state_machine::terminate()</code> and <code>state_machine::process_event()</code><br>
+
+修正文档中的缺陷，关于对 <code>state_machine::initiate()</code>, <code>state_machine::terminate()</code>
+和 <code>state_machine::process_event()</code> 的作用的说明<code></code></li>
+
+  <li><font color="#ff0000">Moved "Getting started"
+and "Audience" into index.html (Augustus Saunders)</font><font color="#ff0000"><br>
+
+    </font><font color="#ff0000">将 "入门"
+和 "读者" 移至 index.html (Augustus Saunders)</font></li>
+
+  <li><font color="#ff0000">Added Basic topics and
+Intermediate topics headings and shortened the "How to read this
+tutorial" section (Augustus Saunders)</font><font color="#ff0000"><br>
+
+增加"基本议题"和"中级议题"两个标题，以及</font><font color="#ff0000">"如
+何阅读本指南"一节 (Augustus Saunders)</font></li>
+
+</ul>
+
+<p>21 February, 2005</p>
+
+<ul>
+
+  <li>Corrected the review period length mentioned above
+(absolutely no changes to code and documentation)<br>
+
+修正了以上提及的审查期长度(对代码和文档完全不作修改)</li>
+
+</ul>
+
+<p>20 February, 2005</p>
+
+<ul>
+
+  <li><b>Breaking change</b>: Incorporated a part of <code>exception_translator::operator()</code>
+code into the <code>state_machine</code> class template.
+This simplifies custom exception translators and makes implementing
+them less error-prone<br>
+
+    <b>破坏性的变更：</b>将 <code>exception_translator::operator()</code>
+的一部分代码合并到 <code>state_machine</code>
+类模板中。以简化对异常转换器的定制，以及减少实现时的错误</li>
+
+  <li><b>Breaking change</b>: A request to defer an
+exception event is no longer honored and ultimately results in the
+exception being rethrown. This change is the result of the rule that
+during the processing of an exception no non-user code must be called
+that could itself propagate an exception and thus mask the original
+exception (for event deferral <code>operator new</code>
+must be called, which could throw). Exception event deferral has always
+been a strange concept anyway<br>
+
+    <b>破坏性的变更：</b>有关延迟异常事件的请求不再被接受，最终结果是重抛出该异常。这一变化是以下规则的结果，
+在处理异常期间，不要求必须调用非用户代码，有可能抛出其它异常而覆盖原来的异常(要对事件进行延迟，必须调用 <code>operator
+new</code>，所以有可能抛出)。无论如何异常事件延迟都是一个奇怪的概念</li>
+
+  <li>Various code brush-ups<br>
+
+多处代码的梳理</li>
+
+</ul>
+
+<p>09 February, 2005</p>
+
+<ul>
+
+  <li>Added exception testing to TransitionTest<br>
+
+为 TransitionTest 增加异常测试</li>
+
+  <li>Fixed a bug that led to an access violation when orthogonal
+region 0 of a state was terminated before exiting the state (either
+through another termination or a transition)<br>
+
+修正以下缺陷，当一个状态的正交区域0在退出该状态之前被终止，会导致非法访问(通过另一个终止动作或转换动作)</li>
+
+  <li>Various minor changes<br>
+
+多处不重要的修改</li>
+
+</ul>
+
+<p>07 February, 2005</p>
+
+<ul>
+
+  <li>Added FifoSchedulerTest, TerminationTest,
+CustomReactionTest, StateIterationTest, TypeInfoTest, StateCastTest,
+HistoryTest and tests for inconsistent uses of history, unsupported
+types of deep history and invalid statecharts<br>
+
+增加了 FifoSchedulerTest, TerminationTest,
+CustomReactionTest, StateIterationTest, TypeInfoTest, StateCastTest,
+HistoryTest 以及对历史的不一致使用、不支持的深历史类型和无效状态图的测试</li>
+
+  <li>Fixed a bug that led to a compile-time error when <code>state_downcast</code>
+was instantiated with a reference target<br>
+
+修正以下缺陷，当 <code>state_downcast</code>
+被以一个引用目标进行实例化时，会导致编译期错误</li>
+
+  <li>Fixed a bug that led to a null function pointer dereference
+when history was cleared before making a transition to history<br>
+
+修正以下缺陷，当在转换到一个历史之前该历史被清除，将导致一个空的函数指针提领</li>
+
+  <li>Updated the "Speed versus scalability tradeoffs" section<br>
+
+更新"速度与可扩展性的折衷"一节</li>
+
+  <li>Fixed previously failing builds of single-threaded variants
+of the PingPong example<br>
+
+修正了之前构建 PingPong 例子的单线程变体失败的错误</li>
+
+  <li>Moved the "Incompatible compilers" section to index.html<br>
+
+将"不兼容的编译器"一节移动至 index.html</li>
+
+  <li>Added explanation for the BitMachine &amp; Handcrafted
+examples<br>
+
+为 BitMachine &amp; Handcrafted 例子增加解释</li>
+
+  <li>Various minor changes<br>
+
+多处不重要的修改</li>
+
+</ul>
+
+<p>25 November, 2004</p>
+
+<ul>
+
+  <li>Adapted to the changes in the 1.32.0 distribution (mainly
+MPL changes). The library no longer works with 1.31.0<br>
+
+适配在 1.32.0 发布版中的变化(主要是MPL方面的改变)。本库不再与 1.31.0 版本一起使用</li>
+
+  <li>Fixed a bug that led to a failing runtime assert during
+state machine destruction<br>
+
+修正了以下缺陷，在状态机析构期间会引发运行期断言</li>
+
+  <li>Fixed a bug that led to events deferred in a composite
+state not being released when that state was left<br>
+
+修正以下缺陷，当一个组合状态被保持而未被释放时，会导致事件的延迟</li>
+
+  <li>Added TransitionTest and DeferralTest<br>
+
+增加了 TransitionTest 和 DeferralTest</li>
+
+</ul>
+
+<p>19 October, 2004</p>
+
+<ul>
+
+  <li><b>Breaking change</b>: Out of the box, a state
+machine no longer uses <code>exception_translator&lt;&gt;</code>
+to translate exceptions propagated into the framework. Instead, <code>null_exception_translator</code>
+is now used, which does not catch or translate any exceptions. Updated
+docs accordingly<br>
+
+    <b>破坏性的变更：</b>缺省情况下，状态机不再使用 <code>exception_translator&lt;&gt;</code>
+来转换传入到框架中的异常。现在使用的是 <code>null_exception_translator</code>,
+它不进行捕获也不转换异常。更新相关文档</li>
+
+  <li>Implemented <a href="tutorial.html#TwoStageExit">two
+stage exit</a> and updated docs accordingly<br>
+
+实现 <a href="tutorial.html#TwoStageExit">两阶段退出</a>
+并更新相关文档</li>
+
+  <li>Implemented an experimental feature that allows a
+transition action to be a member of the transition source or any of its
+direct or indirect contexts, see <a href="configuration.html#ApplicationDefinedMacros">BOOST_STATECHART_RELAX_TRANSITION_CONTEXT</a><br>
+
+实现一个试验特性，允许转换动作可以是转换源或其直接或间接上下文的成员，请见 <a href="configuration.html#ApplicationDefinedMacros">BOOST_STATECHART_RELAX_TRANSITION_CONTEXT</a></li>
+
+  <li>Various small code and documentation improvements<br>
+
+多处小的代码和文档的改进</li>
+
+</ul>
+
+<p>22 May, 2004</p>
+
+<ul>
+
+  <li>Integrated the Intel 7.0 workarounds provided by Pavel
+Vozenilek (most are std library workarounds)<br>
+
+由 Pavel
+Vozenilek 提供的对 Intel 7.0 变通方法的集成(主要是标准库的变通方法)</li>
+
+  <li>Added the Intel 7.0 section to the configuration page<br>
+
+为配置页增加 Intel 7.0 节</li>
+
+  <li>Updated copyright notices<br>
+
+更新了版权说明</li>
+
+</ul>
+
+<p>12 May, 2004</p>
+
+<ul>
+
+  <li>Fixed a bug that could have led to an <code>exception_thrown</code>
+event being sent to a state that is <b>not</b> the
+outermost unstable state in an unstable state machine (as documented in
+the reference). Instead, the event was sent to the state where the
+entry action of a direct inner state threw an exception, which is only
+correct for state machines without orthogonal regions. Also updated the
+    <a href="tutorial.html#ExceptionHandling">Exception
+handling</a> section in the tutorial, which now explains this
+behavior in detail<br>
+
+修正了以下缺陷，即在不稳定状态机中有可能导致一个 <code>exception_thrown</code>
+事件被发送给不是最外层不稳定状态的一个状态(如"参考"文档中所写)。相反，该事件是发送给那个其直接内层状态的进入动作抛出异常的状态的。这对于不带
+正交区域的状态机而言是唯一的正确选择。还更新了"指南"中的 <a href="tutorial.html#ExceptionHandling">异常处理</a>
+一节，更详尽地解释了这一行为</li>
+
+  <li>Fixed bug that, under extremely rare circumstances, would
+have prevented the correct handling of out of memory situations<br>
+
+修正了以下缺陷，在极罕见的情况下，不能正确处理内存不足的情形</li>
+
+  <li>Fixed an inconsistency in the state entry sequence when a
+state in an orthogonal region is the target of a transition originating
+outside its direct outer state. Now the states are always entered
+according to the number of their orthogonal region, i.e. orthogonal
+region 0 first, then orthogonal region 1 and so on. Since the
+documentation did not define the sequence (it does now) users should
+not notice any difference<br>
+
+修正了以下缺陷，当一个正交区域中的某个状态是一个从其直接外层状态之外产生的转换动作的目标时，状态进入的顺序会有矛盾。现在已可以总是按照正交区域的
+号码顺序来执行状态进入，即首先是正交区域0，然后是正交区域1，等等。由于文档中没有定义这个顺序(现在有了)，用户应该不会注意到什么不同</li>
+
+  <li>Changed the implementation of <code>state_machine::terminate()</code>
+so that orthogonal regions are now exited strictly from highest to
+lowest number instead of arbitrarily as before. Updated docs accordingly<br>
+
+修改了 <code>state_machine::terminate()</code>
+的实现，使得现在可以严格按照正交区域的号码从高到低执行状态的退出，而不是象以前那样按任意顺序执行。更新相关的文档</li>
+
+</ul>
+
+<p>22 April, 2004</p>
+
+<ul>
+
+  <li>Removed the previously added BCC 5.6.4 fixes (the BCC port
+was postponed due to lack of knowledge how to work around certain bugs)<br>
+
+删除之前增加的 BCC 5.6.4 修正(由于不知道如何解决一些确定的缺陷，所以延后了对BCC的移植)</li>
+
+  <li>Replaced all uses of <code>BOOST_STATIC_CONSTANT</code>
+with their mpl counterparts (<code>bool_</code>, <code>integral_c</code>).
+As a result, ports to buggy compilers should become easier<br>
+
+将所有 <code>BOOST_STATIC_CONSTANT</code> 的使用替换为 mpl 的实现(<code>bool_</code>,
+    <code>integral_c</code>)。这样更易于移植到有问题的编译器上</li>
+
+  <li>Clarified some bits in the tutorial and added
+StopWatch2.cpp, which details an alternative way of retrieving state
+machine state<br>
+
+在"指南"中澄清了一些东西，增加了 StopWatch2.cpp，详细说明了读取状态机状态的另一个方法</li>
+
+</ul>
+
+<p>10 April, 2004</p>
+
+<ul>
+
+  <li>Added two BCC 5.6.4 fixes contributed by Pavel Vozenilek;
+Boost.Statechart does not yet work on BCC though<br>
+
+增加两个 BCC 5.6.4 修正，由 Pavel Vozenilek 贡献；虽然
+Boost.Statechart 还不能用于 BCC</li>
+
+  <li>Implemented a few of the documentation and code
+improvements suggested by Pavel Vozenilek, including the new "UML to
+Boost.Statechart mapping summary" document<br>
+
+由 Pavel Vozenilek 建议实现了一些文档和代码的改进，包括新的"UML到Boost.Statechart的映射概要"文档</li>
+
+</ul>
+
+<p>26 March, 2004</p>
+
+<ul>
+
+  <li>Fixed a small Intel 8.0 bug in the BitMachine example<br>
+
+修正了在 BitMachine 例子中的 Intel 8.0 的一个小缺陷</li>
+
+</ul>
+
+<p>25 March, 2004</p>
+
+<ul>
+
+  <li>Now everything compiles warning-free on Intel 8.0<br>
+
+现在在 Intel 8.0 上编译没有任何告警了</li>
+
+</ul>
+
+<p>21 March, 2004</p>
+
+<ul>
+
+  <li><b>Breaking change</b>: <code>fifo_scheduler&lt;&gt;</code>
+and <code>fifo_worker&lt;&gt;</code> now always
+work non-blocking by default<br>
+
+    <span style="font-weight: bold;">破坏性的变更：</span><code>fifo_scheduler&lt;&gt;</code>
+和 <code>fifo_worker&lt;&gt;</code> 现在缺省总是无阻塞工作</li>
+
+  <li>Added gcc makefiles, contributed by Mitsuo Fukasawa<br>
+
+增加 gcc makefiles，由 Mitsuo Fukasawa 贡献</li>
+
+  <li>Added a fixed version of atomic_count_gcc.hpp to fsm.zip,
+see <a href="http://lists.boost.org/MailArchives/boost/msg57537.php">http://lists.boost.org/MailArchives/boost/msg57537.php</a>
+for more information<br>
+
+增加 atomic_count_gcc.hpp 的一个修正版本到 fsm.zip，详情请见 <a href="http://lists.boost.org/MailArchives/boost/msg57537.php">http://lists.boost.org/MailArchives/boost/msg57537.php</a></li>
+
+</ul>
+
+<p>16 March, 2004</p>
+
+<ul>
+
+  <li><b>Breaking change</b>: Added the <code>FifoWorker</code>
+template parameter to <code>fifo_scheduler&lt;&gt;</code>
+and updated documentation and examples accordingly<br>
+
+    <span style="font-weight: bold;">破坏性的变更：</span>为
+    <code>fifo_scheduler&lt;&gt;</code> 增加 <code>FifoWorker</code>
+模板参数，更新相应的文档和例子</li>
+
+</ul>
+
+<p>13 March, 2004</p>
+
+<ul>
+
+  <li><b>Breaking change</b>: Renamed <code>worker&lt;&gt;</code>
+to <code>fifo_scheduler&lt;&gt;</code> and updated
+documentation and examples accordingly<br>
+
+    <span style="font-weight: bold;"></span><span style="font-weight: bold;">破坏性的变更：</span>将 <code>worker&lt;&gt;</code>
+更名为 <code>fifo_scheduler&lt;&gt;</code>，更新相应的文档和例子</li>
+
+  <li>Changed the <code>fifo_scheduler&lt;&gt;</code>
+implementation so that a custom worker implementation needs to
+duplicate less code<br>
+
+修改 <code>fifo_scheduler&lt;&gt;</code>
+的实现，使得定制工作者实现只需重复少量代码</li>
+
+  <li>Various other small code and doc changes<br>
+
+多处代码和文档的小改动</li>
+
+</ul>
+
+<p>03 March, 2004</p>
+
+<ul>
+
+  <li><b>Breaking change</b>: Redesigned the <code>worker&lt;&gt;</code>
+and <code>asynchronous_state_machine&lt;&gt;</code>
+class templates and updated documentation accordingly. Event processors
+can now be added and removed while a worker is running. Moreover, the
+new design allows for custom workers with non-FIFO queueing schemes<br>
+
+    <span style="font-weight: bold;"></span><span style="font-weight: bold;">破坏性的变更：</span>重新设计 <code>worker&lt;&gt;</code>
+和 <code>asynchronous_state_machine&lt;&gt;</code>
+类模板，更新相关文档。事件处理器现在可以在工作者运行中进行增加和删除。此外，新的设计允许以非FIF0队列的策略来定制工作者</li>
+
+  <li>The StopWatch example now uses <code>std::time()</code>
+instead of <code>std::clock()</code><br>
+
+StopWatch 例子现在使用 <code>std::time()</code>
+而不是 <code>std::clock()</code></li>
+
+</ul>
+
+<p>09 February, 2004</p>
+
+<ul>
+
+  <li>Integrated the standard conformance fixes contributed by
+Peter Petrov. The library now also works on GCC 3.2 and should be much
+easier to port to other highly conforming compilers<br>
+
+集成由
+Peter Petrov 贡献的标准符合性修正。本库现在可用于 GCC 3.2，并更容易移植到具有高符合度的编译器</li>
+
+  <li>Added the state type information facility to <code>simple_state</code><br>
+
+为 <code>simple_state</code> 增加状态类型信息工具</li>
+
+  <li>Added the function templates <code>simple_state::clear_shallow_history()</code>
+and <code>simple_state::clear_deep_history()</code><br>
+
+增加函数模板 <code>simple_state::clear_shallow_history()</code>
+和 <code>simple_state::clear_deep_history()</code></li>
+
+</ul>
+
+<p>11 January, 2004</p>
+
+<ul>
+
+  <li>Finished reference documentation<br>
+
+完成"参考"文档</li>
+
+  <li>Updated Copyright notices<br>
+
+更新版权说明</li>
+
+</ul>
+
+<p>12 December, 2003</p>
+
+<ul>
+
+  <li><b>Thanks to Mitsuo Fukasawa the tutorial is now also
+available in Japanese!!!</b><br>
+
+    <b>感谢 Mitsuo Fukasawa，现在"指南"有了日文版!!!</b></li>
+
+  <li>Added a state type information facility<br>
+
+增加状态类型信息工具</li>
+
+  <li>Added reference (unfinished) and configuration
+documentation and updated other documents<br>
+
+增加"参考"(未完成)和"配置"文档，更新其它文档</li>
+
+  <li>Various code brush-ups (no breaking changes)<br>
+
+多处代码梳理(非破坏性的变更)</li>
+
+</ul>
+
+<p>12 October, 2003</p>
+
+<ul>
+
+  <li><b>Breaking change</b>: Removed <code>rtti_policy&lt;&gt;</code>
+from the interface. By default, the library now uses its own (often
+faster) RTTI implementation. Users can demand the use of native C++
+RTTI by defining <code>BOOST_STATECHART_USE_NATIVE_RTTI</code>.
+This change only affects users who customized <code>state_machine&lt;&gt;</code>,
+    <code>asynchronous_state_machine&lt;&gt;</code>
+or <code>worker&lt;&gt;</code><br>
+
+    <span style="font-weight: bold;">破坏性的变更：</span>从接
+口中删除 <code>rtti_policy&lt;&gt;</code>。缺省情况下，现在本库使用自
+己(也更快)的RTTI实现。用户可以通过定义 <code>BOOST_STATECHART_USE_NATIVE_RTTI</code>
+指定使用原生的 C++ RTTI。这一修改只影响定制了 <code>state_machine&lt;&gt;</code>,
+    <code>asynchronous_state_machine&lt;&gt;</code>
+或 <code>worker&lt;&gt;</code> 的用户</li>
+
+  <li><b>Breaking change</b>: Reordered template
+arguments of <code>state_machine&lt;&gt;</code>
+and <code>asynchronous_state_machine&lt;&gt;</code>.
+This change only affects users who customized <code>state_machine&lt;&gt;</code>
+or <code>asynchronous_state_machine&lt;&gt;</code><br>
+
+    <span style="font-weight: bold;">破坏性的变更：</span>重新
+安排 <code>state_machine&lt;&gt;</code> 和 <code>asynchronous_state_machine&lt;&gt;</code>
+的模板参数顺序。这一修改只影响定制了 <code>state_machine&lt;&gt;</code>
+或 <code>asynchronous_state_machine&lt;&gt;</code><code></code>
+的用户</li>
+
+  <li>Added shallow/deep history support and updated
+documentation accordingly<br>
+
+增加浅历史/深历史的支持，更新相关文档</li>
+
+  <li>Added various compile-time sanity checks<br>
+
+增加了几处编译器完整性检查</li>
+
+  <li>Added 1 FAQ (asked by Mitsuo Fukasawa)<br>
+
+增加了1个FAQ(由 Mitsuo Fukasawa 提问)</li>
+
+</ul>
+
+<p>16 August, 2003</p>
+
+<ul>
+
+  <li>Added <code>asynchronous_state_machine&lt;&gt;</code>
+and <code>worker&lt;&gt;</code> and updated
+documentation accordingly<br>
+
+增加了 <code>asynchronous_state_machine&lt;&gt;</code>
+和 <code>worker&lt;&gt;</code>，更新相关文档</li>
+
+  <li>Various minor bug fixes and code improvements (no breaking
+interface changes)<br>
+
+多处小缺陷的修正和代码改进(非破坏性变更)</li>
+
+  <li>Added Keyboard and PingPong examples<br>
+
+增加了 Keyboard 和 PingPong 例子</li>
+
+  <li>Added .pdf documentation<br>
+
+增加了 .pdf 文档</li>
+
+</ul>
+
+<p>08 June, 2003</p>
+
+<ul>
+
+  <li>Added 3 FAQs (asked by Bohdan) &amp; 1 definition<br>
+
+增加了3个FAQ(由 Bohdan 提问)和1个定义</li>
+
+  <li>Removed the superfluous public derivation specifiers in the
+tutorial and the examples as suggested by Aleksey Gurtovoy<br>
+
+删除"指南"和例子中的多余的公有派生说明，由 Aleksey Gurtovoy 建议</li>
+
+  <li>Various code improvements (no interface changes)<br>
+
+多处代码改进(未改变接口)</li>
+
+  <li>Various html improvements<br>
+
+多处 html 改进</li>
+
+</ul>
+
+<hr>
+<p><a href="http://validator.w3.org/check?uri=referer"><img src="http://www.w3.org/Icons/valid-html401" alt="Valid HTML 4.01 Transitional" border="0" height="31" width="88"></a></p><p>Revised 27 June, 2009</p>
+<p><i>Copyright © 2003-2009&nbsp;<a href="contact.html">Andreas Huber 
+Dönni</a></i></p><p><i>Distributed under the Boost Software License, Version
+1.0. (See accompanying file <a href="../../../LICENSE_1_0.txt">LICENSE_1_0.txt</a>
+or copy at <a href="http://www.boost.org/LICENSE_1_0.txt">http://www.boost.org/LICENSE_1_0.txt</a>)</i></p>
+
+</body></html>

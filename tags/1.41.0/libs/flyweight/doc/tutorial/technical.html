@@ -1,0 +1,303 @@
+<!DOCTYPE HTML PUBLIC "-//W3C//DTD HTML 4.0.1 Transitional//EN">
+<html><head>
+
+
+  
+  <meta http-equiv="Content-Type" content="text/html; charset=UTF-8">
+
+
+
+  
+  
+  
+  <title>Boost.Flyweight Documentation - Tutorial - Technical issues</title><link rel="stylesheet" href="../style.css" type="text/css">
+
+
+  
+  <link rel="start" href="../index.html">
+
+
+  
+  <link rel="prev" href="extension.html">
+
+
+  
+  <link rel="up" href="index.html">
+
+
+  
+  <link rel="next" href="lambda_expressions.html"></head>
+<body>
+
+
+<h1><img src="../../../../boost.png" alt="Boost logo" align="middle" height="86" width="277">Boost.Flyweight Tutorial: Technical issues</h1>
+
+
+
+<div class="prev_link"><a href="extension.html"><img src="../prev.gif" alt="extending Boost.Flyweight" border="0"><br>
+
+
+Extending Boost.Flyweight
+</a></div>
+
+
+<div class="up_link"><a href="index.html"><img src="../up.gif" alt="Boost.Flyweight tutorial" border="0"><br>
+
+
+Boost.Flyweight tutorial
+</a></div>
+
+
+<div class="next_link"><a href="lambda_expressions.html"><img src="../next.gif" alt="annex: MPL lambda expressions" border="0"><br>
+
+
+Annex: MPL lambda expressions
+</a></div>
+
+<br style="" clear="all">
+
+
+
+<hr>
+
+<h2>Contents &nbsp;目录</h2>
+
+
+
+<ul>
+
+
+  <li><a href="#static_init">Static data initialization &nbsp;静态数据初始化</a></li>
+
+
+</ul>
+
+
+
+<h2><a name="static_init">Static data initialization &nbsp;静态数据初始化</a></h2>
+
+
+
+<p>
+For any given <code>T</code>, the type <code>flyweight&lt;T&gt;</code>
+maintains some class-wide or static data that needs to be properly
+initialized before the class can be used. The internal machinery of
+Boost.Flyweight guarantees that static data initialization
+takes place automatically before the first use of the particular
+<code>flyweight&lt;T&gt;</code> instantiation in the program, and in
+any case always during the so-called <i>dynamic initialization phase</i>
+of the program startup sequence. Although this is not strictly
+required by the C++ standard, in current practice dynamic initialization
+is completed before <code>main()</code> begins.</p>
+
+<p>对任何给定的<code><big>T</big>，</code><big><code>flyweight&lt;T&gt;</code></big>类型维护着一些类级别的数据或者静态数据，这些数据在类可以被使用之前需要被恰当的初始化。Boost.Flyweight的内部机制保证：程序中某个<big><code>flyweight&lt;T&gt;</code></big>的实例首次使用之前静态数据的初始化会自动进行，而且无论如何总是在程序启动顺序中所谓的<span style="font-style: italic;">动态初始化阶段</span>进行。虽然C++标准没严格要求，但是目前的做法是动态初始化是在<big><code>main()</code></big>开始前就完成了。
+</p>
+
+
+
+<p>
+So, for all practical purposes, static data initialization is performed
+before <code>main()</code> or before the first pre-<code>main()</code>
+usage of the class, for instance if we declare a global
+<code>static flyweight&lt;T&gt;</code> object. This covers the vast
+majority of usage cases in a transparent manner, but there are
+some scenarios where the automatic static data initialization
+policy of Boost.Flyweight can fail:</p>
+
+<p>因此，实际上，静态数据初始化是在<big><code>main()</code></big>之前执行或者<big><code>main()</code></big>之前第一次使用这个类之前执行的，例如如果我们定义一个全局静态的<big><code>static flyweight&lt;T&gt;</code></big>对象。 这以一种透明的方式覆盖了绝大多数的使用情况，但是存在一些场合Boost.Flyweight的自动静态数据初始化策略会失败：
+</p>
+
+
+
+<blockquote>
+  
+  <pre><span class="comment">// global thread pool</span>
+
+<span class="keyword">class</span> <span class="identifier">thread_pool</span>
+<span class="special">{</span>
+<span class="keyword">public</span><span class="special">:</span>
+  <span class="identifier">thread_pool</span><span class="special">()</span>
+  <span class="special">{</span>
+    <span class="keyword">for</span><span class="special">(</span><span class="keyword">int</span> <span class="identifier">i</span><span class="special">=</span><span class="number">0</span><span class="special">;</span><span class="identifier">i</span><span class="special">&lt;</span><span class="number">100</span><span class="special">;++</span><span class="identifier">i</span><span class="special">)</span><span class="identifier">p</span><span class="special">[</span><span class="identifier">i</span><span class="special">]=</span><span class="identifier">shared_ptr</span><span class="special">&lt;</span><span class="identifier">thread</span><span class="special">&gt;(</span><span class="keyword">new</span> <span class="identifier">thread</span><span class="special">(</span><span class="identifier">thread_fun</span><span class="special">));</span>
+  <span class="special">}</span>
+
+<span class="keyword">private</span><span class="special">:</span>
+  <span class="keyword">static</span> <span class="keyword">void</span> <span class="identifier">thread_fun</span><span class="special">()</span>
+  <span class="special">{</span>
+    <span class="comment">// uses flyweight&lt;std::string&gt;</span>
+  <span class="special">}</span>
+  <span class="identifier">array</span><span class="special">&lt;</span><span class="identifier">shared_ptr</span><span class="special">&lt;</span><span class="identifier">thread</span><span class="special">&gt;,</span><span class="number">100</span><span class="special">&gt;</span> <span class="identifier">p</span><span class="special">;</span>
+<span class="special">};</span>
+
+<span class="keyword">static</span> <span class="identifier">thread_pool</span> <span class="identifier">thpool</span><span class="special">;</span>
+
+<span class="keyword">int</span> <span class="identifier">main</span><span class="special">()</span>
+<span class="special">{</span>
+  <span class="special">...</span></pre>
+
+</blockquote>
+
+
+
+<p>
+The global pool of the example launches several threads, each of which
+internally uses <code>flyweight&lt;std::string&gt;</code>.
+Static data initialization can potentially be executed twice concurrently
+if two threads happen to collide on the first usage of
+<code>flyweight&lt;std::string&gt;</code>: Boost.Flyweight initialization
+does not consider thread safety. So, we need to explicitly take care of
+static data initialization in a thread safe context before launching
+the threads:</p>
+
+<p>这个例子中的全局的线程池启动了若干线程，每个线程内部都会使用<code><big>flyweight&lt;std::string&gt;</big></code>。静态数据初始化有可能并发执行2次，如果2个线程都恰好第一次使用<code><big>flyweight&lt;std::string&gt;</big>：</code>Boost.Flyweight的初始化没有考虑线程安全。因此，在启动这些线程之前，我们必须在一个线程安全的环境下显式地处理好静态数据的初始化 。
+</p>
+
+
+
+<blockquote>
+  
+  <pre><span class="keyword">class</span> <span class="identifier">thread_pool</span>
+<span class="special">{</span>
+<span class="keyword">public</span><span class="special">:</span>
+  <span class="identifier">thread_pool</span><span class="special">()</span>
+  <span class="special">{</span>
+    <b><span class="identifier">flyweight</span><span class="special">&lt;</span><span class="identifier">std</span><span class="special">::</span><span class="identifier">string</span><span class="special">&gt;::</span><span class="identifier">init</span><span class="special">();</span></b>
+    <span class="keyword">for</span><span class="special">(</span><span class="keyword">int</span> <span class="identifier">i</span><span class="special">=</span><span class="number">0</span><span class="special">;</span><span class="identifier">i</span><span class="special">&lt;</span><span class="number">100</span><span class="special">;++</span><span class="identifier">i</span><span class="special">)</span><span class="identifier">p</span><span class="special">[</span><span class="identifier">i</span><span class="special">]=</span><span class="identifier">shared_ptr</span><span class="special">&lt;</span><span class="identifier">thread</span><span class="special">&gt;(</span><span class="keyword">new</span> <span class="identifier">thread</span><span class="special">(</span><span class="identifier">thread_fun</span><span class="special">));</span>
+  <span class="special">}</span>
+  <span class="special">...</span></pre>
+
+</blockquote>
+
+
+
+<p>
+The static member function <code>init</code> is not thread safe, either: in our particular
+example it just happens to be called in a single threaded environment.
+When concurrency can happen, <code>flyweight&lt;T&gt;::init</code> must
+be properly synchronized by the programmer by using some mutual exclusion
+mechanisms of her own.</p>
+
+<p>同样，静态成员函数<big><code>init</code></big>函也不是线程安全的：在我们这个具体例子里它恰好是在一个单线程的环境里被调用的。 当有可能出现并发的时候，程序员必须自己使用一些互斥机制来恰当的同步<big><code>flyweight&lt;T&gt;::init</code></big>的调用。
+</p>
+
+
+
+<p>
+The following is another example where the default static initialization
+provided by Boost.Flyweight can fail:</p>
+
+<p>接下来是Boost.Flyweight的默认静态初始化会失败的另一个例子：
+</p>
+
+
+
+<blockquote>
+  
+  <pre><span class="keyword">static</span> <span class="identifier">std</span><span class="special">::</span><span class="identifier">vector</span><span class="special">&lt;</span><span class="identifier">flyweight</span><span class="special">&lt;</span><span class="identifier">std</span><span class="special">::</span><span class="identifier">string</span><span class="special">&gt;</span> <span class="special">&gt;</span> <span class="identifier">v</span><span class="special">;</span>
+
+<span class="keyword">int</span> <span class="identifier">main</span><span class="special">()</span>
+<span class="special">{</span>
+  <span class="comment">// use v</span>
+<span class="special">}</span></pre>
+
+</blockquote>
+
+
+
+<p>
+In some environments, the program above fails at termination time with something
+like the following:</p>
+
+<p>在某些环境下，上面的程序在结束时会输出像下面这样的错误信息：
+</p>
+
+
+
+<blockquote>
+  
+  <pre>Assertion failed: count()==0, file c:\boost\flyweight\refcounted.hpp, line 68<br></pre>
+
+</blockquote>
+
+
+
+<p>
+What is the problem? Although the type of <code>v</code> involves
+<code>flyweight&lt;std::string&gt;</code>, constructing <code>v</code> as an empty vector
+need not create any flyweight object proper; so,
+it is perfectly possible that the static initialization of
+<code>flyweight&lt;std::string&gt;</code> happens <i>after</i> the construction
+of <code>v</code>; when this is the case, the static destruction of
+the associated factory will occur <i>before</i> <code>v</code>'s
+destruction, leaving the vector with dangling flyweights.
+Again, the solution consists in explicitly forcing the static instantiation
+of <code>flyweight&lt;std::string&gt;</code> before <code>v</code> is
+created. Here, calling
+the function <code>flyweight&lt;std::string&gt;::init</code> is a little
+cumbersome, so we can resort to the utility type
+<code>flyweight&lt;std::string&gt;::initializer</code> to do that job for us:</p>
+
+<p>出什么问题了？虽然<big><code>v</code></big>的类型类用到了<code><big>flyweight&lt;std::string&gt;</big>，</code>但是构造一个空的向量<big><code>v</code></big>不需要创建任何flyweight对象本身；于是，完全有可能<big><code>flyweight&lt;std::string&gt;</code></big>的静态初始化发生在<big><code>v</code></big>的构造<span style="font-style: italic;">之后</span>；当出现这种情况时，相关工厂的静态析构将在<big><code>v</code></big>的析构<span style="font-style: italic;">之前</span>发生，使得向量里尽是些悬挂的flyweight。同样的，解决办法是显示强制<big><code>flyweight&lt;std::string&gt;</code></big>的静态初始化在<big><code>v</code></big>创建之前。这里，调用函数<big><code>flyweight&lt;std::string&gt;::init</code></big>有点麻烦，因此我们求助于工具类<big><code>flyweight&lt;std::string&gt;::initializer</code></big>替我们做这个工作。
+</p>
+
+
+
+<blockquote>
+  
+  <pre><span class="comment">// equivalent to calling flyweight&lt;std::string&gt;::init()</span>
+<b><span class="keyword">static</span> <span class="identifier">flyweight</span><span class="special">&lt;</span><span class="identifier">std</span><span class="special">::</span><span class="identifier">string</span><span class="special">&gt;::</span><span class="identifier">initializer</span>  <span class="identifier">fwinit</span><span class="special">;</span></b>
+<span class="keyword">static</span> <span class="identifier">std</span><span class="special">::</span><span class="identifier">vector</span><span class="special">&lt;</span><span class="identifier">flyweight</span><span class="special">&lt;</span><span class="identifier">std</span><span class="special">::</span><span class="identifier">string</span><span class="special">&gt;</span> <span class="special">&gt;</span> <span class="identifier">v</span><span class="special">;</span>
+
+<span class="keyword">int</span> <span class="identifier">main</span><span class="special">()</span>
+<span class="special">{</span>
+  <span class="comment">// use v; no dangling flyweights at termination now</span>
+<span class="special">}</span></pre>
+
+</blockquote>
+
+
+
+<hr>
+
+<div class="prev_link"><a href="extension.html"><img src="../prev.gif" alt="extending Boost.Flyweight" border="0"><br>
+
+
+Extending Boost.Flyweight
+</a></div>
+
+
+<div class="up_link"><a href="index.html"><img src="../up.gif" alt="Boost.Flyweight tutorial" border="0"><br>
+
+
+Boost.Flyweight tutorial
+</a></div>
+
+
+<div class="next_link"><a href="lambda_expressions.html"><img src="../next.gif" alt="annex: MPL lambda expressions" border="0"><br>
+
+
+Annex: MPL lambda expressions
+</a></div>
+
+<br style="" clear="all">
+
+
+
+<br>
+
+
+
+<p>Revised June 22nd 2009</p>
+
+
+
+<p>© Copyright 2006-2009 Joaquín M López Muñoz.
+Distributed under the Boost Software 
+License, Version 1.0. (See accompanying file <a href="../../../../LICENSE_1_0.txt">
+LICENSE_1_0.txt</a> or copy at <a href="http://www.boost.org/LICENSE_1_0.txt">
+http://www.boost.org/LICENSE_1_0.txt</a>)
+</p>
+
+
+
+</body></html>

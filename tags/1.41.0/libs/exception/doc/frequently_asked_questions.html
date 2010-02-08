@@ -1,0 +1,89 @@
+<!DOCTYPE html PUBLIC "-//W3C//DTD XHTML 1.0 Strict//EN" "http://www.w3.org/TR/xhtml1/DTD/xhtml1-strict.dtd">
+<html xmlns="http://www.w3.org/1999/xhtml" xml:lang="en" lang="en"><head>
+	<meta http-equiv="Content-Type" content="text/html; charset=utf-8" />
+	
+	<title>常问问题</title><link href="reno.css" type="text/css" rel="stylesheet" /></head>
+
+<body>
+<div class="body-0">
+<div class="body-1">
+<div class="body-2">
+<div>
+<div id="boost_logo">
+<a href="http://www.boost.org"><img style="border: 0pt none ;" src="http://www.boost.org/boost.png" alt="Boost" height="86" width="277" /></a>
+</div>
+<h1>Boost Exception</h1>
+</div>
+<!-- Copyright (c) 2006-2009 Emil Dotchevski and Reverge Studios, Inc. -->
+<!-- Distributed under the Boost Software License, Version 1.0. (See accompanying -->
+<!-- file LICENSE_1_0.txt or copy at http://www.boost.org/LICENSE_1_0.txt) -->
+<div class="RenoIncludeDIV"><div class="RenoAutoDIV"><h2>Frequently Asked Questions</h2>
+</div>
+<h3>为什么 boost::exception 不是从std::exception 继承?</h3>
+<p>尽管 <span class="RenoLink"><a href="using_virtual_inheritance_in_exception_types.html">应该对基类异常使用虚拟继承</a></span>, 但是很多的程序员从 std::exception 继承的时候都忘记了这条原则. 如果 boost::<span class="RenoLink"><a href="exception.html">exception</a></span>从 std::exception 继承, 对用户定义的异常类型使用函数 <span class="RenoLink"><a href="enable_error_info.html">enable_error_info</a></span> 就会引入歧义, 从而破坏函数 catch(std::exception &amp;) 执行.</p>
+<p>当然, boost::<span class="RenoLink"><a href="exception.html">exception</a></span> 不应该在异常体系中作为基类类型替换 std::exception . 相反, 它应该是作为虚拟基类和 std::exception 一起使用.(std::exception也应该被虚拟继承.)</p>
+<h3>为什么 boost::exception 是抽象类 ?</h3>
+<p>在异常中立的上下文中,向当前活动的异常对象添加 <span class="RenoLink"><a href="error_info.html">error_info</a></span> 信息的时候, 很容易错误的删除异常的类型, 因此boost::exception 被设计为抽象类. 如下所示:</p>
+<pre>catch( boost::<span class="RenoLink"><a href="exception.html">exception</a></span> &amp; e )<br />    {<br />    e <span class="RenoLink"><a href="exception_operator_shl.html">&lt;&lt;</a></span> foo_info(foo);<br />    throw e; //Compile error: boost::<span class="RenoLink"><a href="exception.html">exception</a></span> is abstract<br />    }</pre>
+<p>正确的做法是:</p>
+<pre>catch( boost::<span class="RenoLink"><a href="exception.html">exception</a></span> &amp; e )<br />    {<br />    e <span class="RenoLink"><a href="exception_operator_shl.html">&lt;&lt;</a></span> foo_info(foo);<br />    throw; //Okay, re-throwing the original exception object.<br />    }</pre>
+<h3> boost::exception 基类的空间开销是多大 ?</h3>
+<p>在异常处理过程中, boost::exception 的空间开销是可以忽略的. 抛出从 boost::<span class="RenoLink"><a href="exception.html">exception</a></span> 继承的异常本身不会引起任何的内存分配.</p>
+<p>从 boost::<span class="RenoLink"><a href="exception.html">exception</a></span> 继承,使得可以向异常对象添加任何数据, 这一般会导致分配内存. 但是, 这些内存会在异常处理以后被回收. 同时, 既然用户代码一般在栈展开的时候不会引起内存分配, 向异常对象添加错误信息一般不会引起内存碎片.</p>
+<h3>抛出异常的时候,应该使用 boost::throw_exception 还是 BOOST_THROW_EXCEPTION, 或者只是简单的抛出 ?</h3>
+<p>使用 boost::<span class="RenoLink"><a href="throw_exception.html">throw_exception</a></span> ,而不是简单的直接抛出, 带来的收益是确保抛出的异常从 boost::<span class="RenoLink"><a href="exception.html">exception</a></span> 继承, 从而使之和函数 boost::<span class="RenoLink"><a href="current_exception.html">current_exception</a></span> 兼容.</p>
+<p>宏 <span class="RenoLink"><a href="BOOST_THROW_EXCEPTION.html">BOOST_THROW_EXCEPTION</a></span> 也会导致调用函数 boost::<span class="RenoLink"><a href="throw_exception.html">throw_exception</a></span>, 但是会向异常对象添加 __FILE__ 和 __LINE__ 信息, 同时还有抛出函数的一个友好的名字信息. 这不会带来什么开销, 但是会使得 boost::<span class="RenoLink"><a href="diagnostic_information.html">diagnostic_information</a></span> 含有一些更加有用, 即便不是用户友好的消息.</p>
+<p>boost::<span class="RenoLink"><a href="diagnostic_information.html">diagnostic_information</a></span> 的典型用法是:</p>
+<pre>catch( boost::exception &amp; e )<br />    {<br />    std::cerr &lt;&lt; "OMG!" &lt;&lt; boost::diagnostic_information(e);<br />    }<br />catch( ... )<br />    {<br />    std::cerr &lt;&lt; "OMG!!!";<br />    }</pre>
+<p>下面是一条可能显示的消息格式, 第一行信息只有在调用 <span class="RenoLink"><a href="BOOST_THROW_EXCEPTION.html">BOOST_THROW_EXCEPTION</a></span> 才会出现:</p>
+<pre>example_io.cpp(70): Throw in function class boost::shared_ptr&lt;struct _iobuf&gt; __cdecl my_fopen(const char *,const char *)<br />Dynamic exception type: class boost::exception_detail::clone_impl&lt;class fopen_error&gt;<br />std::exception::what: example_io error<br />[struct boost::<span class="RenoLink"><a href="errinfo_api_function.html">errinfo_api_function</a></span>_ *] = fopen<br />[struct boost::<span class="RenoLink"><a href="errinfo_errno.html">errinfo_errno</a></span>_ *] = 2, "No such file or directory"<br />[struct boost::<span class="RenoLink"><a href="errinfo_file_name.html">errinfo_file_name</a></span>_ *] = tmp1.txt<br />[struct boost::<span class="RenoLink"><a href="errinfo_file_open_mode.html">errinfo_file_open_mode</a></span>_ *] = rb</pre>
+<h3>boost::exception 为什么要和 boost::throw_exception 集成在一起 ?</h3>
+<p>函数 boost::<span class="RenoLink"><a href="throw_exception.html">throw_exception</a></span> 先于 Boost Exception 函数库存在, 因此 boost::<span class="RenoLink"><a href="exception.html">exception</a></span> 作为任何异常的基类传入到函数 boost::<span class="RenoLink"><a href="throw_exception.html">throw_exception</a></span> 当中所产生的行为就被特别的关注. 这些关注点也体现为 C 和 C++ 中一个通用的原则, 即用户仅需关注他们使用的特性 .</p>
+<p>问题是 Boost Exception 的用用户自身不能使得一个函数库抛出的异常都是继承自 boost::<span class="RenoLink"><a href="exception.html">exception</a></span>, 而不是这样就不能发挥 Boost Exception 的威力.</p>
+<p>例如, 如果用户想在一个单独的线程中使用 Boost Serialization , 那么很自然的就希望把这个函数库抛出的异常传递到主线程中, 进行分析, 然后给出一个用户友好的消息. 通过 boost::<span class="RenoLink"><a href="exception_ptr.html">exception_ptr</a></span> 可以很容易的实现这一点, 但是这要求 Boost Serialization 通过 boost::<span class="RenoLink"><a href="enable_current_exception.html">enable_current_exception</a></span> 抛出异常. 如果 Boost Serialization 通过 boost::<span class="RenoLink"><a href="throw_exception.html">throw_exception</a></span> 抛出异常, 这种行为就会自动和透明的发生.</p>
+<p>这种集成的代价是:</p>
+<div><ul><li> 空间占用方面: 异常对象的静态大小增加了一个指针和3个整数的大小.</li>
+<li> 速率方面: 在异常抛出点,指针被初始化为 null .</li>
+<li> 代码耦合方面: 增加 400 行自包含的, 没有外部连接的 C++ 代码.</li>
+</ul></div>
+<h3>为什么使用操作符 &lt;&lt; 重载向异常对象添加信息 ?</h3>
+<p>在抛出从 boost::<span class="RenoLink"><a href="exception.html">exception</a></span> 继承的异常对象以前, 经常需要添加一个或者多个 <span class="RenoLink"><a href="error_info.html">error_info</a></span> 对象. 操作符 <span class="RenoLink"><a href="exception_operator_shl.html">exception/operator&lt;&lt;</a></span> 提供的语法糖使用起来很直接 :</p>
+<pre>throw error() <span class="RenoLink"><a href="exception_operator_shl.html">&lt;&lt;</a></span> foo_info(foo) <span class="RenoLink"><a href="exception_operator_shl.html">&lt;&lt;</a></span> bar_info(bar);</pre>
+<p>和下面的这种方法相比, 这节省了不少的代码 :</p>
+<pre>error e;<br />e.add(foo_info(foo));<br />e.add(bar_info(bar));<br />throw e;</pre>
+<p>和下面的形式相比也要更好:</p>
+<pre>throw error().add(foo_info(foo)).add(bar_info(bar));</pre><h3>为什么 operator&lt;&lt; 允许抛出？</h3>
+<p>这个问题可引出以下问题。考虑以下 throw 
+语句例子：</p><pre>throw file_open_error() <span class="RenoLink"><a href="exception_operator_shl.html">&lt;&lt;</a></span> file_name(fn);</pre>
+<p>这里的意图是抛出一个 file_open_error，但是如果 <span class="RenoLink"><a href="exception_operator_shl.html">operator&lt;&lt;</a></span> 
+无法复制 file_name <span class="RenoLink"><a href="error_info.html">error_info</a></span> 包装器中的 std::string，就可能会传出一个 std::bad_alloc。对于某些程序员来说，这种行为看起来是不好的。</p>
+<p>Bjarne Stroustrup, The C++ Programming Language, 3rd Edition, 第371页：</p>
+<blockquote>
+<p><i>"Throwing an exception requires an object to throw. A C++ implementation 
+is required to have enough spare memory to be able to throw bad_alloc in case of 
+memory exhaustion. However, it is possible that throwing some other exception 
+will cause memory exhaustion."</i></p></blockquote>
+<p>因此，试图抛出一个其它异常，可能会导致传出一个 
+std::bad_alloc。</p></div><div class="RenoAutoDIV"><div class="RenoHR"><hr /></div>
+<h3>参见:</h3>
+<div class="RenoPageList"><a href="boost-exception.html">Boost Exception<br />
+</a><a href="motivation.html">Motivation<br />
+</a></div>
+</div>
+<!-- Copyright (c) 2006-2009 Emil Dotchevski and Reverge Studios, Inc. -->
+<!-- Distributed under the Boost Software License, Version 1.0. (See accompanying -->
+<!-- file LICENSE_1_0.txt or copy at http://www.boost.org/LICENSE_1_0.txt) -->
+<div id="footer">
+<p>&nbsp;</p>
+<hr />
+<p>
+<a class="logo" href="http://jigsaw.w3.org/css-validator/check/referer"><img class="logo_pic" src="valid-css.png" alt="Valid CSS" height="31" width="88" /></a>
+<a class="logo" href="http://validator.w3.org/check?uri=referer"><img class="logo_pic" src="valid-xhtml.png" alt="Valid XHTML 1.0" height="31" width="88" /></a>
+<small>Copyright (c) 2006-2009 by Emil Dotchevski and Reverge Studios, Inc.<br />
+Distributed under the <a href="http://www.boost.org/LICENSE_1_0.txt">Boost Software License, Version 1.0</a>.<p><i>Copyright © 2009 <a href="http://zadecn.spaces.live.com/">zade</a></i></p>.</small>
+</p>
+</div>
+</div>
+</div>
+</div>
+</body></html>

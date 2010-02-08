@@ -1,0 +1,620 @@
+<!DOCTYPE html PUBLIC "-//w3c//dtd html 4.0 transitional//en">
+<html>
+<head>
+
+  <meta http-equiv="Content-Type" content="text/html; charset=UTF-8">
+
+  <meta name="GENERATOR" content="Mozilla/4.77 [en] (X11; U; Linux 2.2.19 i686) [Netscape]">
+
+  <meta name="Author" content="Herve Bronnimann">
+
+  <meta name="Description" content="Small library to propose minmax_element algorithm.">
+  <title>Boost minmax library</title>
+
+
+</head>
+
+
+<body style="color: rgb(0, 0, 0); background-color: rgb(255, 255, 255);" alink="#ff0000" link="#0000ee" vlink="#551a8b">
+
+<center>
+<h1>Minmax_element 的性能</h1>
+
+</center>
+
+<h3>
+<a name="Performance"></a><b>关于性能</b></h3>
+
+当然，影响算法性能的因素有很多。比较的次数只是其中之一，还有分支预测、流水线、局部引用(影响缓存的效率)，等等。在实践中，我们观察到，当迭代器类
+型为指针时，<tt>boost::minmax_element</tt>
+只比
+<tt>std::min_element</tt> 慢一点点，而比
+<tt>boost::first_min_last_max_element 快很多！对于更慢的迭代器更是这样</tt>(<tt>list&lt;&gt;::iterator</tt>
+或
+<tt>map&lt;&gt;iterator</tt>
+for instance)。以下试验是在一个运行 Linux 的 Pentium III
+500 Mhz 平台上进行的，用 g++ 编译，版本 2.95.2，标志 -O3.
+在下列表中，我们用了不同的元素分布：<i>Identical</i> 表示所有元素都是一样的，<i>2-valued</i>
+表示后一半元素是另一个值，<i>increasing</i>
+表示所有元素都不同且为升序，<i>decrea</i>sing
+则相反为降序，<i>random</i> 则是用 random_shuffle 生成数据。
+<br>
+
+生成以下表格的程序包含在发布包中，文件为 <a href="../example/minmax_timer.cpp">minmax_timer.cpp</a>
+<br>
+
+<center>
+<table nosave="" border="1">
+
+  <tbody>
+
+    <tr nosave="">
+
+      <td nosave=""><b>vector&lt;int&gt;::iterator</b></td>
+
+      <td>Identical</td>
+
+      <td>2-valued</td>
+
+      <td>Increasing</td>
+
+      <td>Decreasing</td>
+
+      <td>Random</td>
+
+    </tr>
+
+    <tr>
+
+      <td>std::min_element</td>
+
+      <td>23.26M/s</td>
+
+      <td>23.26M/s</td>
+
+      <td>23.15M/s</td>
+
+      <td>22.94M/s</td>
+
+      <td>22.94M/s</td>
+
+    </tr>
+
+    <tr>
+
+      <td>std::max_element</td>
+
+      <td>23.26M/s</td>
+
+      <td>23.26M/s</td>
+
+      <td>23.15M/s</td>
+
+      <td>22.94M/s</td>
+
+      <td>22.62M/s</td>
+
+    </tr>
+
+    <tr>
+
+      <td>boost::first_min_element</td>
+
+      <td>23.15M/s</td>
+
+      <td>23.04M/s</td>
+
+      <td>23.04M/s</td>
+
+      <td>22.94M/s</td>
+
+      <td>22.83M/s</td>
+
+    </tr>
+
+    <tr>
+
+      <td>boost::last_min_element</td>
+
+      <td>23.26M/s</td>
+
+      <td>23.26M/s</td>
+
+      <td>23.26M/s</td>
+
+      <td>22.83M/s</td>
+
+      <td>16.23M/s</td>
+
+    </tr>
+
+    <tr>
+
+      <td>boost::first_max_element</td>
+
+      <td>23.15M/s</td>
+
+      <td>23.26M/s</td>
+
+      <td>23.15M/s</td>
+
+      <td>23.04M/s</td>
+
+      <td>22.93M/s</td>
+
+    </tr>
+
+    <tr>
+
+      <td>boost::last_max_element</td>
+
+      <td>23.26M/s</td>
+
+      <td>23.15M/s</td>
+
+      <td>23.15M/s</td>
+
+      <td>22.94M/s</td>
+
+      <td>16.18M/s</td>
+
+    </tr>
+
+    <tr>
+
+      <td>boost::minmax_element</td>
+
+      <td>21.83M/s</td>
+
+      <td>21.83M/s</td>
+
+      <td>21.83M/s</td>
+
+      <td>21.55M/s</td>
+
+      <td>17.79M/s</td>
+
+    </tr>
+
+    <tr>
+
+      <td>boost::first_min_last_max_element</td>
+
+      <td>18.52M/s</td>
+
+      <td>18.38M/s</td>
+
+      <td>18.38M/s</td>
+
+      <td>18.94M/s</td>
+
+      <td>16.29M/s</td>
+
+    </tr>
+
+    <tr>
+
+      <td>boost::last_min_first_max_element</td>
+
+      <td>20.08M/s</td>
+
+      <td>20.83M/s</td>
+
+      <td>20.75M/s</td>
+
+      <td>19.76M/s</td>
+
+      <td>15.87M/s</td>
+
+    </tr>
+
+    <tr>
+
+      <td>boost::last_min_last_max_element</td>
+
+      <td>18.66M/s</td>
+
+      <td>19.69M/s</td>
+
+      <td>19.69M/s</td>
+
+      <td>19.23M/s</td>
+
+      <td>15.77M/s</td>
+
+    </tr>
+
+  </tbody><caption align="bottom">对于标准 vector
+容器的迭代器，每秒处理的元素数量</caption>
+</table>
+
+</center>
+
+<center>
+<table nosave="" border="1">
+
+  <tbody>
+
+    <tr nosave="">
+
+      <td nosave=""><b>list&lt;int&gt;::iterator</b></td>
+
+      <td>Identical</td>
+
+      <td>2-valued</td>
+
+      <td>Increasing</td>
+
+      <td>Decreasing</td>
+
+      <td>Random</td>
+
+    </tr>
+
+    <tr>
+
+      <td>std::min_element</td>
+
+      <td>5.8M/s</td>
+
+      <td>5.8M/s</td>
+
+      <td>5.80M/s</td>
+
+      <td>5.73M/s</td>
+
+      <td>5.73M/s</td>
+
+    </tr>
+
+    <tr>
+
+      <td>std::max_element</td>
+
+      <td>5.81M/s</td>
+
+      <td>5.81M/s</td>
+
+      <td>5.78M/s</td>
+
+      <td>5.73M/s</td>
+
+      <td>5.75M/s</td>
+
+    </tr>
+
+    <tr>
+
+      <td>boost::first_min_element</td>
+
+      <td>5.81M/s</td>
+
+      <td>5.81M/s</td>
+
+      <td>5.79M/s</td>
+
+      <td>5.75M/s</td>
+
+      <td>5.73M/s</td>
+
+    </tr>
+
+    <tr>
+
+      <td>boost::last_min_element</td>
+
+      <td>5.81M/s</td>
+
+      <td>5.80M/s</td>
+
+      <td>5.79M/s</td>
+
+      <td>5.73M/s</td>
+
+      <td>5.03M/s</td>
+
+    </tr>
+
+    <tr>
+
+      <td>boost::first_max_element</td>
+
+      <td>5.81M/s</td>
+
+      <td>5.80M/s</td>
+
+      <td>5.78M/s</td>
+
+      <td>5.74M/s</td>
+
+      <td>5.73M/s</td>
+
+    </tr>
+
+    <tr>
+
+      <td>boost::last_max_element</td>
+
+      <td>5.81M/s</td>
+
+      <td>5.80M/s</td>
+
+      <td>5.79M/s</td>
+
+      <td>5.73M/s</td>
+
+      <td>5.07M/s</td>
+
+    </tr>
+
+    <tr>
+
+      <td>boost::minmax_element</td>
+
+      <td>5.68M/s</td>
+
+      <td>5.80M/s</td>
+
+      <td>5.66M/s</td>
+
+      <td>5.74M/s</td>
+
+      <td>5.30M/s</td>
+
+    </tr>
+
+    <tr>
+
+      <td>boost::first_min_last_max_element</td>
+
+      <td>5.79M/s</td>
+
+      <td>5.81M/s</td>
+
+      <td>5.78M/s</td>
+
+      <td>5.73M/s</td>
+
+      <td>5.04M/s</td>
+
+    </tr>
+
+    <tr>
+
+      <td>boost::last_min_first_max_element</td>
+
+      <td>5.69M/s</td>
+
+      <td>5.79M/s</td>
+
+      <td>5.69M/s</td>
+
+      <td>5.73M/s</td>
+
+      <td>4.84M/s</td>
+
+    </tr>
+
+    <tr>
+
+      <td>boost::last_min_last_max_element</td>
+
+      <td>5.61M/s</td>
+
+      <td>5.79M/s</td>
+
+      <td>5.64M/s</td>
+
+      <td>5.74M/s</td>
+
+      <td>4.75M/s</td>
+
+    </tr>
+
+  </tbody><caption align="bottom">对于标准 list 容器的迭代器的运行时间</caption>
+</table>
+
+</center>
+
+<center>
+<table nosave="" border="1">
+
+  <tbody>
+
+    <tr nosave="">
+
+      <td nosave=""><b>multiset&lt;int&gt;::iterator</b></td>
+
+      <td>Identical</td>
+
+      <td>2-valued</td>
+
+      <td>Increasing</td>
+
+      <td>Decreasing</td>
+
+      <td>Random</td>
+
+    </tr>
+
+    <tr>
+
+      <td>std::min_element</td>
+
+      <td>4.03M/s</td>
+
+      <td>4.04M/s</td>
+
+      <td>4.02M/s</td>
+
+      <td>4.04M/s</td>
+
+      <td>2.97M/s</td>
+
+    </tr>
+
+    <tr>
+
+      <td>std::max_element3.007M</td>
+
+      <td>4.02M/s</td>
+
+      <td>4.02M/s</td>
+
+      <td>4.01M/s</td>
+
+      <td>4.02M/s</td>
+
+      <td>2.96M/s</td>
+
+    </tr>
+
+    <tr>
+
+      <td>boost::first_min_element</td>
+
+      <td>4.01M/s</td>
+
+      <td>4.04M/s</td>
+
+      <td>4.03M/s</td>
+
+      <td>4.04M/s</td>
+
+      <td>3.01M/s</td>
+
+    </tr>
+
+    <tr>
+
+      <td>boost::last_min_element</td>
+
+      <td>4.03M/s</td>
+
+      <td>4.04M/s</td>
+
+      <td>4.04M/s</td>
+
+      <td>4.04M/s</td>
+
+      <td>3.00M/s</td>
+
+    </tr>
+
+    <tr>
+
+      <td>boost::first_max_element</td>
+
+      <td>4.04M/s</td>
+
+      <td>4.04M/s</td>
+
+      <td>4.04M/s</td>
+
+      <td>4.06M/s</td>
+
+      <td>3.01M/s</td>
+
+    </tr>
+
+    <tr>
+
+      <td>boost::last_max_element</td>
+
+      <td>4.04M/s</td>
+
+      <td>4.04M/s</td>
+
+      <td>4.03M/s</td>
+
+      <td>4.04M/s</td>
+
+      <td>3.00M/s</td>
+
+    </tr>
+
+    <tr>
+
+      <td>boost::minmax_element</td>
+
+      <td>3.98M/s</td>
+
+      <td>3.99M/s</td>
+
+      <td>3.98M/s</td>
+
+      <td>3.99M/s</td>
+
+      <td>3.00M/s</td>
+
+    </tr>
+
+    <tr>
+
+      <td>boost::first_min_last_max_element</td>
+
+      <td>3.99M/s</td>
+
+      <td>3.98M/s</td>
+
+      <td>3.97M/s</td>
+
+      <td>3.99M/s</td>
+
+      <td>2.99M/s</td>
+
+    </tr>
+
+    <tr>
+
+      <td>boost::last_min_first_max_element</td>
+
+      <td>3.97M/s</td>
+
+      <td>3.98M/s</td>
+
+      <td>3.96M/s</td>
+
+      <td>3.98M/s</td>
+
+      <td>3.00M/s</td>
+
+    </tr>
+
+    <tr>
+
+      <td>boost::last_min_last_max_element</td>
+
+      <td>4.00M/s</td>
+
+      <td>4.00M/s</td>
+
+      <td>4.00M/s</td>
+
+      <td>4.02M/s</td>
+
+      <td>2.97M/s</td>
+
+    </tr>
+
+  </tbody><caption align="bottom">对于标准 set/multiset 容器的迭代器的运行时间</caption>
+</table>
+
+</center>
+
+<hr size="6">
+<br>
+
+Last modified 2004-06-28
+<p><font face="Arial,Helvetica"><font size="-1">&copy;
+Copyright Herv&eacute;
+Br&ouml;nnimann, Polytechnic University, 2002--2004. Use,
+modification, and distribution is subject to the Boost Software
+License, Version 1.0. (See accompanying file <a href="../../../../LICENSE_1_0.txt">License_1_0.txt</a>
+or copy at
+<a href="http://www.boost.org/LICENSE_1_0.txt">http://www.boost.org/LICENSE_1_0.txt</a>)
+</font></font>
+</p>
+
+</body>
+</html>

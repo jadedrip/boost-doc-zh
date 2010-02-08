@@ -1,0 +1,1043 @@
+<!DOCTYPE HTML PUBLIC "-//W3C//DTD HTML 4.01 Transitional//EN">
+<html><head>
+<meta http-equiv="Content-Type" content="text/html; charset=UTF-8">
+
+<title>Functions</title><link rel="stylesheet" href="../../../../../../../doc/html/boostbook.css" type="text/css">
+<meta name="generator" content="DocBook XSL Stylesheets V1.66.1">
+<link rel="start" href="../index.html" title="Chapter 1. python 1.0">
+<link rel="up" href="../index.html" title="Chapter 1. python 1.0">
+<link rel="prev" href="exposing.html" title=" Exposing Classes">
+<link rel="next" href="object.html" title=" Object Interface"></head>
+<body alink="#0000ff" bgcolor="white" link="#0000ff" text="black" vlink="#840084">
+<table cellpadding="2" width="100%"><tbody><tr>
+<td valign="top"><img alt="Boost C++ Libraries" src="../../../../../../../boost.png" height="86" width="277"></td>
+<td align="center"><a href="../../../../../../../index.html">Home</a></td>
+<td align="center"><a href="../../../../../../../libs/libraries.htm">Libraries</a></td>
+<td align="center"><a href="http://www.boost.org/users/people.html">People</a></td>
+<td align="center"><a href="http://www.boost.org/users/faq.html">FAQ</a></td>
+<td align="center"><a href="../../../../../../../more/index.htm">More</a></td>
+</tr></tbody></table>
+<hr>
+<div class="spirit-nav">
+<a accesskey="p" href="exposing.html"><img src="../../../../../../../doc/html/images/prev.png" alt="Prev"></a><a accesskey="u" href="../index.html"><img src="../../../../../../../doc/html/images/up.png" alt="Up"></a><a accesskey="h" href="../index.html"><img src="../../../../../../../doc/html/images/home.png" alt="Home"></a><a accesskey="n" href="object.html"><img src="../../../../../../../doc/html/images/next.png" alt="Next"></a>
+</div>
+<div class="section" lang="en">
+<div class="titlepage"><div><div><h2 class="title" style="clear: both;">
+<a name="python.functions"></a>Functions</h2>
+<h2 class="title" style="clear: both;">函数</h2>
+</div></div></div>
+<div class="toc"><dl>
+<dt><span class="section"><a href="functions.html#python.call_policies">Call Policies</a></span></dt>
+<dt><span class="section"><a href="functions.html#python.overloading">Overloading</a></span></dt>
+<dt><span class="section"><a href="functions.html#python.default_arguments">Default Arguments</a></span></dt>
+<dt><span class="section"><a href="functions.html#python.auto_overloading">Auto-Overloading</a></span></dt>
+</dl></div>
+<div class="toc"><dl>
+<dt><span class="section"><a href="functions.html#python.call_policies">调用策略</a></span></dt>
+<dt><span class="section"><a href="functions.html#python.overloading">重载</a></span></dt>
+<dt><span class="section"><a href="functions.html#python.default_arguments">默认参数</a></span></dt>
+<dt><span class="section"><a href="functions.html#python.auto_overloading">自动重载</a></span></dt>
+</dl></div>
+<p>
+      In this chapter, we'll look at Boost.Python powered functions in closer detail.
+      We will see some facilities to make exposing C++ functions to Python safe from
+      potential pifalls such as dangling pointers and references. We will also see
+      facilities that will make it even easier for us to expose C++ functions that
+      take advantage of C++ features such as overloading and default arguments.
+    </p>
+
+<p>
+在这一章中，我们将详细查看Boost.Python驱动的函数。
+我们将看到一些工具，
+用来安全地导出C++函数到Python，
+避免潜在的陷阱，如野指针和野引用。
+我们还将看到其他工具，
+它们利用C++的特性，如重载和默认参数，
+使我们导出C++函数更加容易。
+    </p>
+
+<div class="blockquote"><blockquote class="blockquote">
+<p>
+        </p>
+<p>
+          <span class="emphasis"><em>Read on...</em></span>
+        </p>
+<p>
+          <span class="emphasis"><em>继续看……</em></span>
+        </p>
+<p>
+      </p>
+</blockquote></div>
+
+<p>
+      But before you do, you might want to fire up Python 2.2 or later and type
+      <tt class="literal">&gt;&gt;&gt; import this</tt>.
+    </p>
+
+<p>
+但在此之前，你也许要打开Python 2.2或更新版本，并输入
+<tt class="literal">&gt;&gt;&gt; import this</tt>。
+    </p>
+
+<pre class="programlisting">&gt;&gt;&gt; import this<br>The Zen of Python, by Tim Peters<br>Beautiful is better than ugly.<br>Explicit is better than implicit.<br>Simple is better than complex.<br>Complex is better than complicated.<br>Flat is better than nested.<br>Sparse is better than dense.<br>Readability counts.<br>Special cases aren't special enough to break the rules.<br>Although practicality beats purity.<br>Errors should never pass silently.<br>Unless explicitly silenced.<br>In the face of ambiguity, refuse the temptation to guess.<br>There should be one-- and preferably only one --obvious way to do it<br>Although that way may not be obvious at first unless you're Dutch.<br>Now is better than never.<br>Although never is often better than <span class="bold"><b>right</b></span> now.<br>If the implementation is hard to explain, it's a bad idea.<br>If the implementation is easy to explain, it may be a good idea.<br>Namespaces are one honking great idea -- let's do more of those!<br></pre>
+<div class="section" lang="en">
+<div class="titlepage"><div><div><h3 class="title">
+<a name="python.call_policies"></a>Call Policies</h3>
+<h3 class="title">调用策略</h3>
+</div></div></div>
+<p>
+        In C++, we often deal with arguments and return types such as pointers and
+        references. Such primitive types are rather, ummmm, low level and they really
+        don't tell us much. At the very least, we don't know the owner of the pointer
+        or the referenced object. No wonder languages such as Java and Python never
+        deal with such low level entities. In C++, it's usually considered a good
+        practice to use smart pointers which exactly describe ownership semantics.
+        Still, even good C++ interfaces use raw references and pointers sometimes,
+        so Boost.Python must deal with them. To do this, it may need your help. Consider
+        the following C++ function:
+      </p>
+
+<p>
+在C++中，我们经常按指针和引用处理参数和返回类型。
+这种原始类型，嗯……，是低级的，它们真的没有多少信息。
+至少，我们不知道指针或引用对象的所有者。
+怪不得如Java和Python这样的语言，
+从来不处理这种低级的东西。
+在C++中通常认为，使用智能指针是一个好习惯，
+因为智能指针恰恰描述了所有权语义。
+但是，即使是优秀的C++接口，
+有时仍会使用原始的引用和指针，
+所以Boost.Python必须处理它们。
+要做到这一点，它可能需要你的帮助。
+考虑以下的C++函数：
+    </p>
+
+<pre class="programlisting"><span class="identifier">X</span><span class="special">&amp;</span> <span class="identifier">f</span><span class="special">(</span><span class="identifier">Y</span><span class="special">&amp;</span> <span class="identifier">y</span><span class="special">,</span> <span class="identifier">Z</span><span class="special">*</span> <span class="identifier">z</span><span class="special">);</span>
+</pre>
+<p>
+        How should the library wrap this function? A naive approach builds a Python
+        X object around result reference. This strategy might or might not work out.
+        Here's an example where it didn't
+      </p>
+
+<p>
+库应该如何封装这一函数呢？
+单纯的方法是，围绕结果引用建立Python X对象。
+这种策略可能行可能不行。
+这就是不行的例子
+    </p>
+
+<pre class="programlisting"><span class="special">&gt;&gt;&gt;</span> <span class="identifier">x</span> <span class="special">=</span> <span class="identifier">f</span><span class="special">(</span><span class="identifier">y</span><span class="special">,</span> <span class="identifier">z</span><span class="special">)</span> <span class="preprocessor"># x</span> <span class="identifier">refers</span> <span class="identifier">to</span> <span class="identifier">some</span> <span class="identifier">C</span><span class="special">++</span> <span class="identifier">X</span>
+<span class="special">&gt;&gt;&gt;</span> <span class="identifier">del</span> <span class="identifier">y</span>
+<span class="special">&gt;&gt;&gt;</span> <span class="identifier">x</span><span class="special">.</span><span class="identifier">some_method</span><span class="special">()</span> <span class="preprocessor"># CRASH</span><span class="special">!</span>
+</pre>
+<p>
+        What's the problem?
+      </p>
+
+<p>
+        问题在哪里？
+    </p>
+
+<p>
+        Well, what if f() was implemented as shown below:
+      </p>
+
+<p>
+      好，如果 f() 如下实现会怎样：
+    </p>
+
+<pre class="programlisting"><span class="identifier">X</span><span class="special">&amp;</span> <span class="identifier">f</span><span class="special">(</span><span class="identifier">Y</span><span class="special">&amp;</span> <span class="identifier">y</span><span class="special">,</span> <span class="identifier">Z</span><span class="special">*</span> <span class="identifier">z</span><span class="special">)</span>
+<span class="special">{</span>
+    <span class="identifier">y</span><span class="special">.</span><span class="identifier">z</span> <span class="special">=</span> <span class="identifier">z</span><span class="special">;</span>
+    <span class="keyword">return</span> <span class="identifier">y</span><span class="special">.</span><span class="identifier">x</span><span class="special">;</span>
+<span class="special">}</span>
+</pre>
+<p>
+        The problem is that the lifetime of result X&amp; is tied to the lifetime
+        of y, because the f() returns a reference to a member of the y object. This
+        idiom is is not uncommon and perfectly acceptable in the context of C++.
+        However, Python users should not be able to crash the system just by using
+        our C++ interface. In this case deleting y will invalidate the reference
+        to X. We have a dangling reference.
+      </p>
+
+<p>
+问题是，因为 f() 返回y对象成员的引用，
+结果X&amp;的生命期，是与y的生命期捆绑的。
+这个惯用法并不罕见，在C++语境中，它是完全可以接受的。
+然而，Python用户不应该因为使用我们的C++接口而遭受系统崩溃。
+在本例中，删除y会使X的引用失效。
+我们有野引用。
+    </p>
+
+<p>
+        Here's what's happening:
+      </p>
+
+<p>
+      这是所发生的事：
+    </p>
+
+<div class="orderedlist"><ol type="1">
+<li>
+<tt class="literal">f</tt> is called passing in a reference to <tt class="literal">y</tt>
+          and a pointer to <tt class="literal">z</tt>
+</li>
+<li>
+          A reference to <tt class="literal">y.x</tt> is returned
+        </li>
+<li>
+<tt class="literal">y</tt> is deleted. <tt class="literal">x</tt> is a dangling reference
+        </li>
+<li>
+<tt class="literal">x.some_method()</tt> is called
+        </li>
+<li><span class="bold"><b>BOOM!</b></span></li>
+</ol></div>
+
+<div class="orderedlist"><ol type="1">
+<li>
+调用<tt class="literal">f</tt>，输入引用<tt class="literal">y</tt>和
+指针<tt class="literal">z</tt>
+</li>
+<li>
+          返回<tt class="literal">y.x</tt>的引用
+        </li>
+<li>
+删除<tt class="literal">y</tt>。<tt class="literal">x</tt>成为野引用
+        </li>
+<li>
+调用<tt class="literal">x.some_method()</tt>
+        </li>
+<li><span class="bold"><b>轰！</b></span></li>
+</ol></div>
+
+<p>
+        We could copy result into a new object:
+      </p>
+
+<p>
+      我们可以将结果复制到一个新的对象：
+    </p>
+
+<p>
+      </p>
+<pre class="programlisting"><span class="special">&gt;&gt;&gt;</span> <span class="identifier">f</span><span class="special">(</span><span class="identifier">y</span><span class="special">,</span> <span class="identifier">z</span><span class="special">).</span><span class="identifier">set</span><span class="special">(</span><span class="number">42</span><span class="special">)</span> <span class="comment"># Result disappears<br></span><span class="special">&gt;&gt;&gt;</span> <span class="identifier">y</span><span class="special">.</span><span class="identifier">x</span><span class="special">.</span><span class="identifier">get</span><span class="special">()</span>       <span class="comment"># No crash, but still bad<br></span><span class="number">3.14</span>
+</pre>
+<p>
+        This is not really our intent of our C++ interface. We've broken our promise
+        that the Python interface should reflect the C++ interface as closely as
+        possible.
+      </p>
+
+<p>
+这不是我们C++接口的真实意图。
+我们违背了承诺：Python接口应尽可能地反映C++接口。
+    </p>
+
+<p>
+        Our problems do not end there. Suppose Y is implemented as follows:
+      </p>
+
+<p>
+我们的问题并没有到此为止。
+假设Y如下实现：
+    </p>
+
+<p>
+      </p>
+<pre class="programlisting"><span class="keyword">struct</span> <span class="identifier">Y</span>
+<span class="special">{</span>
+    <span class="identifier">X</span> <span class="identifier">x</span><span class="special">;</span> <span class="identifier">Z</span><span class="special">*</span> <span class="identifier">z</span><span class="special">;</span>
+    <span class="keyword">int</span> <span class="identifier">z_value</span><span class="special">()</span> <span class="special">{</span> <span class="keyword">return</span> <span class="identifier">z</span><span class="special">-&gt;</span><span class="identifier">value</span><span class="special">();</span> <span class="special">}</span>
+<span class="special">};</span>
+</pre>
+<p>
+        Notice that the data member <tt class="literal">z</tt> is held by class Y using
+        a raw pointer. Now we have a potential dangling pointer problem inside Y:
+      </p>
+
+<p>
+注意，数据成员<tt class="literal">z</tt>是按原始指针保存在类Y中的。
+现在Y里面有一个潜在的野指针问题：
+    </p>
+
+<pre class="programlisting"><span class="special">&gt;&gt;&gt;</span> <span class="identifier">x</span> <span class="special">=</span> <span class="identifier">f</span><span class="special">(</span><span class="identifier">y</span><span class="special">,</span> <span class="identifier">z</span><span class="special">)</span> <span class="preprocessor"># y</span> <span class="identifier">refers</span> <span class="identifier">to</span> <span class="identifier">z</span>
+<span class="special">&gt;&gt;&gt;</span> <span class="identifier">del</span> <span class="identifier">z</span>       <span class="preprocessor"># Kill</span> <span class="identifier">the</span> <span class="identifier">z</span> <span class="identifier">object</span>
+<span class="special">&gt;&gt;&gt;</span> <span class="identifier">y</span><span class="special">.</span><span class="identifier">z_value</span><span class="special">()</span> <span class="preprocessor"># CRASH</span><span class="special">!</span>
+</pre>
+<p>
+        For reference, here's the implementation of <tt class="literal">f</tt> again:
+      </p>
+
+<p>
+这里再次列出<tt class="literal">f</tt>的实现供参考：
+    </p>
+
+<pre class="programlisting"><span class="identifier">X</span><span class="special">&amp;</span> <span class="identifier">f</span><span class="special">(</span><span class="identifier">Y</span><span class="special">&amp;</span> <span class="identifier">y</span><span class="special">,</span> <span class="identifier">Z</span><span class="special">*</span> <span class="identifier">z</span><span class="special">)</span>
+<span class="special">{</span>
+    <span class="identifier">y</span><span class="special">.</span><span class="identifier">z</span> <span class="special">=</span> <span class="identifier">z</span><span class="special">;</span>
+    <span class="keyword">return</span> <span class="identifier">y</span><span class="special">.</span><span class="identifier">x</span><span class="special">;</span>
+<span class="special">}</span>
+</pre>
+<p>
+        Here's what's happening:
+      </p>
+
+<p>
+这是所发生的事：
+    </p>
+
+<div class="orderedlist"><ol type="1">
+<li>
+<tt class="literal">f</tt> is called passing in a reference to <tt class="literal">y</tt>
+          and a pointer to <tt class="literal">z</tt>
+</li>
+<li>
+          A pointer to <tt class="literal">z</tt> is held by <tt class="literal">y</tt>
+</li>
+<li>
+          A reference to <tt class="literal">y.x</tt> is returned
+        </li>
+<li>
+<tt class="literal">z</tt> is deleted. <tt class="literal">y.z</tt> is a dangling pointer
+        </li>
+<li>
+<tt class="literal">y.z_value()</tt> is called
+        </li>
+<li>
+<tt class="literal">z-&gt;value()</tt> is called
+        </li>
+<li><span class="bold"><b>BOOM!</b></span></li>
+</ol></div>
+
+<div class="orderedlist"><ol type="1">
+<li>
+调用<tt class="literal">f</tt>，输入引用<tt class="literal">y</tt>
+和指针<tt class="literal">z</tt>
+</li>
+<li>
+<tt class="literal">y</tt>保存指针<tt class="literal">z</tt>
+</li>
+<li>
+返回引用<tt class="literal">y.x</tt>
+        </li>
+<li>
+删除<tt class="literal">z</tt>。<tt class="literal">y.z</tt>成为野指针
+        </li>
+<li>
+调用<tt class="literal">y.z_value()</tt>
+        </li>
+<li>
+调用<tt class="literal">z-&gt;value()</tt>
+        </li>
+<li><span class="bold"><b>轰！</b></span></li>
+</ol></div>
+
+<a name="call_policies.call_policies"></a><h2>
+<a name="id464235"></a>
+        Call Policies
+      </h2>
+<h3>调用策略</h3>      
+<p>
+        Call Policies may be used in situations such as the example detailed above.
+        In our example, <tt class="literal">return_internal_reference</tt> and <tt class="literal">with_custodian_and_ward</tt>
+        are our friends:
+      </p>
+
+<p>
+调用策略（Call Policies）可以用于上述例子的情况下。
+在我们的例子中，可用
+<tt class="literal">return_internal_reference</tt>
+和
+<tt class="literal">with_custodian_and_ward</tt>：
+    </p>
+
+<pre class="programlisting"><span class="identifier">def</span><span class="special">(</span><span class="string">"f"</span><span class="special">,</span> <span class="identifier">f</span><span class="special">,</span>
+    <span class="identifier">return_internal_reference</span><span class="special">&lt;</span><span class="number">1</span><span class="special">,</span>
+        <span class="identifier">with_custodian_and_ward</span><span class="special">&lt;</span><span class="number">1</span><span class="special">,</span> <span class="number">2</span><span class="special">&gt;</span> <span class="special">&gt;());</span>
+</pre>
+<p>
+        What are the <tt class="literal">1</tt> and <tt class="literal">2</tt> parameters, you
+        ask?
+      </p>
+
+<p>
+你问参数
+<tt class="literal">1</tt> 和 <tt class="literal">2</tt> 
+是什么？
+    </p>
+
+<pre class="programlisting"><span class="identifier">return_internal_reference</span><span class="special">&lt;</span><span class="number">1</span>
+</pre>
+<p>
+        Informs Boost.Python that the first argument, in our case <tt class="literal">Y&amp;
+        y</tt>, is the owner of the returned reference: <tt class="literal">X&amp;</tt>.
+        The "<tt class="literal">1</tt>" simply specifies the first argument.
+        In short: "return an internal reference <tt class="literal">X&amp;</tt> owned
+        by the 1st argument <tt class="literal">Y&amp; y</tt>".
+      </p>
+
+<p>
+告诉Boost.Python，第一个参数，在我们的例子中
+<tt class="literal">Y&amp;
+        y</tt>，
+是返回引用
+<tt class="literal">X&amp;</tt>
+的拥有者。
+“<tt class="literal">1</tt>”
+简单地指定了第一个参数。
+简而言之：“返回一个由第一参数
+<tt class="literal">Y&amp; y</tt>
+所拥有的内部引用
+<tt class="literal">X&amp;</tt>
+”。
+    </p>
+
+<pre class="programlisting"><span class="identifier">with_custodian_and_ward</span><span class="special">&lt;</span><span class="number">1</span><span class="special">,</span> <span class="number">2</span><span class="special">&gt;</span>
+</pre>
+<p>
+        Informs Boost.Python that the lifetime of the argument indicated by ward
+        (i.e. the 2nd argument: <tt class="literal">Z* z</tt>) is dependent on the lifetime
+        of the argument indicated by custodian (i.e. the 1st argument: <tt class="literal">Y&amp;
+        y</tt>).
+      </p>
+
+<p>
+告诉Boost.Python，
+ward（被监护人）参数（即第二个参数：
+<tt class="literal">Z* z</tt>
+）的生命期，
+依赖于custodian（监护人）参数（即第一个参数：
+<tt class="literal">Y&amp;
+        y</tt>
+）的生命期。
+    </p>
+
+<p>
+        It is also important to note that we have defined two policies above. Two
+        or more policies can be composed by chaining. Here's the general syntax:
+      </p>
+
+<p>
+同时必须注意，我们在上面定义了两项策略。
+两个或更多的策略可以链式组合。
+这是一般的语法：
+    </p>
+
+<pre class="programlisting"><span class="identifier">policy1</span><span class="special">&lt;</span><span class="identifier">args</span><span class="special">...,</span>
+    <span class="identifier">policy2</span><span class="special">&lt;</span><span class="identifier">args</span><span class="special">...,</span>
+        <span class="identifier">policy3</span><span class="special">&lt;</span><span class="identifier">args</span><span class="special">...&gt;</span> <span class="special">&gt;</span> <span class="special">&gt;</span>
+</pre>
+<p>
+        Here is the list of predefined call policies. A complete reference detailing
+        these can be found <a href="../../../../v2/reference.html#models_of_call_policies" target="_top">here</a>.
+      </p>
+
+<p>
+这是预定义调用策略的列表。
+完整的详细参考资料，可以在
+<a href="../../../../v2/reference.html#models_of_call_policies" target="_top">这里</a>
+找到。
+    </p>
+
+<div class="itemizedlist"><ul type="disc">
+<li>
+<span class="bold"><b>with_custodian_and_ward</b></span>: Ties lifetimes
+          of the arguments
+        </li>
+<li>
+<span class="bold"><b>with_custodian_and_ward_postcall</b></span>: Ties
+          lifetimes of the arguments and results
+        </li>
+<li>
+
+<span class="bold"><b>return_internal_reference</b></span>: Ties lifetime
+          of one argument to that of result
+        </li>
+<li>
+<span class="bold"><b>return_value_policy&lt;T&gt; with T one of:</b></span><div class="itemizedlist"><ul type="circle">
+<li>
+<span class="bold"><b>reference_existing_object</b></span>: naive (dangerous)
+              approach
+            </li>
+<li>
+<span class="bold"><b>copy_const_reference</b></span>: Boost.Python
+              v1 approach
+            </li>
+
+<li>
+<span class="bold"><b>copy_non_const_reference</b></span>:
+            </li>
+<li>
+<span class="bold"><b>manage_new_object</b></span>: Adopt a pointer
+              and hold the instance
+            </li>
+</ul></div>
+</li>
+</ul></div>
+
+<div class="itemizedlist"><ul type="disc">
+<li>
+<span class="bold"><b>with_custodian_and_ward</b></span>：
+          捆绑参数的生命期
+        </li>
+<li>
+<span class="bold"><b>with_custodian_and_ward_postcall</b></span>：
+          捆绑参数和结果的生命期
+        </li>
+<li>
+
+<span class="bold"><b>return_internal_reference</b></span>：
+          把一个参数的生命期捆绑到结果的生命期
+        </li>
+<li>
+<span class="bold"><b>return_value_policy&lt;T&gt;，T为其中之一：</b></span><div class="itemizedlist"><ul type="circle">
+<li>
+<span class="bold"><b>reference_existing_object</b></span>：
+              单纯的（危险的）方法
+            </li>
+<li>
+<span class="bold"><b>copy_const_reference</b></span>：
+              Boost.Python v1 方法
+            </li>
+
+<li>
+<span class="bold"><b>copy_non_const_reference</b></span>：
+            </li>
+<li>
+<span class="bold"><b>manage_new_object</b></span>：
+              收养指针并保存实例
+            </li>
+</ul></div>
+</li>
+</ul></div>
+
+<div class="sidebar">
+<p>
+        <span class="inlinemediaobject"><img src="../images/smiley.png" alt="smiley"></span> <span class="bold"><b>Remember the Zen, Luke:</b></span>
+
+      </p>
+<p>
+        "Explicit is better than implicit"
+      </p>
+<p>
+        "In the face of ambiguity, refuse the temptation to guess"
+      </p>
+</div>
+
+<div class="sidebar">
+<p>
+        <span class="inlinemediaobject"><img src="../images/smiley.png" alt="smiley"></span>
+        <span class="bold"><b>记住禅，Luke：</b></span>
+
+      </p>
+<p>
+        “显式比隐式好”
+      </p>
+<p>
+        “面对二义性，拒绝猜测的诱惑”
+      </p>
+</div>
+
+</div>
+<div class="section" lang="en">
+<div class="titlepage"><div><div><h3 class="title">
+<a name="python.overloading"></a>Overloading</h3>
+<h3 class="title">重载</h3>
+</div></div></div>
+<p>
+        The following illustrates a scheme for manually wrapping an overloaded member
+        functions. Of course, the same technique can be applied to wrapping overloaded
+        non-member functions.
+      </p>
+
+<p>
+下面说明了手工封装成员函数重载的方案。
+当然，同样的技术可以应用于封装非成员函数的重载。
+    </p>
+
+<p>
+        We have here our C++ class:
+      </p>
+
+<p>
+      这里是我们的C++类：
+    </p>
+
+<pre class="programlisting"><span class="keyword">struct</span> <span class="identifier">X</span>
+<span class="special">{</span>
+    <span class="keyword">bool</span> <span class="identifier">f</span><span class="special">(</span><span class="keyword">int</span> <span class="identifier">a</span><span class="special">)</span>
+    <span class="special">{</span>
+        <span class="keyword">return</span> <span class="keyword">true</span><span class="special">;</span>
+    <span class="special">}</span>
+
+    <span class="keyword">bool</span> <span class="identifier">f</span><span class="special">(</span><span class="keyword">int</span> <span class="identifier">a</span><span class="special">,</span> <span class="keyword">double</span> <span class="identifier">b</span><span class="special">)</span>
+    <span class="special">{</span>
+        <span class="keyword">return</span> <span class="keyword">true</span><span class="special">;</span>
+    <span class="special">}</span>
+
+    <span class="keyword">bool</span> <span class="identifier">f</span><span class="special">(</span><span class="keyword">int</span> <span class="identifier">a</span><span class="special">,</span> <span class="keyword">double</span> <span class="identifier">b</span><span class="special">,</span> <span class="keyword">char</span> <span class="identifier">c</span><span class="special">)</span>
+    <span class="special">{</span>
+        <span class="keyword">return</span> <span class="keyword">true</span><span class="special">;</span>
+    <span class="special">}</span>
+
+    <span class="keyword">int</span> <span class="identifier">f</span><span class="special">(</span><span class="keyword">int</span> <span class="identifier">a</span><span class="special">,</span> <span class="keyword">int</span> <span class="identifier">b</span><span class="special">,</span> <span class="keyword">int</span> <span class="identifier">c</span><span class="special">)</span>
+    <span class="special">{</span>
+        <span class="keyword">return</span> <span class="identifier">a</span> <span class="special">+</span> <span class="identifier">b</span> <span class="special">+</span> <span class="identifier">c</span><span class="special">;</span>
+    <span class="special">};</span>
+<span class="special">};</span>
+</pre>
+<p>
+        Class X has 4 overloaded functions. We will start by introducing some member
+        function pointer variables:
+      </p>
+
+<p>
+类X具有4个重载函数。
+我们将首先介绍一些成员函数指针变量：
+    </p>
+
+<pre class="programlisting"><span class="keyword">bool</span>    <span class="special">(</span><span class="identifier">X</span><span class="special">::*</span><span class="identifier">fx1</span><span class="special">)(</span><span class="keyword">int</span><span class="special">)</span>              <span class="special">=</span> <span class="special">&amp;</span><span class="identifier">X</span><span class="special">::</span><span class="identifier">f</span><span class="special">;</span>
+<span class="keyword">bool</span>    <span class="special">(</span><span class="identifier">X</span><span class="special">::*</span><span class="identifier">fx2</span><span class="special">)(</span><span class="keyword">int</span><span class="special">,</span> <span class="keyword">double</span><span class="special">)</span>      <span class="special">=</span> <span class="special">&amp;</span><span class="identifier">X</span><span class="special">::</span><span class="identifier">f</span><span class="special">;</span>
+<span class="keyword">bool</span>    <span class="special">(</span><span class="identifier">X</span><span class="special">::*</span><span class="identifier">fx3</span><span class="special">)(</span><span class="keyword">int</span><span class="special">,</span> <span class="keyword">double</span><span class="special">,</span> <span class="keyword">char</span><span class="special">)=</span> <span class="special">&amp;</span><span class="identifier">X</span><span class="special">::</span><span class="identifier">f</span><span class="special">;</span>
+<span class="keyword">int</span>     <span class="special">(</span><span class="identifier">X</span><span class="special">::*</span><span class="identifier">fx4</span><span class="special">)(</span><span class="keyword">int</span><span class="special">,</span> <span class="keyword">int</span><span class="special">,</span> <span class="keyword">int</span><span class="special">)</span>    <span class="special">=</span> <span class="special">&amp;</span><span class="identifier">X</span><span class="special">::</span><span class="identifier">f</span><span class="special">;</span>
+</pre>
+<p>
+        With these in hand, we can proceed to define and wrap this for Python:
+      </p>
+
+<p>
+      有了这些，我们就可以着手为Python进行定义和封装：
+    </p>
+
+<pre class="programlisting"><span class="special">.</span><span class="identifier">def</span><span class="special">(</span><span class="string">"f"</span><span class="special">,</span> <span class="identifier">fx1</span><span class="special">)</span>
+<span class="special">.</span><span class="identifier">def</span><span class="special">(</span><span class="string">"f"</span><span class="special">,</span> <span class="identifier">fx2</span><span class="special">)</span>
+<span class="special">.</span><span class="identifier">def</span><span class="special">(</span><span class="string">"f"</span><span class="special">,</span> <span class="identifier">fx3</span><span class="special">)</span>
+<span class="special">.</span><span class="identifier">def</span><span class="special">(</span><span class="string">"f"</span><span class="special">,</span> <span class="identifier">fx4</span><span class="special">)</span>
+</pre>
+</div>
+<div class="section" lang="en">
+<div class="titlepage"><div><div><h3 class="title">
+<a name="python.default_arguments"></a>Default Arguments</h3>
+<h3 class="title">默认参数</h3>
+</div></div></div>
+<p>
+        Boost.Python wraps (member) function pointers. Unfortunately, C++ function
+        pointers carry no default argument info. Take a function <tt class="literal">f</tt>
+        with default arguments:
+      </p>
+
+<p>
+Boost.Python可以封装（成员）函数的指针。
+不幸的是，C++函数指针没有默认参数信息。
+假定函数<tt class="literal">f</tt>具有默认参数：
+    </p>
+
+<pre class="programlisting"><span class="keyword">int</span> <span class="identifier">f</span><span class="special">(</span><span class="keyword">int</span><span class="special">,</span> <span class="keyword">double</span> <span class="special">=</span> <span class="number">3.14</span><span class="special">,</span> <span class="keyword">char</span> <span class="keyword">const</span><span class="special">*</span> <span class="special">=</span> <span class="string">"hello"</span><span class="special">);</span>
+</pre>
+<p>
+        But the type of a pointer to the function <tt class="literal">f</tt> has no information
+        about its default arguments:
+      </p>
+
+<p>
+但是，指向函数<tt class="literal">f</tt>的指针类型，
+不知道它的默认参数：
+    </p>
+
+<pre class="programlisting"><span class="keyword">int</span><span class="special">(*</span><span class="identifier">g</span><span class="special">)(</span><span class="keyword">int</span><span class="special">,</span><span class="keyword">double</span><span class="special">,</span><span class="keyword">char</span> <span class="keyword">const</span><span class="special">*)</span> <span class="special">=</span> <span class="identifier">f</span><span class="special">;</span>    <span class="comment">// defaults lost!<br></span></pre>
+<p>
+        When we pass this function pointer to the <tt class="literal">def</tt> function,
+        there is no way to retrieve the default arguments:
+      </p>
+
+<p>
+当我们把该函数指针传入
+<tt class="literal">def</tt>函数时，
+没有办法获取默认参数：
+    </p>
+
+<pre class="programlisting"><span class="identifier">def</span><span class="special">(</span><span class="string">"f"</span><span class="special">,</span> <span class="identifier">f</span><span class="special">);</span>                            <span class="comment">// defaults lost!<br></span></pre>
+<p>
+        Because of this, when wrapping C++ code, we had to resort to manual wrapping
+        as outlined in the <a href="functions.html#python.overloading" title="Overloading">previous section</a>,
+        or writing thin wrappers:
+      </p>
+
+<p>
+因此，当封装C++代码时，我们不得不采用如
+<a href="functions.html#python.overloading" title="Overloading">上一节</a>
+所述那样的手工封装，
+或者编写薄的封装：
+    </p>
+
+<pre class="programlisting"><span class="comment">// write "thin wrappers"<br></span><span class="keyword">int</span> <span class="identifier">f1</span><span class="special">(</span><span class="keyword">int</span> <span class="identifier">x</span><span class="special">)</span> <span class="special">{</span> <span class="identifier">f</span><span class="special">(</span><span class="identifier">x</span><span class="special">);</span> <span class="special">}</span>
+<span class="keyword">int</span> <span class="identifier">f2</span><span class="special">(</span><span class="keyword">int</span> <span class="identifier">x</span><span class="special">,</span> <span class="keyword">double</span> <span class="identifier">y</span><span class="special">)</span> <span class="special">{</span> <span class="identifier">f</span><span class="special">(</span><span class="identifier">x</span><span class="special">,</span><span class="identifier">y</span><span class="special">);</span> <span class="special">}</span>
+
+<span class="comment">/*...*/</span>
+
+    <span class="comment">// in module init<br></span>    <span class="identifier">def</span><span class="special">(</span><span class="string">"f"</span><span class="special">,</span> <span class="identifier">f</span><span class="special">);</span>  <span class="comment">// all arguments<br></span>    <span class="identifier">def</span><span class="special">(</span><span class="string">"f"</span><span class="special">,</span> <span class="identifier">f2</span><span class="special">);</span> <span class="comment">// two arguments<br></span>    <span class="identifier">def</span><span class="special">(</span><span class="string">"f"</span><span class="special">,</span> <span class="identifier">f1</span><span class="special">);</span> <span class="comment">// one argument<br></span></pre>
+<p>
+        When you want to wrap functions (or member functions) that either:
+      </p>
+
+<p>
+      当你要封装的函数（或成员函数）：
+    </p>
+
+<div class="itemizedlist"><ul type="disc">
+<li>
+          have default arguments, or
+        </li>
+<li>
+          are overloaded with a common sequence of initial arguments
+        </li>
+</ul></div>
+
+<div class="itemizedlist"><ul type="disc">
+<li>
+          具有默认参数，或
+        </li>
+<li>
+          以公共参数序列进行重载
+        </li>
+</ul></div>
+
+<a name="default_arguments.boost_python_function_overloads"></a><h2>
+<a name="id466276"></a>
+        BOOST_PYTHON_FUNCTION_OVERLOADS
+      </h2>
+<h2>BOOST_PYTHON_FUNCTION_OVERLOADS</h2>
+<p>
+        Boost.Python now has a way to make it easier. For instance, given a function:
+      </p>
+
+<p>
+Boost.Python现在有个更方便的办法。例如，有函数：
+    </p>
+
+<pre class="programlisting"><span class="keyword">int</span> <span class="identifier">foo</span><span class="special">(</span><span class="keyword">int</span> <span class="identifier">a</span><span class="special">,</span> <span class="keyword">char</span> <span class="identifier">b</span> <span class="special">=</span> <span class="number">1</span><span class="special">,</span> <span class="keyword">unsigned</span> <span class="identifier">c</span> <span class="special">=</span> <span class="number">2</span><span class="special">,</span> <span class="keyword">double</span> <span class="identifier">d</span> <span class="special">=</span> <span class="number">3</span><span class="special">)</span>
+<span class="special">{</span>
+    <span class="comment">/*...*/</span>
+<span class="special">}</span>
+</pre>
+<p>
+        The macro invocation:
+      </p>
+
+<p>
+      宏调用：
+    </p>
+
+<pre class="programlisting"><span class="identifier">BOOST_PYTHON_FUNCTION_OVERLOADS</span><span class="special">(</span><span class="identifier">foo_overloads</span><span class="special">,</span> <span class="identifier">foo</span><span class="special">,</span> <span class="number">1</span><span class="special">,</span> <span class="number">4</span><span class="special">)</span>
+</pre>
+<p>
+        will automatically create the thin wrappers for us. This macro will create
+        a class <tt class="literal">foo_overloads</tt> that can be passed on to <tt class="literal">def(...)</tt>.
+        The third and fourth macro argument are the minimum arguments and maximum
+        arguments, respectively. In our <tt class="literal">foo</tt> function the minimum
+        number of arguments is 1 and the maximum number of arguments is 4. The <tt class="literal">def(...)</tt>
+        function will automatically add all the foo variants for us:
+      </p>
+
+<p>
+会自动为我们创建薄封装。
+这个宏将创建类
+<tt class="literal">foo_overloads</tt>，
+可以传递给
+<tt class="literal">def(...)</tt>。
+第三和第四个宏参数分别是，最小和最大的参数个数。
+在我们<tt class="literal">foo</tt>函数中，
+参数个数最小是1，最大是4。
+<tt class="literal">def(...)</tt>函数将自动为我们添加所有foo变量：
+    </p>
+
+<pre class="programlisting"><span class="identifier">def</span><span class="special">(</span><span class="string">"foo"</span><span class="special">,</span> <span class="identifier">foo</span><span class="special">,</span> <span class="identifier">foo_overloads</span><span class="special">());</span>
+</pre>
+<a name="default_arguments.boost_python_member_function_overloads"></a><h2>
+<a name="id466594"></a>
+        BOOST_PYTHON_MEMBER_FUNCTION_OVERLOADS
+      </h2>
+<h3>BOOST_PYTHON_MEMBER_FUNCTION_OVERLOADS</h3>
+<p>
+        Objects here, objects there, objects here there everywhere. More frequently
+        than anything else, we need to expose member functions of our classes to
+        Python. Then again, we have the same inconveniences as before when default
+        arguments or overloads with a common sequence of initial arguments come into
+        play. Another macro is provided to make this a breeze.
+      </p>
+
+<p>
+这里有对象，那里有对象，这里那里到处有对象。
+比任何其他事情都频繁地，我们需要向Python导出类的成员函数。
+但是，和前面一样，对于默认参数或公共参数序列的重载，
+我们有相同的麻烦。
+Boost.Python提供了另一个宏，使这变得轻而易举。
+    </p>
+
+<p>
+        Like <tt class="literal">BOOST_PYTHON_FUNCTION_OVERLOADS</tt>, <tt class="literal">BOOST_PYTHON_MEMBER_FUNCTION_OVERLOADS</tt>
+        may be used to automatically create the thin wrappers for wrapping member
+        functions. Let's have an example:
+      </p>
+
+<p>
+像<tt class="literal">BOOST_PYTHON_FUNCTION_OVERLOADS</tt>，
+<tt class="literal">BOOST_PYTHON_MEMBER_FUNCTION_OVERLOADS</tt>
+可用于自动创建封装成员函数的薄封装。
+让我们举一个例子：
+    </p>
+
+<pre class="programlisting"><span class="keyword">struct</span> <span class="identifier">george</span>
+<span class="special">{</span>
+    <span class="keyword">void</span>
+    <span class="identifier">wack_em</span><span class="special">(</span><span class="keyword">int</span> <span class="identifier">a</span><span class="special">,</span> <span class="keyword">int</span> <span class="identifier">b</span> <span class="special">=</span> <span class="number">0</span><span class="special">,</span> <span class="keyword">char</span> <span class="identifier">c</span> <span class="special">=</span> <span class="char">'x'</span><span class="special">)</span>
+    <span class="special">{</span>
+        <span class="comment">/*...*/</span>
+    <span class="special">}</span>
+<span class="special">};</span>
+</pre>
+<p>
+        The macro invocation:
+      </p>
+
+<p>
+      宏调用：
+    </p>
+
+<pre class="programlisting"><span class="identifier">BOOST_PYTHON_MEMBER_FUNCTION_OVERLOADS</span><span class="special">(</span><span class="identifier">george_overloads</span><span class="special">,</span> <span class="identifier">wack_em</span><span class="special">,</span> <span class="number">1</span><span class="special">,</span> <span class="number">3</span><span class="special">)</span>
+</pre>
+<p>
+        will generate a set of thin wrappers for george's <tt class="literal">wack_em</tt>
+        member function accepting a minimum of 1 and a maximum of 3 arguments (i.e.
+        the third and fourth macro argument). The thin wrappers are all enclosed
+        in a class named <tt class="literal">george_overloads</tt> that can then be used
+        as an argument to <tt class="literal">def(...)</tt>:
+      </p>
+
+<p>
+将为george的<tt class="literal">wack_em</tt>成员函数产生一组薄封装，
+接受最小1最大3个参数（即第三和第四个宏参数）。
+薄封装都封闭在类<tt class="literal">george_overloads</tt>中，
+然后该类可以用作<tt class="literal">def(...)</tt>的参数：
+    </p>
+
+<pre class="programlisting"><span class="special">.</span><span class="identifier">def</span><span class="special">(</span><span class="string">"wack_em"</span><span class="special">,</span> <span class="special">&amp;</span><span class="identifier">george</span><span class="special">::</span><span class="identifier">wack_em</span><span class="special">,</span> <span class="identifier">george_overloads</span><span class="special">());</span>
+</pre>
+<p>
+        See the <a href="../../../../v2/overloads.html#BOOST_PYTHON_FUNCTION_OVERLOADS-spec" target="_top">overloads
+        reference</a> for details.
+      </p>
+
+<p>
+详情见<a href="../../../../v2/overloads.html#BOOST_PYTHON_FUNCTION_OVERLOADS-spec" target="_top">重载说明</a>
+    </p>
+
+<a name="default_arguments.init_and_optional"></a><h2>
+<a name="id466958"></a>
+        init and optional
+      </h2>
+<h2>init和optional</h2>      
+<p>
+        A similar facility is provided for class constructors, again, with default
+        arguments or a sequence of overloads. Remember <tt class="literal">init&lt;...&gt;</tt>?
+        For example, given a class X with a constructor:
+      </p>
+
+<p>
+此外，对于类构造函数，存在默认参数，或具有一系列重载时，也有类似的工具。
+还记得<tt class="literal">init&lt;...&gt;</tt>吗？
+例如，类X有构造函数：
+    </p>
+
+<pre class="programlisting"><span class="keyword">struct</span> <span class="identifier">X</span>
+<span class="special">{</span>
+    <span class="identifier">X</span><span class="special">(</span><span class="keyword">int</span> <span class="identifier">a</span><span class="special">,</span> <span class="keyword">char</span> <span class="identifier">b</span> <span class="special">=</span> <span class="char">'D'</span><span class="special">,</span> <span class="identifier">std</span><span class="special">::</span><span class="identifier">string</span> <span class="identifier">c</span> <span class="special">=</span> <span class="string">"constructor"</span><span class="special">,</span> <span class="keyword">double</span> <span class="identifier">d</span> <span class="special">=</span> <span class="number">0.0</span><span class="special">);</span>
+    <span class="comment">/*...*/</span>
+<span class="special">}</span>
+</pre>
+<p>
+        You can easily add this constructor to Boost.Python in one shot:
+      </p>
+
+<p>
+      你可以轻松地，一次性地添加该构造函数到Boost.Python：
+    </p>
+
+<pre class="programlisting"><span class="special">.</span><span class="identifier">def</span><span class="special">(</span><span class="identifier">init</span><span class="special">&lt;</span><span class="keyword">int</span><span class="special">,</span> <span class="identifier">optional</span><span class="special">&lt;</span><span class="keyword">char</span><span class="special">,</span> <span class="identifier">std</span><span class="special">::</span><span class="identifier">string</span><span class="special">,</span> <span class="keyword">double</span><span class="special">&gt;</span> <span class="special">&gt;())</span>
+</pre>
+<p>
+        Notice the use of <tt class="literal">init&lt;...&gt;</tt> and <tt class="literal">optional&lt;...&gt;</tt>
+        to signify the default (optional arguments).
+      </p>
+
+<p>
+注意 <tt class="literal">init&lt;...&gt;</tt> 和 
+ <tt class="literal">optional&lt;...&gt;</tt> 的使用，
+它们表示默认（可选参数）。
+    </p>
+
+</div>
+<div class="section" lang="en">
+<div class="titlepage"><div><div><h3 class="title">
+<a name="python.auto_overloading"></a>Auto-Overloading</h3>
+<h3 class="title">自动重载</h3>
+</div></div></div>
+<p>
+        It was mentioned in passing in the previous section that <tt class="literal">BOOST_PYTHON_FUNCTION_OVERLOADS</tt>
+        and <tt class="literal">BOOST_PYTHON_MEMBER_FUNCTION_OVERLOADS</tt> can also be
+        used for overloaded functions and member functions with a common sequence
+        of initial arguments. Here is an example:
+      </p>
+
+<p>
+在上一节中顺带提过，
+<tt class="literal">BOOST_PYTHON_FUNCTION_OVERLOADS</tt>
+ 和 <tt class="literal">BOOST_PYTHON_MEMBER_FUNCTION_OVERLOADS</tt>
+ 也能用于具有公共参数序列的函数和成员函数的重载。
+下面是一个例子：
+    </p>
+
+<pre class="programlisting"><span class="keyword">void</span> <span class="identifier">foo</span><span class="special">()</span>
+<span class="special">{</span>
+   <span class="comment">/*...*/</span>
+<span class="special">}</span>
+
+<span class="keyword">void</span> <span class="identifier">foo</span><span class="special">(</span><span class="keyword">bool</span> <span class="identifier">a</span><span class="special">)</span>
+<span class="special">{</span>
+   <span class="comment">/*...*/</span>
+<span class="special">}</span>
+
+<span class="keyword">void</span> <span class="identifier">foo</span><span class="special">(</span><span class="keyword">bool</span> <span class="identifier">a</span><span class="special">,</span> <span class="keyword">int</span> <span class="identifier">b</span><span class="special">)</span>
+<span class="special">{</span>
+   <span class="comment">/*...*/</span>
+<span class="special">}</span>
+
+<span class="keyword">void</span> <span class="identifier">foo</span><span class="special">(</span><span class="keyword">bool</span> <span class="identifier">a</span><span class="special">,</span> <span class="keyword">int</span> <span class="identifier">b</span><span class="special">,</span> <span class="keyword">char</span> <span class="identifier">c</span><span class="special">)</span>
+<span class="special">{</span>
+   <span class="comment">/*...*/</span>
+<span class="special">}</span>
+</pre>
+<p>
+        Like in the previous section, we can generate thin wrappers for these overloaded
+        functions in one-shot:
+      </p>
+
+<p>
+就像在上一节中，我们可以一下子就为这些函数生成薄封装：
+    </p>
+
+<pre class="programlisting"><span class="identifier">BOOST_PYTHON_FUNCTION_OVERLOADS</span><span class="special">(</span><span class="identifier">foo_overloads</span><span class="special">,</span> <span class="identifier">foo</span><span class="special">,</span> <span class="number">0</span><span class="special">,</span> <span class="number">3</span><span class="special">)</span>
+</pre>
+<p>
+        Then...
+      </p>
+
+<p>
+      然后……
+    </p>
+
+<pre class="programlisting"><span class="special">.</span><span class="identifier">def</span><span class="special">(</span><span class="string">"foo"</span><span class="special">,</span> <span class="special">(</span><span class="keyword">void</span><span class="special">(*)(</span><span class="keyword">bool</span><span class="special">,</span> <span class="keyword">int</span><span class="special">,</span> <span class="keyword">char</span><span class="special">))</span><span class="number">0</span><span class="special">,</span> <span class="identifier">foo_overloads</span><span class="special">());</span>
+</pre>
+<p>
+        Notice though that we have a situation now where we have a minimum of zero
+        (0) arguments and a maximum of 3 arguments.
+      </p>
+
+<p>
+但请注意，这次，我们的参数个数最小是0，最大3。
+    </p>
+
+<a name="auto_overloading.manual_wrapping"></a><h2>
+<a name="id467739"></a>
+        Manual Wrapping
+      </h2>
+<h2>手工封装</h2>      
+<p>
+        It is important to emphasize however that <span class="bold"><b>the overloaded
+        functions must have a common sequence of initial arguments</b></span>. Otherwise,
+        our scheme above will not work. If this is not the case, we have to wrap
+        our functions <a href="functions.html#python.overloading" title="Overloading">manually</a>.
+      </p>
+
+<p>
+然而，要强调一点，
+<span class="bold"><b>重载函数必须具有公共的参数序列</b></span>。
+否则，上述方案是行不通的。
+如果情况并非如此，我们不得不
+<a href="functions.html#python.overloading" title="Overloading">手工</a>
+封装我们的函数。
+    </p>
+
+<p>
+        Actually, we can mix and match manual wrapping of overloaded functions and
+        automatic wrapping through <tt class="literal">BOOST_PYTHON_MEMBER_FUNCTION_OVERLOADS</tt>
+        and its sister, <tt class="literal">BOOST_PYTHON_FUNCTION_OVERLOADS</tt>. Following
+        up on our example presented in the section <a href="functions.html#python.overloading" title="Overloading">on
+        overloading</a>, since the first 4 overload functins have a common sequence
+        of initial arguments, we can use <tt class="literal">BOOST_PYTHON_MEMBER_FUNCTION_OVERLOADS</tt>
+        to automatically wrap the first three of the <tt class="literal">def</tt>s and
+        manually wrap just the last. Here's how we'll do this:
+      </p>
+
+<p>
+其实，我们可以通过
+<tt class="literal">BOOST_PYTHON_MEMBER_FUNCTION_OVERLOADS</tt>
+及其姊妹，<tt class="literal">BOOST_PYTHON_FUNCTION_OVERLOADS</tt>，
+在手工封装重载函数时，混合和搭配自动封装。
+继续我们在
+<a href="functions.html#python.overloading" title="Overloading">重载</a>
+一节中的所举的例子，
+由于前4个重载函数具有一个公共同参数序列，
+我们可以利用
+<tt class="literal">BOOST_PYTHON_MEMBER_FUNCTION_OVERLOADS</tt>
+自动封装前3个 <tt class="literal">def</tt>，
+手工封装仅仅最后一个。
+我们将这样做：
+    </p>
+
+<pre class="programlisting"><span class="identifier">BOOST_PYTHON_MEMBER_FUNCTION_OVERLOADS</span><span class="special">(</span><span class="identifier">xf_overloads</span><span class="special">,</span> <span class="identifier">f</span><span class="special">,</span> <span class="number">1</span><span class="special">,</span> <span class="number">4</span><span class="special">)</span>
+</pre>
+<p>
+        Create a member function pointers as above for both X::f overloads:
+      </p>
+
+<p>
+与前面一样，为两个X::f重载创建成员函数指针：
+    </p>
+
+<pre class="programlisting"><span class="keyword">bool</span>    <span class="special">(</span><span class="identifier">X</span><span class="special">::*</span><span class="identifier">fx1</span><span class="special">)(</span><span class="keyword">int</span><span class="special">,</span> <span class="keyword">double</span><span class="special">,</span> <span class="keyword">char</span><span class="special">)</span>    <span class="special">=</span> <span class="special">&amp;</span><span class="identifier">X</span><span class="special">::</span><span class="identifier">f</span><span class="special">;</span>
+<span class="keyword">int</span>     <span class="special">(</span><span class="identifier">X</span><span class="special">::*</span><span class="identifier">fx2</span><span class="special">)(</span><span class="keyword">int</span><span class="special">,</span> <span class="keyword">int</span><span class="special">,</span> <span class="keyword">int</span><span class="special">)</span>        <span class="special">=</span> <span class="special">&amp;</span><span class="identifier">X</span><span class="special">::</span><span class="identifier">f</span><span class="special">;</span>
+</pre>
+<p>
+        Then...
+      </p>
+
+<p>
+      然后……
+    </p>
+
+<pre class="programlisting"><span class="special">.</span><span class="identifier">def</span><span class="special">(</span><span class="string">"f"</span><span class="special">,</span> <span class="identifier">fx1</span><span class="special">,</span> <span class="identifier">xf_overloads</span><span class="special">());</span>
+<span class="special">.</span><span class="identifier">def</span><span class="special">(</span><span class="string">"f"</span><span class="special">,</span> <span class="identifier">fx2</span><span class="special">)</span>
+</pre>
+</div>
+</div>
+<table xmlns:rev="http://www.cs.rpi.edu/~gregod/boost/tools/doc/revision" width="100%"><tbody><tr>
+<td align="left"></td>
+<td align="right"><div class="copyright-footer">Copyright ?2002-2005 Joel
+      de Guzman, David Abrahams<p>
+        Distributed under the Boost Software License, Version 1.0. (See accompanying
+        file LICENSE_1_0.txt or copy at <a href="http://www.boost.org/LICENSE_1_0.txt" target="_top">
+        http://www.boost.org/LICENSE_1_0.txt </a>)
+      </p>
+      <p>翻译：<a href="http://blog.csdn.net/jq0123">金庆</a></p>
+      <p>译文更新：2008.5.28</p>
+</div></td>
+</tr></tbody></table>
+<hr>
+<div class="spirit-nav">
+<a accesskey="p" href="exposing.html"><img src="../../../../../../../doc/html/images/prev.png" alt="Prev"></a><a accesskey="u" href="../index.html"><img src="../../../../../../../doc/html/images/up.png" alt="Up"></a><a accesskey="h" href="../index.html"><img src="../../../../../../../doc/html/images/home.png" alt="Home"></a><a accesskey="n" href="object.html"><img src="../../../../../../../doc/html/images/next.png" alt="Next"></a>
+</div>
+</body></html>

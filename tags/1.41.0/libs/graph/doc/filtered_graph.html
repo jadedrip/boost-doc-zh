@@ -1,0 +1,309 @@
+<!DOCTYPE HTML PUBLIC "-//W3C//DTD HTML 4.01 Transitional//EN">
+<html><head><meta content="text/html; charset=UTF-8" http-equiv="content-type"><!--
+  -- Copyright (c) Jeremy Siek 2000
+  --
+  -- Distributed under the Boost Software License, Version 1.0.
+  -- (See accompanying file LICENSE_1_0.txt or copy at
+  -- http://www.boost.org/LICENSE_1_0.txt)
+  -->
+<title>Boost Graph Library: Filtered Graph</title></head>
+<body alink="#ff0000" bgcolor="#ffffff" link="#0000ee" text="#000000" vlink="#551a8b"> 
+<img src="../../../boost.png" alt="C++ Boost" height="86" width="277"> 
+
+<br clear="">
+
+
+
+<h1><a name="sec:filtered-graph-class"></a>
+<pre>filtered_graph&lt;Graph, EdgePredicate, VertexPredicate&gt;<br></pre>
+</h1>
+
+
+<p><tt>filtered_graph</tt> 类模板是一个适配器，它创建一个图的过滤视图。其中的断言函数对象决定原图的哪些边和顶点会在过滤视图中出现。如果边断言对于某条边返回 <tt>true</tt>，则该边出现在过滤视图中，如果断言返回 <tt>false</tt> 则该边不会出现在过滤视图中。对于顶点也同样如此。<tt>filtered_graph</tt> 类不会创建原图的一份拷贝，而是使用一个引向原图的引用。原图的生存期必须比其任一过滤视图长。过滤视图不会修改原图的结构，不过原图的顶点属性和边属性可以通过过滤视图的属性映射来修改。过滤视图的顶点描述符及边描述符与原图的顶点描述符及边描述符相同，且可互换。
+
+</p><p>函数&nbsp;<a href="#num_vertices"><tt>num_vertices</tt></a> 和 <a href="#num_edges"><tt>num_edges</tt></a> 在返回结果之前不进行过滤，所以它们返回的是底层图的顶点数和边数，未经过滤<a href="#2">[2]</a>。
+
+</p><h3>Example 示例</h3>
+
+<p>在以下例子中，我们将基于边的权重来过滤一个图的边。我们将保持所有边的权重为正。首先，我们创建一个断言函数对象。
+
+</p><pre>template &lt;typename EdgeWeightMap&gt;<br>struct positive_edge_weight {<br>  positive_edge_weight() { }<br>  positive_edge_weight(EdgeWeightMap weight) : m_weight(weight) { }<br>  template &lt;typename Edge&gt;<br>  bool operator()(const Edge&amp; e) const {<br>    return 0 &lt; get(m_weight, e);<br>  }<br>  EdgeWeightMap m_weight;<br>};<br></pre>现在我们创建并打印这个过滤视图。
+<pre>int main()<br>{<br>  using namespace boost;<br>  <br>  typedef adjacency_list&lt;vecS, vecS, directedS,<br>    no_property, property&lt;edge_weight_t, int&gt; &gt; Graph;<br>  typedef property_map&lt;Graph, edge_weight_t&gt;::type EdgeWeightMap;<br><br>  enum { A, B, C, D, E, N };<br>  const char* name = "ABCDE";<br>  Graph g(N);<br>  add_edge(A, B, 2, g);<br>  add_edge(A, C, 0, g);<br>  add_edge(C, D, 1, g);<br>  add_edge(C, E, 0, g);<br>  add_edge(D, B, 3, g);<br>  add_edge(E, C, 0, g);<br>  <br>  positive_edge_weight&lt;EdgeWeightMap&gt; filter(get(edge_weight, g));<br>  filtered_graph&lt;Graph, positive_edge_weight&lt;EdgeWeightMap&gt; &gt;<br>    fg(g, filter);<br><br>  std::cout &lt;&lt; "filtered edge set: ";<br>  print_edges(fg, name);<br><br>  std::cout &lt;&lt; "filtered out-edges:" &lt;&lt; std::endl;<br>  print_graph(fg, name);<br>  <br>  return 0;<br>}<br></pre>输出如下：
+<pre>filtered edge set: (A,B) (C,D) (D,B) <br>filtered out-edges:<br>A --&gt; B <br>B --&gt; <br>C --&gt; D <br>D --&gt; B <br>E --&gt; <br></pre>
+
+<p>
+
+</p><h3>Template Parameters 模板参数</h3>
+
+<p>
+<table border="1">
+<tbody><tr>
+<th>Parameter</th><th>Description</th><th>Default</th>
+</tr>
+
+<tr><td><tt>Graph</tt></td>
+<td>底层的图类型。</td>
+<td>&nbsp;</td>
+</tr>
+
+<tr>
+<td><tt>EdgePredicate</tt></td> <td>一个函数对象，用于选择原图中的哪些边会在过滤视图中出现。该函数对象必须是 <a href="http://www.sgi.com/tech/stl/Predicate.html">断言Predicate</a>。函数对象的参数类型必须是该图的边描述符类型。此外，断言必须是 <a href="http://www.sgi.com/tech/stl/DefaultConstructible.html">可缺省构造的</a> <a href="#1">[1]</a>。</td>
+<td>&nbsp;</td>
+</tr>
+
+<tr>
+<td><tt>VertexPredicate</tt></td>
+<td>一个函数对象，用于选择原图中的哪些顶点会在过滤视图中出现。该函数对象必须是 <a href="http://www.sgi.com/tech/stl/Predicate.html">断言Predicate</a>。函数对象的参数类型必须是该图的顶点描述符类型。此外，断言必须是 <a href="http://www.sgi.com/tech/stl/DefaultConstructible.html">可缺省构造的</a> <a href="#1">[1]</a>。</td>
+<td><tt>keep_all</tt></td>
+</tr>
+
+</tbody></table>
+</p><p>
+
+</p><h3>Model of 以...为模型</h3>
+
+<p>取决于底层的图类型。如果底层的
+<tt>Graph</tt> 类型是 <a href="./VertexAndEdgeListGraph.html">点边列表图VertexAndEdgeListGraph</a> 和 <a href="./PropertyGraph.html">属性图PropertyGraph</a>，则过滤视图也是。如果底层的 <tt>Graph</tt> 类型只满足较小的概念，则过滤视图也是。
+
+</p><p>
+
+</p><h3>Where Defined 定义于</h3>
+
+<p>
+<a href="../../../boost/graph/filtered_graph.hpp"><tt>boost/graph/filtered_graph.hpp</tt></a>
+
+</p><p>
+
+</p><h2>Associated Types 关联类型</h2>
+
+<hr>
+
+<tt>graph_traits&lt;filtered_graph&gt;::vertex_descriptor</tt>
+<br><br>与
+<tt>filtered_graph</tt> 关联的顶点描述符类型，与原图的
+<tt>vertex_descriptor</tt> 相同。
+
+
+<hr>
+
+<tt>graph_traits&lt;filtered_graph&gt;::edge_descriptor</tt><br>
+<br><br>与
+<tt>filtered_graph</tt> 关联的顶点描述符类型，与原图的&nbsp;<tt>edge</tt><tt>_descriptor</tt> 相同。
+
+<hr>
+
+<tt>graph_traits&lt;filtered_graph&gt;::vertex_iterator</tt><br>
+<br><br>由 <tt>vertices()</tt> 返回的迭代器类型，为：
+<pre><a href="../../iterator/doc/filter_iterator.html">filter_iterator</a>&lt;VertexPredicate, graph_traits&lt;Graph&gt;::vertex_iterator&gt;<br></pre>该迭代为 <a href="../../utility/MultiPassInputIterator.html">多遍输入迭代器MultiPassInputIterator</a>。
+
+
+<hr>
+
+<tt>graph_traits&lt;filtered_graph&gt;::edge_iterator</tt>
+<br><br>由&nbsp;<tt>edges()</tt> 返回的迭代器类型，为：
+<pre><a href="../../iterator/doc/filter_iterator.html">filter_iterator</a>&lt;EdgePredicate, graph_traits&lt;Graph&gt;::edge_iterator&gt;<br></pre>该迭代为 <a href="../../utility/MultiPassInputIterator.html">多遍输入迭代器MultiPassInputIterator</a>。
+
+<hr>
+
+
+<tt>graph_traits&lt;filtered_graph&gt;::out_edge_iterator</tt>
+<br><br>由&nbsp;<tt>out_edges()</tt> 返回的迭代器类型，为：
+<pre><a href="../../iterator/doc/filter_iterator.html">filter_iterator</a>&lt;EdgePredicate, graph_traits&lt;Graph&gt;::out_edge_iterator&gt;<br></pre>该迭代为 <a href="../../utility/MultiPassInputIterator.html">多遍输入迭代器MultiPassInputIterator</a>。
+
+
+<hr>
+
+<tt>graph_traits&lt;filtered_graph&gt;::adjacency_iterator</tt>
+<br><br>由 <tt>adjacent_vertices()</tt> 返回的迭代器类型。<tt>adjacency_iterator</tt> 符合与
+<tt>out_edge_iterator</tt> 相同的迭代器概念。
+
+<hr>
+
+<tt>graph_traits&lt;filtered_graph&gt;::directed_category</tt><br>
+<br><br>提供关于该图是有向图(<tt>directed_tag</tt>)或是无向图(<tt>undirected_tag</tt>)的信息。
+
+<hr>
+
+<tt>graph_traits&lt;filtered_graph&gt;::edge_parallel_category</tt><br>
+<br><br>说明该图类是否允许插入平行边(具有相同源和目标的边)。可能的两个标签是 <tt>allow_parallel_edge_tag</tt> 和
+    <tt>disallow_parallel_edge_tag</tt>。<tt>setS</tt> 和 <tt>hash_setS</tt> 变体不允许平行边，而其它则允许平行边。&nbsp;
+
+<hr>
+
+<tt>graph_traits&lt;filtered_graph&gt;::vertices_size_type</tt>
+<br><br>用于处理图中顶点数量的类型。
+
+
+
+<hr>
+
+<tt>graph_traits&lt;filtered_graph&gt;::edge_size_type</tt>
+<br><br>用于处理图中边数量的类型。
+
+
+
+<hr>
+
+<tt>graph_traits&lt;filtered_graph&gt;::degree_size_type</tt>
+<br><br>用于处理单个顶点的出边数量的类型。
+
+
+
+<hr>
+
+<tt>property_map&lt;filtered_graph, Property&gt;::type</tt><br>
+和<br>
+<tt>property_map&lt;filtered_graph, Property&gt;::const_type</tt>
+<br><br>图中顶点属性或边属性所用的映射类型。在原图中的属性映射同样在过滤视图中可用。
+
+<hr>
+
+<h2>Member Functions 成员函数</h2>
+
+<hr>
+
+<pre>filtered_graph(Graph&amp;&nbsp;g, EdgePredicate&nbsp;ep, VertexPredicate&nbsp;vp)<br></pre>基于图 <i>g</i> 和边过滤器 <i>ep</i> 及顶点过滤器 <i>vp</i> 创建一个过滤视图。
+
+<hr>
+
+<pre>filtered_graph(Graph&amp;&nbsp;g, EdgePredicate&nbsp;ep)<br></pre>基于图 <i>g</i> 和边过滤器 <i>ep</i> 创建一个过滤视图。原图的所有顶点被保留。
+
+<hr>
+
+filtered_graph(const&nbsp;filtered_graph&amp;&nbsp;x)
+
+<br><br>创建一个与底层图 <i>x</i> 一样的过滤视图。换句话说，就是一个浅拷贝。
+
+<hr>
+
+<pre>filtered_graph&amp; operator=(const&nbsp;filtered_graph&amp;&nbsp;x)<br></pre>创建一个与底层图 <i>x</i> 一样的过滤视图。换句话说，就是一个浅拷贝。
+
+<hr>
+
+<p>
+
+</p><h2>Non-Member Functions 非成员函数</h2>
+
+<h4>Structure Access 结构访问</h4>
+
+<hr>
+
+<pre>std::pair&lt;vertex_iterator,&nbsp;vertex_iterator&gt;<br>vertices(const filtered_graph&amp; g)<br></pre>返回一个迭代器区间，提供对图&nbsp;<tt>g</tt> 的顶点集的访问。
+
+
+
+<hr>
+
+<pre>std::pair&lt;edge_iterator,&nbsp;edge_iterator&gt;<br>edges(const filtered_graph&amp; g)<br></pre>返回一个迭代器区间，提供对图&nbsp;<tt>g</tt> 的边集的访问。
+
+
+
+<hr>
+
+<pre>std::pair&lt;adjacency_iterator,&nbsp;adjacency_iterator&gt;<br>adjacent_vertices(vertex_descriptor&nbsp;u, const&nbsp;filtered_graph&amp;&nbsp;g)<br></pre>返回一个迭代器区间，提供对图&nbsp;<tt>g</tt> 中顶点&nbsp;<tt>u</tt> 的邻接顶点的访问。
+
+<hr>
+
+
+<pre>std::pair&lt;out_edge_iterator,&nbsp;out_edge_iterator&gt;<br>out_edges(vertex_descriptor&nbsp;u, const&nbsp;filtered_graph&amp;&nbsp;g)<br></pre>返回一个迭代器区间，提供对图&nbsp;<tt>g</tt> 的顶点&nbsp;<tt>u</tt> 的出边的访问。如果是无向图，则该迭代器区间提供对顶点
+<tt>u</tt> 的所有关联边的访问。对于有向图及无向图，其某条出边
+<tt>e</tt>，有 <tt>source(e, g) == u</tt> 且 <tt>target(e, g) == v</tt>，其中 <tt>v</tt> 是邻接于 <tt>u</tt> 的顶点。
+
+<hr>
+
+<pre>std::pair&lt;in_edge_iterator,&nbsp;in_edge_iterator&gt;<br>in_edges(vertex_descriptor&nbsp;v, const&nbsp;filtered_graph&amp;&nbsp;g)<br></pre>返回一个迭代器区间，提供对图&nbsp;<tt>g</tt> 的顶点&nbsp;<tt>v</tt><tt></tt> 的入边的访问。对于某条入边
+<tt>e</tt>，有 <tt>target(e, g) == v</tt> 且 <tt>source(e, g) == u</tt>，其中 <tt>u</tt> 是邻接于&nbsp;<tt>v</tt> 的顶点，无论是有向图还是无向图。
+
+<hr>
+
+<pre>vertex_descriptor<br>source(edge_descriptor&nbsp;e, const&nbsp;filtered_graph&amp;&nbsp;g)<br></pre>返回边&nbsp;<tt>e</tt> 的源顶点。
+
+
+
+<hr>
+
+<pre>vertex_descriptor<br>target(edge_descriptor&nbsp;e, const&nbsp;filtered_graph&amp;&nbsp;g)<br></pre>返回边&nbsp;<tt>e</tt> 的目标顶点。
+
+
+
+<hr>
+
+<pre>degree_size_type<br>out_degree(vertex_descriptor&nbsp;u, const&nbsp;filtered_graph&amp;&nbsp;g)<br></pre>返回顶点 <tt>u</tt> 的出边数量。
+
+
+
+<hr>
+
+<pre>degree_size_type<br>in_degree(vertex_descriptor&nbsp;u, const&nbsp;filtered_graph&amp;&nbsp;g)<br></pre>返回顶点 <tt>u</tt> 的入边数量。
+
+ 
+
+<hr>
+
+<pre><a name="num_vertices"></a>
+vertices_size_type
+num_vertices(const filtered_graph&amp; g)
+</pre>返回在底层图中的顶点数量<a href="#2">[2]</a>。 
+
+<hr>
+
+<pre><a name="num_edges"></a>
+edges_size_type
+num_edges(const filtered_graph&amp; g)
+</pre>返回在底层图中的边数量<a href="filtered_graph.html#2">[2]</a>。
+
+<hr>
+
+<pre>std::pair&lt;edge_descriptor, bool&gt;<br>edge(vertex_descriptor&nbsp;u, vertex_descriptor&nbsp;v,<br>     const&nbsp;filtered_graph&amp;&nbsp;g)<br></pre>返回在图 <tt>g</tt> 中连接顶点 <tt>u</tt> 至顶点 <tt>v</tt> 的边。&nbsp;
+
+<hr>
+
+<pre>template &lt;typename G, typename EP, typename VP&gt;<br>std::pair&lt;out_edge_iterator, out_edge_iterator&gt;<br>edge_range(vertex_descriptor u, vertex_descriptor v,<br>	   const filtered_graph&amp; g)<br></pre>返回一对出边迭代器，给出从 <tt>u</tt> 到 <tt>v</tt> 的所有平行边。该函数仅当底层图支持 <tt>edge_range</tt> 时可用，它要求图根据目标顶点来对出边进行排序，并允许平行边。带
+<tt>OutEdgeList=multisetS</tt> 的 <tt>adjacency_list</tt> 类是满足要求的一个例子。
+
+
+<hr>
+
+<h4>Property Map Access 属性映射访问</h4>
+
+<hr>
+
+<pre>template &lt;class <a href="./PropertyTag.html">PropertyTag</a>&gt;<br>property_map&lt;filtered_graph, PropertyTag&gt;::type<br>get(PropertyTag, filtered_graph&amp; g)<br><br>template &lt;class <a href="./PropertyTag.html">PropertyTag</a>&gt;<br>property_map&lt;filtered_graph, Tag&gt;::const_type<br>get(PropertyTag, const filtered_graph&amp; g)<br></pre>返回由
+<tt>PropertyTag</tt> 指定的顶点属性的属性映射对象。<tt>PropertyTag</tt> 必须是在图的&nbsp;<tt>VertexProperty</tt> 模板参数中所指定的某一个属性相匹配。
+
+<hr>
+
+<pre>template &lt;class <a href="./PropertyTag.html">PropertyTag</a>, class X&gt;<br>typename property_traits&lt;property_map&lt;filtered_graph, PropertyTag&gt;::const_type&amp;gt::value_type<br>get(PropertyTag, const filtered_graph&amp; g, X x)<br></pre>返回&nbsp;<tt>x</tt> 的属性值，<tt>x</tt> 是一个顶点描述符或边描述符。
+<hr>
+
+<pre>template &lt;class <a href="./PropertyTag.html">PropertyTag</a>, class X, class Value&gt;<br>void<br>put(PropertyTag, const filtered_graph&amp; g, X x, const Value&amp; value)<br></pre>将 <tt>x</tt> 的属性值设置为
+<tt>value</tt>。<tt>x</tt> 是一个顶点描述符或边描述符。<tt>Value</tt> 必须可以转换为
+<tt>typename property_traits&lt;property_map&lt;filtered_graph, PropertyTag&gt;::type&amp;gt::value_type</tt>
+
+<hr>
+
+<h3>See Also 参见</h3>
+
+<a href="./property_map.html"><tt>property_map</tt></a>,
+<a href="./graph_traits.html"><tt>graph_traits</tt></a>
+
+<h3>Notes 备注</h3>
+
+<p>
+<a name="1">[1]</a> 要求 <tt>EdgePredicate</tt> 和
+<tt>VertexPredicate</tt> 类型满足 <a href="http://www.sgi.com/tech/stl/DefaultConstructible.html">可缺省构造</a> 的要求是，这些断言是以值方式保存(为了性能的原因)在过滤迭代器适配器中的，而C++标准要求迭代器要满足可缺省构造。
+
+</p><p> <a name="2">[2]</a> 本来，返回过滤后所剩下的顶点数(或边数)似乎更好一些，不过这有两个问题。首先是需要更多的计算，其次是这样的话与底层的顶点/边索引映射的交互性较差。索引映射不再位于 <tt>[0,num_vertices(g))</tt>&nbsp;(或 <tt>[0,
+num_edges(g))</tt>) 范围中了，这一点在许多算法中是假定满足的。<br>
+</p><hr>
+<table>
+<tbody><tr valign="top">
+<td nowrap="nowrap">Copyright © 2000-2001</td><td>
+<a href="http://www.boost.org/people/jeremy_siek.htm">Jeremy Siek</a>,
+Indiana University (<a href="mailto:jsiek@osl.iu.edu">jsiek@osl.iu.edu</a>)<br>
+<a href="http://www.boost.org/people/liequan_lee.htm">Lie-Quan Lee</a>, Indiana University (<a href="mailto:llee@cs.indiana.edu">llee@cs.indiana.edu</a>)<br>
+<a href="http://www.osl.iu.edu/%7Elums">Andrew Lumsdaine</a>,
+Indiana University (<a href="mailto:lums@osl.iu.edu">lums@osl.iu.edu</a>)
+</td></tr></tbody></table>
+
+</body></html>

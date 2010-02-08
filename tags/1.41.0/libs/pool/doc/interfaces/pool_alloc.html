@@ -1,0 +1,177 @@
+<!DOCTYPE HTML PUBLIC "-//W3C//DTD HTML 4.01 Transitional//EN" "http://www.w3.org/TR/html4/loose.dtd">
+<html><head>
+  <meta http-equiv="Content-Language" content="en-us">
+  <meta http-equiv="Content-Type" content="text/html; charset=UTF-8">
+  <link href="../pool.css" rel="stylesheet" type="text/css">
+
+  <title>pool_alloc - Boost Pool Standard Allocators</title></head>
+
+
+<body>
+  <img src="../../../../boost.png" alt="C++ Boost" height="86" width="276">
+
+  <h1 align="center">pool_alloc - Boost Pool Standard Allocators 内存池标准分配器</h1>
+
+  <h2>Introduction 简介</h2>
+
+  <p>pool_alloc.hpp provides two template types that can be used for fast and
+  efficient memory allocation. These types both satisfy the Standard
+  Allocator requirements [20.1.5] and the additional requirements in
+  [20.1.5/4], so they can be used with Standard or user-supplied containers.
+  For information on other pool-based interfaces, see <a href="../interfaces.html">the other pool interfaces</a>.<br>pool_alloc.hpp 提供了两个模板类型，可用于快速高效的内存分配。这两个类型都符合标准分配器的要求[20.1.5]以及在[20.1.5/4]中的额外要求，因此它们可以用于标准的或用户提供的容器。有关其它内存池接口的信息，请见 <a href="../interfaces.html">其它内存池接口</a>。</p>
+
+  <h2>Synopsis 摘要</h2>
+  <pre class="code">struct pool_allocator_tag { };<br><br>template &lt;typename T,<br>    typename UserAllocator = default_user_allocator_new_delete&gt;<br>class pool_allocator<br>{<br>  public:<br>    typedef UserAllocator user_allocator;<br>    typedef T value_type;<br>    typedef value_type * pointer;<br>    typedef const value_type * const_pointer;<br>    typedef value_type &amp; reference;<br>    typedef const value_type &amp; const_reference;<br>    typedef typename pool&lt;UserAllocator&gt;::size_type size_type;<br>    typedef typename pool&lt;UserAllcoator&gt;::difference_type difference_type;<br><br>    template &lt;typename U&gt;<br>    struct rebind<br>    { typedef pool_allocator&lt;U, UserAllocator&gt; other; };<br><br>  public:<br>    pool_allocator();<br>    pool_allocator(const pool_allocator &amp;);<br>    // The following is not explicit, mimicking std::allocator [20.4.1]<br>    template &lt;typename U&gt;<br>    pool_allocator(const pool_allocator&lt;U, UserAllocator&gt; &amp;);<br>    pool_allocator &amp; operator=(const pool_allocator &amp;);<br>    ~pool_allocator();<br><br>    static pointer address(reference r);<br>    static const_pointer address(const_reference s);<br>    static size_type max_size();<br>    static void construct(pointer ptr, const value_type &amp; t);<br>    static void destroy(pointer ptr);<br><br>    bool operator==(const pool_allocator &amp;) const;<br>    bool operator!=(const pool_allocator &amp;) const;<br><br>    static pointer allocate(size_type n);<br>    static pointer allocate(size_type n, pointer);<br>    static void deallocate(pointer ptr, size_type n);<br>};<br><br>struct fast_pool_allocator_tag { };<br><br>template &lt;typename T<br>    typename UserAllocator = default_user_allocator_new_delete&gt;<br>class fast_pool_allocator<br>{<br>  public:<br>    typedef UserAllocator user_allocator;<br>    typedef T value_type;<br>    typedef value_type * pointer;<br>    typedef const value_type * const_pointer;<br>    typedef value_type &amp; reference;<br>    typedef const value_type &amp; const_reference;<br>    typedef typename pool&lt;UserAllocator&gt;::size_type size_type;<br>    typedef typename pool&lt;UserAllocator&gt;::difference_type difference_type;<br><br>    template &lt;typename U&gt;<br>    struct rebind<br>    { typedef fast_pool_allocator&lt;U, UserAllocator&gt; other; };<br><br>  public:<br>    fast_pool_allocator();<br>    fast_pool_allocator(const fast_pool_allocator &amp;);<br>    // The following is not explicit, mimicking std::allocator [20.4.1]<br>    template &lt;typename U&gt;<br>    fast_pool_allocator(const fast_pool_allocator&lt;U, UserAllocator&gt; &amp;);<br>    fast_pool_allocator &amp; operator=(const fast_pool_allocator &amp;);<br>    ~fast_pool_allocator();<br><br>    static pointer address(reference r);<br>    static const_pointer address(const_reference s);<br>    static size_type max_size();<br>    static void construct(pointer ptr, const value_type &amp; t);<br>    static void destroy(pointer ptr);<br><br>    bool operator==(const fast_pool_allocator &amp;) const;<br>    bool operator!=(const fast_pool_allocator &amp;) const;<br><br>    static pointer allocate(size_type n);<br>    static pointer allocate(size_type n, pointer);<br>    static void deallocate(pointer ptr, size_type n);<br><br>    static pointer allocate();<br>    static void deallocate(pointer ptr);<br>};<br></pre>
+
+  <h2>Template Parameters 模板参数</h2>
+
+  <h3>T</h3>
+
+  <p>The first template parameter is the type of object to
+  allocate/deallocate.<br>第一个模板参数是要分配/释放的对象类型。</p>
+
+  <h3>UserAllocator</h3>
+
+  <p>Defines the method that the underlying Pool will use to allocate memory
+  from the system. See <a href="user_allocator.html">User Allocators</a> for
+  details.<br>定义底层内存池用于从系统分配内存的方法。细节请见 <a href="user_allocator.html">用户分配器</a>。</p>
+
+  <h2>Semantics 语义</h2>
+
+  <p>Both of the pool allocators above satisfy all Standard Allocator
+  requirements, as laid out in the Standard [20.1.5]. They also both satisfy
+  the additional requirements found in [20.1.5/4]; this permits their usage
+  with any Standard-compliant container.<br>这两个内存池分配器都符合位于标准第[20.1.5]节中的对标准分配器的所有要求。它们还满足在[20.1.5/4]中的额外要求；这使得它们可以用于任何一个符合标准的分配器。</p>
+
+  <p>In addition, the <span class="code">fast_pool_allocator</span> also
+  provides an additional allocation and an additional deallocation
+  function:<br>此外，<span class="code">fast_pool_allocator</span> 还提供了一个额外的分配和释放函数：</p>
+
+  <table summary="" align="center" border="1">
+    <caption>
+      <em>Symbol Table</em>
+    </caption>
+
+    <tbody><tr>
+      <th>Symbol</th>
+
+      <th>Meaning</th>
+    </tr>
+
+    <tr>
+      <td class="code">PoolAlloc</td>
+
+      <td><span class="code">fast_pool_allocator&lt;T,
+      UserAllocator&gt;</span></td>
+    </tr>
+
+    <tr>
+      <td class="code">p</td>
+
+      <td>value of type <span class="code">T *</span></td>
+    </tr>
+  </tbody></table><br>
+
+  <table summary="" align="center" border="1">
+    <caption>
+      <em>Additional allocation/deallocation functions (<span class="code">fast_pool_allocator</span> only)</em>
+    </caption>
+
+    <tbody><tr>
+      <th>Expression</th>
+
+      <th>Return Type</th>
+
+      <th>Semantic Equivalence</th>
+    </tr>
+
+    <tr>
+      <td class="code">PoolAlloc::allocate()</td>
+
+      <td class="code">T *</td>
+
+      <td class="code">PoolAlloc::allocate(1)</td>
+    </tr>
+
+    <tr>
+      <td class="code">PoolAlloc::deallocate(p)</td>
+
+      <td>void</td>
+
+      <td class="code">PoolAlloc::deallocate(p, 1)</td>
+    </tr>
+  </tbody></table>
+
+  <p>The typedef <span class="code">user_allocator</span> publishes the value
+  of the <span class="code">UserAllocator</span> template parameter.<br>typedef <span class="code">user_allocator</span> 提供了模板参数 <span class="code">UserAllocator</span> 的值。</p>
+
+  <h2>Notes 说明</h2>
+
+  <p>If the allocation functions run out of memory, they will throw
+  <span class="code">std::bad_alloc</span>.<br>如果分配函数内存不足，将抛出 <span class="code">std::bad_alloc</span>.</p>
+
+  <p>The underlying Pool type used by the allocators is accessible through
+  the <a href="singleton_pool.html">Singleton Pool Interface</a>. The
+  identifying tag used for <span class="code">pool_allocator</span> is
+  <span class="code">pool_allocator_tag</span>, and the tag used for
+  <span class="code">fast_pool_allocator</span> is <span class="code">fast_pool_allocator_tag</span>. All template parameters of the
+  allocators (including <a href="../implementation/pool_alloc.html">implementation-specific ones</a>)
+  determine the type of the underlying Pool, with the exception of the first
+  parameter <span class="code">T</span>, whose size is used instead.<br>分配器所用的底层内存池类型可以通过 <a href="singleton_pool.html">单件内存池接口</a> 来访问。<span class="code">pool_allocator</span> 所用的标签是
+  <span class="code">pool_allocator_tag</span>, 而 <span class="code">fast_pool_allocator</span> 使用的标签是 <span class="code">fast_pool_allocator_tag</span>。分配器(包括 <a href="../implementation/pool_alloc.html">特殊实现的一个</a>)的所有模板参数决定底层内存池的类型，除了第一个参数 <span class="code">T</span>，它的大小被用于决定底层内存池的类型。</p>
+
+  <p>Since the size of <span class="code">T</span> is used to determine the
+  type of the underlying Pool, each allocator for different types of the same
+  size <em>will share</em> the same underlying pool. The tag class prevents
+  pools from being shared between <span class="code">pool_allocator</span>
+  and <span class="code">fast_pool_allocator</span>. For example, on a system
+  where sizeof(int) == sizeof(void *), <span class="code">pool_allocator&lt;int&gt;</span> and <span class="code">pool_allocator&lt;void *&gt;</span> will both allocate/deallocate
+  from/to the same pool.<br>因为 <span class="code">T</span> 的大小被用于确定底层内存池的类型，所以相同大小的不同类型的分配器<em>会共享</em>同一个底层内存池。标签类可以防止 <span class="code">pool_allocator</span> 和 <span class="code">fast_pool_allocator</span> 共享内存池。例如，在一个 sizeof(int) == sizeof(void *) 的系统中， <span class="code">pool_allocator&lt;int&gt;</span> 和 <span class="code">pool_allocator&lt;void *&gt;</span> 是从同一个内存池中进行分配/释放的。</p>
+
+  <p>If there is only one thread running before <span class="code">main()</span> starts and after <span class="code">main()</span>
+  ends, then both allocators are completely thread-safe.<br>如果在 <span class="code">main()</span> 开始前和 <span class="code">main()</span>
+  结束后，只有一个线程在运行，则两个分配器都是线程安全的。</p>
+
+  <h2>The Fast Pool Allocator 快速内存池分配器</h2>
+
+  <p><span class="code">pool_allocator</span> is a more general-purpose
+  solution, geared towards efficiently servicing requests for any number of
+  contiguous chunks. <span class="code">fast_pool_allocator</span> is also a
+  general-purpose solution, but is geared towards efficiently servicing
+  requests for one chunk at a time; it will work for contiguous chunks, but
+  not as well as <span class="code">pool_allocator</span>. If you are
+  seriously concerned about performance, use <span class="code">fast_pool_allocator</span> when dealing with containers such as
+  <span class="code">std::list</span>, and use <span class="code">pool_allocator</span> when dealing with containers such as
+  <span class="code">std::vector</span>.<br><span class="code">pool_allocator</span> 是一个更为通用的解决方案，旨在有效地为任意数量的连续区块请求提供服务。<span class="code">fast_pool_allocator</span> 也是一个通用的解决方案，但旨在为每次一个区块的请求提供高效服务；它也可以用于连续区块，但不如 <span class="code">pool_allocator</span> 做得好。如果你非常关注性能，请在处理如
+  <span class="code">std::list</span> 这样的容器时使用 <span class="code">fast_pool_allocator</span><span class="code"></span>，而在处理如
+  <span class="code">std::vector</span> 这样的容器时使用 <span class="code">pool_allocator</span>。</p>
+
+  <h2>Symbols 符号</h2>
+
+  <ul>
+    <li>boost::pool_allocator</li>
+
+    <li>boost::pool_allocator_tag</li>
+
+    <li>boost::fast_pool_allocator</li>
+
+    <li>boost::fast_pool_allocator_tag</li>
+  </ul>
+
+  <h2><a href="../implementation/pool_alloc.html">Implementation
+  Details 实现细节</a></h2>
+  <hr>
+
+  <p><a href="http://validator.w3.org/check?uri=referer"><img style="border: 0px solid ; width: 88px; height: 31px;" src="../../../../valid-html401.png" alt="Valid HTML 4.01 Transitional"></a></p>
+
+  <p>Revised 
+  <!--webbot bot="Timestamp" s-type="EDITED" s-format="%d %B, %Y" startspan -->05
+  December, 2006<!--webbot bot="Timestamp" endspan i-checksum="38516" --></p>
+
+  <p><i>Copyright © 2000, 2001 Stephen Cleary (scleary AT jerviswebb DOT
+  com)</i></p>
+
+  <p><i>Distributed under the Boost Software License, Version 1.0. (See
+  accompanying file <a href="../../../../LICENSE_1_0.txt">LICENSE_1_0.txt</a>
+  or copy at <a href="http://www.boost.org/LICENSE_1_0.txt">http://www.boost.org/LICENSE_1_0.txt</a>)</i></p>
+</body></html>

@@ -1,0 +1,248 @@
+<!DOCTYPE HTML PUBLIC "-//W3C//DTD HTML 4.01 Transitional//EN">
+<html><head><meta content="text/html; charset=UTF-8" http-equiv="content-type"><!--
+  -- Copyright (c) Jeremy Siek 2000
+  --
+  -- Distributed under the Boost Software License, Version 1.0.
+  -- (See accompanying file LICENSE_1_0.txt or copy at
+  -- http://www.boost.org/LICENSE_1_0.txt)
+  -->
+<title>Using the Boost Graph Library</title></head>
+<body alink="#ff0000" bgcolor="#ffffff" link="#0000ee" text="#000000" vlink="#551a8b"> 
+<img src="../../../boost.png" alt="C++ Boost" height="86" width="277"> 
+
+<br clear="">
+
+<h1><a name="SECTION00830000000000000000"></a>
+<a name="sec:using-adjacency-list"></a>
+<br>
+Using <tt>adjacency_list 使用 adjacency_list</tt>
+</h1>本节详细介绍如何使用
+<tt>adjacency_list</tt> 类。讲解分为以下主题：
+
+<ol>
+<li><a href="#sec:choosing-graph-type">选用 <tt>Edgelist</tt> 和 <tt>VertexList</tt></a>
+</li><li><a href="#sec:directed-and-undirected">有向和无向的邻接列表</a>
+</li><li><a href="#sec:adjacency-list-properties">内部属性</a>
+</li><li><a href="#sec:custom-storage">定制邻接列表的存储</a>
+</li></ol>
+
+<h2><a name="SECTION00831000000000000000"></a>
+<a name="sec:choosing-graph-type"></a>
+<br>
+Choosing the <tt>Edgelist</tt> and <tt>VertexList 选用 Edgelist 和 VertexList</tt>
+</h2>
+
+<p>本节专注于在不同的情形下如何决定使用哪一个版本的 <a href="./adjacency_list.html"><tt>adjacency_list</tt></a> 类。<tt>adjacency_list</tt> 就象一把瑞士军刀，它可以按多种方式来配置。在本节中我们所关注的参数是 <tt>OutEdgeList</tt> 和 <tt>VertexList</tt>，它们控制了用来表示一个图的底层数据结构。选择
+<tt>OutEdgeList</tt> 或 <tt>VertexList</tt> 会影响到许多图操作的时间复杂度和图对象的空间复杂度。
+
+</p><p>
+BGL使用来自于STL的容器，如
+<a href="http://www.sgi.com/tech/stl/Vector.html"><tt>std::vector</tt></a>,
+<a href="http://www.sgi.com/tech/stl/List.html"><tt>std::list</tt></a>, 和 <a href="http://www.sgi.com/tech/stl/set.html"><tt>std::set</tt></a>
+来表示顶点集以及图的邻接结构(出边和入边)。有几个选择符类型用来指定对
+<tt>OutEdgeList</tt> 和 <tt>VertexList</tt> 容器的选择。</p><ul>
+<li><tt>vecS</tt> 选用 <tt>std::vector</tt>.</li>
+<li><tt>listS</tt>&nbsp;选用 <tt>std::list</tt>.</li>
+<li><tt>slistS</tt>&nbsp;选用 <tt>std::slist</tt>.</li>
+<li><tt>setS</tt>&nbsp;选用 <tt>std::set</tt>.</li>
+<li><tt>multisetS</tt>&nbsp;选用 <tt>std::multiset</tt>.</li>
+<li><tt>hash_setS</tt>&nbsp;选用 <tt>std::hash_set</tt>.</li>
+</ul>
+
+<h3>选择 <tt>VertexList</tt> 类型</h3>
+
+<p>参数&nbsp;<tt>VertexList</tt> 决定选择哪一种容器表示顶点集或图的二维结构。这个容器必须符合 <a href="http://www.sgi.com/tech/stl/Sequence.html">序列Sequence</a> 或
+<a href="http://www.sgi.com/tech/stl/RandomAccessContainer.html">随机访问容器RandomAccessContainer</a>。通常，<tt>listS</tt> 是一个不错的选择，如果你需要快速地增加或移除顶点。其代价是，与选用 <tt>vecS</tt> 相比，需要额外的空间开销。
+
+</p><h4>空间复杂度</h4>
+
+<p>
+<tt>std::list</tt> 具有比
+<tt>std::vector</tt> 更高的每顶点空间开销，对于每个顶点，它要保存三个额外的指针。
+
+</p><h4>时间复杂度</h4>
+
+<p><tt>VertexList</tt> 的选择会影响以下操作的时间复杂度。
+
+</p><ul>
+
+<li>
+<pre>add_vertex()<br></pre>对于 <tt>vecS</tt> 和
+<tt>listS</tt>，该操作是分期常量时间复杂度(用<tt>push_back()</tt>实现)。但是，如果 <tt>VertexList</tt> 类型为 <tt>vecS</tt>，则该操作的时间偶尔会变大，因为vector可能会被重新分配且整个图被复制。
+
+</li><li>
+<pre>remove_vertex()<br></pre>对于 <tt>listS</tt>，该操作是常量时间，对于 <tt>vecS</tt>，则是 <i>O(V + E)</i>。对于 <tt>vecS</tt> 有较大的时间复杂度是因为必须对整个图的顶点描述符(这种情况下它们是对应于顶点列表中的顶点的索引)调整出边。
+
+</li><li>
+<pre>vertex()<br></pre>对于 <tt>vecS</tt> 和
+<tt>listS</tt>，该操作是常量时间。</li></ul>
+
+ 
+<h3><a name="SECTION00831200000000000000">
+选择 <tt>OutEdgeList</tt> 类型</a>
+</h3>
+
+<p>参数 <tt>OutEdgeList</tt> 决定对于图中每个顶点，使用哪一种容器来保存其出边(也可能是入边)。用于边列表的容器必须符合 <a href="http://www.sgi.com/tech/stl/Sequence.html">序列Sequence</a> 或
+<a href="http://www.sgi.com/tech/stl/AssociativeContainer.html">关联容器AssociativeContainer</a> 的要求。
+
+</p><p>选择
+<tt>OutEdgeList</tt> 时要考虑的第一件事情是，你是否希望 <tt>adjacency_list</tt> 强制在图中不会出现平行边(即，强制该图不会变为复图multi-graph)。如果你希望如此，则使用 <tt>setS</tt> 或 <tt>hash_setS</tt> 选择符。如果你想表示一个复图，或者你知道不会往图中插入平行边，则选择以下 <a href="http://www.sgi.com/tech/stl/Sequence.html">序列Sequence</a>
+类型之一：<tt>vecS</tt>, <tt>listS</tt>, 或 <tt>slistS</tt>。你还要考虑不同的图操作的时间复杂度和空间复杂度。下面，我们用 <i>V</i> 表示图中的顶点数量，用 <i>E</i> 表示边的数量。这里没有列出的操作都是常量时间的。</p><h4>空间复杂度</h4>
+
+<p>对 <tt>OutEdgeList</tt> 的选择会影响在图对象中每条边的空间开销。按最小空间到最大空间的顺序，相应的选择符依次为 <tt>vecS</tt>, <tt>slistS</tt>,
+<tt>listS</tt>, 和 <tt>setS</tt>.</p><h4>时间复杂度</h4>
+
+<p>在以下对于不同操作的时间复杂度的描述中，我们用含有 <i>E/V</i> 的"大O"表示法来表示一个出边列表的长度。严格来说，这是不准确的，因为 <i>E/V</i> 只是一个随机图中每个顶点的平均边数。最坏情况下，一个顶点的出边数是 <i>V</i> (除非它是一个复图)。对于稀疏图来说，<i>E/V</i> 通常远小于 <i>V</i> 且可以被视为常数。</p><ul>
+<li>
+<pre>add_edge()<br></pre>如果 <tt>OutEdgeList</tt> 是一个<a href="http://www.sgi.com/tech/stl/UniqueAssociativeContainer.html">唯一关联式容器UniqueAssociativeContainer</a>，如 <tt>std::set</tt>，则在增加边时会阻止平行边的加入。这个额外的查找具有
+<i>O(log(E/V))</i> 的时间复杂度。而模仿 <a href="http://www.sgi.com/tech/stl/Sequence.html">序列Sequence</a> 的 <tt>OutEdgeList</tt> 类型则不会执行这样的检查，因此其 <tt>add_edge()</tt> 是分期常数时间的。这意味着如果你不关心图是否有平行边，或者你知道图的输入不会包含平行边，则最好选择基于序列的
+<tt>OutEdgeList</tt>。基于序列的
+<tt>OutEdgeList</tt> 的 <tt>add_edge()</tt> 是以 <tt>push_front()</tt> 或
+<tt>push_back()</tt> 实现的。不过，对于 <tt>std::list</tt> 和
+<tt>std::slist</tt>，该操作通常快于
+<tt>std::vector</tt>，因为后者偶尔会需要重新分配并复制所有元素。
+
+</li><li>
+<pre>remove_edge()<br></pre>对于基于序列的 <tt>OutEdgeList</tt> 类型，该操作是以 <tt>std::remove_if()</tt> 实现的，这意味着平均时间为 <i>E/V</i>。而对于基于集合的 <tt>OutEdgeList</tt> 类型，该操作是以 <tt>erase()</tt> 成员函数实现的，其平均时间为 <i>log(E/V)</i>。
+
+</li><li>
+<pre>edge()<br></pre>如果
+<tt>OutEdgeList</tt> 类型是一个<a href="http://www.sgi.com/tech/stl/Sequence.html">序列Sequence</a>，该操作的时间复杂度为 <i>O(E/V)</i>，如果 <tt>OutEdgeList</tt> 类型是一个<a href="http://www.sgi.com/tech/stl/AssociativeContainer.html">关联式容器AssociativeContainer</a>，则为 <i>O(log(E/V))</i>。
+
+</li><li>
+<pre>clear_vertex()<br></pre>对于带有基于序列的 <tt>OutEdgeList</tt> 类型的有向图，时间复杂度为 <i>O(V + E)</i>，而对于基于关联式容器的
+<tt>OutEdgeList</tt> 类型，该操作会快些，其时间复杂度为
+<i>O(V log(E/V))</i>。对于无向图来说，该操作的时间复杂度为
+<i>O(E<sup>2</sup>/V<sup>2</sup>)</i> 或 <i>O(E/V log(E/V))</i>。
+
+</li><li>
+<pre>remove_vertex()<br></pre>该操作的时间复杂度为 <i>O(V + E)</i>，无论采用何种
+<tt>OutEdgeList</tt> 类型。
+
+</li><li>
+<pre>out_edge_iterator::operator++()<br></pre>对于所有 <tt>OneD</tt> 类型，该操作都是常量时间。不过，对于不同的类型，其常量因子有显著的差异，这是很重要的，因为这个操作是大多数图算法的主要操作。该操作的速度按从快到慢的顺序排列，依次为
+<tt>vecS</tt>, <tt>slistS</tt>, <tt>listS</tt>, <tt>setS</tt>,
+<tt>hash_setS</tt>.
+
+</li><li>
+<pre>in_edge_iterator::operator++()<br></pre>该操作为常量时间，依照 <tt>OutEdgeList</tt> 的不同选择，其速度的顺序与 <tt>out_edge_iterator</tt> 类似。
+
+</li><li>
+<pre>vertex_iterator::operator++()<br></pre>该操作为常量时间，且非常快(和递增一个指针的速度相同)。<tt>OneD</tt> 的选择不影响该操作的速度。
+
+</li><li>
+<pre>edge_iterator::operator++()<br></pre>该操作为常量时间，依照 <tt>OutEdgeList</tt> 的不同选择，其速度的顺序与 <tt>out_edge_iterator</tt> 类似。遍历整个边集的时间复杂度为 <i>O(V + E)</i>.
+
+</li><li>
+<pre>adjacency_iterator::operator++()<br></pre>该操作为常量时间，依照 <tt>OutEdgeList</tt> 的不同选择，其速度的顺序与 <tt>out_edge_iterator</tt> 类似。</li></ul>
+
+<h2><a name="sec:directed-and-undirected">Directed and Undirected Adjacency Lists 有向的和无向的邻接列表</a></h2>
+
+<p>
+<a name="sec:directed-and-undirected"><tt>adjacency_list</tt> 类可用于表示有向图或无向图，这取决于传给 <tt>Directed</tt> 模板参数的实参。选择 <tt>directedS</tt> 或 <tt>bidirectionalS</tt> 则为有向图，而
+<tt>undirectedS</tt> 则表示为无向图。有关BGL中无向图与有向图之间差异的描述，请见 </a><a href="graph_concepts.html#sec:undirected-graphs">无向图Undirected Graphs</a>
+一节。<tt>bidirectealS</tt> 选择符指定，该图同时提供 <tt>in_edges()</tt> 函数和 <tt>out_edges()</tt> 函数。这使得每条边要占用两倍的空间，这正是为什么 <tt>in_edges()</tt> 是可选项的原因。</p><h2><a name="sec:adjacency-list-properties"></a>
+Internal Properties 内部属性
+</h2>
+
+<p>通常属性接口，可以将属性附着到一个
+<tt>adjacency_list</tt> 图的顶点或边上。<tt>adjacency_list</tt> 类的模板参数 <tt>VertexProperty</tt> 和 <tt>EdgeProperty</tt> 正是为了填写这些内部属性。
+
+</p><p><b>备注：</b>BGL支持两种可互换的方法，以指定内部属性：<a href="bundles.html">绑定属性bundled properties</a> 
+和属性列表。前者更易使用且要求较少动作，后者则兼容于较老的、不符合标准的编译器，并且后向兼容于1.32.0以前的Boost版本。如果你绝对要求兼容性，则继续往下学习属性列表。否则，我们强烈建议你学习 <a href="bundles.html">绑定属性bundled
+properties</a> 机制。
+
+</p><p>你可以通过属性列表来指定内部属性，属性列表是从如下定义的 
+property 类的实例构建而来的。</p><pre>template &lt;class PropertyTag, class T, class NextProperty = no_property&gt;<br>struct property;<br></pre>
+
+<p>
+模板参数 <a href="./PropertyTag.html"><tt>PropertyTag</tt></a> 是一个标签类，它只是标识或给出属性的唯一名称。有一些预定义的标签，也很容易增加新的。<br></p><pre>  struct vertex_index_t { };<br>  struct vertex_index1_t { };<br>  struct vertex_index2_t { };<br>  struct edge_index_t { };<br>  struct graph_name_t { };<br>  struct vertex_name_t { };<br>  struct edge_name_t { };<br>  struct edge_weight_t { };<br>  struct edge_weight2_t { };<br>  struct edge_capacity_t { };<br>  struct edge_residual_capacity_t { };<br>  struct edge_reverse_t { };<br>  struct vertex_distance_t { };<br>  struct vertex_root_t { };<br>  struct vertex_all_t { };<br>  struct edge_all_t { };<br>  struct graph_all_t { };<br>  struct vertex_color_t { };<br>  struct vertex_rank_t { };<br>  struct vertex_predecessor_t { };<br>  struct vertex_isomorphism_t { };<br>  struct vertex_invariant_t { };<br>  struct vertex_invariant1_t { };<br>  struct vertex_invariant2_t { };<br>  struct vertex_degree_t { };<br>  struct vertex_out_degree_t { };<br>  struct vertex_in_degree_t { };<br>  struct vertex_discover_time_t { };<br>  struct vertex_finish_time_t { };<br></pre>
+
+<p><tt>property</tt> 的模板参数 <b><tt>T</tt></b> 给定属性值的类型。类型 <tt>T</tt> 必须是
+<a href="http://www.sgi.com/tech/stl/DefaultConstructible.html">可缺省构造的</a>、<a href="../../utility/Assignable.html">可赋值的</a> 和 <a href="../../utility/CopyConstructible.html">可复制构造的</a>。和C++标准库的容器一样，类型 <tt>T</tt> 的属性对象是以值的方式保存在图内的。
+
+</p><p>参数 <b><tt>NextProperty</tt></b> 允许属性类型被嵌套，这样就可以对同一个图附加任意数量的属性。
+
+</p><p>以下代码示范了如何组装一个顶点属性类型或边属性类型，并用它来创建一个图类型。我们把一个值类型为float的距离属性和一个值类型为<tt>std::string</tt>的名称属性附加到图的顶点。我们还把一个值类型为float的权重属性附加到图的边。</p><pre>  typedef property&lt;vertex_distance_t, float, <br>            property&lt;vertex_name_t, std::string&gt; &gt; VertexProperty;<br>  typedef property&lt;edge_weight_t, float&gt; EdgeProperty;<br><br>  typedef adjacency_list&lt;mapS, vecS, undirectedS, <br>                         VertexProperty, EdgeProperty&gt; Graph;<br><br>  Graph g(num_vertices); // 构造一个图对象<br></pre>
+
+<p>接下来，就可以用属性映射来读入或写出这些属性值。有关如何从一个图获得属性映射的说明，请见 <a href="using_property_maps.html#sec:interior-properties">内部属性Interior
+Properties</a> 一节，有关如何使用属性映射的说明，则请见 <a href="./using_property_maps.html">属性映射Property Maps</a> 一节。</p><h3><a name="sec:custom-edge-properties"></a>
+Custom Edge Properties 定制边的属性
+</h3>
+
+<p>创建你自己的属性类型和属性非常容易；只需要为你的新属性定义一个标签类。这个属性标签类需要用一个唯一的整数ID定义 <tt>num</tt>，并定义 <tt>kind</tt> 为 <tt>edge_property_tag</tt>,
+<tt>vertex_property_tag</tt>, 或 <tt>graph_property_tag</tt>.</p><pre>struct flow_t {<br>  typedef edge_property_tag kind;<br>};<br><br>struct capacity_t { <br>  typedef edge_property_tag kind;<br>};<br></pre>
+
+<p>你也可以用 enum's 代替 struct's 来创建标签类型。为每个属性创建一个枚举类型。枚举类型名字的第一个部分必须是 <tt>edge</tt>, <tt>vertex</tt>, 或
+<tt>graph</tt>，后跟一个下划符和新属性的名字，最后是一个 <tt>_t</tt>。在枚举类型中，定义一个值，其名字为枚举类型名减去
+<tt>_t</tt>。然后调用 <tt>BOOST_INSTALL_PROPERTY</tt> 宏。
+
+</p><pre>namespace boost {<br>  enum edge_flow_t { edge_flow };<br>  enum edge_capacity_t { edge_capacity };<br><br>  BOOST_INSTALL_PROPERTY(edge, flow);<br>  BOOST_INSTALL_PROPERTY(edge, capacity);<br>}<br></pre>
+
+<p>现在你可以象使用内建标签那样在属性定义中使用这个新的属性标签。</p><pre>  typedef property&lt;capacity_t, int&gt; Cap;<br>  typedef property&lt;flow_t, int, Cap&gt; EdgeProperty;<br>  typedef adjacency_list&lt;vecS, vecS, no_property, EdgeProperty&gt; Graph;<br></pre>
+
+<p>和前面一样，这些属性的属性映射可以通过
+<tt>get(Property, g)</tt> 函数从图中取得。</p><pre>  property_map&lt;Graph, capacity_t&gt;::type capacity<br>    = get(capacity_t(), G);<br>  property_map&lt;Graph, flow_t&gt;::type flow<br>    = get(flow_t(), G);<br></pre>
+
+<p>文件 <tt>edge_property.cpp</tt> 列出了这个例子的完整源代码。</p><h3><a name="SECTION00833200000000000000"></a>
+<a name="sec:custom-vertex-properties"></a>
+<br>
+Custom Vertex Properties 定制顶点的属性
+</h3>
+
+<p>创建你自己的属性关联至顶点和创建边属性一样容易。下面我们将某人的姓关联至图中的顶点。</p><pre>  struct first_name_t {<br>    typedef vertex_property_tag kind;<br>  };<br></pre>
+
+<p>现在我们可以在 <tt>property</tt> 类中使用这个新标签，并在组装一个图类型时使用它。以下代码示范了图类型的创建，然后再创建一个图对象。我们把边填入，并将名字赋给顶点。这些边表示的是"谁欠了谁"。</p><pre>  typedef property&lt;first_name_t, std::string&gt; FirstNameProperty;<br>  typedef adjacency_list&lt;vecS, vecS, directedS, <br>                         FirstNameProperty&gt; MyGraphType;<br><br>  typedef pair&lt;int,int&gt; Pair;<br>  Pair edge_array[11] = { Pair(0,1), Pair(0,2), Pair(0,3), <br>                          Pair(0,4), Pair(2,0), Pair(3,0), <br>                          Pair(2,4), Pair(3,1), Pair(3,4), <br>                          Pair(4,0), Pair(4,1) };<br>    <br>  MyGraphType G(5);<br>  for (int i = 0; i &lt; 11; ++i)<br>    add_edge(edge_array[i].first, edge_array[i].second, G);<br><br>  property_map&lt;MyGraphType, first_name_t&gt;::type<br>    name = get(first_name_t(), G);<br>    <br>  boost::put(name, 0, "Jeremy");<br>  boost::put(name, 1, "Rich");<br>  boost::put(name, 2, "Andrew");<br>  boost::put(name, 3, "Jeff");<br>  name[4] = "Kinis"; // you can use operator[] too<br>    <br>  who_owes_who(edges(G).first, edges(G).second, G);<br></pre>
+
+<p>为这个例子所写的函数 <tt>who_owes_who()</tt> 是以泛型的方式实现的。输入是模板化的，因为我们不知道实际的图类型。要针对我们的姓氏属性找出其属性映射类型，我们要用
+<tt>property_map</tt> traits 类。因为&nbsp;graph 参数是常量性的，所以要使用 <tt>const_type</tt>。我们有了这个属性映射类型后，就可以用
+<tt>property_traits</tt> 类推导出属性的值类型。在这个例子中，我们知道该属性的类型是 <tt>std::string</tt>，不过，以泛型的方式来编写的 <tt>who_owes_who()</tt> 函数也可以用于其它的属性值类型。</p><pre>  template &lt;class EdgeIter, class Graph&gt;<br>  void who_owes_who(EdgeIter first, EdgeIter last, const Graph&amp; G)<br>  {<br>    // 访问该图的属性访问器类型<br>    typedef typename property_map&lt;Graph, <br>      first_name_t&gt;::const_type NameMap;<br>    NameMap name = get(first_name, G);<br><br>    typedef typename boost::property_traits&lt;NameMap&gt;<br>      ::value_type NameType;<br><br>    NameType src_name, targ_name;<br><br>    while (first != last) {<br>      src_name = boost::get(name, source(*first, G));<br>      targ_name = boost::get(name, target(*first, G));<br>      cout &lt;&lt; src_name &lt;&lt; " owes " <br>           &lt;&lt; targ_name &lt;&lt; " some money" &lt;&lt; endl;<br>      ++first;<br>    }<br></pre>输出如下：
+<pre>Jeremy owes Rich some money<br>Jeremy owes Andrew some money<br>Jeremy owes Jeff some money<br>Jeremy owes Kinis some money<br>Andrew owes Jeremy some money<br>Andrew owes Kinis some money<br>Jeff owes Jeremy some money<br>Jeff owes Rich some money<br>Jeff owes Kinis some money<br>Kinis owes Jeremy some money<br>Kinis owes Rich some money<br></pre>该例子的完整源代码在文件
+<tt>interior_property_map.cpp</tt> 中。<h2><a name="sec:custom-storage"></a>
+Customizing the Adjacency List Storage 定制邻接列表的存储
+</h2>
+
+<p>
+<tt>adjacency_list</tt> 由两类容器构造而成。一类容器用于保存图中的所有顶点，另一类容器则用于保存每个顶点的出边列表(可能还有入边列表)。BGL提供了选择符类，允许用户在STL提供的几种容器中进行选择。你也可以使用你自己的容器类型。在定制 <tt>VertexList</tt> 时，你需要如下文所说那样定义一个容器生成器。在定制 <tt>OutEdgeList</tt> 时则需要定义一个容器生成器以及平行边
+traits。文件 <tt>container_gen.cpp</tt> 中有一个关于如何使用定制的存储类型的例子。</p><h3><a name="SECTION00834100000000000000">
+Container Generator 容器生成器</a>
+</h3>
+
+<p><tt>adjacency_list</tt> 类用一个名为
+<tt>container_gen</tt> 的 traits 类来将 <tt>OutEdgeList</tt> 和 <tt>VertexList</tt>
+选择符映射至图存储实际使用的容器类型。这个 traits 类的缺省版本列出如下，还有一个关于如何为 <tt>listS</tt> 选择符对该类进行特化的例子。</p><pre>namespace boost {<br>  template &lt;class Selector, class ValueType&gt;<br>  struct container_gen { };<br><br>  template &lt;class ValueType&gt;<br>  struct container_gen&lt;listS, ValueType&gt; {<br>    typedef std::list&lt;ValueType&gt; type;<br>  };<br>}<br></pre>
+
+<p>要使用你选择的其它容器，就定义一个选择符类，然后为你的选择符特化 <tt>container_gen</tt>。</p><pre>  struct custom_containerS { }; // 你的选择符<br><br>  namespace boost {<br>    // 针对你的选择符的特化<br>    template &lt;class ValueType&gt;<br>    struct container_gen&lt;custom_containerS, ValueType&gt; {<br>      typedef custom_container&lt;ValueType&gt; type;<br>    };<br>  }<br></pre>
+
+<p>可能有些时候，你想对容器指定更多的模板参数，不仅仅是 <tt>ValueType</tt>。例如，你可能想指定分配器类型。一个方法是，将额外参数硬编码到
+<tt>container_gen</tt> 的特化版中。不过，如果你想要更多的灵活性，你可以为选择符类增加一个模板参数。在以下代码中，我们示范了如何创建一个选择符，可以让你指定 <tt>std::list</tt> 所使用的分配器。</p><pre>  template &lt;class Allocator&gt;<br>  struct list_with_allocatorS { };<br><br>  namespace boost {<br>    template &lt;class Alloc, class ValueType&gt;<br>    struct container_gen&lt;list_with_allocatorS&lt;Alloc&gt;, ValueType&gt;<br>    {<br>      typedef typename Alloc::template rebind&lt;ValueType&gt;::other Allocator;<br>      typedef std::list&lt;ValueType, Allocator&gt; type;<br>    };<br>  }<br><br>  // 现在你可以用 std::list 和特定的分配器定义一个图<br>  typedef adjacency_list&lt; list_with_allocatorS&lt; std::allocator&lt;int&gt; &gt;, vecS, directedS&gt; MyGraph;<br></pre>
+
+<h3><a name="SECTION00834300000000000000">
+Push and Erase for the Custom Container 定制容器的压入和删除</a>
+</h3>
+
+<p>你还必须告诉 <tt>adjacency_list</tt>，元素可以如何高效地加入到定制容器中和从中删除。这可以通过为定制容器类型重载 <tt>push()</tt> 和 <tt>erase()</tt>
+函数来完成。<tt>push()</tt> 函数应返回一个指向新插入元素的迭代器，以及一个表示是否插入成功的布尔标志。
+
+</p><pre>  template &lt;class T&gt;<br>  std::pair&lt;typename custom_container&lt;T&gt;::iterator, bool&gt;<br>  push(custom_container&lt;T&gt;&amp; c, const T&amp; v)<br>  {<br>    // 对于你的容器，可能需要修改该实现<br>    c.push_back(v);<br>    return std::make_pair(boost::prior(c.end()), true);<br>  }<br><br>  template &lt;class T&gt;<br>  void erase(custom_container&lt;T&gt;&amp; c, const T&amp; x)<br>  {<br>    // 对于你的容器，可能需要修改该实现<br>    c.erase(std::remove(c.begin(), c.end(), x), c.end());<br>  }<br></pre>
+
+
+<p>以上是用于STL容器类型的 <tt>push()</tt> 和 <tt>erase()</tt> 函数的缺省实现。
+
+
+</p><h3><a name="SECTION00834200000000000000">
+Parallel Edge Traits 平行边 Traits</a>
+</h3>
+
+<p>在定制 <tt>OutEdgeList</tt> 时，你还必须特化 <tt>parallel_edge_traits</tt> 类，以指定该容器类型是允许平行边(且是一个 <a href="http://www.sgi.com/tech/stl/Sequence.html">序列Sequence</a>)，或是不允许平行边(且是一个 <a href="http://www.sgi.com/tech/stl/AssociativeContainer.html">关联容器AssociativeContainer</a>)。</p><pre>  template &lt;&gt;<br>  struct parallel_edge_traits&lt;custom_containerS&gt; { <br>    typedef allow_parallel_edge_tag type;<br>  };<br></pre>
+
+
+<br>
+<hr>
+<table>
+<tbody><tr valign="top">
+<td nowrap="nowrap">Copyright © 2000-2001</td><td>
+<a href="http://www.boost.org/people/jeremy_siek.htm">Jeremy Siek</a>, Indiana University (<a href="mailto:jsiek@osl.iu.edu">jsiek@osl.iu.edu</a>)
+</td></tr></tbody></table>
+
+</body></html>

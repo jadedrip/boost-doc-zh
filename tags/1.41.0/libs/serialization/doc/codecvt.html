@@ -1,0 +1,159 @@
+<!DOCTYPE HTML PUBLIC "-//W3C//DTD HTML 4.01 Transitional//EN" "http://www.w3.org/TR/html4/loose.dtd">
+<html>
+<head>
+<!--
+  == Copyright (c) 2001 Ronald Garcia
+  ==
+  == Permission to use, copy, modify, distribute and sell this software
+  == and its documentation for any purpose is hereby granted without fee,
+  == provided that the above copyright notice appears in all copies and
+  == that both that copyright notice and this permission notice appear
+  == in supporting documentation.  Ronald Garcia makes no
+  == representations about the suitability of this software for any
+  == purpose.  It is provided "as is" without express or implied warranty.
+  -->
+  <meta http-equiv="Content-Type" content="text/html; charset=UTF-8">
+  <link rel="stylesheet" type="text/css" href="../../../boost.css">
+  <link rel="stylesheet" type="text/css" href="style.css">
+
+  <title>UTF-8 Codecvt Facet</title>
+</head>
+
+
+
+
+
+
+<body alink="#ff0000" bgcolor="#ffffff" link="#0000ee" text="#000000" vlink="#551a8b">
+
+<img src="../../../boost.png" alt="C++ Boost" height="86" width="277"> <br clear="all">
+
+
+
+<a name="sec:utf8-codecvt-facet-class"></a>
+
+
+<h1>UTF-8 Codecvt Facet</h1>
+
+
+
+<pre>template&lt;<br>    typename InternType = wchar_t, <br>    typename ExternType = char<br>&gt; utf8_codecvt_facet<br></pre>
+
+
+
+<h2>基本原理</h2>
+UTF-8 用于在以8位字符保存数据的环境中对 Unicode 文本进行编码，在这些环境中，一些 ascii 字符(如 Unix
+文件系统的文件名)要比其它字符更常出现。UTF-8&nbsp;在文件系统中是保存数据的方便和高效的方法，但并不意味着在应用程序的内存中也一样。有
+些应用程序(如 Unix 的 'cat')会忽略这种编码，而其它一些应用程序就会在读入文件时把 UTF-8 转换为 UCS-4
+(Unicode 的更为标准的表示)，并且在写出文件时进行相反的转换。
+<p>C++ 标准的 IOStreams 提供了 <tt>std::codecvt</tt>
+    facet 来处理这种情形。在从文件读入或向文件写出时，<tt>std::basic_filebuf</tt> 可以调用 codecvt facet 来从外部格式(如 UTF-8)向内部格式(如 UCS-4)转换数据表示法，反之亦然。<tt>utf8_codecvt_facet</tt> 是
+    <tt>std::codecvt</tt> 的一个特化，专门用于处理 UTF-8 和 UCS-4 间的翻译。
+
+
+</p>
+<h2>模板参数</h2>
+
+
+<table summary="template parameters" border="1">
+
+  <tbody>
+    <tr>
+
+      <th>参数</th>
+      <th>描述</th>
+      <th>缺省</th>
+
+    </tr>
+
+
+    <tr>
+
+      <td><tt>InternType</tt></td>
+
+      <td>用于表示 UCS-4 字符的内部类型</td>
+
+      <td><tt>wchar_t</tt></td>
+
+    </tr>
+
+
+    <tr>
+
+      <td><tt>ExternType</tt></td>
+
+      <td>用于表示 UTF-8 字节的外部类型</td>
+
+      <td><tt>char_t</tt></td>
+
+    </tr>
+
+  </tbody>
+</table>
+
+
+
+<h2>要求</h2>
+
+
+    <tt>utf8_codecvt_facet</tt> 缺省使用 <tt>char</tt> 作为外部数据类型，以 <tt>wchar_t</tt> 作为内部数据类型，但是在某些体系中 <tt>wchar_t</tt> 的大小不足以保存 UCS-4 字符。要使用其它内部类型，你还必须特化 <tt>std::codecvt</tt>
+    以处理你的内部和外部类型。(对于任意符合标准的编译器，都要求支持<tt>std::codecvt&lt;char,wchar_t,std::mbstate_t&gt;</tt>&nbsp;).
+
+
+<h2>例子</h2>
+以下是使用这个 facet 的例子：
+
+<pre>  //...<br>  // 我的编码类型<br>  typedef wchar_t ucs4_t;<br><br>  std::locale old_locale;<br>  std::locale utf8_locale(old_locale,new utf8_codecvt_facet&lt;ucs4_t&gt;);<br><br>  // 设置一个新的全局 locale<br>  std::locale::global(utf8_locale);<br><br>  // 发送 UCS-4, 转换为 UTF-8<br>  {<br>    std::wofstream ofs("data.ucd");<br>    ofs.imbue(utf8_locale);<br>    std::copy(ucs4_data.begin(),ucs4_data.end(),<br>          std::ostream_iterator&lt;ucs4_t,ucs4_t&gt;(ofs));<br>  }<br><br>  // 读入 UTF-8 数据，转换为 UCS-4<br>  std::vector&lt;ucs4_t&gt; from_file;<br>  {<br>    std::wifstream ifs("data.ucd");<br>    ifs.imbue(utf8_locale);<br>    ucs4_t item = 0;<br>    while (ifs &gt;&gt; item) from_file.push_back(item);<br>  }<br>  //...<br></pre>
+
+
+
+<h2>历史</h2>
+这段代码原本是为一个容器上的迭代器适配器而编写的，用于在内存中保存 UTF-8 编码串。Dietmar Kuehl 建议它可以进一步用于
+    codecvt facet.
+
+<h2>资源</h2>
+
+
+<ul>
+
+  <li> <a href="http://www.unicode.org">Unicode 主页</a>
+  </li>
+  <li> <a href="http://home.CameloT.de/langer/iostreams.htm">标准
+      C++ IOStreams 和 Locales</a>
+  </li>
+  <li> <a href="http://www.research.att.com/%7Ebs/3rd.html">The C++
+      Programming Language Special Edition, Appendix D.</a> 
+  </li>
+</ul>
+
+
+<br>
+
+<hr>
+<table summary="Copyright information">
+
+  <tbody>
+    <tr valign="top">
+
+      <td nowrap="nowrap">Copyright &copy; 2001</td>
+
+      <td><a href="http://www.osl.iu.edu/%7Egarcia">Ronald Garcia</a>,
+Indiana University 
+(<a href="mailto:garcia@cs.indiana.edu">garcia@osl.iu.edu</a>)<br>
+
+      <a href="http://www.osl.iu.edu/%7Elums">Andrew Lumsdaine</a>,
+Indiana University
+(<a href="mailto:lums@osl.iu.edu">lums@osl.iu.edu</a>)</td>
+
+    </tr>
+
+  </tbody>
+</table>
+
+<p><i>&copy; Copyright <a href="http://www.rrsd.com">Robert Ramey</a> 2002-2004. 
+Distributed under the Boost Software License, Version 1.0. (See
+accompanying file LICENSE_1_0.txt or copy at http://www.boost.org/LICENSE_1_0.txt)
+</i></p>
+
+</body>
+</html>

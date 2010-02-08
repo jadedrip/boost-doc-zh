@@ -1,0 +1,125 @@
+<!DOCTYPE html PUBLIC "-//W3C//DTD XHTML 1.0 Transitional//EN" "http://www.w3.org/TR/xhtml1/DTD/xhtml1-transitional.dtd">
+<html xmlns="http://www.w3.org/1999/xhtml" xml:lang="en" lang="en">
+<head>
+<!-- Copyright Aleksey Gurtovoy 2006. Distributed under the Boost --><!-- Software License, Version 1.0. (See accompanying --><!-- file LICENSE_1_0.txt or copy at http://www.boost.org/LICENSE_1_0.txt) -->
+  <meta http-equiv="Content-Type" content="text/html; charset=utf-8" />
+
+  <meta name="generator" content="Docutils 0.3.6: http://docutils.sourceforge.net/" />
+
+
+  <title>THE BOOST MPL LIBRARY: Incomplete Support for Lambda Expressions</title>
+  <link rel="stylesheet" href="../style.css" type="text/css" />
+</head>
+
+
+
+
+
+
+<body class="docframe">
+
+<table class="header">
+  <tbody>
+    <tr class="header">
+      <td class="header-group navigation-bar"><span class="navigation-group"><a href="./broken-integral-constant.html" class="navigation-link">Prev</a>&nbsp;<a href="./eti.html" class="navigation-link">Next</a></span><span class="navigation-group-separator">&nbsp;|&nbsp;</span><span class="navigation-group"><a href="./broken-integral-constant.html" class="navigation-link">Back</a>&nbsp;<a href="./eti.html" class="navigation-link">Along</a></span><span class="navigation-group-separator">&nbsp;|&nbsp;</span><span class="navigation-group"><a href="./portability.html" class="navigation-link">Up</a>&nbsp;<a href="../index.html" class="navigation-link">Home</a></span><span class="navigation-group-separator">&nbsp;|&nbsp;</span><span class="navigation-group"><a href="./tutorial_toc.html" class="navigation-link">Full TOC</a></span></td>
+
+      <td class="header-group page-location"><a href="../index.html" class="navigation-link">标题页</a> / <a href="technical-details.html" class="navigation-link">技术细节</a>&nbsp;/ <a href="portability.html" class="navigation-link">可移植性</a><a href="./portability.html" class="navigation-link"></a>&nbsp;/ <a href="./incomplete-support-for.html" class="navigation-link">不完全支持 Lambda 表达式</a></td>
+
+    </tr>
+  </tbody>
+</table>
+<div class="header-separator"></div>
+
+<div class="section" id="incomplete-support-for">
+<h1><a class="toc-backref" href="./portability.html#id75" name="incomplete-support-for">不完全支持 Lambda 表达式</a></h1>
+
+<p>熟练的MPL用户都会同意以下观点，如果说在MPL中有什么在能力和活力两方面都显得有点不可思议的话，那就非 MPL lambda 表达式莫属了。实际上，它的机制很简单，可以在10分钟之内给任何熟悉C++模板的人解释清楚。</p>
+
+<!-- People are going to hate you for saying so and not actually -->
+<!-- explaining it. -->
+<p>不幸的是，这种机制要依赖于对模板偏特化以及模板模板参数的支持。对于那些被称为不完善的编译器 &mdash; 基本上多数是2000年以前发布的编译器 &mdash; 要完全支持这两个特性的机会是很渺茫的。有关产品列表请见我们的 <a class="reference" href="./portability.html#compatibility-table">兼容性列表</a>。</p>
+
+<p>虽然没有这两个特性就不能实现<span style="font-style: italic;">完全透明的</span><em></em> lambda
+表达式，不过还是有可能通过元函数作者的一些手工辅助来得到一个稍微有些限制的实现。本节将说明所需要的手工工作以及得到的结果有哪些限制。</p>
+
+<div class="section" id="incomplete-the-problem">
+<h2><a name="incomplete-the-problem">问题</a></h2>
+
+<p>如果你的编译器属于"不完善"一类，以下有效 MPL&nbsp;程序将编译失败：</p>
+
+<pre class="literal-block">#include &lt;boost/mpl/apply.hpp&gt;<br /><br />using namespace boost::mpl;<br /><br />template&lt; typename T &gt; struct add_const<br />{<br />    typedef T const type;<br />};<br /><br />typedef apply1&lt; add_const&lt;_1&gt;,int &gt;::type t; // t == int const<br /></pre>
+
+<p>更糟的是，错误提示会将你带到库的内部，并使你以为是库的内部发生了错误。事实上是程序和库都没有错(对于这个特定的例子来说)，这是你的编译器的问题。</p>
+
+</div>
+
+<div class="section" id="incomplete-the-solution">
+<h2><a name="incomplete-the-solution">解决的方法</a></h2>
+
+<p>正如前面提到的，解决的方法需要元函数的作者做一些工作，但是对于元函数的用户来说，结果是相对透明的。对于前面的例子，我们要做的事情如下：</p>
+
+<pre class="literal-block">#include &lt;boost/mpl/apply.hpp&gt;<br /><strong>#include &lt;boost/mpl/aux_/lambda_support.hpp&gt;</strong>
+
+using namespace boost::mpl;
+
+template&lt; typename T &gt; struct add_const
+{
+    typedef T const type;
+    <strong>BOOST_MPL_AUX_LAMBDA_SUPPORT(1, add_const, (T))</strong>
+};
+
+typedef apply1&lt; add_const&lt;_1&gt;,int &gt;::type t; // t == int const
+</pre>
+
+<p>只要做出以上两处修改，编译器就可以很愉快地接受这段代码。"嘿，这还算不错！"，你可以会这样说。只要放入一个宏，一切就都好了。</p>
+
+</div>
+
+<div class="section" id="limitations">
+<h2><a name="limitations">限制</a></h2>
+
+<p>不幸的是，故事并没有结束。以上方法还会在某些情况下失败，我们还得要编写不协调的元函数类。具体如下：</p>
+
+<blockquote>
+  <p>要使得 lambda 表达式在没有模板偏特化和模板模板参数的情况下工作，MPL 必须采用其它方法来处理模板实例化的表达式树，而唯一的方法就是通过一个介入式的元函数内省机制(intrusive metafunction introspection 
+mechanism)。这正是我们在前面看到的 <tt class="literal"><span class="pre">BOOST_MPL_AUX_LAMBDA_SUPPORT</span></tt> 宏背后所做的。</p>
+
+  <p>但是，接着我们就要获得保存在元函数中的，我们所需的信息(元函数的 arity 及其模板参数)，唯一的访问方法是察看元函数的内部。这就意味着要过早地实例化该元函数，在该元函数被真正地<span style="font-style: italic;">使用一个或多个占位符参数</span>调用之前。后面一部分是一个潜在的问题。</p>
+
+</blockquote>
+
+<p>换句话说，只要你的元函数是"占位符安全"的(即可以安全地被占位符参数实例化)，该机制就可以工作，这可以归结为以下两个标准：</p>
+
+<ol class="arabic simple">
+
+  <li>元函数不访问其参数的嵌套成员，或者</li>
+
+  <li>只访问类型名为 <tt class="literal"><span class="pre">::tag</span></tt> 或 <tt class="literal"><span class="pre">::type</span></tt> 的成员(占位符都有这些成员)。</li>
+
+</ol>
+
+<p>如果满足以上两个条件，那么你就可以安全地将 <tt class="literal"><span class="pre">BOOST_MPL_AUX_LAMBDA_SUPPORT</span></tt> 置于你的元函数中，并且忘掉这个问题。如果不行，你就不太幸运了，你可能要另写一个元函数类来代替。</p>
+
+<p>好消息是，MPL 本身的元函数以及 <a class="reference" href="../../../type_traits/index.html" target="_top">Boost.Type Traits</a>
+模板中的大多数都是"占位符安全"的，并且都已经有了相关准备，所以即使是在不完善的编译器上，也有90%的用例可以工作。</p>
+
+<p>关于
+<tt class="literal"><span class="pre">BOOST_MPL_AUX_LAMBDA_SUPPORT</span></tt> 宏的详细情况请参考 MPL <a class="reference" href="./reference-manual.html">参考手册</a>。</p>
+
+</div>
+
+</div>
+
+
+<div class="footer-separator"></div>
+
+<table class="footer">
+  <tbody>
+    <tr class="footer">
+      <td class="header-group navigation-bar"><span class="navigation-group"><a href="./broken-integral-constant.html" class="navigation-link">Prev</a>&nbsp;<a href="./eti.html" class="navigation-link">Next</a></span><span class="navigation-group-separator">&nbsp;|&nbsp;</span><span class="navigation-group"><a href="./broken-integral-constant.html" class="navigation-link">Back</a>&nbsp;<a href="./eti.html" class="navigation-link">Along</a></span><span class="navigation-group-separator">&nbsp;|&nbsp;</span><span class="navigation-group"><a href="./portability.html" class="navigation-link">Up</a>&nbsp;<a href="../index.html" class="navigation-link">Home</a></span><span class="navigation-group-separator">&nbsp;|&nbsp;</span><span class="navigation-group"><a href="./tutorial_toc.html" class="navigation-link">Full TOC</a></span></td>
+
+    </tr>
+  </tbody>
+</table>
+</body>
+</html>

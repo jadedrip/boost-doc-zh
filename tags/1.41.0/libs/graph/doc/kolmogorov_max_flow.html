@@ -1,0 +1,193 @@
+<!DOCTYPE HTML PUBLIC "-//W3C//DTD HTML 4.0 Transitional//EN">
+<html><head>
+<meta http-equiv="CONTENT-TYPE" content="text/html; charset=UTF-8"><title>Boost Graph Library: Kolmogorov Maximum Flow</title>
+
+<meta name="GENERATOR" content="OpenOffice.org 2.0 (Linux)">
+<meta name="CREATED" content="20060820;17315200">
+<meta name="CHANGEDBY" content="Stephan Diederich">
+<meta name="CHANGED" content="20060820;23125100"><!-- // Copyright (c) 2006, Stephan Diederich // // This documentation may be used under either of the following two licences: // // Permission is hereby granted, free of charge, to any person // obtaining a copy of this software and associated documentation // files (the "Software"), to deal in the Software without // restriction, including without limitation the rights to use, // copy, modify, merge, publish, distribute, sublicense, and/or // sell copies of the Software, and to permit persons to whom the // Software is furnished to do so, subject to the following // conditions: // // The above copyright notice and this permission notice shall be // included in all copies or substantial portions of the Software. // // THE SOFTWARE IS PROVIDED "AS IS", WITHOUT WARRANTY OF ANY KIND, // EXPRESS OR IMPLIED, INCLUDING BUT NOT LIMITED TO THE WARRANTIES // OF MERCHANTABILITY, FITNESS FOR A PARTICULAR PURPOSE AND // NONINFRINGEMENT. IN NO EVENT SHALL THE AUTHORS OR COPYRIGHT // HOLDERS BE LIABLE FOR ANY CLAIM, DAMAGES OR OTHER LIABILITY, // WHETHER IN AN ACTION OF CONTRACT, TORT OR OTHERWISE, ARISING // FROM, OUT OF OR IN CONNECTION WITH THE SOFTWARE OR THE USE OR // OTHER DEALINGS IN THE SOFTWARE. OF SUCH DAMAGE. // // Or: // // Distributed under the Boost Software License, Version 1.0. // (See accompanying file LICENSE_1_0.txt or copy at // http://www.boost.org/LICENSE_1_0.txt) -->
+
+<style>
+<!--
+TD P { color: #000000 }
+H1 { color: #000000 }
+P { color: #000000 }
+PRE { color: #000000 }
+H3 { color: #000000 }
+BLOCKQUOTE { color: #000000 }
+A:link { color: #0000ee }
+A:visited { color: #551a8b }
+-->
+</style></head>
+<body style="direction: ltr; color: rgb(0, 0, 0); background-color: rgb(255, 255, 255);" lang="de-DE" link="#0000ee" vlink="#551a8b">
+<p><img src="../../../boost.png" name="Grafik1" alt="C++ Boost" align="bottom" border="0" height="86" width="277">
+</p>
+<h1><a name="sec:kolmogorov_max_flow"></a><tt>kolmogorov_max_flow</tt>
+</h1>
+<pre><i>// 命名参数版本</i><br>template &lt;class Graph, class P, class T, class R&gt;<br>typename property_traits&lt;typename property_map&lt;Graph, edge_capacity_t&gt;::const_type&gt;::value_type<br>kolmogorov_max_flow(Graph&amp; g, typename graph_traits&lt;Graph&gt;::vertex_descriptor src,<br>typename graph_traits&lt;Graph&gt;::vertex_descriptor sink,<br>const bgl_named_params&lt;P, T, R&gt;&amp; params = <i>all defaults</i>)<br><br><i>// 非命名参数版本</i><br>template &lt;class Graph, class CapacityEdgeMap, class ResidualCapacityEdgeMap, class ReverseEdgeMap,<br>class PredecessorMap, class ColorMap, class DistanceMap, class IndexMap&gt;<br>typename property_traits&lt;CapacityEdgeMap&gt;::value_type<br>kolmogorov_max_flow(Graph&amp; g,<br>CapacityEdgeMap cap,<br>ResidualCapacityEdgeMap res_cap,<br>ReverseEdgeMap rev_map,<br>PredecessorMap pre_map,<br>ColorMap color,<br>DistanceMap dist,<br>IndexMap idx,<br>typename graph_traits &lt;Graph&gt;::vertex_descriptor src,<br>typename graph_traits &lt;Graph &gt;::vertex_descriptor sink)</pre>
+<p><font size="3">还提供了其它重载的非命名参数版本(不带
+DistanceMap/ColorMap/DistanceMap 的；使用带有给定索引映射的
+iterator_property_maps)</font></p>
+<p>函数 <tt>kolmogorov_max_flow()</tt>
+计算一个网络的最大流。关于最大流的描述，请见 <a href="graph_theory_review.html#sec:network-flow-algorithms">网
+络流算法</a> 一节。该函数的返回值即为计算所得的最大流。该函数还针对
+<i>E</i> 中所有&nbsp;<i>(u,v)</i> 计算了流值 <i>f(u,v)</i>，
+它以残留容量
+<i>r(u,v) = c(u,v) - f(u,v)</i> 的形式来返回。 </p>
+<p><b>要求：</b><br>
+表示网络的有向图 <i>G=(V,E)</i> 必须对于
+<i>E</i> 中的每条边都有一条反向边。即，输入图应为 <i>G<sub>in</sub>
+= (V,{E U
+E<sup>T</sup>})</i>。<tt>ReverseEdgeMap</tt>
+参数 <tt>rev</tt>
+必须将原图中的每条边映射至它的反向边，即对于 <i>E</i> 中的所有 <i>(u,v)</i>，<i>(u,v)
+-&gt; (v,u)</i>。 </p>
+<p>注释：虽然 push-relabel 方法要求 <i>E<sup>T</sup></i>
+中的每条边必须具有容量 0，但本算法中的反向边允许带有容量值。如果在输入图 <i><font face="Courier New, monospace">G</font></i>
+中已有反向边，则它们可以被使用。这可以减少一半的边数，并显著提高性能。<br>
+<br>
+<b>算法描述：</b><br>
+Kolmogorov
+算法是增广路径算法的一种变体。标准的增广路径算法查找从源点到汇点的最短路径，并通过从每条边的残留容量中减去该路径的瓶颈容量和将该容量增加到总流量
+中，来完成增广。同时，该最小容量被增加至反向边的残留容量中。如果在残留边树中没有找到路径，则算法结束。Kolmogorov
+版本则不是在每次迭代中从源点到汇点查找新的最短路径，而是按如下方式保持已找到的路径：</p>
+<p>该算法建立两棵搜索树，一棵源点树和一棵汇点树。每个顶点有一个标签(保存于 <i>ColorMap</i>)
+来识别它属于哪棵树，还有一个状态标志，表示该顶点是主动的还是被动的。在算法开始时，只有源点和汇点被着色(源点==黑色，汇点==白色)和具有主动状
+态。所有其它顶点为灰色。该算法包含三个阶段：</p>
+<p><i>增长-阶段</i>：在这个阶段中，主动顶点可以获取那些通过具有大于零的容量值的边所连接的邻接顶点
+为。获取的意思是，那些顶点成为主动
+的，且属于当前主动顶点的搜索树。如果没有更多的有效邻接顶点连接了，则当前顶点变为被动的，且对下一个主动顶点继续增长阶段。如果没有主动顶点了，或某
+个顶点通过一条不饱和边发现了一个其它搜索树的顶点，则增长阶段终止。这种情况下，发现了一条从源点到汇点的路径。</p>
+<p><i>增广-阶段</i>：这个阶段增广在增长阶段找到的路径。首先，它找出被发现路径的瓶颈容量，然后更新
+该路径上各边的残留容量，从原残留容量
+中减去瓶颈容量。此外，反向边的残留容量被加上瓶颈容量。这个阶段可以销毁建立起来的搜索树，因为它至少创建了一条饱和边。这意味着，搜索树坍塌成了森
+林，因为搜索树的一个条件是，它们中的每条边具有一条到终点的有效(=非饱和)连接。</p>
+<p><i>采纳-阶段</i>：该阶段重建搜索树。一个简单的方法是，将被发现的路径上第一个孤点之后的所有顶点
+标记为自由顶点(灰色)。
+而更复杂的方法是，给这些孤点安排新的父点：邻接顶点是已检查的，如果它们有一个到同一个终点的有效连接，就象这个顶点有(一条带不饱和边的路径)。如果
+有，则该顶点成为当前孤点的新父点，且这个森林被重新包含入搜索树中。如果没有找到新的父点，则这个顶点成为一个自由顶点(标为灰色)，且它的子孙成为孤
+点。当没有孤点时，采纳阶段结束。</p>
+<p><img src="figs/kolmogorov_max_flow.gif" name="Grafik2" align="left" border="0" height="311" width="827"><br clear="left">
+<b>细节：</b></p>
+<ul>
+<li>
+<p>标记启发式策略：为每个顶点保存一个时间戳，表明处于算法的哪一次迭代中，计算离对应终点的距离。 </p>
+<ul>
+<li>
+<p>这
+个距离在采纳-阶段被使用和进行计算。为了为孤点查找一个有效的新父点，要对可能的父点进行检查，看是否有一个至所属树的终点的连接。如果有这
+样的连接，则该路径被用当前时间戳和距离值来标签。如果另一个孤点需要查找点，且与一个带当前时间戳的顶点相遇，则该信息被使用。</p>
+</li>
+<li>
+<p>这个距离也在增长-阶段被使用。如果在查找新顶点时，一个顶点与另一个同树的顶点相遇，则用另一个顶点的距离与它的距
+离相比较。如果该顶点距离较小，则另一个顶点成为当前顶点的新父点。这可以减少搜索路径的长度，从而减少采纳操作的数量。</p>
+</li>
+</ul>
+</li>
+<li>
+<p>孤
+点的顺序：如上所述，增广-阶段和采纳-阶段会造成孤点。增广-阶段生成的孤点，根据它们与终点的距离排序(最小的在前)。它与距离/时间戳策
+略相结合，可以不需要过于频繁地重新检查至终点的连接。出于同一原因，在采纳阶段生成的新孤点在主队列的孤点之前被处理。</p>
+</li>
+</ul>
+<p><br>
+<b>实现说明：</b></p>
+<p>该算法的主要实现在 Kolmogorov 的博士论文中描述。我们进行了一些改动，以提高性能：</p>
+<ul>
+<li>
+<p>初始化：该算法首先增广从源点-&gt;汇点的所有路径和从源点-&gt;VERTEX-&gt;汇
+点的所有路径。这尤其改进了在图像视觉中所用的图切割，几乎每个顶点都有一个源点和汇点的连接。在这一步中，具有从源点出发的不饱和连接的所有顶点被增加至主动顶点列表中，而源点不会。 </p>
+</li>
+<li>
+<p>主动顶点：Kolmogorov
+用了两个主动节点列表，表明新的主动顶点被增加至另一个列表的尾部。取出一个主动顶点是从第一个列表的头部进行的。如果第一个列表为空，则被第二个列表所
+交换。本实现只使用一个列表。</p>
+</li>
+<li>
+<p>增长-阶段：在增长阶段，主动列表的第一个顶点被取出，且所有出边被检查，如果它们是不饱和的。对于边密度较高的图来说，这会
+降低性能。本实现保存了最后访问的边并从它继续，如果主动列表中的第一个顶点与上一次增长-阶段中的是同一个的话。</p>
+</li>
+</ul>
+<p>该算法[<a href="bibliography.html#kolmogorov03">68</a>,
+<a href="bibliography.html#boykov-kolmogorov04">69</a>]
+由 Boykov 和 Kolmogorov 开发。
+</p>
+<h3>Where Defined 定义于</h3>
+<p><tt><a href="../../../boost/graph/kolmogorov_max_flow.hpp">boost/graph/kolmogorov_max_flow.hpp</a></tt>
+</p>
+<h3>Parameters 参数</h3>
+<p>IN: <tt>Graph&amp; g</tt> </p>
+<blockquote>一个有向图。图的类型必须符合
+<a href="VertexListGraph.html">点列表图Vertex List Graph</a>,
+<a href="EdgeListGraph.html">边列表图Edge
+List Graph</a> 和 <a href="IncidenceGraph.html">关联图
+Incidence Graph</a>。对于图中的每条边 <i>(u,v)</i>，反向边 <i>(v,u)</i>
+必须也在图中。 </blockquote>
+<p>IN: <tt>vertex_descriptor src</tt> </p>
+<blockquote>流网络图的源顶点。 </blockquote>
+<p>IN: <tt>vertex_descriptor sink</tt> </p>
+<blockquote>流网络图的汇顶点。 </blockquote>
+<h3>Named Parameters 命名参数</h3>
+<p>IN: <tt>edge_capacity(EdgeCapacityMap cap)</tt> </p><p><tt></tt> </p>
+<blockquote>边容量属性映射。该类型必须是一个常性的&nbsp;<a href="../../property_map/doc/LvaluePropertyMap.html">左值属性映射</a>。
+该映射的键类型必须是该图的边描述符类型。<br>
+<b>缺省值：</b><tt>get(edge_capacity, g)</tt> </blockquote>
+<p>OUT: <tt>edge_residual_capacity(ResidualCapacityEdgeMap res)</tt> </p><p><tt></tt> </p>
+<blockquote>将边映射至它的残留容量。该类型必须是一个可变的 <a href="../../property_map/doc/LvaluePropertyMap.html">左值属性映射</a>。
+该映射的键类型必须是该图的边描述符类型。<br>
+<b>缺省值：</b><tt>get(edge_residual_capacity, g)</tt>
+</blockquote>
+<p>IN: <tt>edge_reverse(ReverseEdgeMap rev)</tt> </p><p><tt></tt>
+</p>
+<blockquote>一个边属性映射，将图中每条边 <i>(u,v)</i> 映射至反向边 <i>(v,u)</i>。
+该映射必须是一个常性的 <a href="../../property_map/doc/LvaluePropertyMap.html">左
+值属性映射</a>。该映射的键类型必须是图的边描述符类型。<br>
+<b>缺省值：</b><tt>get(edge_reverse, g)</tt> </blockquote>
+<p>UTIL: <tt>vertex_predecessor(PredecessorMap pre_map)</tt>
+</p>
+<blockquote>一个顶点属性映射，将边信息保存为顶点的前趋。该映射必须是一个可变的 <a href="../../property_map/doc/LvaluePropertyMap.html">左值属性映射</a>。
+该映射的键类型必须是图的顶点描述符类型。<br>
+<b>缺省值：</b><tt>get(vertex_predecessor, g)</tt>
+</blockquote>
+<p>OUT/UTIL: <tt>vertex_color(ColorMap color)</tt> </p>
+<blockquote>一个顶点属性映射，为边顶点保存颜色。如果一个顶点的颜色在本算法运行后为黑色，则该顶点属于源点树，否则属于汇点
+树(用于表示最小割)。该映射必须是一个可变的 <a href="../../property_map/doc/LvaluePropertyMap.html">左值属性映射</a>。
+该映射的键类型必须是图的顶点描述符类型。<br>
+<b>缺省值：</b><tt>get(vertex_color, g)</tt> </blockquote>
+<p>UTIL: <tt>vertex_distance(DistanceMap dist)</tt> </p>
+<blockquote>一个顶点属性映射，保存至对应终点的距离。它是一个用于加速本算法的辅助映射。该映射必须是一个可变的 <a href="../../property_map/doc/LvaluePropertyMap.html">左值属性映射</a>。
+该映射的键类型必须是图的顶点描述符类型。<br>
+<b>缺省值：</b><tt>get(vertex_distance, g)</tt> </blockquote><p>IN: <tt>vertex_index(VertexIndexMap index_map)</tt> </p><blockquote>将图中每个顶点映射至 <tt>[0, num_vertices(g))</tt>
+区间中的一个整数。该映射必须是一个常性的 <a href="../../property_map/doc/LvaluePropertyMap.html">左值属性映射</a>。
+该映射的键类型必须是图的顶点描述符类型。<br>
+<b>缺省值：</b><tt>get(vertex_index, g)</tt> </blockquote>
+<h3>Example 示例</h3>
+<p>以下例子从一个DIMACS格式的文件(<tt><a href="../example/max_flow.dat">example/max_flow.dat</a></tt>)
+中读入一个最大流问题(一个带有边容量的图)。该例子的源码可在
+<tt><a href="../example/kolmogorov-eg.cpp">example/kolmogorov-eg.cpp</a></tt>
+中找到。
+</p>
+<pre>#include &lt;boost/config.hpp&gt;<br>#include &lt;iostream&gt;<br>#include &lt;string&gt;<br>#include &lt;boost/graph/kolmogorov_max_flow.hpp&gt;<br>#include &lt;boost/graph/adjacency_list.hpp&gt;<br>#include &lt;boost/graph/read_dimacs.hpp&gt;<br>#include &lt;boost/graph/graph_utility.hpp&gt;<br><br>int<br>main()<br>{<br>  using namespace boost;<br><br>  typedef adjacency_list_traits &lt; vecS, vecS, directedS &gt; Traits;<br>  typedef adjacency_list &lt; vecS, vecS, directedS,<br>    property &lt; vertex_name_t, std::string,<br>    property &lt; vertex_index_t, long,<br>    property &lt; vertex_color_t, boost::default_color_type,<br>    property &lt; vertex_distance_t, long,<br>    property &lt; vertex_predecessor_t, Traits::edge_descriptor &gt; &gt; &gt; &gt; &gt;,<br>    <br>    property &lt; edge_capacity_t, long,<br>    property &lt; edge_residual_capacity_t, long,<br>    property &lt; edge_reverse_t, Traits::edge_descriptor &gt; &gt; &gt; &gt; Graph;<br> <br>  Graph g;<br>  property_map &lt; Graph, edge_capacity_t &gt;::type<br>      capacity = get(edge_capacity, g);<br>  property_map &lt; Graph, edge_residual_capacity_t &gt;::type<br>      residual_capacity = get(edge_residual_capacity, g);<br>  property_map &lt; Graph, edge_reverse_t &gt;::type rev = get(edge_reverse, g);<br>  Traits::vertex_descriptor s, t;<br>  read_dimacs_max_flow(g, capacity, rev, s, t);<br><br>  std::vector&lt;default_color_type&gt; color(num_vertices(g));<br>  std::vector&lt;long&gt; distance(num_vertices(g));<br>  long flow = kolmogorov_max_flow(g ,s, t);<br><br>  std::cout &lt;&lt; "c  The total flow:" &lt;&lt; std::endl;<br>  std::cout &lt;&lt; "s " &lt;&lt; flow &lt;&lt; std::endl &lt;&lt; std::endl;<br><br>  std::cout &lt;&lt; "c flow values:" &lt;&lt; std::endl;<br>  graph_traits &lt; Graph &gt;::vertex_iterator u_iter, u_end;<br>  graph_traits &lt; Graph &gt;::out_edge_iterator ei, e_end;<br>  for (tie(u_iter, u_end) = vertices(g); u_iter != u_end; ++u_iter)<br>    for (tie(ei, e_end) = out_edges(*u_iter, g); ei != e_end; ++ei)<br>      if (capacity[*ei] &gt; 0)<br>        std::cout &lt;&lt; "f " &lt;&lt; *u_iter &lt;&lt; " " &lt;&lt; target(*ei, g) &lt;&lt; " "<br>          &lt;&lt; (capacity[*ei] - residual_capacity[*ei]) &lt;&lt; std::endl;<br><br>  return EXIT_SUCCESS;<br>}</pre>
+<p>输出如下： </p>
+<pre>c The total flow:<br>s 13<br><br>c flow values:<br>f 0 6 3<br>f 0 1 0<br>f 0 2 10<br>f 1 5 1<br>f 1 0 0<br>f 1 3 0<br>f 2 4 4<br>f 2 3 6<br>f 2 0 0<br>f 3 7 5<br>f 3 2 0<br>f 3 1 1<br>f 4 5 4<br>f 4 6 0<br>f 5 4 0<br>f 5 7 5<br>f 6 7 3<br>f 6 4 0<br>f 7 6 0<br>f 7 5 0</pre>
+<h3>See Also 参见</h3>
+<p style="margin-bottom: 0cm;"><tt><a href="edmonds_karp_max_flow.html">edmonds_karp_max_flow()</a></tt>,<br>
+<tt><a href="push_relabel_max_flow.html">push_relabel_max_flow()</a></tt>.
+</p>
+<hr>
+<table cellpadding="2" cellspacing="2">
+<tbody>
+<tr valign="top">
+<td>
+<p>Copyright © 2006</p>
+</td>
+<td>
+<p>Stephan Diederich, University Mannheim(<a href="mailto:diederich@ti.uni-manheim.de">diederich@ti.uni-manheim.de</a>)</p>
+</td>
+</tr>
+</tbody>
+</table>
+<p><br>
+<br>
+</p>
+</body></html>

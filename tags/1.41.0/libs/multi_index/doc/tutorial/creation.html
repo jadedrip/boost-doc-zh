@@ -1,0 +1,459 @@
+<!DOCTYPE HTML PUBLIC "-//W3C//DTD HTML 4.0.1 Transitional//EN">
+<html>
+<head>
+
+
+
+  
+  
+  <meta http-equiv="Content-Type" content="text/html; charset=UTF-8">
+
+
+
+
+  
+  
+  
+  
+  <title>Boost.MultiIndex Documentation - Tutorial - Container creation</title>
+  <link rel="stylesheet" href="../style.css" type="text/css">
+
+
+
+  
+  
+  <link rel="start" href="../index.html">
+
+
+
+  
+  
+  <link rel="prev" href="key_extraction.html">
+
+
+
+  
+  
+  <link rel="up" href="index.html">
+
+
+
+  
+  
+  <link rel="next" href="debug.html">
+</head>
+
+
+<body>
+
+
+
+<h1><img src="../../../../boost.png" alt="boost.png (6897 bytes)" align="middle" height="86" width="277">Boost.MultiIndex 指南: 容器的创建</h1>
+
+
+
+
+<div class="prev_link"><a href="key_extraction.html"><img src="../prev.gif" alt="key extraction" border="0"><br>
+
+
+
+Key extraction键提取
+</a></div>
+
+
+
+<div class="up_link"><a href="index.html"><img src="../up.gif" alt="Boost.MultiIndex tutorial" border="0"><br>
+
+
+
+Boost.MultiIndex 指南
+</a></div>
+
+
+
+<div class="next_link"><a href="debug.html"><img src="../next.gif" alt="debugging support" border="0"><br>
+
+
+
+Debugging support测试的支持
+</a></div>
+
+
+<br style="" clear="all">
+
+
+
+
+<hr>
+
+<h2>Contents目录</h2>
+
+
+
+
+<ul>
+
+
+
+  <li><a href="#value_semantics">Value semantics值语义</a></li>
+
+
+
+  <li><a href="#ctor_args_list"><code>ctor_args_list的使用</code></a></li>
+  <li><a href="#special_allocator">Special allocator support</a><a href="creation.html#special_allocator">特殊分配器的支持</a></li>
+
+
+
+  <li><a href="#serialization">Serialization序列化</a></li>
+
+
+
+</ul>
+
+
+
+
+<h2><a name="value_semantics">Value semantics值语义</a></h2>
+
+
+
+
+<p>
+<code>multi_index_container</code> 具有一般意义的值语义，这与复制构造和赋值相关，即赋值时会对源容器的元素进行复制创建然后插入到目标容器中。更为有趣的是，复制还会对容器的<span style="font-style: italic;">每一个索引</span>进行重排以重新建立初始的顺序。这意味着所有索引的等价性在复制或赋值时得到保护，如果索引类型定义了等价性。这一行为可被视为复制语义的自然扩展，如果 <code>y</code> 是 <code>x 的一个拷贝，则</code>
+<code>y==x</code>。
+</p>
+
+
+
+
+<h2><a name="ctor_args_list"><code>ctor_args_list的使用</code></a></h2>
+
+
+
+
+<p>虽然多数情况下 
+<code>multi_index_container</code>&nbsp;是使用缺省值来构造的(或者从另一个已有<code></code>的<code>multi_index_container</code>拷贝)，不过有时也需要特别指定其某些内部对象(键提取器、比较谓词、分配器)的值，例如在这些对象没有缺省构造函数的情况下。同样的情况也会在STL容器中出现，这时可以使用这些对象的可选项：
+</p>
+
+
+
+
+<blockquote>
+  
+  
+  <pre><span class="comment">// </span><span class="comment">例子：非缺省构造的 std::set</span><span class="comment"></span>
+<span class="keyword">template</span><span class="special">&lt;</span><span class="keyword">typename</span> <span class="identifier">IntegralType</span><span class="special">&gt;</span>
+<span class="keyword">struct</span> <span class="identifier">modulo_less</span>
+<span class="special">{</span>
+  <span class="identifier">modulo_less</span><span class="special">(</span><span class="identifier">IntegralType</span> <span class="identifier">m</span><span class="special">):</span><span class="identifier">modulo</span><span class="special">(</span><span class="identifier">m</span><span class="special">){}</span>
+
+  <span class="keyword">bool</span> <span class="keyword">operator</span><span class="special">()(</span><span class="identifier">IntegralType</span> <span class="identifier">x</span><span class="special">,</span><span class="identifier">IntegralType</span> <span class="identifier">y</span><span class="special">)</span><span class="keyword">const</span>
+  <span class="special">{</span>
+    <span class="keyword">return</span> <span class="special">(</span><span class="identifier">x</span><span class="special">%</span><span class="identifier">modulo</span><span class="special">)&lt;(</span><span class="identifier">y</span><span class="special">%</span><span class="identifier">modulo</span><span class="special">);</span>
+  <span class="special">}</span>
+
+<span class="keyword">private</span><span class="special">:</span>
+  <span class="identifier">IntegralType</span> <span class="identifier">modulo</span><span class="special">;</span>
+<span class="special">};</span>
+
+<span class="keyword">typedef</span> <span class="identifier">std</span><span class="special">::</span><span class="identifier">set</span><span class="special">&lt;</span><span class="keyword">unsigned</span> <span class="keyword">int</span><span class="special">,</span><span class="identifier">modulo_less</span><span class="special">&lt;</span><span class="keyword">unsigned</span> <span class="keyword">int</span><span class="special">&gt;</span> <span class="special">&gt;</span> <span class="identifier">modulo_set</span><span class="special">;</span>
+
+<span class="identifier">modulo_set</span> <span class="identifier">m</span><span class="special">(</span><span class="identifier">modulo_less</span><span class="special">&lt;</span><span class="keyword">unsigned</span> <span class="keyword">int</span><span class="special">&gt;(</span><span class="number">10</span><span class="special">));</span>
+  </pre>
+
+
+</blockquote>
+
+
+
+
+<p>
+<code>multi_index_container</code> 
+也提供了这种功能，不过更为复杂，这是由于<code>multi_index_container</code>的构造函数必须接受其索引的所有内部对象。<code>multi_index_container</code> 
+构造函数的完整形式如下：
+</p>
+
+
+
+
+<blockquote>
+  
+  
+  <pre><span class="keyword">explicit</span> <span class="identifier">multi_index_container</span><span class="special">(</span>
+    <span class="keyword">const</span> <span class="identifier">ctor_args_list</span><span class="special">&amp;</span> <span class="identifier">args_list</span><span class="special">=</span><span class="identifier">ctor_args_list</span><span class="special">(),</span>
+    <span class="keyword">const</span> <span class="identifier">allocator_type</span><span class="special">&amp;</span> <span class="identifier">al</span><span class="special">=</span><span class="identifier">allocator_type</span><span class="special">());</span>
+  </pre>
+
+
+</blockquote>
+
+
+
+
+<p>分配器对象不会有什么问题；至于 
+<code>ctor_args_list</code>，该对象被设计为持有<code>multi_index_container</code>中每个索引所需的构造值。在用户看来，<code>ctor_args_list</code> 
+等同于以下类型：
+</p>
+
+
+
+
+<blockquote>
+  
+  
+  <pre><span class="identifier">boost</span><span class="special">::</span><span class="identifier">tuple</span><span class="special">&lt;</span><span class="identifier">C<sub>0</sub></span><span class="special">,...,</span><span class="identifier">C<sub>I-1</sub></span><span class="special">&gt;</span>
+  </pre>
+
+
+</blockquote>
+
+
+
+
+<p><code>I</code> 为索引的数量，<code>C<sub>i</sub></code> 为：
+</p>
+
+
+
+
+<blockquote>
+  
+  
+  <pre><span class="identifier">nth_index</span><span class="special">&lt;</span><span class="identifier">i</span><span class="special">&gt;::</span><span class="identifier">type</span><span class="special">::</span><span class="identifier">ctor_args</span>
+  </pre>
+
+
+</blockquote>
+
+
+
+
+<p>即第<code>i</code>个索引的嵌套类型 <code>ctor_args</code>。每个 <code>ctor_args</code> 
+类型分别由对应索引的构造函数的参数值组合而成，如：有序索引要求一个键提取器和一个比较谓词，散列索引要求一个桶数量的初始值、一个键提取器和一个等价性谓词，而序列索引则不需要任何构造函数参数。例如，我们有以下定义：
+</p>
+
+
+
+
+<blockquote>
+  
+  
+  <pre><span class="keyword">typedef</span> <span class="identifier">multi_index_container</span><span class="special">&lt;</span>
+  <span class="keyword">unsigned</span> <span class="keyword">int</span><span class="special">,</span>
+  <span class="identifier">indexed_by</span><span class="special">&lt;</span>
+    <span class="identifier">hashed_unique</span><span class="special">&lt;</span><span class="identifier">identity</span><span class="special">&lt;</span><span class="keyword">unsigned</span> <span class="keyword">int</span><span class="special">&gt;</span> <span class="special">&gt;,</span>
+    <span class="identifier">ordered_non_unique</span><span class="special">&lt;</span><span class="identifier">identity</span><span class="special">&lt;</span><span class="keyword">unsigned</span> <span class="keyword">int</span><span class="special">&gt;,</span> <span class="identifier">modulo_less</span><span class="special">&lt;</span><span class="keyword">unsigned</span> <span class="keyword">int</span><span class="special">&gt;</span> <span class="special">&gt;,</span>
+    <span class="identifier">sequenced</span><span class="special">&lt;&gt;,</span>
+    <span class="identifier">random_access</span><span class="special">&lt;&gt;</span>
+  <span class="special">&gt;</span>
+<span class="special">&gt;</span> <span class="identifier">modulo_indexed_set</span><span class="special">;</span>
+  </pre>
+
+
+</blockquote>
+
+
+
+
+<p>相应的 <code>ctor_args_list</code> 类型等价于：
+</p>
+
+
+
+
+<blockquote>
+  
+  
+  <pre><span class="identifier">boost</span><span class="special">::</span><span class="identifier">tuple</span><span class="special">&lt;</span>
+  <span class="comment">// </span><span class="comment">索引#0的ctr_args</span><span class="comment"></span>
+  <span class="identifier">boost</span><span class="special">::</span><span class="identifier">tuple</span><span class="special">&lt;</span>
+    <span class="identifier">std</span><span class="special">::</span><span class="identifier">size_t</span><span class="special">,</span> <span class="comment">// </span><span class="comment">桶数量的初始值；不指定则为0</span><span class="comment"></span>
+    <span class="identifier">identity</span><span class="special">&lt;</span><span class="keyword">unsigned</span> <span class="keyword">int</span><span class="special">&gt;,</span>
+    <span class="identifier">boost</span><span class="special">::</span><span class="identifier">hash</span><span class="special">&lt;</span><span class="keyword">unsigned</span> <span class="keyword">int</span><span class="special">&gt;,</span>
+    <span class="identifier">std</span><span class="special">::</span><span class="identifier">equal_to</span><span class="special">&lt;</span><span class="keyword">unsigned</span> <span class="keyword">int</span><span class="special">&gt;</span> <span class="special">&gt;,</span>    <br><br>  <span class="comment">// </span><span class="comment">索引#1的ctr_args</span><span class="comment"></span>
+  <span class="identifier">boost</span><span class="special">::</span><span class="identifier">tuple</span><span class="special">&lt;</span>
+    <span class="identifier">identity</span><span class="special">&lt;</span><span class="keyword">unsigned</span> <span class="keyword">int</span><span class="special">&gt;,</span>
+    <span class="identifier">modulo_less</span><span class="special">&lt;</span><span class="keyword">unsigned</span> <span class="keyword">int</span><span class="special">&gt;</span> <span class="special">&gt;,</span>
+  
+  <span class="comment">// </span><span class="comment">序列索引不需要任何构造函数参数</span><span class="comment"></span>
+  <span class="identifier">boost</span><span class="special">::</span><span class="identifier">tuple</span><span class="special">&lt;&gt;,</span>
+
+  <span class="comment">// 随机访问索引也不需要</span>
+  <span class="identifier">boost</span><span class="special">::</span><span class="identifier">tuple</span><span class="special">&lt;&gt;</span>
+<span class="special">&gt;</span>
+  </pre>
+
+
+</blockquote>
+
+
+
+
+<p>这样，<code>modulo_indexed_set</code> 将不能缺省构造，因为 <code>modulo_less</code> 
+没有缺省构造函数。下面给出了构造的方法：
+</p>
+
+
+
+
+<blockquote>
+  
+  
+  <pre><span class="identifier">modulo_indexed_set</span><span class="special">::</span><span class="identifier">ctor_args_list</span> <span class="identifier">args_list</span><span class="special">=</span>
+  <span class="identifier">boost</span><span class="special">::</span><span class="identifier">make_tuple</span><span class="special">(</span>
+    <span class="comment">// </span><span class="comment">索引#0的ctor_args可以缺省构造</span><span class="comment"></span>
+    <span class="identifier">modulo_indexed_set</span><span class="special">::</span><span class="identifier">nth_index</span><span class="special">&lt;</span><span class="number">0</span><span class="special">&gt;::</span><span class="identifier">type</span><span class="special">::</span><span class="identifier">ctor_args</span><span class="special">(),</span>
+    
+    <span class="identifier">boost</span><span class="special">::</span><span class="identifier">make_tuple</span><span class="special">(</span><span class="identifier">identity</span><span class="special">&lt;</span><span class="keyword">unsigned</span> <span class="keyword">int</span><span class="special">&gt;(),</span><span class="identifier">modulo_less</span><span class="special">&lt;</span><span class="keyword">unsigned</span> <span class="keyword">int</span><span class="special">&gt;(</span><span class="number">10</span><span class="special">)),</span>
+    
+    <span class="comment">// </span><span class="comment">这个也可以缺省构造(事实上是一个空的tuple)</span> <br>    <span class="identifier">modulo_indexed_set</span><span class="special">::</span><span class="identifier">nth_index</span><span class="special">&lt;</span><span class="number">2</span><span class="special">&gt;::</span><span class="identifier">type</span><span class="special">::</span><span class="identifier">ctor_args</span><span class="special">(),</span>
+    <span class="identifier">modulo_indexed_set</span><span class="special">::</span><span class="identifier">nth_index</span><span class="special">&lt;</span><span class="number">3</span><span class="special">&gt;::</span><span class="identifier">type</span><span class="special">::</span><span class="identifier">ctor_args</span><span class="special">()</span>
+  <span class="special">);</span>
+
+<span class="identifier">modulo_indexed_set</span> <span class="identifier">m</span><span class="special">(</span><span class="identifier">args_list</span><span class="special">);</span>
+  </pre>
+
+
+</blockquote>
+
+
+
+
+<p><a href="../examples.html#example3">&ldquo;例子&rdquo;一节</a> 中有一个例程实际使用了这些概念。</p>
+<h2><a name="special_allocator">Special allocator support 特殊分配器的支持</a></h2>
+
+<p>Boost.MultiIndex 允许使用比C++标准的严格要求稍微通用些的分配器类，详细的解释在 <a href="../reference/multi_index_container.html#instantiation_types">参考</a> 中。所支持的一种重要的非标准分配器是由 
+<a href="../../../interprocess/index.html">Boost Interprocess 库</a> 所提供的分配器；这使得 <code>multi_index_container</code>s 被放在共享内存中。 </p>
+
+<blockquote>
+  <pre><span class="preprocessor">#include</span> <span class="special">&lt;</span><span class="identifier">boost</span><span class="special">/</span><span class="identifier">interprocess</span><span class="special">/</span><span class="identifier">allocators</span><span class="special">/</span><span class="identifier">allocator</span><span class="special">.</span><span class="identifier">hpp</span><span class="special">&gt;</span><br><span class="preprocessor">#include</span> <span class="special">&lt;</span><span class="identifier">boost</span><span class="special">/</span><span class="identifier">interprocess</span><span class="special">/</span><span class="identifier">managed_shared_memory</span><span class="special">.</span><span class="identifier">hpp</span><span class="special">&gt;</span><br><br><span class="keyword">namespace</span> <span class="identifier">bip</span><span class="special">=</span><span class="identifier">boost</span><span class="special">::</span><span class="identifier">interprocess</span><span class="special">;</span><br><br><span class="comment">// 一个兼容共享内存的 ints 分配器</span> <br><span class="keyword">typedef</span> <span class="identifier">bip</span><span class="special">::</span><span class="identifier">allocator</span><span class="special">&lt;</span><br>  <span class="keyword">int</span><span class="special">,</span><span class="identifier">bip</span><span class="special">::</span><span class="identifier">managed_shared_memory</span><span class="special">::</span><span class="identifier">segment_manager</span><br><span class="special">&gt;</span> <span class="identifier">shared_int_allocator</span><span class="special">;</span><br><br><span class="comment">// 定义一个兼容于共享内存的 multi_index_container<br>// 使用 shared_int_allocator</span><br><span class="keyword">typedef</span> <span class="identifier">multi_index_container</span><span class="special">&lt;</span><br>  <span class="keyword">int</span><span class="special">,</span><br>  <span class="identifier">indexed_by</span><span class="special">&lt;</span><br>    <span class="identifier">sequenced</span><span class="special">&lt;&gt;,</span><br>    <span class="identifier">ordered_unique</span><span class="special">&lt;</span><span class="identifier">identity</span><span class="special">&lt;</span><span class="keyword">int</span><span class="special">&gt;</span> <span class="special">&gt;</span><br>  <span class="special">&gt;,</span><br>  <span class="identifier">shared_int_allocator</span><br><span class="special">&gt;</span> <span class="identifier">unique_int_list</span><span class="special">;</span><br><br><span class="special">...</span><br><br><span class="comment">// 创建一个被管理内存段</span><br><span class="identifier">bip</span><span class="special">::</span><span class="identifier">managed_shared_memory</span> <span class="identifier">seg</span><span class="special">(</span><br>  <span class="identifier">bip</span><span class="special">::</span><span class="identifier">create_only</span><span class="special">,</span><span class="string">"SharedMemoryID"</span><span class="special">,</span><span class="number">65536</span><span class="special">);</span><br><br><span class="comment">// 在这个段中构造一个 unique_int_list</span><br><span class="identifier">unique_int_list</span><span class="special">*</span> <span class="identifier">puil</span><span class="special">=</span><span class="identifier">seg</span><span class="special">.</span><span class="identifier">construct</span><span class="special">&lt;</span><span class="identifier">unique_int_list</span><span class="special">&gt;</span><br>  <span class="special">(</span><span class="string">"UniqueIntListID"</span><span class="special">)</span> <span class="comment">// 在该段中的对象标识符<br>  // 构造参数：首先是一个 ctor arg list, 然后是<br>  // 一个从段对象获得的共享内存分配器</span><br>  <span class="special">(</span><span class="identifier">unique_int_list</span><span class="special">::</span><span class="identifier">ctor_args_list</span><span class="special">(),</span><br>   <span class="identifier">unique_int_list</span><span class="special">::</span><span class="identifier">allocator_type</span><span class="special">(</span><span class="identifier">seg</span><span class="special">.</span><span class="identifier">get_segment_manager</span><span class="special">()));</span><br>   </pre>
+</blockquote>
+
+<p>"例子"一节中包含一个进一步探究此功能的 <a href="../examples.html#example12">程序</a>。</p>
+
+
+
+
+<h2><a name="serialization">Serialization序列化</a></h2>
+
+
+
+
+<p>
+<code>multi_index_container</code>s&nbsp;可以通过
+<a href="../../../serialization/index.html">Boost Serialization Library</a> 被归档和取回。普通档和XML档都可以支持。用法很简单，与其它可序列化类型没什么不同。例如：
+</p>
+
+
+
+
+<blockquote>
+  
+  
+  <pre><span class="preprocessor">#include</span> <span class="special">&lt;</span><span class="identifier">boost</span><span class="special">/</span><span class="identifier">archive</span><span class="special">/</span><span class="identifier">text_oarchive</span><span class="special">.</span><span class="identifier">hpp</span><span class="special">&gt;</span>
+<span class="preprocessor">#include</span> <span class="special">&lt;</span><span class="identifier">boost</span><span class="special">/</span><span class="identifier">archive</span><span class="special">/</span><span class="identifier">text_iarchive</span><span class="special">.</span><span class="identifier">hpp</span><span class="special">&gt;</span>
+<span class="preprocessor">#include</span> <span class="special">&lt;</span><span class="identifier">fstream</span><span class="special">&gt;</span>
+
+<span class="special">...</span>
+
+<span class="keyword">void</span> <span class="identifier">save</span><span class="special">(</span><span class="keyword">const</span> <span class="identifier">employee_set</span><span class="special">&amp;</span> <span class="identifier">es</span><span class="special">)</span>
+<span class="special">{</span>
+  <span class="identifier">std</span><span class="special">::</span><span class="identifier">ofstream</span> <span class="identifier">ofs</span><span class="special">(</span><span class="string">"data"</span><span class="special">);</span>
+  <span class="identifier">boost</span><span class="special">::</span><span class="identifier">archive</span><span class="special">::</span><span class="identifier">text_oarchive</span> <span class="identifier">oa</span><span class="special">(</span><span class="identifier">ofs</span><span class="special">);</span>
+  <span class="identifier">oa</span><span class="special">&lt;&lt;</span><span class="identifier">es</span><span class="special">;</span>
+<span class="special">}</span>
+
+<span class="keyword">void</span> <span class="identifier">load</span><span class="special">(</span><span class="identifier">employee_set</span><span class="special">&amp;</span> <span class="identifier">es</span><span class="special">)</span>
+<span class="special">{</span>
+  <span class="identifier">std</span><span class="special">::</span><span class="identifier">ifstream</span> <span class="identifier">ifs</span><span class="special">(</span><span class="string">"data"</span><span class="special">);</span>
+  <span class="identifier">boost</span><span class="special">::</span><span class="identifier">archive</span><span class="special">::</span><span class="identifier">text_iarchive</span> <span class="identifier">ia</span><span class="special">(</span><span class="identifier">ifs</span><span class="special">);</span>
+  <span class="identifier">ia</span><span class="special">&gt;&gt;</span><span class="identifier">es</span><span class="special">;</span>
+<span class="special">}</span>
+
+<span class="special">...</span>
+
+<span class="identifier">employee_set</span> <span class="identifier">es</span><span class="special">;</span>
+<span class="special">...</span> <span class="comment">// </span><span class="comment">填入数据</span><span class="comment"></span>
+<span class="identifier">save</span><span class="special">(</span><span class="identifier">es</span><span class="special">);</span>
+
+<span class="special">...</span>
+
+<span class="identifier">employee_set</span> <span class="identifier">restored_es</span><span class="special">;</span>
+<span class="identifier">load</span><span class="special">(</span><span class="identifier">restored_es</span><span class="special">);</span>
+  </pre>
+
+
+</blockquote>
+
+
+
+
+<p>只需与适当的Boost.Serialization库模块进行链接即可自动提供序列化能力：不需要显式地包含Boost.Serialization的任何头文件，除了程序中需要使用的档案类型声明之外。如果不需要，也可以通过定义全局宏<code>BOOST_MULTI_INDEX_DISABLE_SERIALIZATION</code>来禁用序列化。禁用 
+Boost.MultiIndex 
+的序列化可以稍稍加快程序的建造时间，对于那些没有正确处理Boost.Serialization头文件的有缺陷的编译器，这也许是必须的。
+</p>
+
+
+
+
+<p>按照  Boost.MultiIndex
+的<a href="creation.html#value_semantics">值语义</a>，从一个归档中取回 <code>multi_index_container</code> 
+时，不仅元素被恢复，而且它们对于容器的每个索引都已经排好序了。这一规则有一个例外，就是<a href="indices.html#hashed_indices">hashed
+indices散列索引</a>，恢复后的容器中的元素顺序没有任何保证；通常来说，依赖于散列索引的元素顺序是不明智的，因为在插入元素或重散列时，它们的顺序都可以随意改变 -- 这正是散列索引和TR1的非有序关联式容器没有定义等价性比较操作符的原因。
+</p>
+
+
+
+
+
+
+
+<p><code>multi_index_container</code> 索引的迭代器也可以被序列化。迭代器的序列化必须在相应的容器序列化之后进行。</p>
+
+<p>&ldquo;例子&rdquo;一节中的 <a href="../examples.html#example9">Example 9</a> 示例了 Boost.MultiIndex 的序列化功能。
+</p>
+
+
+
+
+<hr>
+
+<div class="prev_link"><a href="key_extraction.html"><img src="../prev.gif" alt="key extraction" border="0"><br>
+
+
+
+Key extraction键提取
+</a></div>
+
+
+
+<div class="up_link"><a href="index.html"><img src="../up.gif" alt="Boost.MultiIndex tutorial" border="0"><br>
+
+
+
+Boost.MultiIndex 指南
+</a></div>
+
+
+
+<div class="next_link"><a href="debug.html"><img src="../next.gif" alt="debugging support" border="0"><br>
+
+
+
+Debugging support测试的支持
+</a></div>
+
+
+<br style="" clear="all">
+
+
+
+
+<br>
+<p>Revised July 17th 2007</p>
+
+<p>&copy; Copyright 2003-2007 Joaqu&iacute;n M L&oacute;pez Mu&ntilde;oz. Distributed under the Boost 
+Software License, Version 1.0. (See accompanying file <a href="../../../../LICENSE_1_0.txt">LICENSE_1_0.txt</a> or copy at <a href="http://www.boost.org/LICENSE_1_0.txt">http://www.boost.org/LICENSE_1_0.txt</a>) 
+</p>
+</body>
+</html>

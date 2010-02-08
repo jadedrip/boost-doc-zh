@@ -1,0 +1,58 @@
+<!DOCTYPE HTML PUBLIC "-//W3C//DTD HTML 4.01 Transitional//EN">
+<html><head>
+<meta http-equiv="Content-Type" content="text/html; charset=UTF-8">
+
+<title>Appendix A. Rationale for some of the design decisions（某些设计权衡的根本原因）</title><link rel="stylesheet" href="boostbook.css" type="text/css">
+<meta name="generator" content="DocBook XSL Stylesheets V1.68.1">
+<link rel="start" href="index.html" title="The Boost C++ Libraries BoostBook Documentation Subset">
+<link rel="up" href="lambda.html" title="Chapter 8. Boost.Lambda">
+<link rel="prev" href="lambda/s09.html" title="Contributors">
+<link rel="next" href="boost_math.html" title="Chapter 9. Boost.Math"></head>
+<body alink="#0000ff" bgcolor="white" link="#0000ff" text="black" vlink="#840084">
+<table cellpadding="2" width="100%">
+<tbody><tr><td valign="top"><img alt="Boost C++ Libraries" src="../../boost.png" height="86" width="277"></td>
+<td align="center"><a href="../../index.htm">Home</a></td>
+<td align="center"><a href="../../libs/libraries.htm">Libraries</a></td>
+<td align="center"><a href="../../people/people.htm">People</a></td>
+<td align="center"><a href="../../more/faq.htm">FAQ</a></td>
+<td align="center"><a href="../../more/index.htm">More</a></td>
+</tr></tbody></table>
+<hr>
+<div class="spirit-nav">
+<a accesskey="p" href="lambda/s09.html"><img src="images/prev.png" alt="Prev"></a><a accesskey="u" href="lambda.html"><img src="images/up.png" alt="Up"></a><a accesskey="h" href="index.html"><img src="images/home.png" alt="Home"></a><a accesskey="n" href="mpi.html"><img style="border: 0px solid ; width: 19px; height: 19px;" src="images/next.png" alt="Next"></a>
+</div>
+<div class="appendix" lang="en">
+<div class="titlepage"><div><div><h2 class="title">
+<a name="id1249962"></a>Appendix A. Rationale for some of the design decisions（某些设计权衡的根本原因）</h2></div></div></div>
+<div class="toc">
+<p><b>Table of Contents</b></p>
+<dl><dt><span class="section"><a href="apa.html#lambda.why_weak_arity">
+Lambda functor arity（lambda 仿函数数量）
+</a></span></dt></dl>
+</div>
+<div class="section" lang="en">
+<div class="titlepage"><div><div><h3 class="title">
+<a name="lambda.why_weak_arity"></a>
+Lambda functor arity（lambda 仿函数数量）
+</h3></div></div></div>
+<p>一个 lambda 表达式中的最高占位符索引决定最终的函数对象的数量。但是，这只是一个最小数量，因为函数对象可以持有任意多的参数，那些不需要被放弃。考虑下面的两个 bind 表达式和它们的调用：</p>
+<pre class="programlisting">bind(g, _3, _3, _3)(x, y, z); <br>bind(g, _1, _1, _1)(x, y, z); <br></pre>
+<p>第一行放弃参数 <code class="literal">x</code> 和 <code class="literal">y</code>，做成这样的调用：</p>
+<pre class="programlisting">g(z, z, z) <br></pre>
+<p>第二行放弃参数 <code class="literal">y</code> 和 <code class="literal">z</code>，调用：</p>
+<pre class="programlisting">g(x, x, x)<br></pre>
+<p>在库的早期版本中，后一行将导致一个编译时错误。这主要是安全性和灵活性之间的一个折衷，而且这个问题在 Boost 库的评审期间引起广泛讨论。<span class="emphasis"><em>strict arity</em></span>（强数量）检查的主要观点在于它可以尽早捕捉到一个编程错误，而且一个 lambda 表达式显式放弃它的参数也很容易：</p>
+<pre class="programlisting">(_3, bind(g, _1, _1, _1))(x, y, z);<br></pre>
+<p>这个 lambda 表达式持有三个参数。逗号操作符的左侧参数什么也不做，逗号返回右侧参数的求值结果，这样我们就在强数量检查的情况下调用了 <code class="literal">g(x, x, x)</code>。</p>
+<p>反对强数量检查的主要观点在于需要放弃参数是很平常的事情，因此应该是直截了当的，而且强数量检查也没有真正换取多少安全性，特别是它不是对称的。例如，如果程序员想要写表达式 <code class="literal">_1 + _2</code>，但是错写成 <code class="literal">_1 + 2</code>，如果有强数量检查，编译器会发现这个错误。但是，如果错误表达式是 <code class="literal">1 + _2</code>，这个错误就不会被注意。此外，弱数量检查的实现更简单。根据 Boost 审查的建议，强数量检查被去掉了。</p>
+</div>
+</div>
+<table width="100%"><tbody><tr>
+<td align="left"></td>
+<td align="right"><small>Copyright  1999-2004 Jaakko Jrvi, Gary Powell</small></td>
+</tr></tbody></table>
+<hr>
+<div class="spirit-nav">
+<a accesskey="p" href="lambda/s09.html"><img src="images/prev.png" alt="Prev"></a><a accesskey="u" href="lambda.html"><img src="images/up.png" alt="Up"></a><a accesskey="h" href="index.html"><img src="images/home.png" alt="Home"></a><a accesskey="n" href="mpi.html"><img style="border: 0px solid ; width: 19px; height: 19px;" src="images/next.png" alt="Next"></a>
+</div>
+</body></html>

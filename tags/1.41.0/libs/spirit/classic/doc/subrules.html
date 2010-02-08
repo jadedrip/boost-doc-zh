@@ -1,0 +1,236 @@
+<!DOCTYPE HTML PUBLIC "-//W3C//DTD HTML 4.01 Transitional//EN">
+<html><head>
+
+<title>Subrules</title><meta http-equiv="Content-Type" content="text/html; charset=UTF-8">
+<link rel="stylesheet" href="theme/style.css" type="text/css"></head>
+<body>
+<table background="theme/bkd2.gif" border="0" cellspacing="2" width="100%">
+  <tbody><tr>
+    <td width="10">
+    </td>
+    <td width="85%">
+      <font face="Verdana, Arial, Helvetica, sans-serif" size="6"><b>Subrules 子规则</b></font>
+    </td>
+    <td width="112"><a href="http://spirit.sf.net"><img src="theme/spirit.gif" align="right" border="0" height="48" width="112"></a></td>
+  </tr>
+</tbody></table>
+<br>
+<table border="0">
+  <tbody><tr>
+    <td width="10"></td>
+    <td width="30"><a href="../index.html"><img src="theme/u_arr.gif" border="0"></a></td>
+    <td width="30"><a href="grammar.html"><img src="theme/l_arr.gif" border="0"></a></td>
+    <td width="30"><a href="semantic_actions.html"><img src="theme/r_arr.gif" border="0"></a></td>
+  </tr>
+</tbody></table>
+<p>Spirit is implemented using expression templates. This is a very powerful technique.
+  Along with its power comes some complications. We almost take for granted that
+  when we write <tt>i | j &gt;&gt; k</tt> where <tt>i</tt>, <tt>j</tt> and <tt>k</tt>
+  are all integers the result is still an integer. Yet, with expression templates,
+  the same expression <tt>i | j &gt;&gt; k</tt> where <tt>i</tt>, <tt>j</tt> and
+  <tt>k</tt> are of type <tt>T</tt>, the result is a complex composite type [see
+  <a href="basic_concepts.html">Basic Concepts</a>]. Spirit expressions, which
+  are combinations of primitives and composites yield an infinite set of new types.
+  One problem is that C++ offers no easy facility to deduce the type of an arbitrarily
+  complex expression that yields a complex type. Thus, while it is easy to write:<br>Spirit 是用表达式模板来实现的。这是很强大的技术。与这种强大相伴的是一些复杂性。我们得到的保证是，当我们写下<tt>i | j &gt;&gt; k</tt> 其中 <tt>i</tt>, <tt>j</tt> 和 <tt>k</tt>
+  都是整数时，其结果也还是一个整数。然而，对于表达式模板，同一个表达式 <tt>i | j &gt;&gt; k</tt> 若其中 <tt>i</tt>, <tt>j</tt> 和
+  <tt>k</tt> 为类型 <tt>T</tt>，那么结果就是一个复杂的合成类型[见
+  <a href="basic_concepts.html">基本概念</a>]。Spirit的表达式，这个元素和复合物的混合体导致了一个新类型的无穷集。一个问题就是，C++没有提供一个简便的方法来推演一个会产生复杂类型的复杂表达式的类型。因此，虽然这么写很容易：</p>
+<pre><code><font color="#000000"><span class="identifier">    </span><span class="keyword">int </span><span class="identifier">r </span><span class="special">= </span><span class="identifier">i </span><span class="special">| </span><span class="identifier">j </span><span class="special">&gt;&gt; </span><span class="identifier">k</span><span class="special">; </span><span class="comment">// where i, j, and k are ints 其中i,j和k都是int</span></font></code></pre>
+<p>Expression templates yield an endless supply of types. Without the <a href="rule.html">rule</a>, 
+  there is no easy way to do this in C++ if <tt>i</tt>, <tt>j</tt> and <tt>k</tt> 
+  are Spirit parsers:<br>但表达式模板造成了新类型的无限可能。没有<a href="rule.html">规则</a>的话，在C++中，如果 <tt>i</tt>, <tt>j</tt> 和 <tt>k</tt>&nbsp;是Spirit的分析器，就没什么好办法来作这个了。</p>
+<pre><code><font color="#000000"><span class="comment">    </span><span class="special">&lt;</span><span class="identifier">what_type???</span><span class="special">&gt; </span><span class="identifier">r </span><span class="special">= </span><span class="identifier">i </span><span class="special">| </span><span class="identifier">j </span><span class="special">&gt;&gt; </span><span class="identifier">k</span><span class="special">; </span><span class="comment">// where i, j, and k are Spirit parsers  其中i,j和k是Spirit分析器</span></font></code></pre>
+<p>If <tt>i</tt>, <tt>j</tt> and <tt>k</tt> are all <tt>chlit&lt;&gt;</tt> objects, 
+  the type that we want is:<br>如果 <tt>i</tt>, <tt>j</tt> 和 <tt>k</tt> 都是 <tt>chlit&lt;&gt;</tt>&nbsp;对象，那么我们想要的类型就是：</p>
+<pre><code><font color="#000000"><span class="comment">    </span><span class="keyword">typedef<br>        </span><span class="identifier">alternative</span><span class="special">&lt;<br>            </span><span class="identifier">chlit</span><span class="special">&lt;&gt;</span><span class="comment">      //  i<br>          </span><span class="special">,</span> <span class="identifier">sequence</span><span class="special">&lt;<br>                </span><span class="identifier">chlit</span><span class="special">&lt;&gt;  </span><span class="comment">//  j<br>          </span><span class="special">    ,</span><span class="comment"> </span><span class="identifier">chlit</span><span class="special">&lt;&gt;  </span><span class="comment">//  k<br>            </span><span class="special">&gt;<br>        &gt;<br>    </span><span class="identifier">rule_t</span><span class="special">;<br><br>    </span><span class="identifier">rule_t r </span><span class="special">= </span><span class="identifier">i </span><span class="special">| </span><span class="identifier">j </span><span class="special">&gt;&gt; </span><span class="identifier">k</span><span class="special">; </span><span class="comment">// where i, j, and k are chlit&lt;&gt; objects  其中i,j和k都是chlit&lt;&gt;对象</span></font></code></pre>
+<p>We deliberately formatted the type declaration nicely to make it understandable. 
+  Try that with a more complex expression. While it can be done, explicitly spelling 
+  out the type of a Spirit expression template is tedious and error prone. The 
+  right hand side (rhs) has to mirror the type of the left hand side (lhs). (<img src="theme/lens.gif" height="16" width="15"> 
+  Yet, if you still wish to do it, see this <a href="techniques.html#no_rules">link</a> 
+  for a technique).<br>我们故意把类型声明的格式弄得好看些，以方便理解。试着对更复杂的表达式用这个。虽然的确也可以做到，但显式拼写Spirit表达式模板的类型是冗烦而易错的。右操作数（rhs）必须是左操作数（lhs）的镜像。（<img src="theme/lens.gif" height="16" width="15">不过，如果你坚持这么作的话，这个<a href="techniques.html#no_rules">链接</a>里有相关的技术）。</p>
+<table align="center" border="0" width="80%">
+  <tbody><tr>
+    <td class="note_box"><p><img src="theme/lens.gif" height="16" width="15"><b> 
+        typeof and auto</b> <br>
+        <br>
+        Some compilers already support the <tt>typeof</tt> keyword. This can be 
+        used to free us from having to explicitly type the type (pun intentional). 
+        Using the <tt>typeof</tt>, we can rewrite the Spirit expression above 
+        as:</p><p>有些编译器已经支持 <tt>typeof</tt> 关键字了。这可以把我们从显式地打出类型中解放出来。使用 <tt>typeof</tt>，我们可以把上面的Spirit表达式写成这样：<br>
+        <br>
+        <span class="keyword"><code>typeof</code><code></code></span><code><span class="special">(</span><span class="identifier">i 
+        </span><span class="special">| </span><span class="identifier">j </span><span class="special">&gt;&gt; 
+        </span><span class="identifier">k</span><span class="special">) </span><span class="identifier">r 
+        </span><span class="special">= </span><span class="identifier">i </span><span class="special">| 
+        </span><span class="identifier">j </span><span class="special">&gt;&gt; </span><span class="identifier">k</span><span class="special">;</span></code><br>
+        <br>
+        While this is better than having to explicitly declare a complex type, 
+        it is redundant, error prone and still an eye sore. The expression is 
+        typed twice. The only way to simplify this is to introduce a macro (See 
+        this <a href="techniques.html#typeof">link</a> for more information).<br>虽然这比显示声明复杂类型好些，但还是有冗余，易错以及晃眼。表达式被输入了两次。唯一简化这个的方法是引进一个宏（这个<a href="techniques.html#typeof">链接</a>里有更多的信息）<br>
+        <br>
+        <a href="http://www.boost-consulting.com">David Abrahams</a> proposed 
+        in comp.std.c++ to reuse the <tt>auto</tt> keyword for type deduced variables. 
+        This has been extensibly discussed in <a href="http://www.boost.org">boost.org</a>. Example:<br><a href="http://www.boost-consulting.com/">David Abrahams</a>在 comp.std.c++ 中提议重用 <tt>auto</tt> 关键字来标识类型推演变量。这在 <a href="http://www.boost.org/">boost.org</a> 中有延伸讨论。例子：<br>
+        <br>
+        <span class="keyword"><code>auto </code></span><code><span class="identifier">r 
+        </span><span class="special">= </span><span class="identifier">i </span><span class="special">| 
+        </span><span class="identifier">j </span><span class="special">&gt;&gt; </span><span class="identifier">k</span><span class="special">;</span></code><br>
+        <br>
+        Once such a C++ extension is accepted into the standard, this would be 
+        a neat solution and a nice fit for our purpose. It's not a complete solution 
+        though since there are still situations where we do not know the rhs beforehand; 
+        for instance when pre-declaring cyclic dependent rules.<br>一旦这个C++的扩展被标准接纳，将是一个干净利落的解决方案，而且和我们的目标相当吻合。但这还不是一个完整的解决方案，某些情况下我们无法预知rhs的类型；例如在前置声明有环形依赖的规则的时候。</p>
+    </td>
+  </tr>
+</tbody></table>
+<p>Fortunately, rules come to the rescue. Rules can capture the type of the expression
+  assigned to it. Thus:<br>幸运的是，规则这个救星出现了。规则可以捕获赋予它的表达式的类型。因此：</p>
+<pre><code><font color="#000000">    <span class="identifier">rule</span><span class="special">&lt;&gt; </span><span class="identifier">r </span><span class="special">= </span><span class="identifier">i </span><span class="special">| </span><span class="identifier">j </span><span class="special">&gt;&gt; </span><span class="identifier">k</span><span class="special">;  </span><span class="comment">// where i, j, and k are chlit&lt;&gt; objects</span></font></code><code><font color="#000000"><span class="comment">  其中i,j和k都是chlit&lt;&gt;对象</span></font></code></pre>
+<p>It might not be apparent but behind the scenes, plain rules are actually implemented
+  using a pointer to a runtime polymorphic abstract class that holds the dynamic
+  type of the parser assigned to it. When a Spirit expression is assigned to a
+  rule, its type is encapsulated in a concrete subclass of the abstract class.
+  A virtual parse function delegates the parsing to the encapsulated object.<br>可
+能不那么直观，但在幕后，单纯的规则实际上是用一个保有分配给它的分析器的动态类型的运行时多态的抽象类的指针来实现的。当一个Spirit表达式被赋值
+给一个规则，它的类型就被一个抽象类的具体派生类所封装了。一个虚的 parse 函数代理了被封装的对象的分析工作。</p>
+<p>Rules have drawbacks though:<br>然而规则也有缺点：</p>
+<p><img src="theme/bullet.gif" height="12" width="12"> It is coupled to a specific 
+  scanner type. The rule is tied to a specific scanner [see <a href="faq.html#scanner_business">The 
+  Scanner Business</a>].<br>它与特定的扫描器类型耦合。规则是被绑定到特定的扫描器上的[见<a href="faq.html#scanner_business">分析器事务</a>]。<br>
+  <img src="theme/bullet.gif" height="12" width="12"> The rule's parse member 
+function has a virtual function call overhead that cannot be inlined.<br>规则的 parse 成员函数有虚函数调用的负担，不能被内联。</p>
+<h2>Static rules: subrules 静态规则：子规则</h2>
+<p>The subrule is a fully static version of the rule. The subrule does not have
+  the drawbacks listed above.<br>子规则是规则的全静态版本。它没有上面列出的那些缺点。</p>
+<p><img src="theme/bullet.gif" height="12" width="12"> The subrule is not tied 
+  to a specific scanner so just about any scanner type may be used<br>子规则没有与特定的扫描器类型绑定，因此可以使用任意的扫描器类型<br>
+  <img src="theme/bullet.gif" height="12" width="12"> The subrule also allows 
+  aggressive inlining since there are no virtual function calls<br>子规则也允许最大限度的内联，因为它没有虚函数调用</p>
+<pre><code><font color="#000000"><span class="identifier">    </span><span class="keyword">template</span><span class="special">&lt;</span><span class="keyword">int </span></font><span class="identifier">ID</span><font color="#000000"><span class="special">, </span><span class="keyword">typename </span><span class="identifier">ContextT </span><span class="special">= </span><span class="identifier">parser_context</span><span class="special">&lt;&gt;</span> <span class="special">&gt;<br>    </span><span class="keyword">class </span><span class="identifier">subrule</span><span class="special">;</span></font></code></pre>
+<p>The first template parameter gives the subrule an identification tag. Like 
+  the <a href="rule.html">rule</a>, there is a ContextT template parameter that 
+  defaults to <code><tt>parser_context</tt></code>. You need not be concerned 
+  at all with the <tt>ContextT</tt> template parameter unless you wish to tweak 
+  the low level behavior of the subrule. Detailed information on the <tt>ContextT</tt> 
+  template parameter is provided <a href="indepth_the_parser_context.html">elsewhere</a>.<br>第一个模板参数给了子规则一个身份标签。就像<a href="rule.html">规则</a>一样，它也有一个默认为 <code><tt>parser_context</tt></code> 的 ContextT 模板参数。你完全不用理会&nbsp;<tt>ContextT</tt> 这个模板参数，除非你想调整子规则的底层行为。有关 <tt>ContextT</tt>&nbsp;模板参数的细节在<a href="indepth_the_parser_context.html">其他地方</a>提供。</p>
+
+<p>Presented above is the public API. There may actually be more template parameters 
+  after <tt>ContextT</tt>. Everything after the <tt>ContextT</tt> parameter should 
+  not be of concern to the client and are strictly for internal use only.<br>上面出现的是它的公共API。实际上在 <tt>ContextT</tt> 后面还可能有其他的模板参数。所有在 <tt>ContextT</tt>&nbsp;之后的东西都不应该被用户所关心，并且被严格限定在内部使用。</p><p>Apart from a few minor differences, the subrule follows the usage and syntax 
+  of the rule closely. Here's the calculator grammar using subrules:<br>除了某些细节的不同，子规则的使用和语法与规则很接近。这里是用子规则实现的计算器语法：</p>
+<pre><code><font color="#000000"><span class="comment">    </span><span class="keyword">struct </span><span class="identifier">calculator </span><span class="special">: </span><span class="keyword">public </span><span class="identifier">grammar</span><span class="special">&lt;</span><span class="identifier">calculator</span><span class="special">&gt;<br>    </span><span class="special">{<br>        </span><span class="keyword">template </span><span class="special">&lt;</span><span class="keyword">typename </span><span class="identifier">ScannerT</span><span class="special">&gt;<br>        </span><span class="keyword">struct </span><span class="identifier">definition<br>        </span><span class="special">{<br>            </span><span class="identifier">definition</span><span class="special">(</span><span class="identifier">calculator </span><span class="keyword">const</span><span class="special">&amp; </span><span class="identifier">self</span><span class="special">)<br>            </span><span class="special">{<br>                </span><span class="identifier">first </span><span class="special">=<br>                </span><span class="special">(<br>                    </span><span class="identifier">expression  </span><span class="special">= </span><span class="identifier">term </span><span class="special">&gt;&gt; </span><span class="special">*((</span><span class="literal">'+' </span><span class="special">&gt;&gt; </span><span class="identifier">term</span><span class="special">) </span><span class="special">| </span><span class="special">(</span><span class="literal">'-' </span><span class="special">&gt;&gt; </span><span class="identifier">term</span><span class="special">)),<br>                    </span><span class="identifier">term        </span><span class="special">= </span><span class="identifier">factor </span><span class="special">&gt;&gt; </span><span class="special">*((</span><span class="literal">'*' </span><span class="special">&gt;&gt; </span><span class="identifier">factor</span><span class="special">) </span><span class="special">| </span><span class="special">(</span><span class="literal">'/' </span><span class="special">&gt;&gt; </span><span class="identifier">factor</span><span class="special">)),<br>                    </span><span class="identifier">factor      </span><span class="special">= </span><span class="identifier">integer </span><span class="special">| </span><span class="identifier">group</span><span class="special">,<br>                    </span><span class="identifier">group       </span><span class="special">= </span><span class="literal">'(' </span><span class="special">&gt;&gt; </span><span class="identifier">expression </span><span class="special">&gt;&gt; </span><span class="literal">')'<br>                </span><span class="special">);<br>            </span><span class="special">}<br><br>            </span><span class="identifier">subrule</span><span class="special">&lt;</span><span class="number">0</span><span class="special">&gt;  </span><span class="identifier">expression</span><span class="special">;<br>            </span><span class="identifier">subrule</span><span class="special">&lt;</span><span class="number">1</span><span class="special">&gt;  </span><span class="identifier">term</span><span class="special">;<br>            </span><span class="identifier">subrule</span><span class="special">&lt;</span><span class="number">2</span><span class="special">&gt;  </span><span class="identifier">factor</span><span class="special">;<br>            </span><span class="identifier">subrule</span><span class="special">&lt;</span><span class="number">3</span><span class="special">&gt;  </span><span class="identifier">group</span><span class="special">;<br><br>            </span><span class="identifier">rule</span><span class="special">&lt;</span><span class="identifier">ScannerT</span><span class="special">&gt; </span><span class="identifier">first</span><span class="special">;<br>            </span><span class="identifier">rule</span><span class="special">&lt;</span><span class="identifier">ScannerT</span><span class="special">&gt; </span><span class="keyword">const</span><span class="special">&amp;<br>            </span><span class="identifier">start</span><span class="special">() </span><span class="keyword">const </span><span class="special">{ </span><span class="keyword">return </span><span class="identifier">first</span><span class="special">; </span><span class="special">}<br>        </span><span class="special">};<br>    </span><span class="special">};</span></font></code></pre>
+<p><img src="theme/lens.gif" height="16" width="15"> A fully working example with 
+  <a href="semantic_actions.html">semantic actions</a> can be <a href="../example/fundamental/subrule_calc.cpp">viewed 
+  here</a>. This is part of the Spirit distribution.<br><img src="theme/lens.gif" height="16" width="15">绑定了<a href="semantic_actions.html">语义动作</a>的完整的例子<a href="../example/fundamental/subrule_calc.cpp">见这里</a>。这是Spirit发布包的一部分。</p>
+<table align="left" border="0">
+  <tbody><tr> 
+    <td width="199"><img src="theme/subrule1.png" height="224" width="234"></td>
+    <td width="2"></td>
+  </tr>
+</tbody></table>
+<p>The subrule as an efficient version of the rule. Compiler optimizations such
+  as aggressive inlining help reduce the code size and increase performance significantly.<br>子规则是高效版的规则。编译器用诸如高度内联这样的优化帮助减小程序尺寸和显著提高效率。</p>
+<p>The subrule is not a panacea however. Subrules push the C++ compiler hard to
+  its knees. For example, current compilers have a limit on recursion depth that
+  may not be exceeded. Don't even think about writing a full pascal grammar using
+  subrules alone. A grammar using subrules is a single C++ expression. Current
+  C++ compilers cannot handle very complex expressions very well. Finally, a plain
+  rule is still needed to act as place holder for subrules.<br>但子规则并不是万灵药。子规则把C++编译器逼到了极限。比如，目前的编译器有可能不能克服的递归深度的极限。千万不要想写一个Pascal语法而
+只使用子规则。一个使用子规则的语法是一个单一的C++表达式。目前C++编译器还不能很好地应付复杂的表达式。最后，一个普通的规则还是要作为保有子规
+则的占位符而出现的。</p>
+<p>The code above is a good example of the recommended way to use subrules. Notice 
+  the hierarchy. We have a grammar that encapsulates the whole calculator. The 
+  start rule is a plain rule that holds the set of subrules. The subrules in turn 
+  defines the actual details of the grammar.<br>以上代码是一个关于如何按照推荐的范式使用子规则的很好的例子。注意它的层次。我们有一个语法来封装整个计算器。起始规则是一个保有子规则的集合的纯规则。子规则依次定义语法的实际细节。</p>
+<table align="center" border="0" width="80%">
+  <tbody><tr> 
+    <td class="note_box"><img src="theme/lens.gif" height="16" width="15"><b> 
+      Template instantiation depth</b> 模板实例化深度<br> <br>
+      Spirit pushes the C++ compiler hard. Current C++ compilers cannot handle 
+      very complex heavily nested expressions very well. One restricting factor 
+      is the typical compiler's limit on template recursion depth. Some, but not 
+      all, compilers allow this limit to be configured.<font color="#c0c0c0"><br></font>Spirit给C++编译器的负担很重，目前的C++编译器无法很好地处理非常复杂的重重嵌套的表达式。一个制约因素是典型的编译器在模板递归上的深度的限制。某些，但并非全部编译器允许调整这个深度。<br>
+      <br>
+      g++'s maximum can be set using a compiler flag: -ftemplate-depth. Set this 
+      appropriately if you have a relatively complex grammar.<br>g++的最大值可以用编译器标志-ftemplate-depth来设置。可以把它设置成合适的值，如果你有相对复杂的语法的话。<br>
+      <br>
+      Microsoft Visual C++ can take greater than 1000 for both template class 
+      and function instantiation depths. However, the linker chokes with deep 
+      template function instantiation unless inline recursion depth is set using 
+      these pragmas:<br>Microsoft Visual C++在类模板和函数模板上都大于1000。然而，连接器处理深度模板函数实例时会阻塞，除非内联递归深度被用这的参数设置了：<br>
+      <br>
+      <span class="preprocessor">#pragma</span> inline_depth<span class="special">(</span>255<span class="special">)</span><br>
+      <span class="preprocessor">#pragma</span> inline_recursion<span class="special">(</span>on<span class="special">)<br>
+      <br>
+      </span>Perhaps this limitations no longer applies to more current versions 
+      of these compilers. Be sure to check your compiler documentation.<br>也许这些限制在现在的编译器上已经不存在了。查阅你的编译器文档以确认这些。</td>
+  </tr>
+</tbody></table>
+<p>This setup gives a good balance. The subrules do all the work. Each grammar 
+  will have only one rule: <tt>first</tt>. The rule is used just to hold the subrules 
+  and make them visible to the grammar.<br>这种设置带来一个好的平衡。子规则干所有事情。每个语法都只有一个规则：<tt>first</tt>。规则只是用来持有子规则并使他们对语法可见。</p>
+<h3>The subrule definition 子规则的定义</h3>
+<p>Like the rule, the expression after assignment operator <tt>=</tt> defines
+  the subrule:<br>类似于规则，赋值号 <tt>=</tt> 后面的表达式定义了子规则：</p>
+<pre>    <span class="identifier">identifier </span><span class="special">= </span><span class="identifier">expression</span></pre>
+<p>Unlike rules, subrules may be defined only once. Redefining a subrule is illegal 
+  and will result to a compile time assertion.<br>与规则不同的是，子规则只能定义一次。重定义子规则是非法的，将导致编译时断言失败。</p>
+<h3>Separators [ , ] 分隔符</h3>
+<p>While rules are terminated by the semicollon <tt>';'</tt>. Subrules are not 
+  terminated but are separated by the comma: <tt>','</tt>. Like Pascal statements, 
+  the last subrule in a group may not have a trailing comma.<br>虽然规则以分号<tt>';'</tt>终结，但子规则并无终结，而是以逗号<tt>','</tt>分隔。就像Pascal语句，一组子规则中最后一个子规则并不需要后缀的逗号。</p>
+<pre><span class="identifier">    </span><span class="identifier">a </span><span class="special">= </span><span class="identifier">ch_p</span><span class="special">(</span><span class="literal">'a'</span><span class="special">),<br>    </span><span class="identifier">b </span><span class="special">= </span><span class="identifier">ch_p</span><span class="special">(</span><span class="literal">'b'</span><span class="special">),<br>    </span><span class="identifier">c </span><span class="special">= </span><span class="identifier">ch_p</span><span class="special">(</span><span class="literal">'c'</span><span class="special">), </span><span class="comment">// BAD, trailing comma  错误，以逗号结尾</span><code></code><code></code></pre>
+<p>
+</p><pre><code><span class="comment">    </span><span class="identifier">a </span><span class="special">= </span><span class="identifier">ch_p</span><span class="special">(</span><span class="literal">'a'</span><span class="special">),<br>    </span><span class="identifier">b </span><span class="special">= </span><span class="identifier">ch_p</span><span class="special">(</span><span class="literal">'b'</span><span class="special">),<br>    </span><span class="identifier">c </span><span class="special">= </span><span class="identifier">ch_p</span><span class="special">(</span><span class="literal">'c'</span><span class="special">)  </span><span class="comment">// OK</span></code></pre>
+<h3> The start subrule 起始子规则</h3>
+<p>Unlike rules, parsing proceeds from the start subrule. The first (topmost) 
+  subrule in a group of subrules is called the <b>start subrule</b>. In our example 
+  above, <tt>expression</tt> is the start subrule. When a group of subrules is 
+  called forth, the start subrule <tt>expression</tt> is called first.<br>与规则不同，分析过程从起始子规则开始。一组子规则中第一个（最高层）的子规则被称为<strong>起始子规则</strong>。在上面的例子里，<tt>expression</tt> 是起始子规则。当一组子规则被有效调用时，起始子规则 <tt>expression</tt> 将首先被调用。</p>
+<h3>IDs</h3>
+<p>Each subrule has a corresponding ID; an integral constant that uniquely specifies 
+  the subrule. Our example above has four subrules. They are declared as:<br>每个子规则都有相应的ID；一个用于唯一标识子规则的整形常量。上面的例子有四个子规则。这么声明他们：</p>
+<pre><code><span class="comment">    </span><span class="identifier">subrule</span><span class="special">&lt;</span><span class="number">0</span><span class="special">&gt;  </span><span class="identifier">expression</span><span class="special">;<br>    </span><span class="identifier">subrule</span><span class="special">&lt;</span><span class="number">1</span><span class="special">&gt;  </span><span class="identifier">term</span><span class="special">;<br>    </span><span class="identifier">subrule</span><span class="special">&lt;</span><span class="number">2</span><span class="special">&gt;  </span><span class="identifier">factor</span><span class="special">;<br>    </span><span class="identifier">subrule</span><span class="special">&lt;</span><span class="number">3</span><span class="special">&gt;  </span><span class="identifier">group</span><span class="special">;</span></code></pre>
+<h3> Aliases 别名</h3>
+<p>It is possible to have subrules with similar IDs. A subrule with a similar
+  ID to will be an alias of the other. Both subrules may be used interchangeably.<br>有可能多个子规则具有相同的ID。有相同ID的子规则将互为对方的别名。这些子规则可以互换使用。</p>
+<pre><code><span class="special">    </span><span class="identifier">subrule</span><span class="special">&lt;</span><span class="number">0</span><span class="special">&gt;  </span><span class="identifier">a</span><span class="special">;<br>    </span><span class="identifier">subrule</span><span class="special">&lt;</span><span class="number">0</span><span class="special">&gt;  </span><span class="identifier">alias</span><span class="special">;  </span><span class="comment">// alias of a  a的别名</span></code></pre>
+<h3>Groups: scope and nesting 编组：范围与嵌套</h3>
+<p>The scope of a subrule and its definition is the enclosing group, typically 
+  (and by convention) enclosed inside the parentheses. IDs outside a scope are 
+  not directly visible. Inner subrule groups can be nested by enclosing each sub-group 
+  inside another set of parentheses. Each group is unique and acts independently. 
+  Consequently, while it may not be advisable to do so, a subrule in a group may 
+  share the same ID as a subrule in another group since both groups are independent 
+  of each other.<br>子规则及其定义的范围是封装他们的组，典型（同时也是约定）情况是封装在括号内。范围之外的ID并不直接可见。内部的子规则组可以使用另外一对括号来封装以实现嵌套。每个组都是唯一的并且独立工作。因此，虽然不建议这么做，但两个不同组的子规则可以使用同一个id。</p>
+<pre><code><span class="comment">    </span><span class="identifier">subrule</span><span class="special">&lt;</span><span class="number">0</span><span class="special">&gt; </span><span class="identifier">a</span><span class="special">;<br>    </span><span class="identifier">subrule</span><span class="special">&lt;</span><span class="number">1</span><span class="special">&gt; </span><span class="identifier">b</span><span class="special">;<br>    </span><span class="identifier">subrule</span><span class="special">&lt;</span><span class="number">0</span><span class="special">&gt; </span><span class="identifier">c</span><span class="special">;<br>    </span><span class="identifier">subrule</span><span class="special">&lt;</span><span class="number">1</span><span class="special">&gt; </span><span class="identifier">d</span><span class="special">;<br><br>    </span><span class="special">(                       </span><span class="comment">// outer subrule group, scope of a and b 外层子规则组，a和b的范围<br>        </span><span class="identifier">a </span><span class="special">= </span><span class="identifier">ch_p</span><span class="special">(</span><span class="literal">'a'</span><span class="special">),<br>        </span><span class="identifier">b </span><span class="special">=<br>        </span><span class="special">(                   </span><span class="comment">// inner subrule group, scope of b and c 内层子规则组，c和d的范围<br>            </span><span class="identifier">c </span><span class="special">= </span><span class="identifier">ch_p</span><span class="special">(</span><span class="literal">'c'</span><span class="special">),<br>            </span><span class="identifier">d </span><span class="special">= </span><span class="identifier">ch_p</span><span class="special">(</span><span class="literal">'d'</span><span class="special">)<br>        </span><span class="special">)<br>    </span><span class="special">)</span></code></pre>
+<p>Subrule IDs need to be unique only within a group. A grammar is an implicit 
+  group. Furthermore, even subrules in a grammar may have the same IDs without 
+  clashing if they are inside a group. Subrules may be explicitly grouped using 
+  the parentheses. Parenthesized groups have unique scopes. In the code above, 
+  the outer subrule group defines the subrules <tt>a</tt> and <tt>b</tt> while 
+  the inner subrule group defines the subrules <tt>c</tt> and <tt>d</tt>. Notice 
+  that the definition of <tt>b</tt> is the inner subrule.<br>子规则的ID的唯一性只是在同组中要求。一个语法就是一个隐式的组。更进一步，甚至同一个语法中的子规则也可以使用相同的ID，只要他们在不同组
+中。子规则可以用括号显示分组。带括号的组有唯一的范围。上面的代码中，外层的子规则组定义了子规则 <tt>a</tt> 和 <tt>b</tt>，而内层的子规则组定义了子规则 <tt>c</tt> 和 <tt>d</tt>。注意b的定义就是内层的
+子规则。</p>
+<table border="0">
+  <tbody><tr>
+    <td width="10"></td>
+    <td width="30"><a href="../index.html"><img src="theme/u_arr.gif" border="0"></a></td>
+    <td width="30"><a href="grammar.html"><img src="theme/l_arr.gif" border="0"></a></td>
+    <td width="30"><a href="semantic_actions.html"><img src="theme/r_arr.gif" border="0"></a></td>
+  </tr>
+</tbody></table>
+<br>
+<hr size="1">
+<p class="copyright">Copyright © 1998-2003 Joel de Guzman<br>
+  <br>
+  <font size="2">Use, modification and distribution is subject to the Boost Software
+    License, Version 1.0. (See accompanying file LICENSE_1_0.txt or copy at
+    http://www.boost.org/LICENSE_1_0.txt)</font></p>
+<p>&nbsp;</p>
+<p><code><font color="#000000"><font color="#0000ff"></font></font></code></p>
+</body></html>

@@ -1,0 +1,604 @@
+<!DOCTYPE HTML PUBLIC "-//W3C//DTD HTML 4.01 Transitional//EN">
+<html>
+<head>
+
+
+  
+  <meta http-equiv="Content-Type" content="text/html; charset=UTF-8">
+
+
+
+  
+  
+  <title>How To</title>
+  <link rel="stylesheet" href="../boostbook.css" type="text/css">
+
+
+  
+  <meta name="generator" content="DocBook XSL Stylesheets V1.68.1">
+
+
+  
+  <link rel="start" href="../index.html" title="The Boost C++ Libraries BoostBook Documentation Subset">
+
+
+  
+  <link rel="up" href="../program_options.html" title="Chapter&nbsp;10.&nbsp;Boost.Program_options">
+
+
+  
+  <link rel="prev" href="overview.html" title="Library Overview">
+
+
+  
+  <link rel="next" href="design.html" title="Design Discussion">
+</head>
+
+
+<body alink="#0000ff" bgcolor="white" link="#0000ff" text="black" vlink="#840084">
+
+
+<table cellpadding="2" width="100%">
+
+
+  <tbody>
+
+    <tr>
+
+      <td valign="top"><img alt="Boost C++ Libraries" src="../../../boost.png" height="86" width="277"></td>
+
+
+      <td align="center"><a href="../../../index.htm">Home</a></td>
+
+
+      <td align="center"><a href="../../../libs/libraries.htm">Libraries</a></td>
+
+
+      <td align="center"><a href="../../../people/people.htm">People</a></td>
+
+
+      <td align="center"><a href="../../../more/faq.htm">FAQ</a></td>
+
+
+      <td align="center"><a href="../../../more/index.htm">More</a></td>
+
+
+    </tr>
+
+  
+  </tbody>
+</table>
+
+
+<hr>
+<div class="spirit-nav">
+<a accesskey="p" href="overview.html"><img src="../images/prev.png" alt="Prev"></a><a accesskey="u" href="../program_options.html"><img src="../images/up.png" alt="Up"></a><a accesskey="h" href="../index.html"><img src="../images/home.png" alt="Home"></a><a accesskey="n" href="design.html"><img src="../images/next.png" alt="Next"></a>
+</div>
+
+
+<div class="section" lang="en">
+<div class="titlepage">
+<div>
+<div>
+<h2 class="title" style="clear: both;">
+<a name="program_options.howto"></a>How To</h2>
+
+</div>
+
+</div>
+
+</div>
+
+
+<div class="toc">
+<dl>
+
+
+  <dt><span class="section"><a href="howto.html#id1592624">非传统语法</a></span></dt>
+
+
+  <dt><span class="section"><a href="howto.html#id1592676">响应文件</a></span></dt>
+
+
+  <dt><span class="section"><a href="howto.html#id1592754">Winmain 命令行</a></span></dt>
+
+
+  <dt><span class="section"><a href="howto.html#id1592795">选项组和隐藏选项</a></span></dt>
+
+
+  <dt><span class="section"><a href="howto.html#id1592926">定制验证器</a></span></dt>
+
+
+  <dt><span class="section"><a href="howto.html#id1592999">Unicode 支持</a></span></dt>
+
+
+  <dt><span class="section"><a href="howto.html#id1593176">允许未知选项</a></span></dt>
+
+
+</dl>
+
+</div>
+
+
+<p>本节描述本库如何在特定情况下使用。</p>
+
+
+<div class="section" lang="en">
+<div class="titlepage">
+<div>
+<div>
+<h3 class="title">
+<a name="id1592624"></a>非传统语法</h3>
+
+</div>
+
+</div>
+
+</div>
+
+
+<p>有时候，标准的命令行语法是不够的。例如，gcc 编译器有 "-frtti" 和 -fno-rtti" 选项，这种语法不能直接支持。
+    </p>
+
+
+<a class="indexterm" name="id1592636"></a>
+<p>对于这种情况，程序库允许用户提供一个 <em class="firstterm">附加分析器</em> --&nbsp;一个在每个命令行元素被程序库处理之前就调用的函数。如果附加分析器认可该语法，则返回选项名和选项值。上述例子可以用以下代码处理：
+    </p>
+
+
+<p>
+      </p>
+
+
+<pre class="programlisting">pair&lt;string, string&gt; reg_foo(const string&amp; s)<br>{<br>    if (s.find("-f") == 0) {<br>        if (s.substr(2, 3) == "no-")<br>            return make_pair(s.substr(5), string("false"));<br>        else<br>            return make_pair(s.substr(2), string("true"));<br>    } else {<br>        return make_pair(string(), string());<br>    }<br>}<br></pre>
+
+
+<p>这就是附加分析器的定义。在分析命令行时，我们这样传递附加分析器：
+</p>
+
+
+<pre class="programlisting">store(command_line_parser(ac, av).options(desc).extra_parser(reg_foo)<br>        .run(), vm);<br></pre>
+
+
+<p>完整的例子请见 "example/custom_syntax.cpp" 文件。                
+    </p>
+
+
+</div>
+
+
+<div class="section" lang="en">
+<div class="titlepage">
+<div>
+<div>
+<h3 class="title">
+<a name="id1592676"></a>响应文件</h3>
+
+</div>
+
+</div>
+
+</div>
+
+
+<a class="indexterm" name="id1592682"></a>
+<p>有些操作系统对于命令行长度只有很低的限制。对付这些限制的常用方法是使用
+      <em class="firstterm">response files响应文件</em>。响应文件是采用与命令行相同语法的配置文件。如果命令行指定了响应文件的名字，则导入该文件并进行命令行分析。程序库没有提供对响应文件的直接支持，所以你需要编写额外的代码。
+    </p>
+
+
+<p>首先，你需要为响应文件定义一个选项：
+</p>
+
+
+<pre class="programlisting">("response-file", value&lt;string&gt;(), <br>     "can be specified with '@name', too")<br></pre>
+
+
+<p>
+    </p>
+
+
+<p>其次，你需要一个附加分析器，以支持指定响应文件的标准语法: "@file":
+</p>
+
+
+<pre class="programlisting">pair&lt;string, string&gt; at_option_parser(string const&amp;s)<br>{<br>    if ('@' == s[0])<br>        return std::make_pair(string("response-file"), s.substr(1));<br>    else<br>        return pair&lt;string, string&gt;();<br>}<br><br></pre>
+
+
+<p>
+    </p>
+
+
+<p>最手，如果找到了 "response-file" 选项，你需要导入文件并将它传给命令行分析器。这部分是最难的。我们要使用 Boost.Tokenizer 库，该库可用但有点限制。你也可考虑 Boost.StringAlgo. 代码如下：
+</p>
+
+
+<pre class="programlisting">if (vm.count("response-file")) {<br>     // 导入文件并分解记号<br>     ifstream ifs(vm["response-file"].as&lt;string&gt;().c_str());<br>     if (!ifs) {<br>         cout &lt;&lt; "Could no open the response file\n";<br>         return 1;<br>     }<br>     // 将整个文件读入到 string<br>     stringstream ss;<br>     ss &lt;&lt; ifs.rdbuf();<br>     // 分解文件内容<br>     char_separator&lt;char&gt; sep(" \n\r");<br>     tokenizer&lt;char_separator&lt;char&gt; &gt; tok(ss.str(), sep);<br>     vector&lt;string&gt; args;<br>     copy(tok.begin(), tok.end(), back_inserter(args));<br>     // 分析文件并保存选项<br>     store(command_line_parser(args).options(desc).run(), vm);     <br>}<br><br></pre>
+
+
+<p>完整的例子请见 "example/response_file.cpp" 文件。                
+    </p>
+
+
+</div>
+
+
+<div class="section" lang="en">
+<div class="titlepage">
+<div>
+<div>
+<h3 class="title">
+<a name="id1592754"></a>Winmain 命令行</h3>
+
+</div>
+
+</div>
+
+</div>
+
+
+<p>在 Windows 操作系统，GUI 应用以单个字符串接收命令行，而不分解为多个元素。由于这个原因，命令行分析器不能直接使用。有一些编译器可以得到分解的命令行，但不清楚是否所有编译器在所有版本的操作系统上都支持相同的机制。<code class="computeroutput">split_winmain</code> 函数是本库提供的可移植方案。</p>
+
+
+<p>下面是一个用例：
+</p>
+
+
+<pre class="programlisting">vector&lt;string&gt; args = split_winmain(lpCmdLine);<br>store(command_line_parser(args).options(desc).run(), vm);<br></pre>
+
+
+<p>该函数有一个对于 <code class="computeroutput">wchar_t</code> 字符串的重载，因此也可用于 Unicode 应用。
+    </p>
+
+
+</div>
+
+
+<div class="section" lang="en">
+<div class="titlepage">
+<div>
+<div>
+<h3 class="title">
+<a name="id1592795"></a>选项组和隐藏选项</h3>
+
+</div>
+
+</div>
+
+</div>
+
+
+<p>用单个 <code class="computeroutput"><a href="../boost/program_options/options_description.html" title="Class options_description">options_description</a></code> 实例处理所有程序选项有以下问题：
+      </p>
+
+
+<div class="itemizedlist">
+<ul type="disc">
+
+
+  <li>
+    
+    <p>有些选项只用于特定的源，如配置文件。</p>
+
+  </li>
+
+
+  <li>
+    
+    <p>用户倾向于生成结构化的帮助信息。</p>
+
+  </li>
+
+
+  <li>
+    
+    <p>有些选项不应出现在生成的帮助信息中。</p>
+
+  </li>
+
+
+</ul>
+
+</div>
+
+
+<p>
+    </p>
+
+
+<p>为了解决以上问题，本库允许程序员创建多个 <code class="computeroutput"><a href="../boost/program_options/options_description.html" title="Class options_description">options_description</a></code> 实例，并合并为不同的组合。在以下例子中定义了三组选项：一个用于命令行指定，另两个用于特定的程序模块，其中只有一个会在生成的帮助信息中显示。
+    </p>
+
+
+<p>每个组都使用标准语法定义。但是，你应为每个 <code class="computeroutput"><a href="../boost/program_options/options_description.html" title="Class options_description">options_description</a></code> 实例取一个合理的名字：
+</p>
+
+
+<pre class="programlisting">options_description general("General options");<br>general.add_options()<br>    ("help", "produce a help message")<br>    ("help-module", value&lt;string&gt;(),<br>        "produce a help for a given module")<br>    ("version", "output the version number")<br>    ;<br><br>options_description gui("GUI options");<br>gui.add_options()<br>    ("display", value&lt;string&gt;(), "display to use")<br>    ;<br><br>options_description backend("Backend options");<br>backend.add_options()<br>    ("num-threads", value&lt;int&gt;(), "the initial number of threads")<br>    ;<br></pre>
+
+
+<p>
+    </p>
+
+
+<p>声明了选项组之后，我们把它们合并为两个组合。第一个包含所有选项，用于分析。第二个则用于 "--help" 选项。
+</p>
+
+
+<pre class="programlisting">// 声明一个选项描述实例，包含所有选项<br>options_description all("Allowed options");<br>all.add(general).add(gui).add(backend);<br><br>// 声明一个选项描述实例，包含显示给用户的选项<br>options_description visible("Allowed options");<br>visible.add(general).add(gui);<br></pre>
+
+
+<p>
+    </p>
+
+
+<p>剩下就是分析和处理选项：
+</p>
+
+
+<pre class="programlisting">variables_map vm;<br>store(parse_command_line(ac, av, all), vm);<br><br>if (vm.count("help")) <br>{<br>    cout &lt;&lt; visible;<br>    return 0;<br>}<br>if (vm.count("help-module")) {<br>    const string&amp; s = vm["help-module"].as&lt;string&gt;();<br>    if (s == "gui") {<br>        cout &lt;&lt; gui;<br>    } else if (s == "backend") {<br>        cout &lt;&lt; backend;<br>    } else {<br>        cout &lt;&lt; "Unknown module '" <br>             &lt;&lt; s &lt;&lt; "' in the --help-module option\n";<br>        return 1;<br>    }<br>    return 0;<br>}<br>if (vm.count("num-threads")) {<br>    cout &lt;&lt; "The 'num-threads' options was set to "<br>         &lt;&lt; vm["num-threads"].as&lt;int&gt;() &lt;&lt; "\n";            <br>}                           <br></pre>
+
+
+<p>在分析命令行时，所有选项都可用。但是 "--help" 信息不包含 "Backend options" 组 -- 该组中的选项被隐藏。用户可以通过传入 "--help-module backend" 选项来显式强制选项组的显示。完整的例子请见
+      "example/option_groups.cpp" 文件。
+    </p>
+
+
+</div>
+
+
+<div class="section" lang="en">
+<div class="titlepage">
+<div>
+<div>
+<h3 class="title">
+<a name="id1592926"></a>定制验证器</h3>
+
+</div>
+
+</div>
+
+</div>
+
+
+<p>缺省地，选项值从字符串到C++类型的转换使用 iostreams 来执行，但有时候会不太方便。本库允许用户为特定类定制转换的方法。用户要提供 <code class="computeroutput">validate</code> 函数的合适重载。
+    </p>
+
+
+<p>我们首先定义一个简单的类：
+</p>
+
+
+<pre class="programlisting">struct magic_number {<br>public:<br>    magic_number(int n) : n(n) {}<br>    int n;<br>};<br></pre>
+
+
+<p>然后重载 <code class="computeroutput">validate</code> 函数：
+</p>
+
+
+<pre class="programlisting">void validate(boost::any&amp; v, <br>              const std::vector&lt;std::string&gt;&amp; values,<br>              magic_number* target_type, int)<br>{<br>    static regex r("\\d\\d\\d-(\\d\\d\\d)");<br><br>    using namespace boost::program_options;<br><br>    // 确定之前没有对 'a' 赋值<br>    validators::check_first_occurrence(v);<br>    // 从 'values' 提取第一个串。如果有多于一个串则为错误，抛出异常<br>    const string&amp; s = validators::get_single_string(values);<br><br>    // 进行 regex 匹配并将相应部分转换为 int.<br>    smatch match;<br>    if (regex_match(s, match, r)) {<br>        v = any(magic_number(lexical_cast&lt;int&gt;(match[1])));<br>    } else {<br>        throw validation_error("invalid value");<br>    }        <br>}<br>        <br></pre>
+
+
+<p>该函数带四个参数。第一个为选项值的存储，本例中要么为空，要么包含一个 <code class="computeroutput">magic_number</code> 实例。第二个为下一个选项的字符串列表。剩下的两个参数对于缺乏模板偏特化和函数模板部分分类的编译器是需要的。
+    </p>
+
+
+<p>函数首先检查我们是否试图对同一个选项重复赋值。然后检查传入的单个字符串。接着字符串在 Boost.Regex 库的帮助下进行验证。如果测试通过，分析得到的值被保存在变量
+      <code class="computeroutput">v</code> 中。
+    </p>
+
+
+<p>完整的例子请见 "example/regex.cpp" 文件。
+    </p>
+
+
+</div>
+
+
+<div class="section" lang="en">
+<div class="titlepage">
+<div>
+<div>
+<h3 class="title">
+<a name="id1592999"></a>Unicode 支持</h3>
+
+</div>
+
+</div>
+
+</div>
+
+
+<p>将本库使用于 Unicode, 你需要：
+      </p>
+
+
+<div class="itemizedlist">
+<ul type="disc">
+
+
+  <li>
+    
+    <p>对 Unicode 输入使用 Unicode-aware 的分析器</p>
+
+  </li>
+
+
+  <li>
+    
+    <p>要求选项在需要时支持 Unicode</p>
+
+  </li>
+
+
+</ul>
+
+</div>
+
+
+<p>
+    </p>
+
+
+<p>多数分析器都有 Unicode 版本。例如，<code class="computeroutput"><a href="../boost/program_options/parse_command_line.html" title="Function template parse_command_line">parse_command_line</a></code> 函数有一个重载接受
+      <code class="computeroutput">wchar_t</code> 字符串，替代原先的 <code class="computeroutput">char</code>.
+    </p>
+
+
+<p>即使有些分析器是 Unicode-aware 的，但并不意味你需要修改所有选项的定义。事实上，对于多数选项，如整型的，并不影响。要使用 Unicode 你需要一些<span class="emphasis"><em></em></span> Unicode-aware 选项。这些选项与原先的不同在于它们接受 <code class="computeroutput">wstring</code> 输入，并使用宽字符流来处理它。创建一个 Unicode-aware 选项非常容易：只要使用 <code class="computeroutput">wvalue</code> 函数替代通常&nbsp; <code class="computeroutput">value</code> 就行了。
+    </p>
+
+
+<p>当一个 ascii 分析器传递数据给一个 ascii 选项时，或一个 Unicode
+      分析器传递数据给一个 Unicode 选项时，数据不会改变。即 ascii 选项将看到一个本地8位编码的字符串，而 Unicode 选项将看到 Unicode 输入的字符串。
+    </p>
+
+
+<p>如果将 Unicode 数据传递给 ascii 选项或反之，会如何？本库会自动执行从
+      Unicode 到本地8位编码的转换。例如：如果命令行是
+      ascii 的，而你使用 <code class="computeroutput">wstring</code> 选项，则 ascii 输入将被转换为 Unicode.
+    </p>
+
+
+<p>为了执行转换，本库使用了来自于 global locale 的 <code class="computeroutput">codecvt&lt;wchar_t,
+    char&gt;</code> locale facet。如果你想处理使用本地8位编码(不要使用
+    7-bit ascii 字集)的字符串，你的应用程序要以这样开始：
+      </p>
+
+
+<pre class="programlisting">locale::global(locale(""));<br>      </pre>
+
+
+<p>这就设置了转换 facet 依照于用户选择的
+      locale. 
+    </p>
+
+
+<p>明智的做法是检查一下在你的实现上对 C++ locale 的支持状态。快速的测试包括以下三步：
+      </p>
+
+
+<div class="orderedlist">
+<ol type="1">
+
+
+  <li>
+    
+    <p>进入 "test" 目录，构建 "test_convert"&nbsp;程序。</p>
+
+  </li>
+
+
+  <li>
+    
+    <p>在环境中设置某个非-ascii locale. 例如在 Linux 上，你可执行: </p>
+
+
+    
+    <pre class="screen">$ export LC_CTYPE=ru_RU.KOI8-R<br></pre>
+
+
+    
+    <p>
+          </p>
+
+
+  </li>
+
+
+  <li>
+    
+    <p>运行 "test_convert" 程序，以一些选定编码的非-ascii 字符串作为参数。如果你看到一串 Unicode 编码，则一切OK。否则，表示你的系统上的 locale 支持可能已被破坏。</p>
+
+  </li>
+
+
+</ol>
+
+</div>
+
+
+<p>
+    </p>
+
+
+</div>
+
+
+<div class="section" lang="en">
+<div class="titlepage">
+<div>
+<div>
+<h3 class="title">
+<a name="id1593176"></a>允许未知选项</h3>
+
+</div>
+
+</div>
+
+</div>
+
+
+<p>通常，本库在遇到未知选项时会抛出异常。这种行为可以被改变。例如，你的程序中只有一部分使用 
+      <a href="../program_options.html" title="Chapter&nbsp;10.&nbsp;Boost.Program_options">Program_options</a>, 而你希望将未能识别的选项传递给程序的其它部分，或者甚至是其它程序。</p>
+
+
+<p>要允许在命令行中使用未登记的选项，你需要使用 <code class="computeroutput"><a href="../boost/program_options/basic_command_line_parser.html" title="Class template basic_command_line_parser">basic_command_line_parser</a></code> 类来分析 (而不是 <code class="computeroutput"><a href="../boost/program_options/parse_command_line.html" title="Function template parse_command_line">parse_command_line</a></code>)
+     ，并且调用该类的 <code class="computeroutput"><a href="../boost/program_options/basic_command_line_parser.html#id999223-bb">allow_unregistered</a></code> 方法：
+      </p>
+
+
+<pre class="programlisting">parsed_options parsed = <br>    command_line_parser(argv, argc).options(desc).allow_unregistered().run();      <br>      </pre>
+
+
+<p>对于每一个看起来象选项，但又没有已知名字的记号，将产生一个 <code class="computeroutput"><a href="../boost/program_options/basic_option.html" title="Class template basic_option">basic_option</a></code> 实例并增加到结果中。该实例的 <code class="computeroutput">string_key</code> 和 <code class="computeroutput">value</code> 域中包含了对该记号进行语法分析的结果，<code class="computeroutput">unregistered</code> 域将被设置为 <code class="computeroutput">true</code>,
+      而 <code class="computeroutput">original_tokens</code> 域则包含出现在命令行中的记号。
+      </p>
+
+
+<p>如果你想进一步传递这个未能识别的选项，可以使用 
+      <code class="computeroutput"><a href="../boost/program_options/collect_unrecognized.html" title="Function template collect_unrecognized">collect_unrecognized</a></code> 函数。该函数收集所有未能识别的原始记号，以及所有位置选项(可选)。即是说，如果你的代码只处理少数选项，而不处理位置选项，则你可以这样使用函数： </p>
+
+
+<pre class="programlisting">vector&lt;string&gt; to_pass_further = collect_arguments(parsed.option, include_positional);<br>      </pre>
+
+
+<p>
+      
+      </p>
+
+
+</div>
+
+
+</div>
+
+
+<table width="100%">
+
+  <tbody>
+
+    <tr>
+
+
+      <td align="left"></td>
+
+
+      <td align="right"><small>Copyright &copy; 2002-2004 Vladimir Prus</small></td>
+
+
+    </tr>
+
+  
+  </tbody>
+</table>
+
+
+<hr>
+<div class="spirit-nav">
+<a accesskey="p" href="overview.html"><img src="../images/prev.png" alt="Prev"></a><a accesskey="u" href="../program_options.html"><img src="../images/up.png" alt="Up"></a><a accesskey="h" href="../index.html"><img src="../images/home.png" alt="Home"></a><a accesskey="n" href="design.html"><img src="../images/next.png" alt="Next"></a>
+</div>
+
+
+</body>
+</html>

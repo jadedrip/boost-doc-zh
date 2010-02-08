@@ -1,0 +1,149 @@
+<!DOCTYPE HTML PUBLIC "-//W3C//DTD HTML 4.01 Transitional//EN">
+<html><head>
+<meta http-equiv="Content-Language" content="en-us">
+<meta name="GENERATOR" content="Microsoft FrontPage 5.0">
+<meta name="ProgId" content="FrontPage.Editor.Document">
+<meta http-equiv="Content-Type" content="text/html; charset=UTF-8">
+<title>Portability Guide</title></head>
+<body bgcolor="#ffffff">
+
+<h1>
+<img src="../../../boost.png" align="middle" border="0" height="86" width="277">路径名可移植性指南</h1>
+
+<p>
+<a href="#Introduction">简介</a><br>
+<a href="#name_check%C2%AD_functions">name_check 函数</a><br>
+<a href="#recommendations">文件名和目录名建议</a></p>
+<h2><a name="Introduction">简介</a></h2>
+<p>和其它执行I/O操作的C++程序相似，并不保证使用 Boost.Filesystem 的程序一定可以在不同操作系统间移植。I/O的关键方面，如操作系统如何解释路径，并没有在C和C++标准中规定。</p>
+<p>对于一个未知的操作系统，不可能知道一个文件或目录名是否有效(从而是可移植的)。总是有可能一个操作系统使用了不常见的名字(例如数量小于4096)或者非常有限的大小(例如最大六个字符的名字)。换言之，可移植性不是绝对的；它总是与特定的操作系统或文件系统相关。</p>
+<p>对于某个特定的操作系统，有可能提前知道一个目录名或文件名是否很可能有效。也有可能构造一个很可能可以移植到多数现代和旧用操作系统的名字。</p>
+
+<p>几乎所有现代操作系统都支持多种文件系统。至少，它们支持一个原生文件系统以及一个CD-ROM文件系统(通用的 
+ISO-9669, 常常会带有 Juliet 扩展)。</p>
+
+<p>每个文件系统可能有它自己的命名规则。例如，现代版本的 Windows 支持 NTFS, FAT, FAT32, 和 ISO-9660
+文件系统，与其它相比，这些文件系统中有些命名规则会与众不同。每个文件系统对于路径有效性可以有不同的规则，如最大长度或子目录数量。</p>
+
+<p>结果，Boost.Filesystem 的 <i>name_check</i> 函数不能保证目录名和文件名的可移植性。应该说，它们通过提前检查常见的命名问题，给了程序员一个"努力的机会"来达成可移植性。</p>
+
+<h2><a name="name_check­_functions">name_check 函数</a></h2>
+
+<p><i>name_check</i> 函数返回 true，如果它的参数对于某个特定操作系统或文件系统是有效的名字。有多个这样的函数，而且用户也可以提供自己的 <i>
+name_check</i>.</p>
+
+<p>函数 <a href="#portable_name">portable_name</a> 特别应该注意，因为它被小心地设计为提供广泛的可移植性而不会过度限制表示形式。</p>
+
+<table border="1" cellpadding="5" cellspacing="0">
+  <tbody><tr>
+    <td colspan="2" align="center"><b>本库提供的 name_check 函数</b></td>
+  </tr>
+  <tr>
+    <td align="center"><b>名字</b></td>
+    <td align="center"><b>说明</b></td>
+  </tr>
+  <tr>
+    <td align="left" valign="top"><code></code><code><a name="portable_posix_name">portable_posix_name</a>(const 
+std::string&amp;<i> name</i>)</code><code></code></td>
+    <td><b>返回:</b> 对于只含有在 POSIX 中定义的<i> Portable Filename Character Set</i> 规则中指定的字符的名字，返回 <i>true</i> (<a href="http://www.opengroup.org/onlinepubs/007904975/basedefs/xbd_chap03.html">www.opengroup.org/onlinepubs/007904975/basedefs/xbd_chap03.html</a>).<br>只允许字符 0-9, a-z, A-Z, '.', '_', 和 '-'.<p><b>用于:</b> 
+    必须可以移植到任何 POSIX 系统上的应用程序。</p></td>
+  </tr>
+  <tr>
+    <td align="left" valign="top"><code></code><code><a name="windows_name">windows_name</a>(const std::string&amp;<i> 
+name</i>)</code><code></code></td>
+    <td><b>返回:</b> 对于只含有由 Windows 平台 SDK 认为有效的字符的，返回 <i>true</i>，不管何种文件系统。允许除了 0x0-0x1F, '&lt;', '&gt;', ':', '"', '/', '\', 和 '|' 以外的任意字符。此外，名字必须不以空格或句点结束。<p>
+    <b>用于:</b> 必须可以移植到 Windows 的应用程序。</p>
+    <p><b>注:</b> 保留的设备名不能作为文件名，但不能被检测出来，因为它们仍是有效的路径。即：CON, PRN, AUX, CLOCK$, NUL, COM[1-9], LPT[1-9], 及上述名字加扩展名(如 NUL.tx7)。</p></td>
+  </tr>
+  <tr>
+    <td align="left" valign="top"><code></code><code><a name="portable_name">portable_name</a>(const std::string&amp;<i> 
+name</i>)</code><code></code></td>
+    <td><b>返回: </b><code>windows_name(name) &amp;&amp; portable_posix_name(name)</code><code> &amp;&amp; (name</code> 为 <code>"."</code> 或 <code>".."</code>, 
+    且第一个字符不是句点或连字符)。<p><b>用于:</b> 必须移植到多个现代操作系统，大的和小的，以及一些旧有O/S的应用程序。</p></td>
+  </tr>
+  <tr>
+    <td align="left" valign="top"><code></code><code><a name="portable_directory_name">portable_directory_name</a>(const 
+std::string&amp;<i> name</i>)</code><code></code></td>
+    <td><b>返回: </b><code>portable_name(name)</code><code> &amp;&amp; (name</code> 为 <code>"."</code> 或 <code>".."</code> 或 不包含句点<code>)</code>。<p><b>用于:</b> 必须移植到多个平台，包括 OpenVMS 的应用程序。</p></td>
+  </tr>
+  <tr>
+    <td align="left" valign="top"><code></code><code><a name="portable_file_name">portable_file_name</a>(const 
+std::string&amp;<i> name</i>)</code><code></code></td>
+    <td><b>返回:</b><code>&nbsp;portable_name(name)</code>, 除了允许单个句点并后跟1-3个字符。<p><b>用于:</b> 
+    必须移植到多个平台，包括 OpenVMS 和其它具有"文件扩展名"概念但长度有限的系统的应用程序。</p></td>
+  </tr>
+  <tr>
+    <td align="left" valign="top"><code><a name="native">native</a>(const std::string&amp;<i> name</i>)</code></td>
+    <td><b>返回: </b>实现定义的 name_check. 对于操作系统视为有效的所有名字，返回 <i>
+    true</i>.<p><b>注:</b> 可能会对于在所有情形下都被操作系统视为无效的名字返回 <i>true</i> (特别是在那些支持多种文件系统的操作系统上)。</p></td>
+  </tr>
+</tbody></table>
+
+<h2>文件名和目录名建议<a name="recommendations"></a></h2>
+
+<table border="1" cellpadding="5" cellspacing="0">
+
+  <tbody><tr>
+    <td align="center" valign="top"><strong>建议</strong></td>
+    <td align="center" valign="top"><strong>原理</strong></td>
+  </tr>
+  <tr>
+    <td valign="top">限定文件名和目录名只使用 A-Z, a-z, 0-9, 句点, 连字符, 和下划线。<p>使用任一 "portable_" <a href="#name_check%C2%AD_functions">
+    name check functions</a> 来强制这一建议。</p></td>
+    <td valign="top">这些是由POSIX标准为可移植目录名和文件名所指定的字符，并且在 Windows, Mac, 以及多数现代文件系统中均有效。</td>
+  </tr>
+  <tr>
+    <td valign="top">不要使用句点或连字符作为名字的第一个字符。不要用句点作为名字的最后一个字符。<p>使用 <a href="#portable_name">portable_name</a>,
+    <a href="#portable_directory_name">portable_directory_name</a>, 或
+    <a href="#portable_file_name">portable_file_name</a> 来强制这一建议。</p></td>
+    <td valign="top">有些操作系统对于名字的第一个字符有特殊规则。例如 POSIX。Windows 则不允许句点作为最后一个字符。</td>
+  </tr>
+  <tr>
+    <td valign="top">不要在目录名中使用句点。<p>使用
+    <a href="#portable_directory_name">portable_directory_name</a> 来强制这一建议。</p></td>
+    <td valign="top">这是不带 Juliet 扩展的 ISO-9660, OpenVMS 文件系统以及其它一些旧系统的要求。</td>
+  </tr>
+  <tr>
+    <td valign="top">不要在一个文件名中使用超过一个句点，并限制句点后的部分为三个字符以内。<p>使用
+    <a href="#portable_file_name">portable_file_name</a> 来强制这一建议。</p></td>
+    <td valign="top">这是 ISO-9660 level 1, OpenVMS 文件系统以及其它旧系统的要求。 </td>
+  </tr>
+  <tr>
+    <td valign="top">不要假定名字是大小写敏感的。例如，不要期望一个目录可以分辨 "Foo" 和 "foo" 为不同项。 </td>
+    <td valign="top">有些文件系统是大小写敏感的。例如 Windows 
+    NTFS 对于它保存的名字保留大小写，但是在查找名字时则是大小写不敏感的(除非运行在 POSIX 子系统上，这时执行大小写敏感的查找)。 </td>
+  </tr>
+  <tr>
+    <td valign="top">不要假定名字是大小写不敏感的。例如，不要期望一个以名字 "Foo" 创建的文件可以以名字 "foo" 打开。</td>
+    <td valign="top">有些文件系统是大小写敏感的。例如 POSIX.</td>
+  </tr>
+  <tr>
+    <td valign="top">不要在名字中使用连字符。</td>
+    <td valign="top">ISO-9660 level 1, 以及某些旧系统，不允许连字符。</td>
+  </tr>
+  <tr>
+    <td valign="top">将 path::string() 返回的字符串长度限制为255个字符。注意 ISO 9660&nbsp;明确限定目录树深度为 8, 虽然这一限制被 Juliet 扩展所去除。</td>
+    <td valign="top">有些操作系统对于路径总长度有所限制。例如，Windows 2000 限制路径总长度为260个字符。</td>
+  </tr>
+  <tr>
+    <td valign="top">限制路径中任一名字的长度。根据你想移植到的操作系统和文件系统的特定限制来取值：<br>
+    &nbsp;&nbsp; 没有限制:&nbsp; POSIX, Windows, MAC OS X.<br>
+    &nbsp;&nbsp; 31个字符: Classic Mac OS<br>
+&nbsp;&nbsp; 8个字符 + 句点 + 3个字符: ISO 9660 level 1<br>
+&nbsp;&nbsp; 32个字符: ISO 9660 level 2 and 3<br>
+&nbsp;&nbsp; 128个字符(Unicode则为64): ISO 9660 带 Juliet 扩展</td>
+    <td valign="top">限制名字长度会显著降低文件名的表现力，但对于长度使用较大限制值则会影响可移植能力。</td>
+  </tr>
+</tbody></table>
+
+<hr>
+<p>Revised <!--webbot bot="Timestamp" S-Type="EDITED" S-Format="%d %B, %Y" startspan -->11 
+January, 2009</p>
+
+<p>© Copyright Beman Dawes, 2002, 2003</p>
+<p> Use, modification, and distribution are subject to the Boost Software 
+License, Version 1.0. (See accompanying file <a href="../../../LICENSE_1_0.txt">
+LICENSE_1_0.txt</a> or copy at <a href="http://www.boost.org/LICENSE_1_0.txt">
+www.boost.org/LICENSE_1_0.txt</a>)</p>
+
+</body></html>

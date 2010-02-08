@@ -1,0 +1,339 @@
+<!DOCTYPE HTML PUBLIC "-//W3C//DTD HTML 4.01 Transitional//EN">
+<html><head>
+
+  <meta http-equiv="Content-Type" content="text/html; charset=UTF-8">
+
+
+  
+  <title>Development</title><link rel="stylesheet" href="../boostbook.css" type="text/css">
+
+  <meta name="generator" content="DocBook XSL Stylesheets V1.73.2">
+
+  <link rel="start" href="../index.html" title="Chapter&nbsp;1.&nbsp;Boost.Optional">
+
+  <link rel="up" href="../index.html" title="Chapter&nbsp;1.&nbsp;Boost.Optional">
+
+  <link rel="prev" href="../index.html" title="Chapter&nbsp;1.&nbsp;Boost.Optional">
+
+  <link rel="next" href="synopsis.html" title="Synopsis"></head>
+<body alink="#0000ff" bgcolor="white" link="#0000ff" text="black" vlink="#840084">
+
+<table cellpadding="2" width="100%">
+  <tbody>
+    <tr>
+
+      <td valign="top"><img alt="Boost C++ Libraries" src="../../../../../boost.png" height="86" width="277"></td>
+
+      <td align="center"><a href="../../../../../index.html">Home</a></td>
+
+      <td align="center"><a href="../../../../libraries.htm">Libraries</a></td>
+
+      <td align="center"><a href="http://www.boost.org/people/people.htm">People</a></td>
+
+      <td align="center"><a href="http://www.boost.org/more/faq.htm">FAQ</a></td>
+
+      <td align="center"><a href="../../../../../more/index.htm">More</a></td>
+
+    </tr>
+  </tbody>
+</table>
+
+<hr>
+<div class="spirit-nav">
+<a accesskey="p" href="../index.html"><img src="../../../../../doc/html/images/prev.png" alt="Prev"></a><a accesskey="u" href="../index.html"><img src="../../../../../doc/html/images/up.png" alt="Up"></a><a accesskey="h" href="../index.html"><img src="../../../../../doc/html/images/home.png" alt="Home"></a><a accesskey="n" href="synopsis.html"><img src="../../../../../doc/html/images/next.png" alt="Next"></a>
+</div>
+
+<div class="section" lang="en">
+<div class="titlepage">
+<div>
+<div>
+<h2 class="title" style="clear: both;">
+<a name="boost_optional.development"></a><a class="link" href="development.html" title="Development">发展</a>
+</h2>
+</div>
+</div>
+</div>
+
+<div class="toc">
+<dl>
+
+  <dt><span class="section"><a href="development.html#boost_optional.development.the_models">模型</a></span></dt>
+
+  <dt><span class="section"><a href="development.html#boost_optional.development.the_semantics">语义</a></span></dt>
+
+  <dt><span class="section"><a href="development.html#boost_optional.development.the_interface">接口</a></span></dt>
+
+</dl>
+</div>
+
+<div class="section" lang="en">
+<div class="titlepage">
+<div>
+<div>
+<h3 class="title">
+<a name="boost_optional.development.the_models"></a><a class="link" href="development.html#boost_optional.development.the_models" title="The models">模型</a>
+</h3>
+</div>
+</div>
+</div>
+
+<p>在C++中，我们可以<span style="font-style: italic;">声明</span>类型T的一个对象(变量)，并且我们可以给这个对象一个<span style="font-style: italic;">初始值</span>(通过<i>初始化</i> (参考 
+8.5))。当一个声明中包含非空的初始化(即给出一个初始值)，就称这个对象已被<span style="font-weight: bold; font-style: italic;">初始化</span>。如果一个声明使用了空的初始化(即未给出初始值)，而且也没缺省值可用于初始化，则称该对象是<span style="font-weight: bold; font-style: italic;">未初始化</span>的。它的真实值是存在的，但具有一个<span style="font-style: italic;">不确定的初始值</span>(参考 
+8.5.9)。<code>optional&lt;T&gt;</code> 
+的目的是规范初始化(或无初始化)的概念，让程序可以检测一个对象是否已初始化，并规定访问一个未初始化对象的值是未定义的行为。即，如果一个变量被声明为 <code class="computeroutput"><span class="identifier">optional</span><span class="special">&lt;</span><span class="identifier">T</span><span class="special">&gt;</span></code> 而未给定初始值，则该变量就是<span style="font-style: italic;">正式的</span>未初始化。一个正式的未初始化的 optional 
+对象是没有值的，并且可以在运行期对此状态进行测试。尝试访问一个未初始化的 optional 被正式规定为<span style="font-style: italic;">未定义行为</span>。一个未初始化的 optional 可以被<span style="font-style: italic;">赋予</span>一个值，这时它的初始化状态就会变为已初始化。此外，还给出处理 optional 
+对象的初始化状态的方法，甚至可以将一个 optional 重新置为<span style="font-style: italic;">未初始化</span>。<br>
+</p>
+<p>在C++里没有未初始化对象的正式概念，即是说对象总是带有初始值的，即使是不确定的值。正如前面所讨论的，这样有一个缺点，因为你需要用额外的信息来告知一个对象是不是已经被有效地初始化了。一种以前常用的典型方法是使用特殊值：<code class="computeroutput"><span class="identifier">EOF</span></code>, <code class="computeroutput"><span class="identifier">npos</span></code>, -1, 
+等等... 这相当于增加一个特殊值到给定类型的可取值的集合中。由 <code class="computeroutput"><span class="identifier">T</span></code> 加上某个 <i>nil_t</i> — <code class="computeroutput"><span class="identifier">nil_t</span></code> 是某个无状态的POD -- 
+组成的超集在现代语言中可以被模仿为由 <code>T</code> 和 <code>nil_t</code> 组成的一个<span style="font-weight: bold;">可识别联合</span>。可识别联合通常称为 <i>variants</i>. 一个 variant 具有 
+<span style="font-style: italic;">当前类型</span>，在我们的例子中就是 <code>T</code> 或者 
+<code>nil_t</code>.使用 <a href="../../../../variant/index.html">Boost.Variant</a> 库，以上模型可以用 
+<code>boost::variant&lt;T,nil_t&gt;</code> 来实现。用可识别联合来模仿一个 optional 
+值是有先例的：<a href="http://www.haskell.org/"><u>Haskell</u></a> 的 <b>Maybe</b> 
+内建类型构造器。所以，可识别联合 <code>T+nil_t</code> 可以作为一个概念上的基础。<br>
+</p>
+<p><code>variant&lt;T,nil_t&gt;</code> 自然而然地可用于扩展可取值的传统惯用法，它增加一个"哨兵"值用于表示<span style="font-style: italic;">空值</span>。不过，这个新增的<span style="font-style: italic;">空值</span>与我们意图大不相关，因为我们的目标是规范化未初始化对象的概念，虽然一个特殊的扩展值可以用于表达这个意思，但是它并不是严格必要的。</p>
+
+<p>最近的研究表明，额外的 <code>nil_t</code> 对于 <code class="computeroutput"><span class="identifier">optional</span><span class="special">&lt;</span><span class="identifier">T</span><span class="special">&gt;</span></code> 的 <u>目的</u> 
+是无关的，我们建议另一种模型：一个<span style="font-style: italic;">容器</span>，它具有 <code class="computeroutput"><span class="identifier">T</span></code> 的值，或者为空。 </p>
+
+<p>在写这篇文档之时，我还不知道有任何一个大小可变、容量固定(为1)、基于栈的 optional 
+值的容器模型的先例，但是我相信这只是因为还没有这样一个容器的实际实现，而不是这样一个容器模型的固有缺点。</p>
+
+<p>无论如何，可识别联合或单元素容器模型均可作为表示 optional&nbsp;类 — 即可能未初始化的 — 对象的基础。<br>
+例如，这些模型表现出了一个 
+optional 值包装器所需的<span style="font-style: italic;">准确</span>语义：</p>
+
+<p>可识别联合：</p>
+
+<blockquote>
+  <li><b>深复制</b> 语义：variant 的拷贝即为值的拷贝。 
+  </li>
+  <li><b>深比较</b> 语义：比较两个 variants 要同时匹配类型和值。 
+  </li>
+  <li>如果 variant 的当前类型为 T, 它就代表<span style="font-style: italic;">已初始化的</span> 
+optional. 
+  </li>
+  <li>如果 variant 的当前类型不是 T, 它就代表<span style="font-style: italic;">未初始化的</span> 
+optional. 
+  </li>
+  <li>测试 variant 的当前类型是否为 T 即测试 optional 是否已初始化。 
+  </li>
+  <li>试图从一个 variant 取出 T 而它的当前类型不是 T 时，正好符合了访问一个未初始化 optional 值的未定义行为。 
+  </li>
+</blockquote>
+
+<p>单元素容器：</p>
+
+<blockquote>
+  <li><b>深复制</b> 语义：container 的拷贝即为值的拷贝。 
+  </li>
+  <li><b>深比较</b> 语义：比较两个&nbsp;containers 要先比较容器的大小，如果匹配再比较容器中的值。 
+  </li>
+  <li>如果&nbsp;container 非空(包含一个类型为 T 的对象)，它就代表<span style="font-style: italic;">已初始化的</span> optional. 
+  </li>
+  <li>如果&nbsp;container 为空，它就代表<span style="font-style: italic;">未初始化的</span> optional. 
+  </li>
+  <li>测试&nbsp;container&nbsp;是否为空即测试 optional 是否已初始化。 
+  </li>
+  <li>试图从一个空的 container 取出 T，正好符合了访问一个未初始化 optional 值的未定义行为。<br>
+  </li>
+</blockquote>
+</div>
+
+<div class="section" lang="en">
+<div class="titlepage">
+<div>
+<div>
+<h3 class="title">
+<a name="boost_optional.development.the_semantics"></a>语义
+</h3>
+</div>
+</div>
+</div>
+
+<p>类型 <code>optional&lt;T&gt;</code> 的对象的设计意图是，用在那些使用可能未被初始化的类型 <code class="computeroutput"><span class="identifier">T</span></code>
+的对象的地方。因此，<code>optional&lt;T&gt;</code> 
+的意图是对增加可能的未初始化状态进行规范化。从这一任务的观点出发，<code>optional&lt;T&gt;</code> 可以具有与 <code class="computeroutput"><span class="identifier">T</span></code> 
+相同的操作语义，再加上与特殊状态相对应的额外语义。同样，<code>optional&lt;T&gt;</code> 可被视为 <code class="computeroutput"><span class="identifier">T</span></code> 的一个 
+<i>超类型supertype</i>. 当然，我们不能在C++中这样做，所以我们需要用一种不同的机制来得到想要的语义。使用其它方法实现它，如让 
+<code>optional&lt;T&gt;</code> 作为 <code class="computeroutput"><span class="identifier">T</span></code> 的 
+<i>子类</i>，不仅是概念上的错误，而且也是不实际的：因为不允许从非类类型派生，如从内建类型派生。</p>
+
+<p>我们可以从 <code class="computeroutput"><span class="identifier">optional</span><span class="special">&lt;</span><span class="identifier">T</span><span class="special">&gt;</span></code> 的目的描画出所需的基本语义：</p>
+<div class="itemizedlist">
+<ul type="disc">
+
+  <li>
+    <b>缺省构造：</b>引入一个正式的未初始化包装对象。
+        </li>
+
+  <li>
+    <b>通过复制进行直接的值构造：</b>引入一个正式的已初始化包装对象，其值来自于某个对象的拷贝。
+        </li>
+
+  <li>
+    <b>深复制构造：</b>获得一个新的、等价的包装对象。
+        </li>
+
+  <li>
+    <b>直接的值赋值(到已初始化的对象)：</b>将一个值赋值到包装对象。
+        </li>
+
+  <li>
+    <b>直接的值赋值(到未初始化的对象)：</b>从某个对象的拷贝取得值，初始化包装对象。
+        </li>
+
+  <li>
+    <b>赋值(到已初始化的对象)：</b>将另一个包装对象的值赋值到包装对象。
+        </li>
+
+  <li>
+    <b>赋值(到未初始化的对象)：</b>以另一个包装对象的值初始化包装对象。
+        </li>
+
+  <li>
+    <b>深比较操作(仅当被类型T支持时)：</b>比较两个包装对象的值，包括未初始化状态的情形。
+        </li>
+
+  <li>
+    <b>值访问：</b>对包装对象去包装。
+        </li>
+
+  <li>
+    <b>初始化状态查询：</b>判断该对象是否已正式初始化。
+        </li>
+
+  <li>
+    <b>交换：</b>交换包装的对象。(无论 T 的交换操作提供何种异常安全性保证)。
+        </li>
+
+  <li>
+    <b>去初始化：</b>释放包装的对象(如果有)，并使包装器保留未初始化状态。
+        </li>
+
+</ul>
+</div>
+
+<p>其它操作也是有用的，如转换构造函数和转换赋值，就地构造和赋值，以及通过包装对象的一个指针或空指针进行安全的值访问。&nbsp;
+      </p>
+
+</div>
+
+<div class="section" lang="en">
+<div class="titlepage">
+<div>
+<div>
+<h3 class="title">
+<a name="boost_optional.development.the_interface"></a><a class="link" href="development.html#boost_optional.development.the_interface" title="The Interface">接口</a>
+</h3>
+</div>
+</div>
+</div>
+
+<p>由于 optional 的目的是允许我们使用增加了正式的未初始化状态的对象，所以它的接口应该尽可能跟随底层的类型 <code class="computeroutput"><span class="identifier">T</span></code>. 为了选择适当的原本的 T 
+接口，应该留意以下几点：即使被类型 <code class="computeroutput"><span class="identifier">T</span></code> 的实例所支持的所有操作是为该类的整个值域所定义的，但是 <code class="computeroutput"><span class="identifier">optional</span><span class="special">&lt;</span><span class="identifier">T</span><span class="special">&gt;</span></code> 
+将该值域扩充了一个新值，所以多数操作对此没有定义。</p>
+<p>此外，由于 <code class="computeroutput"><span class="identifier">optional</span><span class="special">&lt;</span><span class="identifier">T</span><span class="special">&gt;</span></code> 本身只不过是一个 <code class="computeroutput"><span class="identifier">T</span></code> 的包装(类似于 T 
+的一个超类)，任何针对未初始化的 optional 的操作定义都应完全与 <code class="computeroutput"><span class="identifier">T</span></code> 相关。</p>
+<p>本库所选择的接口是，沿用 <code class="computeroutput"><span class="identifier">T</span></code> 
+的接口，只要那些操作是有良好定义的(与类型 <code class="computeroutput"><span class="identifier">T</span></code> 
+有关)，即使某些操作数未初始化。这样的操作包括有：构造，复制构造，赋值，交换和比较操作。</p>
+<p>对于值访问操作，如果操作数是未初始化的，则是未定义的(与类型 <code class="computeroutput"><span class="identifier">T</span></code> 
+有关)，所以选用了不同的接口(稍后将会解释)。</p>
+<p>还有，未初始化状态的可能出现需要有更多的操作，这些操作是 <code class="computeroutput"><span class="identifier">T</span></code> 
+本身所不具备的，它们将以特定的接口提供。</p>
+<a name="boost_optional.development.the_interface.lexically_hinted_value_access_in_the_presence_of_possibly_untitialized_optional_objects__the_operators___and___gt_"></a>
+<h5>
+<a name="id2636515"></a> <a class="link" href="development.html#boost_optional.development.the_interface.lexically_hinted_value_access_in_the_presence_of_possibly_untitialized_optional_objects__the_operators___and___gt_">对可能未初始化的 optional 对象的带提示的值访问：操作符 * 和 -&gt;</a>
+      </h5>
+
+<p>指针的一个特点是它可以具有 <b>空指针值</b>。这是一个特殊值，用于表示该指针没有指向任何对象。换句话说，空指针值表达的意思是不存在的对象。</p>
+
+<p>空指针值的这个意义使得指针成为了处理 optional 
+对象的事实标准，因为当你要引向一个实际上不存在的值时，你要做的只是使用适当类型的空指针值。指针已经被使用了几十年 — 从 C APIs 一直到现代的 C++ 库 
+— 用来表示 optional (即可能不存在的)对象；尤其是用作函数的可选参数，但也常被用作可选数据成员。</p>
+
+<p>空指针值的可能出现使得访问被指物值的操作可能是无定义的，所以，使用提领和访问操作符的表达式，如 <code>( *p = 2 )</code> 和 
+<code>( p-&gt;foo())</code>, 暗含了可选性的概念，此类信息被表达式的语法所依赖。即，操作符 <code class="computeroutput"><span class="special">*</span></code> 和 <code class="computeroutput"><span class="special">-&gt;</span></code> 本身 — 
+无需任何额外的上下文 —就说明了该表达式可以是无定义的，除非被指物确实存在。</p>
+
+<p>这个表示 optional 对象的事实上的惯用法可以用一个概念来规范化：<a href="../../../../utility/OptionalPointee.html">OptionalPointee</a> 概念。该概念包含了操作符 <code class="computeroutput"><span class="special">*</span></code>, <code class="computeroutput"><span class="special">-&gt;</span></code> 以及转换到 <code class="computeroutput"><span class="keyword">bool</span></code> 的语法，以表达可选性的概念。</p>
+
+<p>虽然指针适合于表示 optional 对象，但是并不特别适合处理 optional 
+对象的其它方面，如初始化或移动/复制。问题主要在于指针语义的浅复制：如果你需要高效地移动或复制对象，那么仅有指针是不够的。问题是指针的拷贝并不代表被指物的拷贝。例如，象在"动机"一节中所讨论的，仅用指针并不能从一个函数返回 
+optional 
+对象，因为该对象必须从函数中移至外部，进入调用者的上下文。</p>
+<p>解决浅复制问题的一个常用方法是，采用动态分配并使用智能指针来自动处理其细节。例如，如果一个函数可选性地返回一个对象 
+X, 则可以使用 <code class="computeroutput"><span class="identifier">shared_ptr</span><span class="special">&lt;</span><span class="identifier">X</span><span class="special">&gt;</span></code>
+ 作为返回值。不过，这要求对 <code class="computeroutput"><span class="identifier">X</span></code> 进行动态分配。如果 <code class="computeroutput"><span class="identifier">X</span></code> 是内建的或是小的 POD, 
+该技术在资源方面很不划算。Optional 对象本质上是值对象，所以，如果可以象我们处理普通的值对象那样，使用自动存储和深复制语义来维护 optional 
+值，才是最方便的。指针不具有这种语义，所以不适于初始化和转移 optional 值，但还是非常适合于访问有可能无定义的值，因为该用法已存在于以指针为代表的 <a href="../../../../utility/OptionalPointee.html" target="_top">OptionalPointee</a> 概念中。</p>
+<a name="boost_optional.development.the_interface.optional_lt_t_gt__as_a_model_of_optionalpointee"></a>
+<h5>
+<a name="id2636825"></a>
+        <a class="link" href="development.html#boost_optional.development.the_interface.optional_lt_t_gt__as_a_model_of_optionalpointee">Optional&lt;T&gt; 作为 OptionalPointee 的模型</a>
+      </h5>
+
+<p>对于值访问操作，<code class="computeroutput"><span class="identifier">optional</span><span class="special">&lt;&gt;</span></code> 使用操作符 <code class="computeroutput"><span class="special">*</span></code> 和 <code class="computeroutput"><span class="special">-&gt;</span></code> 
+来提醒有可能出现的未初始化状态，这类似于指针语义中的空指针用法。<br>
+</p>
+<div class="warning">
+<table summary="Warning" border="0">
+
+  <tbody>
+    <tr>
+
+      <td rowspan="2" align="center" valign="top" width="25"><img alt="[Warning]" src="../../../../../doc/html/images/warning.png"></td>
+
+      <th align="left">警告</th>
+
+    </tr>
+
+    <tr>
+      <td align="left" valign="top">
+      <p>但是，要重点留意的是，<code class="computeroutput"><span class="identifier">optional</span><span class="special">&lt;&gt;</span></code> 对象不是指针。<span class="underline"><code class="computeroutput"><span class="identifier">optional</span><span class="special">&lt;&gt;</span></code> 不是也不符合指针的概念</span>。
+        </p>
+      </td>
+    </tr>
+
+  </tbody>
+</table>
+</div>
+
+<p>例如，<code class="computeroutput"><span class="identifier">optional</span><span class="special">&lt;&gt;</span></code>
+ 没有浅复制，所以也没有别名：两个不同的 optional 永远不会引向同一个值，除非 <code class="computeroutput"><span class="identifier">T</span></code> 本身是一个引用(但可以有相等的值)。必须注意 <code class="computeroutput"><span class="identifier">optional</span><span class="special">&lt;</span><span class="identifier">T</span><span class="special">&gt;</span></code> 和指针间的区别，特别是因为它们的比较操作符的语义是不同的：因为 <code class="computeroutput"><span class="identifier">optional</span><span class="special">&lt;</span><span class="identifier">T</span><span class="special">&gt;</span></code> 是一个值包装器，比较操作符是"深"的：它们比较 optional 
+的值；而指针的比较操作符则是"浅"的：它们不比较被指物的值。所以，你也许可以在某些情形下用 <code class="computeroutput"><span class="identifier">T</span><span class="special">*</span></code> 
+替换 <code class="computeroutput"><span class="identifier">optional</span><span class="special">&lt;</span><span class="identifier">T</span><span class="special">&gt;</span></code>，但并不是总可以这样做。特别是，在为两者所写的泛型代码中，你不能直接使用比较操作符，而必须使用模板函数 <a href="../../../../utility/OptionalPointee.html#equal" target="_top"><code class="computeroutput"><span class="identifier">equal_pointees</span><span class="special">()</span></code></a> 和 <a href="../../../../utility/OptionalPointee.html#less" target="_top"><code class="computeroutput"><span class="identifier">less_pointees</span><span class="special">()</span></code></a> 来代替。<br>
+</p>
+</div>
+
+</div>
+
+<table xmlns:rev="http://www.cs.rpi.edu/~gregod/boost/tools/doc/revision" width="100%">
+  <tbody>
+    <tr>
+
+      <td align="left"></td>
+
+      <td align="right">
+      <div class="copyright-footer">Copyright © 2003 -2007 Fernando Luis Cacciola Carballal
+      <p>
+        Distributed under the Boost Software License, Version 1.0. (See accompanying
+        file LICENSE_1_0.txt or copy at <a href="http://www.boost.org/LICENSE_1_0.txt" target="_top">http://www.boost.org/LICENSE_1_0.txt</a>)
+      </p>
+
+      </div>
+      </td>
+
+    </tr>
+  </tbody>
+</table>
+
+<hr>
+<div class="spirit-nav">
+<a accesskey="p" href="../index.html"><img src="../../../../../doc/html/images/prev.png" alt="Prev"></a><a accesskey="u" href="../index.html"><img src="../../../../../doc/html/images/up.png" alt="Up"></a><a accesskey="h" href="../index.html"><img src="../../../../../doc/html/images/home.png" alt="Home"></a><a accesskey="n" href="synopsis.html"><img src="../../../../../doc/html/images/next.png" alt="Next"></a>
+</div>
+
+</body></html>

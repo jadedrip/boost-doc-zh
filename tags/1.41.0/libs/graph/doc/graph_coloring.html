@@ -1,0 +1,67 @@
+<!DOCTYPE HTML PUBLIC "-//W3C//DTD HTML 4.01 Transitional//EN">
+<html><head><meta content="text/html; charset=UTF-8" http-equiv="content-type"><!--
+  -- Copyright (c) Jeremy Siek, Lie-Quan Lee, and Andrew Lumsdaine  2000
+  --
+  -- Distributed under the Boost Software License, Version 1.0.
+  -- (See accompanying file LICENSE_1_0.txt or copy at
+  -- http://www.boost.org/LICENSE_1_0.txt)
+  -->
+<title>Graph Coloring Example</title></head>
+
+<body alink="#ff0000" bgcolor="#ffffff" link="#0000ee" text="#000000" vlink="#551a8b"> 
+<img src="../../../boost.png" alt="C++ Boost" height="86" width="277"> 
+
+<br clear="">
+
+<h1>Graph Coloring 图着色</h1>图(或顶点)的着色问题，即为图中的顶点指定颜色，使得相邻的顶点具有不同的颜色，该问题在很多科学和工程应用中出现，如调度、寄存器分配、优化和并行数值计算。
+
+<p>数学上，一个无向图
+<i>G=(V,E)</i> 的一个正确的顶点着色是指一个映射 <i>c: V -&gt; S</i>，满足 <i>c(u) != c(v)</i>
+如果在 <i>G</i> 中有一条边 <i>(u,v)</i><i></i>。集合 <i>S</i> 中的颜色被称为可用色。问题通常是，对于一个给定图 <i>G</i>，确定
+<i>S</i> 的最小基数(即颜色数)，或者是问，能否对图 <i>G</i> 以特定数量的颜色着色。例如，我们需要多少种颜色才可以在地图上对美国进行着色，令相邻州具有不同的颜色？编译器常常需要确定在同一点上，变量和临时值是否可以被分配到固定数量的寄存器中。如果目标机器有 <i>K</i>
+个寄存器，则一个特定的干涉图能否以
+<i>K</i> 种颜色着色？(干涉图中的每个顶点表示一个临时值；每条边则表示不能赋给同一个寄存器的一对临时值)。
+
+</p><p>另一个例子是，在优化和微分方程的大规模非线性问题中以差分对稀疏Jacobian矩阵进行估算。给定一个非线性函数 <i>F</i>，Jacobian矩阵 <i>J</i> 的估算可以通过对向量 <i>d</i> 的合适选择估算
+<i>Jd</i> 得到。Curtis, Powell 和
+Reid&nbsp;[<a href="bibliography.html#curtis74:_jacob">9</a>]指出，可以通过对 <i>Jd</i> 的求值来确定 <i>J</i> 的列组，如果在该图中没有两列在同一行的位置为非零。因此，问题被归结为：计算近似的Jacobian矩阵需要求值的函数数量？其实这个问题和计算一个图的最小着色数量是一样的，如果我们以如下方式构造这个图：每个顶点表示 <i>J</i> 的一列，当且仅当在同一行的位置上具有非零值时，两点间有边。
+
+</p><p>但是，对一个通用图以最小数量颜色(集合 <i>S</i> 的基数)进行着色，已知是一个NP-完全问题[<a href="bibliography.html#garey79:computers-and-intractability">30</a>]。人们通常依赖于启发式来寻找答案。一种广泛使用的通用的贪心法是，从 <i>G</i> 的一个有序顶点枚举 <i>v<sub>1</sub>, ..., v<sub>n</sub></i> 开始，对于从 <i>1</i> 到 <i>n</i> 的
+<i>i</i>，给 <i>v<sub>i</sub></i> 赋一个最小的可用颜色。在&nbsp;<a href="constructing_algorithms.html">Constructing graph
+algorithms with BGL</a> 一节中，我们示范了以泛型编程的范式来编写这样的算法。但是，顶点的顺序显著地影响着色结果。某个顺序可能会执行得非常糟糕，而另一种顺序又可能得到最优的着色方案。目前已研究了多个对贪心着色法有帮助的排序算法，包括：最大优先顺序、最小最后顺序和关联度顺序。
+
+</p><p>在BGL框架中，这种顺序的构造/原型过程非常简单，因为编写这种顺序是非常符合这个算法说明的。作为一个示例，我们给出最小最后顺序的算法。
+
+</p><p>最小最后顺序[<a href="bibliography.html#matula72:_graph_theory_computing">29</a>]的基本思路如下：假定顶点 <i>v<sub>k+1</sub>, ...,
+v<sub>n</sub></i> 已被选中，选出 <i>v<sub>k</sub></i> 满足 <i>v<sub>k</sub></i> 在由
+<i>V - {v<sub>k+1</sub>, ..., v<sub>n</sub>}</i> 给出的子图中的度是最小的。
+
+</p><p>该算法针对图中的顶点使用了一个桶排序器，其中以顶点的度数为桶。在算法中还使用了两个顶点属性映射，<tt>degree</tt> 和
+<tt>marker</tt>。前者保存了每个顶点的度数，而后者用于标记某个顶点在遍历邻接顶点时是否已被排序或已处理。序号被保存在 <tt>order</tt> 中。算法如下：
+
+</p><ul>
+<li>将所有顶点放入桶排序器
+</li>
+<li>在桶排序器中找出最小度数的顶点节点
+</li>
+<li>对节点编号并遍历它的邻接顶点更新顶点度数和在桶排序器中的位置。
+</li>
+<li>跳至第2步，直至所有顶点被编号。
+</li>
+</ul>
+
+<pre>namespace boost {<br>  template &lt;class VertexListGraph, class Order, class Degree, <br>            class Marker, class BucketSorter&gt;<br>  void <br>  smallest_last_ordering(const VertexListGraph&amp; G, Order order, <br>                         Degree degree, Marker marker, <br>                         BucketSorter&amp; degree_buckets) {<br>    typedef typename graph_traits&lt;VertexListGraph&gt; GraphTraits;<br><br>    typedef typename GraphTraits::vertex_descriptor Vertex;<br>    //typedef typename GraphTraits::size_type size_type;<br>    typedef size_t size_type;<br><br>    const size_type num = num_vertices(G);<br>    <br>    typename GraphTraits::vertex_iterator v, vend;<br>    for (tie(v, vend) = vertices(G); v != vend; ++v) {<br>      put(marker, *v, num);<br>      put(degree, *v, out_degree(*v, G));<br>      degree_buckets.push(*v);<br>    }<br> <br>    size_type minimum_degree = 1;<br>    size_type current_order = num - 1;<br>    <br>    while ( 1 ) {<br>      typedef typename BucketSorter::stack MDStack;<br>      MDStack minimum_degree_stack = degree_buckets[minimum_degree];<br>      while (minimum_degree_stack.empty())<br>        minimum_degree_stack = degree_buckets[++minimum_degree];<br>      <br>      Vertex node = minimum_degree_stack.top();<br>      put(order, current_order, node);<br>      <br>      if ( current_order == 0 ) //查找所有顶点<br>        break;<br>      <br>      minimum_degree_stack.pop();<br>      put(marker, node, 0); //node 已排序。<br>      <br>      typename GraphTraits::adjacency_iterator v, vend;<br>      for (tie(v,vend) = adjacent_vertices(node, G); v != vend; ++v)<br>        <br>        if ( get(marker, *v) &gt; current_order ) { //*v 是未排序的顶点<br>          put(marker, *v, current_order);   //标记与节点相邻的列<br>          <br>          //有可能最小度数降低了，我们在此跟踪它。<br>          put(degree, *v, get(degree, *v) - 1); <br>          minimum_degree = std::min(minimum_degree, get(degree, *v)); <br>          <br>          //更新桶排序中的 *v 位置<br>          degree_buckets.update(*v);<br>        }<br><br>      current_order--;<br>    }<br>    //在此，get(order, i) == vertex(i, g);<br>  }<br>} // namespace boost<br></pre>
+
+<br>
+<hr>
+<table>
+<tbody><tr valign="top">
+<td nowrap="nowrap">Copyright © 2000-2001</td><td>
+<a href="http://www.boost.org/people/jeremy_siek.htm">Jeremy Siek</a>,
+Indiana University (<a href="mailto:jsiek@osl.iu.edu">jsiek@osl.iu.edu</a>)<br>
+<a href="http://www.boost.org/people/liequan_lee.htm">Lie-Quan Lee</a>, Indiana University (<a href="mailto:llee@cs.indiana.edu">llee@cs.indiana.edu</a>)<br>
+<a href="http://www.osl.iu.edu/%7Elums">Andrew Lumsdaine</a>,
+Indiana University (<a href="mailto:lums@osl.iu.edu">lums@osl.iu.edu</a>)
+</td></tr></tbody></table>
+
+</body></html>

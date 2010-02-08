@@ -1,0 +1,96 @@
+<!DOCTYPE HTML PUBLIC "-//W3C//DTD HTML 4.01 Transitional//EN">
+<html><head>
+
+<title>The Select Parser</title><meta http-equiv="Content-Type" content="text/html; charset=UTF-8">
+<link rel="stylesheet" href="theme/style.css" type="text/css">
+<style type="text/css">
+<!--
+.style1 {font-family: "Courier New", Courier, mono}
+.style2 {font-family: "Courier New", Courier, mono; font-style: italic; }
+.style3 {font-family: "Courier New", Courier, mono; color: #FF0000; }
+-->
+</style></head>
+<body>
+<table background="theme/bkd2.gif" border="0" cellspacing="2" width="100%">
+  <tbody><tr>
+    <td width="10"> </td>
+    <td width="85%"> <font face="Verdana, Arial, Helvetica, sans-serif" size="6"><b>The Select Parser 选择分析器 </b></font></td>
+    <td width="112"><a href="http://spirit.sf.net"><img src="theme/spirit.gif" align="right" border="0" height="48" width="112"></a></td>
+  </tr>
+</tbody></table>
+<br>
+<table border="0">
+  <tbody><tr>
+    <td width="10"></td>
+    <td width="30"><a href="../index.html"><img src="theme/u_arr.gif" border="0"></a></td>
+    <td width="30"><a href="the_lazy_parser.html"><img src="theme/l_arr.gif" border="0"></a></td>
+    <td width="30"><a href="switch_parser.html"><img src="theme/r_arr.gif" border="0"></a></td>
+  </tr>
+</tbody></table>
+<p>Select parsers may be used to identify a single parser from a given list
+  of parsers, which successfully recognizes the current input sequence. Example:<br>选择分析器可用于从给定的分析器表中选择一个成功识别当前输入的分析器。例子：</p>
+<pre>    rule<span class="special">&lt;&gt;</span> rule_select <span class="special">=</span>
+        select_p<span class="special">
+        (</span>
+            parser_a<span class="special">
+          ,</span> parser_b<span class="special">
+            <span class="comment">/* ... */</span>
+          ,</span> parser_n<br>        <span class="special">)</span><span class="special">;</span></pre>
+<p>The parsers (parser_a, parser_b etc.) are tried sequentially from
+left to right until a parser matches the current input sequence. If
+there is a matching parser found, the <tt>select_p</tt> parser returns
+  the parser's position (zero based index). For instance, in the example above, <tt>1</tt>  is returned if parser_b
+  matches.<br>列表中的分析器（parser_a, parser_b 等等）将从左到右逐个测试，直到有一个分析器匹配当前输入。如果找到一个匹配的分析器，<tt>select_p</tt>&nbsp;将返回分析器的位置（索引从零起计）。比如，上面的例子里，parser_b匹配时返回的是 <tt>1</tt>。</p>
+<p>There are two predefined parsers of the select parser family: <tt>select_p</tt>
+  and <tt>select_fail_p</tt>. These parsers differ in the way the no match
+  case is handled (when none of the  parsers match the current input sequence).
+  While the <tt>select_p</tt> parser will return <tt>-1</tt>
+  if no matching parser is found, the <tt>select_fail_p</tt> parser will not match
+  at all.<br>在选择分析器族中有两个预定义的分析器：select_p和select_fail_p。这些分析器的不同之处在于无匹配情况的处理上（即没有分析器匹配当前输入串）。如果没有匹配，select_p分析器返回-1而select_fail_p分析器将完全不匹配。</p>
+<p>The following sample shows how the select parser may be used very conveniently
+  in conjunction with a <a href="switch_parser.html">switch parser</a>:<br>下面的例子展示了选择分析器是如何便利地与<a href="switch_parser.html">跳转分析器</a>一起使用的：</p>
+<pre>    <span class="keyword">int</span> choice <span class="special">=</span> <span class="literal">-1</span><span class="special">;</span>
+    rule<span class="special">&lt;&gt;</span> rule_select <span class="special">=</span>
+            select_fail_p<span class="special">(</span><span class="literal">'a'</span><span class="special">,</span> <span class="literal">'b'</span><span class="special">,</span> <span class="literal">'c'</span><span class="special">,</span> <span class="literal">'d'</span><span class="special">)[</span>assign_a<span class="special">(</span>choice<span class="special">)]</span>
+        &gt;&gt;  switch_p(var<span class="special">(</span>choice)) <span class="special">
+            [</span><br>                case_p<span class="special">&lt;</span><span class="literal">0</span><span class="special">&gt;(</span>int_p<span class="special">),</span><br>                case_p<span class="special">&lt;</span><span class="literal">1</span><span class="special">&gt;(</span>ch_p<span class="special">(</span><span class="literal">','</span><span class="special">)),</span><br>                case_p<span class="special">&lt;</span><span class="literal">2</span><span class="special">&gt;(</span>str_p<span class="special">(</span><span class="string">"bcd"</span><span class="special">)),</span><br>                default_p<br>            <span class="special">]</span><br><span class="special">        ;</span></pre>
+<p>This example shows a rule, which matches:<br>这个例子里的规则将匹配：</p>
+<ul>
+  <li><span class="literal"> 'a' </span>followed
+      by an integer<br><span class="literal"> 'a' </span>之后接一个整数</li>
+  <li><span class="literal">'b' </span>followed by a<span class="literal">
+    ','</span><br><span class="literal">'b' </span>之后跟一个<span class="literal"> ','</span></li>
+  <li><span class="literal">'c'</span> followed by <span class="string">"bcd"</span><br><span class="literal">'c'</span> 之后跟 <span class="string">"bcd"</span></li>
+  <li>a single <span class="literal">'d'</span>.<br>单一个 <span class="literal">'d'</span>. </li>
+</ul>
+<p>For other input sequences the
+        give rule does not match at all.<br>对于其他的输入分析器完全不匹配。</p>
+<table align="center" border="0" width="80%">
+  <tbody><tr>
+    <td class="note_box"><p><img src="theme/alert.gif" height="16" width="16"> <tt>BOOST_SPIRIT_SELECT_LIMIT</tt><br>
+        <br>
+    The number of possible entries inside the <tt>select_p</tt> parser is limited by the Spirit compile time constant <tt>BOOST_SPIRIT_SELECT_LIMIT</tt>, which defaults to 3. This value should not be greater than the compile time constant given by <tt>PHOENIX_LIMIT</tt> (see <a href="../phoenix/index.html">phoenix</a>). Example:</p><p><tt>select_p</tt>&nbsp;中的条目数量受限于Spirit的编译期常量 <tt>BOOST_SPIRIT_SELECT_LIMIT</tt>，默认值为3。这个值不能大于编译期常量 <tt>PHOENIX_LIMIT</tt>(见 <a href="../phoenix/index.html">phoenix</a><a href="http://www.boost.org/libs/spirit/phoenix/index.html"></a>)。例子：</p>
+    <p class="style1"><span class="comment">// Define these before including anything else 在包含其它头文件之前定义<br>
+      </span><span class="style3">#define</span> PHOENIX_LIMIT 10<br>
+        <span class="preprocessor">#define</span> BOOST_SPIRIT_SELECT_LIMIT 10 </p></td>
+  </tr>
+</tbody></table>
+<br>
+<table border="0">
+  <tbody><tr>
+    <td width="10"></td>
+    <td width="30"><a href="../index.html"><img src="theme/u_arr.gif" border="0"></a></td>
+    <td width="30"><a href="the_lazy_parser.html"><img src="theme/l_arr.gif" border="0"></a></td>
+    <td width="30"><a href="switch_parser.html"><img src="theme/r_arr.gif" border="0"></a></td>
+  </tr>
+</tbody></table>
+<br>
+<hr size="1">
+<p class="copyright">Copyright © 2003-2004 Hartmut Kaiser <br>
+  <br>
+  <font size="2">Use,
+modification and distribution is subject to the Boost Software License,
+Version 1.0. (See accompanying file LICENSE_1_0.txt or copy at
+http://www.boost.org/LICENSE_1_0.txt) </font> </p>
+<p>&nbsp;</p>
+</body></html>

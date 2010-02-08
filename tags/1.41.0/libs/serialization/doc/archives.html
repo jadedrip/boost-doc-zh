@@ -1,0 +1,882 @@
+<!DOCTYPE HTML PUBLIC "-//W3C//DTD HTML 4.01 Transitional//EN" "http://www.w3.org/TR/html4/loose.dtd">
+<html>
+<head>
+
+
+
+
+  
+  
+  
+  <meta http-equiv="Content-Type" content="text/html; charset=UTF-8">
+
+
+
+
+  
+  
+  
+  <link rel="stylesheet" type="text/css" href="../../../boost.css">
+
+
+
+
+  
+  
+  
+  <link rel="stylesheet" type="text/css" href="style.css">
+
+
+
+
+  
+  
+  
+  <title>Serialization - Archives</title>
+</head>
+
+
+<body link="#0000ff" vlink="#800080">
+
+
+
+
+<table summary="header" border="0" cellpadding="7" cellspacing="0" width="100%">
+
+
+
+
+  <tbody>
+
+
+
+    <tr>
+
+
+
+ 
+    <td valign="top" width="300"> 
+      
+      
+      
+      
+      <h3><a href="../../../index.htm"><img alt="C++ Boost" src="../../../boost.png" border="0" height="86" width="277"></a></h3>
+
+
+
+
+    </td>
+
+
+
+
+    <td valign="top"> 
+      
+      
+      
+      
+      <h1 align="center">Serialization序列化</h1>
+
+
+
+
+      
+      
+      
+      
+      <h2 align="center">Archive 概念</h2>
+
+
+
+
+    </td>
+
+
+
+
+  </tr>
+
+
+
+
+  
+  
+  
+  </tbody>
+</table>
+
+
+
+
+<hr>
+<dl class="page-index">
+
+
+
+
+  <dt><a href="#saving_interface">Saving Archive 概念</a>
+  </dt>
+
+
+
+  <dt><a href="#loading_interface">Loading Archive 概念</a>
+  </dt>
+
+
+
+  <dt><a href="#archive_models">模型</a>
+  </dt>
+
+
+
+  <dt><a href="#exceptions">异常</a>
+  </dt>
+
+
+
+  <dt><a href="#charactersets">字符集</a>
+  </dt>
+
+
+
+</dl>
+
+
+
+
+<h4>符号</h4>
+
+
+
+在以下描述中：
+<ul>
+
+
+
+
+  <li><code>SA</code> 是一个类型，符合 <a href="#saving_interface">Saving Archive Concept</a>
+  </li>
+
+
+
+  <li><code>sa</code> 是类型 SA 的实例
+  </li>
+
+
+
+  <li><code>LA</code> 是一个类型，符合 <a href="#loading_interface">Loading Archive Concept</a>
+  </li>
+
+
+
+  <li><code>la</code> 是类型 LA 的实例
+  </li>
+
+
+
+  <li><code>T</code> 是一个 <a href="serialization.html"><strong>Serializable</strong></a> 类型
+  </li>
+
+
+
+  <li><code>x</code> 是类型 T 的实例</li>
+
+
+
+
+  <li><code>u,v</code> 为指向类型 T 的实例的指针
+  </li>
+
+
+
+  <li><code>count</code> 是可转换为 <code>std::size_t</code> 的某个类型的实例
+  </li>
+
+
+
+</ul>
+
+
+
+
+<h4><a name="saving_interface">Saving Archive 概念</a></h4>
+
+
+
+
+<h4>关联类型</h4>
+
+
+直观地说，符合该概念的类型会生成一串字节对应于任意一组C++数据结构。每一个符合
+Saving Archive 概念(SA)的类型可以与另一个符合
+<a href="#loading_interface">Loading Archive 概念</a>(LA)的类型相关联。这个关联的类型执行相反的操作。即是说，给定一串由SA生成的字节，它将生成一组与原来相等价的C++数据结构。等价性的概念由这对存档的实现以及数据所表现的 <a href="serialization.html">serializable</a> 的方法所定义。
+<p>
+</p>
+
+
+
+<h4>有效表达式</h4>
+
+
+
+
+<dl>
+
+
+
+
+  <dt></dt>
+
+
+
+  
+  
+  
+  <h4><code>
+    SA::is_saving
+  </code></h4>
+
+
+
+
+  <dd>
+    返回 Boost MPL 整型常量类型 boost::mpl::bool_&lt;true&gt;
+  </dd>
+
+
+
+   
+  <dt></dt>
+
+
+
+  
+  
+  
+  <h4><code>
+    SA::is_loading
+  </code></h4>
+
+
+
+
+  <dd>返回 Boost MPL&nbsp;整型常量类型 boost::mpl::bool_&lt;false&gt;
+  </dd>
+
+
+
+   
+  <dt></dt>
+
+
+
+  
+  
+  
+  <h4><code>
+    sa &lt;&lt; x
+    <br>
+
+
+
+
+    sa &amp; x
+  </code></h4>
+
+
+
+
+  <dd>这两个表达式必须执行完全相同的功能。它们将 <code style="white-space: normal;">x</code> 的值连同其它信息添加到 <code>sa</code>.
+    这里的其它信息由存档的实现所定义。典型地，这些信息是相对应的
+    Loading Archive 类型能够正确恢复 <code>x</code> 的值所要求的。
+    
+    
+    
+    
+    <p>返回 <code>sa</code> 的引用。 
+  
+  </p>
+
+
+
+  </dd>
+
+
+
+  <dt></dt>
+
+
+
+  
+  
+  
+  <h4><code>
+    sa.save_binary(u, count)
+  </code></h4>
+
+
+
+
+  <dd>将从 
+    <code style="white-space: normal;">u</code> 中发现的 <code style="white-space: normal;">size_t(count)</code> 个字节添加到存档中。
+  </dd>
+
+
+
+
+  <dt></dt>
+
+
+
+  
+  
+  
+  <h4><code>
+    sa.register_type&lt;T&gt;()
+    <br>
+
+
+
+
+    sa.register_type(u)
+  </code></h4>
+
+
+
+
+  <dd>将关于类 T 的信息添加到存档中。这些信息用于在对应的
+    Loading Archive 类型导入一个派生类指针时可以构造正确的类。这个成员函数的调用被称为 "类注册"。具体细节在
+    <a href="special.html#derivedpointers">特别的考虑 - 派生类指针</a> 中解释。第二种语法允许当 <code style="white-space: normal;">sa</code> 是一个模板参数时也可以在不符合标准的编译器上调用该函数。更多的信息请见 <a target="detail" href="implementation.html#tempatesyntax">模板调用语法</a>
+  </dd>
+
+
+
+
+  <dt></dt>
+
+
+
+  
+  
+  
+  <h4><code>
+    sa.library_version()
+  </code></h4>
+
+
+
+
+  <dd>返回一个无符号整数，包含 serialization 库的当前版本数。该数字在每次本库为了某些类型进行修改时将递增。例如，假设用于对集合中成员计数的类型被改变。那么，导入集合的代码就可能要考虑库的版本，以确保由旧版本的库所创建的数据可以被读出。
+  </dd>
+
+
+
+
+</dl>
+
+
+
+
+
+<h4><a name="loading_interface">Loading Archive 概念</a></h4>
+
+
+
+
+<h4>关联类型</h4>
+
+每个符合该概念的类型都假定存在一个与之对应的、符合 
+<a href="archives.html#saving_interface">Saving Archive 概念</a> 的类型。作为该概念的一个实例，其作用是将一串由相对应的SA类型所生成的字节转换为一组与原来相等价的C++数据结构。  
+<h4>有效表达式</h4>
+
+
+
+
+<dl>
+
+
+
+
+  <dt></dt>
+
+
+
+  
+  
+  
+  <h4><code>
+    LA::is_saving
+  </code></h4>
+
+
+
+
+  <dd>返回 Boost MPL&nbsp;整型常量类型 boost::mpl::bool_&lt;false&gt;
+  </dd>
+
+
+
+   
+  <dt></dt>
+
+
+
+  
+  
+  
+  <h4><code>
+    LA::is_loading
+  </code></h4>
+
+
+
+
+  <dd>返回 Boost MPL&nbsp;整型常量类型 boost::mpl::bool_&lt;true&gt;
+  </dd>
+
+
+
+   
+  <dt></dt>
+
+
+
+  
+  
+  
+  <h4><code>
+    la &gt;&gt; x
+    <br>
+
+
+
+
+    la &amp; x
+  </code></h4>
+
+
+
+
+  <dd>
+    这两个表达式必须执行完全相同的功能。将 <code>x</code> 设为从 <code>la</code> 取出的值。
+    
+    
+    
+    
+    <p>返回 <code>la</code> 的引用。 
+  
+  </p>
+
+
+
+  </dd>
+
+
+
+  <dt></dt>
+
+
+
+  
+  
+  
+  <h4><code>
+    la.load_binary(u, count)
+  </code></h4>
+
+
+
+
+  <dd>从 <code style="white-space: normal;">la</code> 中取出 <code style="white-space: normal;">size_t(count)</code> 个字节并保存到 <code style="white-space: normal;">u</code> 开始的内存。
+  </dd>
+
+
+
+
+  <dt>
+  </dt>
+
+
+
+  <dt></dt>
+
+
+
+  
+  
+  
+  <h4><code>
+    la.register_type&lt;T&gt;()
+    <br>
+
+
+
+
+    la.register_type(u)
+  </code></h4>
+
+
+
+
+  <dd>从存档中取出关于类 T 的信息。这些信息用于在导入一个派生类指针而在程序中没有其它引用时，得以构造出正确的类。这个成员函数的调用被称为 "类注册"。具体细节在
+    <a href="special.html#derivedpointers">特别的考虑 - 派生类指针</a> 中解释。第二种语法允许当 <code style="white-space: normal;">la</code><code style="white-space: normal;"></code> 是一个模板参数时也可以在不符合标准的编译器上调用该函数。更多的信息请见 <a target="detail" href="implementation.html#tempatesyntax">模板调用语法</a>&nbsp;<a target="detail" href="implementation.html#tempatesyntax"></a>
+  </dd>
+
+
+
+
+  <dt></dt>
+
+
+
+  
+  
+  
+  <h4><code>
+    la.library_version()
+  </code></h4>
+
+
+
+
+  <dd>返回一个无符号整数，包含创建该存档的 serialization 库的版本数。该数字在每次本库为了某些类型进行修改时将递增。例如，假设用于对集合中成员计数的类型被改变。那么，导入集合的代码就可能要考虑库的版本，以确保由旧版本的库所创建的数据可以被读出。
+  </dd>
+
+
+
+
+  <dt></dt>
+
+
+
+  
+  
+  
+  <h4><code>
+    la.reset_object_address(v, u)
+  </code></h4>
+
+
+
+
+  <dd>通知存档，原本位于地址 u 的对象已被移动到地址 v.
+    
+    
+    
+    
+    <p>当一个对象被导入到一个临时变量，而稍后被移到另一个位置时，必须调用这个函数来通知发生的事情。这样使得存档可以正确地执行对象跟踪。为了正确实现指向派生类实例的指针的序列化，对象跟踪是有必要的。
+    
+  </p>
+
+
+
+  </dd>
+
+
+
+  <dt></dt>
+
+
+
+  
+  
+  
+  <h4><code>
+    la.delete_created_pointers()
+  </code></h4>
+
+
+
+
+  <dd>删除指针导入时创建的所有对象。本函数用于避免由于指针已经导入而存档导入时发生异常所导致的内存泄漏。
+  </dd>
+
+
+
+
+</dl>
+
+有多种存档类型，分别基于文本、二进制和XML文件格式，但都具备以上接口。得益于所有存档类型都有相同的公开接口，所以序列化的规格对于所有存档都是一
+样的。存档类还有一些其它成员没有在这里提到。不过那些都是与库的内部函数相关的，不影响用户的使用。有关实现新的存档的讨论，请见
+<a href="archive_reference.html#implementation">新的存档 - 实现</a>。
+
+<p>操作符 <code style="white-space: normal;">&lt;&lt;</code> 和 <code style="white-space: normal;">&gt;&gt;</code> 的使用暗示了存档与C++ i/o流的关系。<strong>存档不是 
+C++ i/o 流。</strong>本系统中包含的所有存档在构造函数中都以一个流作为参数，这个流是用于输出或输入的。但是，这并不是序列化函数或存档接口的要求。它仅仅表示到目前为止，所编写的各种存档都发现以流作为它们的实现是非常有用的。
+
+</p>
+
+
+
+<h3><a name="archive_models">Archive 模型</a></h3>
+本库包含了 Archive 概念的几种不同实现。一个存档由两个类来定义。一个用于保存数据而另一个用于导入数据。本库包含了几种存档的实现，它们
+"已准备好"
+满足大多数的需求。这些类实现了不同数据格式的存档概念。它们可以拿来就用，或者作为开发一个特定类型存档的基础。要使用这些存档来执行序列化，就必须在
+执行序列化的代码模块中包含以下一个或多个头文件。
+
+<pre><code>
+// 可移植的文本存档
+<a href="../../../boost/archive/text_oarchive.hpp" target="text_oarchive_cpp">boost::archive::text_oarchive</a> // saving<br><a href="../../../boost/archive/text_iarchive.hpp" target="text_iarchive_cpp">boost::archive::text_iarchive</a> // loading<br><br>// 使用宽字符流的可移植文本存档<br><a href="../../../boost/archive/text_woarchive.hpp">boost::archive::text_woarchive</a> // saving<br><a href="../../../boost/archive/text_wiarchive.hpp">boost::archive::text_wiarchive</a> // loading<br><br>// 可移植的 XML 存档<br><a href="../../../boost/archive/xml_oarchive.hpp" target="xml_oarchive_cpp">boost::archive::xml_oarchive</a> // saving<br><a href="../../../boost/archive/xml_iarchive.hpp" target="xml_iarchive_cpp">boost::archive::xml_iarchive</a> // loading<br><br>// 使用宽字符流的可移植 XML 存档 - 用于 utf-8 输出<br><a href="../../../boost/archive/xml_woarchive.hpp" target="xml_woarchive_cpp">boost::archive::xml_woarchive</a> // saving<br><a href="../../../boost/archive/xml_wiarchive.hpp" target="xml_wiarchive_cpp">boost::archive::xml_wiarchive</a> // loading<br><br>// 不可移植的原生二进制存档<br><a href="../../../boost/archive/binary_oarchive.hpp" target="binary_oarchive_cpp">boost::archive::binary_oarchive</a> // saving<br><a href="../../../boost/archive/binary_iarchive.hpp" target="binary_iarchive_cpp">boost::archive::binary_iarchive</a> // loading<br><br><!--
+// a non-portable native binary archive which use wide character streams
+<a href="../../../boost/archive/binary_woarchive.hpp">boost::archive::binary_woarchive</a> // saving
+<a href="../../../boost/archive/binary_wiarchive.hpp">boost::archive::binary_wiarchive</a> // loading
+-->
+
+</code></pre>
+所有这些存档都实现了相同的接口。因此，只要详细描述其中一个就可以了。为此我们使用文本存档来进行介绍。
+
+
+<pre><code>
+namespace boost {
+namespace archive {
+
+enum archive_flags {
+    no_header = 1,          // 禁止存档的头部信息
+    no_codecvt = 2,         // 禁止改变 codecvt facet
+    no_xml_tag_checking = 4 // 禁止 xml tags 的检查 - 保存数据时忽略该标志
+};
+
+} // archive
+} // boost
+</code></pre>
+
+
+
+
+
+<pre><code>
+namespace boost {
+namespace archive {
+
+class text_oarchive : ...
+{
+    ...
+public:
+    ... // 实现 <strong>Saving Archive</strong> 概念<br>    text_oarchive(std::ostream &amp; os, unsigned int flags = 0);<br>    ~text_oarchive();<br>};<br><br>} // archive<br>} // boost<br></code></pre>
+
+
+
+
+
+<dl>
+
+
+
+
+
+  <dt></dt>
+
+
+
+  
+  
+  
+  <h4><code>
+text_oarchive(std::ostream &amp; os, unsigned int flags = 0);
+  </code></h4>
+
+
+
+
+  <dd>给定一个打开的流和可选的标志，构造一个存档。对于多数应用来说不需要用到标志参数。标志是以 <code style="white-space: normal;">enum archive_flags</code> 枚举项来定义的。多个标志以 <code style="white-space: normal;">|</code>
+操作符组合起来。缺省情况下，存档会先输出一些初始化数据，以标识这是一个由本系统产生的存档。这样可以很好地处理从一个无效的文件格式导入存档这种错误
+操作。除此之外，每种存档类型可能还有它自己的信息。例如，原生二进制存档会包含以下信息：原生类型的大小、字节顺序等，以处理将二进制存档用于异构平台
+这样的错误。在某些情形下，这些额外的负载可能会被认为是不适合的，这时可以用 <code style="white-space: normal;">no_header</code> 标志来禁止。
+    
+    
+    
+    <p>有些情形下，存档可能改变 (并在稍后恢复)
+流 locale 的 codecvt facet. 要禁止这种行为，请指定 <code style="white-space: normal;">no_codecvt</code> 标志。
+    </p>
+
+
+
+    
+    
+    
+    <p>
+XML 存档中包含了一些嵌套 tags，用于指定数据域的开始和结束。通常在导入数据时，这些 tags 需要检查是否符合对象名。如果发现不匹配的情况，就会抛出一个异常。这可能是你不想要的。要禁止对 XML
+tags 的检查，请用 <code style="white-space: normal;">no_xml_tag_checking</code> 标志。
+
+
+    </p>
+
+
+
+  </dd>
+
+
+
+  <dt></dt>
+
+
+
+  
+  
+  
+  <h4><code>
+~text_oarchive();
+  </code></h4>
+
+
+
+
+  <dd>析构一个存档。这应该在关闭流之前被调用。它将所有被改动的流 facets 恢复为打开存档之前的状态。
+  </dd>
+
+
+
+
+
+</dl>
+
+
+
+
+
+<pre><code>
+namespace boost {
+namespace archive {
+
+class text_iarchive : ...
+{
+    ...
+public:
+    ... // 实现 <strong>Loading Archive</strong> 概念<br>    text_iarchive(std::istream &amp; is, unsigned int flags = 0);<br>    ~text_iarchive();<br>};<br><br>} //namespace archive<br>) //namespace boost<br><br></code></pre>
+
+
+
+
+
+<dl>
+
+
+
+
+
+  <dt></dt>
+
+
+
+  
+  
+  
+  <h4><code>
+text_iarchive(std::istream &amp; is, unsigned int flags = 0);
+  </code></h4>
+
+
+
+
+  <dd>给定一个打开的流和可选的标志，构造一个存档。如果使用了标志，它们必须与创建存档时的标志一致。标志的功能和用法见前文所述。
+  </dd>
+
+
+
+
+
+  <dt></dt>
+
+
+
+  
+  
+  
+  <h4><code>
+~text_iarchive();
+  </code></h4>
+
+
+
+
+  <dd>析构一个存档。这应该在关闭流之前被调用。它将所有被改动的流 facets 恢复为打开存档之前的状态。
+  </dd>
+
+
+
+
+</dl>
+
+
+
+
+<p><code style="white-space: normal;">binary_oarchive</code> 和
+<code style="white-space: normal;">binary_iarchive</code> 类是以更底层的 
+<code style="white-space: normal;">std::streambuf</code> 实现的。因此，除了上述的通用接口外，它们还有以下构造函数：
+</p>
+
+
+
+<dl>
+
+
+
+
+  <dt></dt>
+
+
+
+  
+  
+  
+  <h4><code>
+binary_oarchive(std::streambuf &amp; bsb, unsigned int flags = 0);
+  </code></h4>
+
+
+
+
+和
+  <dt></dt>
+
+
+
+  
+  
+  
+  <h4><code>
+binary_iarchive(std::streambuf &amp; bsb, unsigned int flags = 0);
+  </code></h4>
+
+
+
+
+</dl>
+
+
+
+
+
+<h3><a name="exceptions">异常</a></h3>
+
+
+
+
+<a name="exceptions">所有存档类都可以抛出异常。有关可能抛出的异常的列表，请看本文档的 </a><a target="detail" href="exceptions.html">存档的异常</a>
+一节。 
+
+<h3><a name="charactersets">字符集</a></h3>
+
+
+
+
+<a name="charactersets">本库包含两个XML的存档类。宽字符版本 (<code style="white-space: normal;">xml_w?archive</code>) 以 UTF-8 为输出，这样可以无损地处理任意的宽字符。<code style="white-space: normal;">std::string</code> 数据被从多字节格式转换为当前 <code style="white-space: normal;">
+locale</code> 所使用的宽字符格式。因此该版本在各种情况下都可以完好地处理各种C++数据。这可能引起一些不希望的行为。假设使用希伯来字符的</a> <code style="white-space: normal;">locale</code> 字符集创建了一个 <code style="white-space: normal;">std::string</code> ，输出时它被转换为宽字符。但是在重新输入时，如果 <code style="white-space: normal;">locale</code> 的设置与创建存档时不一致的话，就会产生问题。
+
+<p>
+<a name="charactersets">普通字符版本 (<code style="white-space: normal;">xml_?archive</code>) 生成 
+<code style="white-space: normal;">std::string</code> 输出时不进行转换。虽然对于序列化来说可以正常使用，但是如果XML存档被用于其它目的时就可能会有困难。
+</a></p>
+
+
+
+<hr>
+<p><a name="charactersets"><i>&copy; Copyright </i></a><i><a href="http://www.rrsd.com">Robert Ramey</a> 2002-2004. 
+Distributed under the Boost Software License, Version 1.0. (See
+accompanying file LICENSE_1_0.txt or copy at http://www.boost.org/LICENSE_1_0.txt)
+</i></p>
+
+
+
+
+</body>
+</html>

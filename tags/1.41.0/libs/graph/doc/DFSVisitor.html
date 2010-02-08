@@ -1,0 +1,159 @@
+<!DOCTYPE HTML PUBLIC "-//W3C//DTD HTML 4.01 Transitional//EN">
+<html><head><meta content="text/html; charset=UTF-8" http-equiv="content-type"><!--
+  -- Copyright (c) Jeremy Siek, Lie-Quan Lee, and Andrew Lumsdaine 2000
+  --
+  -- Distributed under the Boost Software License, Version 1.0.
+  -- (See accompanying file LICENSE_1_0.txt or copy at
+  -- http://www.boost.org/LICENSE_1_0.txt)
+  -->
+<title>DFS Visitor</title></head>
+
+<body alink="#ff0000" bgcolor="#ffffff" link="#0000ee" text="#000000" vlink="#551a8b"> 
+<img src="../../../boost.png" alt="C++ Boost" height="86" width="277"> 
+
+<br clear="">
+
+<h1><img src="figs/python.gif" alt="(Python)">DFS Visitor Concept 深度优先遍历器概念</h1>该概念定义了用于 <a href="./depth_first_search.html"><tt>depth_first_search()</tt></a> 的遍历器接口。用户可以定义一个具有DFS遍历器接口的类，并将该类的一个对象传递给 <tt>depth_first_search()</tt>，从而在图搜索期间增加相应的动作。
+
+<h3>Refinement of 精化自</h3>
+
+<a href="../../utility/CopyConstructible.html">可复制构造 Copy Constructible</a>
+(遍历器的复制应该是一个轻量级的操作)。
+
+<h3>Notation 记号</h3>
+
+<table>
+<tbody><tr>
+<td><tt>V</tt></td>
+<td>一个以DFS遍历器为模的类型。</td>
+</tr>
+
+<tr>
+<td><tt>vis</tt></td>
+<td>一个类型为 <tt>V</tt> 的对象。</td>
+</tr>
+
+<tr>
+<td><tt>G</tt></td>
+<td>一个以 Graph 为模的类型。</td>
+</tr>
+
+<tr>
+<td><tt>g</tt></td>
+<td>一个类型为 <tt>G</tt> 的对象。</td>
+</tr>
+
+<tr>
+<td><tt>e</tt></td>
+<td>一个类型为 <tt>boost::graph_traits&lt;G&gt;::edge_descriptor</tt> 的对象。</td>
+</tr>
+
+<tr>
+<td><tt>s,u</tt></td>
+<td>一个类型为 <tt>boost::graph_traits&lt;G&gt;::vertex_descriptor</tt> 的对象。</td>
+</tr>
+
+</tbody></table>
+
+<h3>Associated Types 关联类型</h3>无
+<h3>Valid Expressions 有效表达式</h3>
+
+<table border="1">
+<tbody><tr>
+<th>Name</th><th>Expression</th><th>Return Type</th><th>Description</th>
+</tr>
+
+<tr>
+<td>顶点初始化</td>
+<td><tt>vis.initialize_vertex(s, g)</tt></td>
+<td><tt>void</tt></td>
+<td>在开始图搜索之前，对图中的每个点调用。
+
+</td>
+</tr>
+
+<tr>
+<td>顶点开始</td>
+<td><tt>vis.start_vertex(s, g)</tt></td>
+<td><tt>void</tt></td>
+<td>在开始搜索之前，对源顶点调用一次。
+</td>
+</tr>
+
+<tr>
+<td>顶点发现</td>
+<td><tt>vis.discover_vertex(u, g)</tt></td>
+<td><tt>void</tt></td>
+<td>当首次遇到某个顶点时调用。
+
+</td>
+</tr>
+
+<tr>
+<td>边检查</td>
+<td><tt>vis.examine_edge(e, g)</tt></td>
+<td><tt>void</tt></td>
+<td>在每个顶点被发现后，对其每条出边调用。&nbsp;
+</td>
+</tr>
+
+
+<tr>
+<td>树边</td>
+<td><tt>vis.tree_edge(e, g)</tt></td>
+<td><tt>void</tt></td>
+<td>在某条边成为搜索树的边成员时调用。</td>
+</tr>
+
+<tr>
+<td>反向边</td>
+<td><tt>vis.back_edge(e, g)</tt></td>
+<td><tt>void</tt></td>
+<td>对图中的反向边调用。对于无向图，由于边 <i>(u,v)</i> 和 <i>(v,u)</i> 是同一条边，所以树边和反向边有些歧义，不过
+<tt>tree_edge()</tt> 和 <tt>back_edge()</tt> 两个函数都会被调用。解决这个歧义的一个办法是将树边记录下来，然后忽略那些已被标记为树边的反向边。记录树边的一个简单方法是在&nbsp; <tt>tree_edge</tt> 事件点上记录其先辈。
+</td>
+</tr>
+
+<tr>
+<td>前向边或交叉边</td>
+<td><tt>vis.forward_or_cross_edge(e, g)</tt></td>
+<td><tt>void</tt></td>
+<td>对图中的前向边或交叉边调用。在无向图中，该方法不会被调用。
+</td>
+</tr>
+
+<tr>
+<td>顶点结束</td>
+<td><tt>vis.finish_vertex(u, g)</tt></td>
+<td><tt>void</tt></td>
+<td>当DFS树中以顶点 u 为根的所有顶点都调用了 <tt>finish_vertex</tt> 后，对顶点 u 调用。如果顶点 <tt>u</tt> 是DFS树的一片叶子，则 <tt>finish_vertex</tt> 函数在 <tt>u</tt> 的所有出边被检查后对 <tt>u</tt> 调用。
+</td>
+</tr>
+
+</tbody></table>
+
+<h3>Models 模型</h3>
+
+<ul>
+ <li><a href="./dfs_visitor.html"><tt>dfs_visitor</tt></a>
+</li></ul>
+
+<a name="python"></a>
+<h3>Python</h3>要在Python中实现一个<tt>DFSVisitor</tt>概念的模型，应创建一个从图的 <tt>DFSVisitor</tt> 类型(名为 <tt><i>GraphType</i>.DFSVisitor</tt>)派生的新类。事件和语法与C++中的遍历器相同。以下是一个
+Python <tt>bgl.Graph</tt> 图类型的例子：
+
+<pre>class count_tree_edges_dfs_visitor(bgl.Graph.DFSVisitor):<br>  def __init__(self, name_map):<br>    bgl.Graph.DFSVisitor.__init__(self)<br>    self.name_map = name_map<br><br>  def tree_edge(self, e, g):<br>    (u, v) = (g.source(e), g.target(e))<br>    print "Tree edge ",<br>    print self.name_map[u],<br>    print " -&gt; ",<br>    print self.name_map[v]<br></pre>
+
+<br>
+<hr>
+<table>
+<tbody><tr valign="top">
+<td nowrap="nowrap">Copyright © 2000-2001</td><td>
+<a href="http://www.boost.org/people/jeremy_siek.htm">Jeremy Siek</a>,
+Indiana University (<a href="mailto:jsiek@osl.iu.edu">jsiek@osl.iu.edu</a>)<br>
+<a href="http://www.boost.org/people/liequan_lee.htm">Lie-Quan Lee</a>, Indiana University (<a href="mailto:llee@cs.indiana.edu">llee@cs.indiana.edu</a>)<br>
+<a href="http://www.osl.iu.edu/%7Elums">Andrew Lumsdaine</a>,
+Indiana University (<a href="mailto:lums@osl.iu.edu">lums@osl.iu.edu</a>)
+</td></tr></tbody></table>
+
+</body></html>

@@ -1,0 +1,480 @@
+<!DOCTYPE HTML PUBLIC "-//W3C//DTD HTML 4.01 Transitional//EN">
+<html><head>
+<meta http-equiv="Content-Type" content="text/html; charset=UTF-8">
+
+<title>Additional Implementation Notes</title><link rel="stylesheet" href="../../../../../../../doc/html/boostbook.css" type="text/css">
+<meta name="generator" content="DocBook XSL Stylesheets Vsnapshot_2006-12-17_0120">
+<link rel="start" href="../../index.html" title="Math Toolkit">
+<link rel="up" href="../backgrounders.html" title="Backgrounders">
+<link rel="prev" href="../backgrounders.html" title="Backgrounders">
+<link rel="next" href="relative_error.html" title="Relative Error"></head>
+<body alink="#0000ff" bgcolor="white" link="#0000ff" text="black" vlink="#840084">
+<table cellpadding="2" width="100%"><tbody><tr>
+<td valign="top"><img alt="Boost C++ Libraries" src="../../../../../../../boost.png" height="86" width="277"></td>
+<td align="center"><a href="../../../../../../../index.html">Home</a></td>
+<td align="center"><a href="../../../../../../../libs/libraries.htm">Libraries</a></td>
+<td align="center"><a href="http://www.boost.org/users/people.html">People</a></td>
+<td align="center"><a href="http://www.boost.org/users/faq.html">FAQ</a></td>
+<td align="center"><a href="../../../../../../../more/index.htm">More</a></td>
+</tr></tbody></table>
+<hr>
+<div class="spirit-nav">
+<a accesskey="p" href="../backgrounders.html"><img src="../../../../../../../doc/html/images/prev.png" alt="Prev"></a><a accesskey="u" href="../backgrounders.html"><img src="../../../../../../../doc/html/images/up.png" alt="Up"></a><a accesskey="h" href="../../index.html"><img src="../../../../../../../doc/html/images/home.png" alt="Home"></a><a accesskey="n" href="relative_error.html"><img src="../../../../../../../doc/html/images/next.png" alt="Next"></a>
+</div>
+<div class="section" lang="en">
+<div class="titlepage"><div><div>
+  <h3 class="title">
+<a name="math_toolkit.backgrounders.implementation"></a><a href="implementation.html" title="Additional Implementation Notes"> 附加的实现说明(Additional
+      Implementation Notes)</a>
+</h3>
+</div></div></div>
+<p>
+  实现说明的主要部分是每个函数和分布的文档。这里的说明是更普遍的性质并反映所使用的更普遍的实现哲学(implementation philosophy)。</p>
+<a name="math_toolkit.backgrounders.implementation.implemention_philosophy"></a>
+<h5>
+<a name="id859817"></a>
+        <a href="implementation.html#math_toolkit.backgrounders.implementation.implemention_philosophy">实现哲学(Implemention
+        philosophy)</a>
+  </h5>
+<p>
+        "首先让其正确，然后让其快速(First be right, then be fast)."
+  </p>
+<p>
+  在速度和精度之间永远都会有潜在的妥协。可能找到更快的算法，尤其是对于特定范围的参数，但是对于大多数的使用数学函数和数学分布的应用程序来说，我们判定(judge)：速度极少与精度一样重要。</p>
+<p>
+      所以我们的优先级是精确度。</p>
+<p>
+  为了允许特殊函数的计算精度，对生成非常精确的测试数据表做出了巨大的努力。</p>
+<p>(同样也要求使用更多的CPU资源  - JM的笔记本电脑有流出塑料熔浆的危险，所以，PAB的双核台式电脑在计算一些测试数据表的日子里的50%的时间处于繁忙的状态).</p>
+<p>
+        对于一个特定的RealType类型，比如说float 或 double，对于一些函数可能可以找到更小因此也更快的逼近方法，但精确度更低一些 (或许因为没有优化的迭代，例如，当计算反函数的时候)。</p>
+<p>
+  如果这些算法“对于满足要求”是足够精确的，那么用户可以使用他自己的特定实现方法。</p>
+<p>
+  例如，从计算代价很昂贵的时代开始就存在逼近算法：</p>
+<p>
+        H Goldberg and H Levine, Approximate formulas for percentage points and normalisation
+        of t and chi squared, Ann. Math. Stat., 17(4), 216 - 225 (Dec 1946).
+  </p>
+<p>
+        A H Carter, Approximations to percentage points of the z-distribution, Biometrika
+        34(2), 352 - 358 (Dec 1947).
+  </p>
+<p>
+  对于一些速度至关重要的应用程序来说，这些算法仍然可以提供足够的精度。</p>
+<a name="math_toolkit.backgrounders.implementation.accuracy_and_representation_of_test_values"></a>
+<h5>
+<a name="id859928"></a>
+        <a href="implementation.html#math_toolkit.backgrounders.implementation.accuracy_and_representation_of_test_values">精度以及测试数据的表示</a>
+  </h5>
+<p>
+为了使足够多的浮点类型满足足够的精度，如果可能的话，常量值被给定为50个十进制数字(虽然许多资料只提供精度为接近64个bit的double精
+度)。除非它们可以被精确表示，例如，整数，或类似于0.125的分数，否则通过在数值的后面附加一个L使得数值被当作long
+double类型。这避免在转换为double(缺省的类型)时发生精度损失。在
+static_cast&lt;RealType&gt;之后使用来为抽样测试提供合适的RealType类型。</p>
+<p>
+        返回常量值的函数，类似于函数 kurtosis ，写作： </p>
+<p>
+        <code class="computeroutput"><span class="keyword">static_cast</span><span class="special">&lt;</span><span class="identifier">RealType</span><span class="special">&gt;(-</span><span class="number">3</span><span class="special">)</span> <span class="special">/</span>
+        <span class="number">5</span><span class="special">;</span></code>
+  </p>
+<p>
+        来提供编译器可以为RealType计算的最精确的值。 (分母是一个整数，所以可进行精确的类型提升)。</p>
+<p>
+  测试1/3，<span class="bold"><strong>不能</strong></span> 使用基底(radix)为浮点数的两个值来表示，而(应当)使用，例如：</p>
+<p>
+        <code class="computeroutput"><span class="keyword">static_cast</span><span class="special">&lt;</span><span class="identifier">RealType</span><span class="special">&gt;(</span><span class="number">1</span><span class="special">)</span> <span class="special">/</span>
+        <span class="number">3</span><span class="special">;</span></code>
+  </p>
+<p> 如果函数对于输入非常敏感，将一个不精确的值(例如 0.1 )作为输入可能会使结果偏移很远：例如 ~1e-7
+是“错误的”，因为0.1没有精确的二进制表示。这就是为什么精确的二进制值－1/2 ， 1/4 ，
+1/8等等－用在测试中，以及偶尔使用的分数a/b，其中，b是2的幂(为了确保结果是一个精确表示的二进制值)。</p>
+<a name="math_toolkit.backgrounders.implementation.tolerance_of_tests"></a>
+<h5>
+<a name="id860159"></a>
+        <a href="implementation.html#math_toolkit.backgrounders.implementation.tolerance_of_tests">容许度测试(Tolerance
+        of Tests)</a>
+  </h5>
+<p>
+        容许度需要设置为最大值：</p>
+<div class="itemizedlist"><ul type="disc">
+<li>
+          某个 epsilon 值。</li>
+<li>
+          数据的精确度 (通常接近于64-bit 的double)。</li>
+</ul></div>
+<p> 否则，当long double比测试数据有更多的数字个数时，那么没有一个基于epsilon的容许度可以通过(Otherwise
+when long double has more digits than the test data, then no amount of
+tweaking an epsilon based tolerance will work)。</p>
+<p> 一个常见的问题是，当对于类似于 Microsoft VS.NET 的实现，容许度是合适的：double 和 long double
+是同样的大小，在其它的long double比double 更精确的系统上，容许度测试会失败。首先检查是否有L后缀，然后检查容许度是否太高。</p>
+<a name="math_toolkit.backgrounders.implementation.handling_unsuitable_arguments"></a>
+<h5>
+<a name="id860219"></a>
+        <a href="implementation.html#math_toolkit.backgrounders.implementation.handling_unsuitable_arguments">处理不合适的参数</a>
+  </h5>
+<p>        <a href="http://www.open-std.org/jtc1/sc22/wg21/docs/papers/2004/n1665.pdf" target="_top">数学特殊函数中的错误</a>， J. Marraffino &amp; M. Paterno
+  提议：当参数使得计算结果是一个数学未定义值的时候，产生一个定义域错误是强制性的。</p>
+<div class="itemizedlist"><ul type="disc">
+  <li>
+          准则 1
+      </li>
+</ul></div>
+<div class="blockquote"><blockquote class="blockquote">
+<p>
+      </p>
+<p>
+            一个函数被称作是在 a = (a1, a2,
+            . . .) 处定义的，如果 x = (x1, x2, . . .)的极限在所有的方向的逼近值都是相同的。定义的值可能是任何值 +infinity，或 -infinity。</p>
+<p>
+      </p>
+</blockquote></div>
+<p>
+        如果函数函数定义延伸到 + infinity 然后 '折回'
+  到 - infinity，那么函数是未定义的。</p>
+<div class="blockquote"><blockquote class="blockquote">
+<p>
+      </p>
+<p>
+      这个库中的函数在数学未定义的值上计算也会产生一个错误。</p>
+<p>
+      </p>
+</blockquote></div>
+<div class="itemizedlist"><ul type="disc">
+  <li>
+          准则 2
+      </li>
+</ul></div>
+<div class="blockquote"><blockquote class="blockquote">
+<p>
+      </p>
+<p>
+            这个库中的函数在数学函数计算出的值不是一个实数值的时候也会产生一个错误。</p>
+<p>
+      </p>
+</blockquote></div>
+<p>
+        这些实现是遵循这些提议的并与<span class="emphasis"><em>ISO/IEC 9899:1999 Programming languages - C</em></span> and
+        with the <a href="http://www.open-std.org/jtc1/sc22/wg21/docs/papers/2005/n1836.pdf" target="_top">Draft
+        Technical Report on C++ Library Extensions, 2005-06-24, section 5.2.1, paragraph
+        5</a>. <a href="../main_overview/error_handling.html" title="Error Handling">See
+        also domain_error</a>.相兼容的。
+  </p>
+<p>        参考<a href="../policy/pol_ref.html" title="Policy Reference">策略指南</a> 了解更多错误处理策略，应当允许用户遵从这些建议以及其它的错误处理行为的信息。</p>
+<p>
+        参考<a href="../main_overview/error_handling.html" title="Error Handling">错误处理</a>
+        了解这些机制的一个全面的解释，以及<a href="../dist/stat_tut/weg/error_eg.html" title="Error Handling Example">错误处理实例</a> 和 <a href="../../../../../example/error_handling_example.cpp" target="_top">error_handling_example.cpp</a>
+。  </p>
+<div class="caution"><table summary="Caution" border="0">
+<tbody><tr>
+<td rowspan="2" align="center" valign="top" width="25"><img alt="[Caution]" src="../../../../../../../doc/html/images/caution.png"></td>
+<th align="left">注意</th>
+</tr>
+<tr><td align="left" valign="top"><p>
+          如果你允许抛出异常但是没有使用 try &amp; catch ，那么程序将会以一个未捕获的异常终止并可能会退出。因此为了从报错消息中得到帮助，推荐对于所有的应用程序允许抛出<span class="bold"><strong>所有的异常</strong></span>
+          ，<span class="bold"><strong>并使用</strong></span>  try&amp;catch  。然而，为了简化代码，大多数的例子程序都没有这样做。</p></td></tr>
+</tbody></table></div>
+<a name="math_toolkit.backgrounders.implementation.handling_of_functions_that_are_not_mathematically_defined"></a>
+<h5>
+<a name="id860444"></a>
+        <a href="implementation.html#math_toolkit.backgrounders.implementation.handling_of_functions_that_are_not_mathematically_defined">处理数学上没有定义的函数</a>
+  </h5>
+<p>
+        数学上没有定义的函数，类似于柯西均值，在缺省情况下不能通过编译。一个<a href="../policy/pol_ref/assert_undefined.html" title="Mathematically Undefined Function Policies">
+  策略</a> 可以用来控制这些行为。</p>
+<p>
+  如果这个函数允许未定义的行为，在缺省情况下，调用这些函数将会抛出定义域错误的异常。但是错误处理策略可以设置为不抛出异常，取而代之的是返回 一个NaN值。例如，在任何的Boost头文件#include之前：</p>
+<p>
+        <code class="computeroutput"><span class="preprocessor">#define</span> <span class="identifier">BOOST_MATH_DOMAIN_ERROR_POLICY</span>
+        <span class="identifier">ignore_error</span></code>
+  </p>
+<p>
+        那么如果调用未实现的函数，函数 mean(cauchy&lt;&gt;()) 将返回 std::numeric_limits&lt;T&gt;::quiet_NaN()。</p>
+<div class="warning"><table summary="Warning" border="0">
+<tbody><tr>
+<td rowspan="2" align="center" valign="top" width="25"><img alt="[Warning]" src="../../../../../../../doc/html/images/warning.png"></td>
+<th align="left">警告</th>
+</tr>
+<tr><td align="left" valign="top"><p>
+          如果<code class="computeroutput"><span class="identifier">std</span><span class="special">::</span><span class="identifier">numeric_limits</span><span class="special">&lt;</span><span class="identifier">T</span><span class="special">&gt;::</span><span class="identifier">has_quiet_NaN</span></code> 为 false (例如T是一个用户自定义类型)，那么当定义域错误出现时总会抛出一个异常。因此也强烈推荐捕获异常。</p></td></tr>
+</tbody></table></div>
+<a name="math_toolkit.backgrounders.implementation.median_of_distributions"></a>
+<h5>
+<a name="id860585"></a>
+        <a href="implementation.html#math_toolkit.backgrounders.implementation.median_of_distributions">分布的均值(Median
+        of distributions)</a>
+  </h5>
+<p>
+        对于许多的分布类型，我们不能够找到一个分析方程(analytic
+        formula)，这就使得我们不能为这些分布实现<a href="http://en.wikipedia.org/wiki/Median" target="_top">均值函数(median
+  functions)</a>，一系列值的中间值。</p>
+<p>
+  然而，对于分布 <code class="computeroutput"><span class="identifier">dist</span></code> 的有用的均值逼近也许是可用的：</p>
+<p>
+        <code class="computeroutput"><span class="identifier">quantile</span><span class="special">(</span><span class="identifier">dist</span><span class="special">,</span> <span class="number">0.5</span><span class="special">)</span></code>.
+  </p>
+<p>
+        <a href="http://www.amstat.org/publications/jse/v13n2/vonhippel.html" target="_top">Mean,
+        Median, 以及 Skew, Paul T von Hippel</a>
+  </p>
+<p>
+        <a href="http://documents.wolfram.co.jp/teachersedition/MathematicaBook/24.5.html" target="_top">Descriptive
+        Statistics,</a>
+  </p>
+<p>
+        <a href="http://documents.wolfram.co.jp/v5/Add-onsLinks/StandardPackages/Statistics/DescriptiveStatistics.html" target="_top">以及</a>
+  </p>
+<p>
+        <a href="http://documents.wolfram.com/v5/TheMathematicaBook/AdvancedMathematicsInMathematica/NumericalOperationsOnData/3.8.1.html" target="_top">Mathematica
+  Basic Statistics.</a> 给出了更多信息，尤其是离散分布。</p>
+<a name="math_toolkit.backgrounders.implementation.handling_of_floating_point_infinity"></a>
+<h5>
+<a name="id860729"></a>
+        <a href="implementation.html#math_toolkit.backgrounders.implementation.handling_of_floating_point_infinity">处理浮点无限值(Handling
+        of Floating-Point Infinity)</a>
+  </h5>
+<p>
+        有一些函数和分布可以将正无穷和负无穷作为参数，但是在将无限值作为特殊测试情况的实验之后 ，我们推断禁止正无穷和负无穷作为参数会更有用一些，取而代之的是返回<a href="../main_overview/error_handling.html#domain_error">定义域错误</a>。</p>
+<p>
+  将无限值作为特殊情况增添了额外的复杂性，因为不像内建的类型－但不是所有－平台－并不是所有的用户自定义类型都提供了对<code class="computeroutput"><span class="identifier">std</span><span class="special">::</span><span class="identifier">numeric_limits</span><span class="special">&lt;</span><span class="identifier">RealType</span><span class="special">&gt;::</span><span class="identifier">infinity</span><span class="special">()</span></code> 的特化并返回是无限值的任何表示。</p>
+<p>
+  原理在于，非有限的值可能因为溢出错误而出现在代码中，并且将这个错误情况提示出来而不是仍旧继续下去可能更有用一些。代码也变得更复杂，更易于出错，需要更多的测试，可读性也更差。</p>
+<p>
+  然而，在一些情况下，例如正态分布，我们很明显地感觉到，我们应当允许参数为无限值，假定在那个实现上RealType实现了无限值的表示方法。</p>
+<p>
+  需要对无限值(或其它特殊值)进行特殊处理可以在调用函数和分布之前拦截这些值并返回他们设置的值，或他们选择的行为。这可能要比处理异常更简单一些。</p>
+<p>
+        向下溢出，向上溢出，denorm 可以通过使用<a href="../policy/pol_ref/error_handling_policies.html" title="Error Handling Policies">错误处理策略</a>来处理。</p>
+<p>
+        我们也尝试了捕获边界情况：产生除数为0或向下溢出并产生一个异常。在pole处的函数的行为可以由<a href="../policy/pol_ref/error_handling_policies.html" title="Error Handling Policies">错误处理策略</a>来控制。</p>
+<a name="math_toolkit.backgrounders.implementation.scale__shape_and_location"></a><h5>
+<a name="id860887"></a>
+        <a href="implementation.html#math_toolkit.backgrounders.implementation.scale__shape_and_location">Scale,
+        Shape and Location</a>
+      </h5>
+<p>
+  我们考虑把 位置(location) 和尺度(scale)添加到函数列表中，例如：</p>
+<pre class="programlisting"><span class="keyword">template</span> <span class="special">&lt;</span><span class="keyword">class</span> <span class="identifier">RealType</span><span class="special">&gt;</span>
+<span class="keyword">inline</span> <span class="identifier">RealType</span> <span class="identifier">scale</span><span class="special">(</span><span class="keyword">const</span> <span class="identifier">triangular_distribution</span><span class="special">&lt;</span><span class="identifier">RealType</span><span class="special">&gt;&amp;</span> <span class="identifier">dist</span><span class="special">)</span>
+<span class="special">{</span>
+  <span class="identifier">RealType</span> <span class="identifier">lower</span> <span class="special">=</span> <span class="identifier">dist</span><span class="special">.</span><span class="identifier">lower</span><span class="special">();</span>
+  <span class="identifier">RealType</span> <span class="identifier">mode</span> <span class="special">=</span> <span class="identifier">dist</span><span class="special">.</span><span class="identifier">mode</span><span class="special">();</span>
+  <span class="identifier">RealType</span> <span class="identifier">upper</span> <span class="special">=</span> <span class="identifier">dist</span><span class="special">.</span><span class="identifier">upper</span><span class="special">();</span>
+  <span class="identifier">RealType</span> <span class="identifier">result</span><span class="special">;</span>  <span class="comment">// of checks.<br></span>  <span class="keyword">if</span><span class="special">(</span><span class="keyword">false</span> <span class="special">==</span> <span class="identifier">detail</span><span class="special">::</span><span class="identifier">check_triangular</span><span class="special">(</span><span class="identifier">BOOST_CURRENT_FUNCTION</span><span class="special">,</span> <span class="identifier">lower</span><span class="special">,</span> <span class="identifier">mode</span><span class="special">,</span> <span class="identifier">upper</span><span class="special">,</span> <span class="special">&amp;</span><span class="identifier">result</span><span class="special">))</span>
+  <span class="special">{</span>
+    <span class="keyword">return</span> <span class="identifier">result</span><span class="special">;</span>
+  <span class="special">}</span>
+  <span class="keyword">return</span> <span class="special">(</span><span class="identifier">upper</span> <span class="special">-</span> <span class="identifier">lower</span><span class="special">);</span>
+<span class="special">}</span>
+</pre>
+<p>
+  但是发现这些概率对于大多数的分布来说是未定义的(或者它们的定义太具有争论性)。因为它们不是成员函数，所以，它们可以依据需要来添加。</p>
+<a name="math_toolkit.backgrounders.implementation.notes_on_implementation_of_specific_functions__amp__distributions"></a>
+<h5>
+<a name="id861353"></a>
+        <a href="implementation.html#math_toolkit.backgrounders.implementation.notes_on_implementation_of_specific_functions__amp__distributions">特殊函数和分布的实现说明(Notes
+        on Implementation of Specific Functions &amp; Distributions)</a>
+  </h5>
+<div class="itemizedlist"><ul type="disc">
+  <li>
+对于三角形分布的缺省参数，我们不确定最好的缺省参数是什么。一些资料建议缺省为标准的三角形分布：lower = 0, mode = half 且
+upper = 1。然而，作为正态分布的逼近，最常见的使用情况，lower = -1, mode = 0 且 upper = 1
+将会更合适一些。</li>
+</ul></div>
+<a name="math_toolkit.backgrounders.implementation.rational_approximations_used"></a>
+<h5>
+<a name="id861393"></a>
+        <a href="implementation.html#math_toolkit.backgrounders.implementation.rational_approximations_used">使用的有理逼近(Rational
+        Approximations Used)</a>
+  </h5>
+<p>
+        这个库中的一些特殊函数是使用有理逼近来实现的。它们或者来自于文献资料，或者使用由John Maddock 发明的<a href="../toolkit/internals2/minimax.html" title="Minimax Approximations and the Remez Algorithm">Remez 代码</a>。</p>
+<p>
+  使用有理逼近而不是多项式逼近来确保精度：多项式逼近通常可以很好地达到一个特定的精度，但是不管增加多少项，都不能达到更高的精度。</p>
+<p> 我们自己的逼近方法是出于增加精度(为了支持128bit 的 long double)，或者是因为文献中没有可用的逼近方法或者基于
+non-BSL compatible license而发明。我们的Remez
+代码与文献资料十分相符，结果是相当“toy”的情况。所有的逼近针对收敛性进行了检查并确保它们不是ill-conditioned(这些系数可以给出
+一个理论上好的解答，但导致有理函数在某些固定精度无法计算)。</p>
+<p> 使用不同的Remez实现来重新计算会产生不同的系数：在通常情况下，这个问题是 ill conditioned
+，并且，对于其它的许多逼近，我们的Remez实现找出了一个宽的并且不是很清楚的极值(当然，对于类似于逼近函数exp的简单例子，极小值是定义良好
+的，不管使用谁的实现方法，系数都是一样的)。通常这不会影响逼近的合理性：有很好的文献资料支持这种思想。注意："in
+error"在这里有一个特殊的含义，参考<a href="http://front.math.ucdavis.edu/0101.5042" target="_top">"Approximate construction
+        of rational approximations and the effect of error autocorrection.",
+        Grigori Litvinov, eprint arXiv:math/0101042</a>。因此系数仍然需要精确地计算 ，即使与“真正的”极小值相比是错的。</p>
+<a name="math_toolkit.backgrounders.implementation.representation_of_mathematical_constants"></a>
+<h5>
+<a name="id861489"></a>
+        <a href="implementation.html#math_toolkit.backgrounders.implementation.representation_of_mathematical_constants">数学常量的表示(Representation
+        of Mathematical Constants)</a>
+  </h5>
+<p>
+        在 constants.hpp中的宏BOOST_DEFINE_MATH_CONSTANT用于为数学函数和分布提供高精度的数值常量，因为，对内建的 float, double
+       和 long double 类型，以及对于用户自定义的类型，类似于 NTL::quad_float 和
+  NTL::RR.提供一致的值是很重要的。</p>
+<p>
+  为了允许在数学工具包以及测试程序中使用精确度为100个十进制数字的NTL::RR类型，明显需要将常量定义到这个精度。</p>
+<p> 然而，一些编译器并不接受这样长的十进制数字串。因此常量被分为三部分，第一部分包含至少是long
+double的精度，如果是已知的或是不需要的，则第二部分为0，如果需要的话，第三部分允许提供一个指数(如果没有就使用0)－另两个参数可能只包含十
+进制数字(以及正负号和小数点)，并不包含一个类似于1.234E99的指数。仅当T是一个用户定义的类型的时候才使用第二个十进制字符串，当这个常量被
+转化为一个字符串或使用lexical_cast 转换为类型T。 (这是必须的，因为你不能使用一个数值常量，即使是long
+double也没有足够的数字用于存储这么高的精度)。</p>
+<p>
+        例如， pi 定义为：</p>
+<pre class="programlisting"><span class="identifier">BOOST_DEFINE_MATH_CONSTANT</span><span class="special">(</span><span class="identifier">pi</span><span class="special">,</span>
+  <span class="number">3.141592653589793238462643383279502884197169399375105820974944</span><span class="special">,</span>
+  <span class="number">5923078164062862089986280348253421170679821480865132823066470938446095505</span><span class="special">,</span>
+  <span class="number">0</span><span class="special">)</span>                                              <br></pre>
+<p>
+        并这样使用：</p>
+<pre class="programlisting"><span class="keyword">using</span> <span class="keyword">namespace</span> <span class="identifier">boost</span><span class="special">::</span><span class="identifier">math</span><span class="special">::</span><span class="identifier">constants</span><span class="special">;</span>
+
+<span class="keyword">double</span> <span class="identifier">diameter</span> <span class="special">=</span> <span class="number">1.</span><span class="special">;</span>
+<span class="keyword">double</span> <span class="identifier">radius</span> <span class="special">=</span> <span class="identifier">diameter</span> <span class="special">*</span> <span class="identifier">pi</span><span class="special">&lt;</span><span class="keyword">double</span><span class="special">&gt;();</span>
+
+<span class="keyword">or</span> <span class="identifier">boost</span><span class="special">::</span><span class="identifier">math</span><span class="special">::</span><span class="identifier">constants</span><span class="special">::</span><span class="identifier">pi</span><span class="special">&lt;</span><span class="identifier">NTL</span><span class="special">::</span><span class="identifier">RR</span><span class="special">&gt;()</span>
+</pre>
+<p>
+        注意，明确地指定类型是必须的：</p>
+<p>
+        所以，你不能这样写</p>
+<pre class="programlisting"><span class="keyword">double</span> <span class="identifier">p</span> <span class="special">=</span> <span class="identifier">boost</span><span class="special">::</span><span class="identifier">math</span><span class="special">::</span><span class="identifier">constants</span><span class="special">::</span><span class="identifier">pi</span><span class="special">&lt;&gt;();</span>  <span class="comment">// 不能为模板推导参数“T”</span></pre>
+<p>
+        你也不能这样写</p>
+<pre class="programlisting"><span class="keyword">double</span> <span class="identifier">p</span> <span class="special">=</span> <span class="identifier">boost</span><span class="special">::</span><span class="identifier">math</span><span class="special">::</span><span class="identifier">constants</span><span class="special">::</span><span class="identifier">pi</span><span class="special">;</span> <span class="comment">// Context does not allow for disambiguation of overloaded function     <br></span><span class="keyword">double</span> <span class="identifier">p</span> <span class="special">=</span> <span class="identifier">boost</span><span class="special">::</span><span class="identifier">math</span><span class="special">::</span><span class="identifier">constants</span><span class="special">::</span><span class="identifier">pi</span><span class="special">();</span> <span class="comment">// Context does not allow for disambiguation of overloaded function     <br></span></pre>
+<a name="math_toolkit.backgrounders.implementation.thread_safety"></a>
+<h5>
+<a name="id862030"></a>
+        <a href="implementation.html#math_toolkit.backgrounders.implementation.thread_safety">线程安全性(Thread
+        safety)</a>
+  </h5>
+<p>
+  通过设置errno来报告错误已经是安全的(否则没有一个标准库数学函数是线程安全的？)。如果你通过抛出异常来报告错误，errno就不再使用。</p>
+<p>
+        除那之外，这些代码是准备对于<span class="bold"><strong>内建数据类型</strong></span> 是线程安全的：因此float, double 和 long double
+        都是线程安全的。</p>
+<p>
+  对于非内建的数据类型-例如， NTL::RR  -初始化这个库中的各种常量是潜在的<span class="bold"><strong>非线程安全的</strong></span> <strong>，</strong>这
+是最令人不愉快的，但修改这一点是一个不小的挑战。一些编译器可能提供以线程安全的方式来初始化常量的方法(Commeau,
+或者其它的?)，如果是这种情况，那么这个问题就解决了。这是下一个C++标准的讨论热点，所以，希望所有的编译器都被要求在这里做出同样正确的事情。
+</p>
+<a name="math_toolkit.backgrounders.implementation.sources_of_test_data"></a>
+<h5>
+<a name="id862102"></a>
+        <a href="implementation.html#math_toolkit.backgrounders.implementation.sources_of_test_data">测试数据(Sources
+        of Test Data)</a>
+  </h5>
+<p>
+        我们找到了大量的测试数据。如果这些数据与我们的测试的数据结果相符，那么我们假定它们是“已知良好的(known good)”，仅在出现严重的不相符时我们才咨询其它的参考资料。精度，实际上并且声明，是变化非常广泛的。仅有<a href="http://functions.wolfram.com/" target="_top">Wolfram Mathematica
+  functions</a> 提供高于C++double精度的数据(64-bit 浮点数)，并作为到目前为止最值得信赖的数据源。</p>
+<p>
+        数据源的一个有用的索引：<a href="http://www.sal.hut.fi/Teaching/Resources/ProbStat/table.html" target="_top">Web-oriented
+        Teaching Resources in Probability and Statistics</a>
+  </p>
+<p>
+        <a href="http://espse.ed.psu.edu/edpsych/faculty/rhale/hale/507Mat/statlets/free/pdist.htm" target="_top">Statlet</a>:
+  是一个Javascript 应用程序，用于计算和为统计分布绘图，并提供最完整的统计分布范围：</p>
+<div class="blockquote"><blockquote class="blockquote">
+<p>
+      </p>
+<p>
+            Bernoulli, Binomial, discrete uniform, geometric, hypergeometric, negative
+            binomial, Poisson, beta, Cauchy-Lorentz, chi-sequared, Erlang, exponential,
+            extreme value, Fisher, gamma, Laplace, logistic, lognormal, normal, Parteo,
+            Student's t, triangular, uniform, and Weibull.
+      </p>
+<p>
+      </p>
+</blockquote></div>
+<p>
+        它计算 pdf, cdf, survivor, log survivor, hazard, tail areas, &amp;
+        critical values for 5 tail values.
+  </p>
+<p>
+  它也是为韦伯分布找到的唯一的独立资源;然而，不幸的是，在那些特殊函数所验证的实现区域，它会产生的精度很差。</p>
+<a name="math_toolkit.backgrounders.implementation.creating_and_managing_the_equations"></a>
+<h5>
+<a name="id862213"></a>
+        <a href="implementation.html#math_toolkit.backgrounders.implementation.creating_and_managing_the_equations">生成和操作方程(Creating
+        and Managing the Equations)</a>
+  </h5>
+<p>
+        这些数学方程的原始资源现在是<a href="http://www.w3.org/Math/" target="_top">MathML</a>： 参看 libs/math/doc/sf_and_dist/equations/中的.mml文件。</p>
+<p>
+  这些方程大都使用类似于<a href="http://mathcast.sourceforge.net/home.html" target="_top">Mathcast</a>的GUI编译器进行编译，请注意， Open Office 当前提供的方程编译器会损坏这些文件，因此现在不应该使用这个编译器。</p>
+<p>        使用<a href="http://www.grigoriev.ru/svgmath/" target="_top">SVGMath</a>
+  来转换为SVG格式，命令行为：</p>
+<pre class="programlisting">$for file in *.mml; do <br>&gt;/cygdrive/c/Python25/python.exe 'C:\download\open\SVGMath-0.3.1\math2svg.py' \<br>&gt;&gt;$file &gt; $(basename $file .mml).svg<br>&gt;done<br></pre>
+<p>
+        注意，SVGMath 要求这些mml文件没有被包装在XHTML XML中－这些缺省由Mathcast 添加 -
+  一种绕道方式是拷贝已存在的mml文件，然后使用 Mathcast编辑：存在的文件应当被保留。在SVGMath所使用的XML解析器中有一个bug，这个工具的作者也注意到这一点了。</p>
+<p>
+  如果需要的话，这些XHTML包装可以使用下面的方法来去掉：</p>
+<pre class="programlisting">cat filename | tr -d "\r\n" | sed -e 's/.*\(&lt;math[^&gt;]*&gt;.*&lt;/math&gt;\).*/\1/' &gt; newfile</pre>
+<p>
+  为SVGMath设置字体现在是一件非常棘手的事情，在WindowsXP系统上，JM的字体设置与与SVGMath 提供了样本配置文件是相同 的，但是:</p>
+<pre class="programlisting">&lt;!-- Double-struck --&gt;<br>    &lt;mathvariant name="double-struck" family="Mathematica7, Lucida Sans Unicode"/&gt;<br></pre>
+<p>
+        改为：</p>
+<pre class="programlisting">&lt;!-- Double-struck --&gt;<br>    &lt;mathvariant name="double-struck" family="Lucida Sans Unicode"/&gt;<br></pre>
+<p>
+  注意，不像SVGMath提供的样本配置文件，这里没有使用Mathematica 7 字体，因为这种字体缺少足够的Unicode信息使得它可以与SVGMath或XEP一起使用。</p>
+<p>
+  同样也请请注意，在这里的SVG 文件也大部分是Windows特定的，因为它们使用多种Windows字体。</p>
+<p>
+        可以使用<a href="http://xmlgraphics.apache.org/batik/tools/rasterizer.html" target="_top">Batik</a>
+        来从SVG文件生成PNG文件，命令行为：</p>
+<pre class="programlisting">java -jar 'C:\download\open\batik-1.7\batik-rasterizer.jar' -dpi 120 *.svg</pre>
+<p>
+  或者使用Inkscape ，命令行为：</p>
+<pre class="programlisting">for file in *.svg; do <br>  /cygdrive/c/progra~1/Inkscape/inkscape -d 120 -e $(cygpath -a -w $(basename $file .svg).png) $(cygpath -a -w $file); <br>done</pre>
+<p>
+  当前， Inkscape 似乎生成更漂亮的png图片。</p>
+<p>
+  在当前目录\math_toolkit\libs\math\doc\sf_and_dist下使用一个命令将PDF 文件生成到 \pdf\math.pdf，典型的做法是：</p>
+<pre class="programlisting">bjam -a pdf &gt;math_pdf.log</pre>
+<p>
+        注意，XEP 需要配置为<span class="bold"><strong>使用和嵌入</strong></span>SVG方程使用的任何字体(如果需要的话，编辑由XEP安装程序提供的样本xep.xml文件)。如果你这样做失败了，你会在日志文件中找到 XEP 告警如下： </p><pre class="programlisting">[warning]could not find any font family matching "Times New Roman"; replaced by Helvetica</pre>
+<p>(缺省是 html，所以使用命令行 
+&gt;bjam -a &gt; math_docs.log 将生成 
+math_toolkit\libs\math\doc\sf_and_dist\html\index.html&nbsp;)。 </p><pre class="programlisting"><span class="special">&lt;!--</span> <span class="identifier">Sample</span> <span class="identifier">configuration</span> <span class="keyword">for</span> <span class="identifier">Windows</span> <span class="identifier">TrueType</span> <span class="identifier">fonts</span><span class="special">.</span>  <span class="special">--&gt;</span>
+</pre>
+<p>&lt;!-- Sample configuration for Windows TrueType fonts. --&gt; 将在下载的 xep.xml 中提供，但该 Windows TrueType 字体被注释掉了。</p><p>
+  JM's XEP 的配置文件 \xep\xep.xml 中增加了下面的配置部分：</p>
+<pre class="programlisting">&lt;font-group xml:base="file:/C:/Windows/Fonts/" label="Windows TrueType" embed="true" subset="true"&gt; <br>      &lt;font-family name="Arial"&gt;<br>        &lt;font&gt;&lt;font-data ttf="arial.ttf"/&gt;&lt;/font&gt;<br>        &lt;font style="oblique"&gt;&lt;font-data ttf="ariali.ttf"/&gt;&lt;/font&gt;<br>        &lt;font weight="bold"&gt;&lt;font-data ttf="arialbd.ttf"/&gt;&lt;/font&gt;<br>        &lt;font weight="bold" style="oblique"&gt;&lt;font-data ttf="arialbi.ttf"/&gt;&lt;/font&gt;<br>      &lt;/font-family&gt;<br><br>      &lt;font-family name="Times New Roman" ligatures="&amp;#xFB01; &amp;#xFB02;"&gt;<br>        &lt;font&gt;&lt;font-data ttf="times.ttf"/&gt;&lt;/font&gt;<br>        &lt;font style="italic"&gt;&lt;font-data ttf="timesi.ttf"/&gt;&lt;/font&gt;<br>        &lt;font weight="bold"&gt;&lt;font-data ttf="timesbd.ttf"/&gt;&lt;/font&gt;<br>        &lt;font weight="bold" style="italic"&gt;&lt;font-data ttf="timesbi.ttf"/&gt;&lt;/font&gt;<br>      &lt;/font-family&gt;<br><br>      &lt;font-family name="Courier New"&gt;<br>        &lt;font&gt;&lt;font-data ttf="cour.ttf"/&gt;&lt;/font&gt;<br>        &lt;font style="oblique"&gt;&lt;font-data ttf="couri.ttf"/&gt;&lt;/font&gt;<br>        &lt;font weight="bold"&gt;&lt;font-data ttf="courbd.ttf"/&gt;&lt;/font&gt;<br>        &lt;font weight="bold" style="oblique"&gt;&lt;font-data ttf="courbi.ttf"/&gt;&lt;/font&gt;<br>      &lt;/font-family&gt;<br><br>      &lt;font-family name="Tahoma" embed="true"&gt;<br>        &lt;font&gt;&lt;font-data ttf="tahoma.ttf"/&gt;&lt;/font&gt;<br>        &lt;font weight="bold"&gt;&lt;font-data ttf="tahomabd.ttf"/&gt;&lt;/font&gt;<br>      &lt;/font-family&gt;<br><br>      &lt;font-family name="Verdana" embed="true"&gt;<br>        &lt;font&gt;&lt;font-data ttf="verdana.ttf"/&gt;&lt;/font&gt;<br>        &lt;font style="oblique"&gt;&lt;font-data ttf="verdanai.ttf"/&gt;&lt;/font&gt;<br>        &lt;font weight="bold"&gt;&lt;font-data ttf="verdanab.ttf"/&gt;&lt;/font&gt;<br>        &lt;font weight="bold" style="oblique"&gt;&lt;font-data ttf="verdanaz.ttf"/&gt;&lt;/font&gt;<br>      &lt;/font-family&gt;<br><br>      &lt;font-family name="Palatino" embed="true" ligatures="&amp;#xFB00; &amp;#xFB01; &amp;#xFB02; &amp;#xFB03; &amp;#xFB04;"&gt;<br>        &lt;font&gt;&lt;font-data ttf="pala.ttf"/&gt;&lt;/font&gt;<br>        &lt;font style="italic"&gt;&lt;font-data ttf="palai.ttf"/&gt;&lt;/font&gt;<br>        &lt;font weight="bold"&gt;&lt;font-data ttf="palab.ttf"/&gt;&lt;/font&gt;<br>        &lt;font weight="bold" style="italic"&gt;&lt;font-data ttf="palabi.ttf"/&gt;&lt;/font&gt;<br>      &lt;/font-family&gt;<br>      <br>    &lt;font-family name<code class="literal">"Lucida Sans Unicode"&gt;<br>         &lt;!-- &lt;font&gt;&lt;font-data ttf</code>"lsansuni.ttf"&gt;&lt;<span class="emphasis"><em>font&gt; --&gt;<br>         &lt;!-- actually called l_10646.ttf on Windows 2000 and Vista Sp1 --&gt;<br>         &lt;font&gt;&lt;font-data ttf="l_10646.ttf"</em></span>&gt;&lt;/font&gt;<br>    &lt;/font-family&gt;<br></pre>
+<p>
+  PAB 不得不修改它的配置文件 ，因为 Lucida Sans Unicode 字体有一个不同的名字。如果你不是使用Windows，那么修改是非常类似的。</p>
+<p>
+  XZ 使用 venerable Latex来生成他的方程， JM 使用<a href="http://gentoo-wiki.com/HOWTO_Convert_LaTeX_to_HTML_with_MathML" target="_top">mxlatex</a>将其转换为MathML，这个过程当前是不可靠的并需要一些手工的干预：因此 Latex 文件不是一个自动生成SVG版本的方程的可靠的方法。</p>
+<p>
+  使用定义在 math.qbk 中的方程模板来将这些方程嵌入到 quickbook 文件中。生成的 Docbook XML 文件类似于下面这样：</p>
+<pre class="programlisting">&lt;inlinemediaobject&gt;<br>&lt;imageobject role<code class="literal">"html"&gt;<br>&lt;imagedata fileref</code>"../equations/myfile.png"&gt;&lt;/imagedata&gt;<br>&lt;/imageobject&gt;<br>&lt;imageobject role<code class="literal">"print"&gt;<br>&lt;imagedata fileref</code>"../equations/myfile.svg"&gt;&lt;/imagedata&gt;<br>&lt;/imageobject&gt;<br>&lt;/inlinemediaobject&gt;<br></pre>
+<p>
+        MathML 并没有出现在 Docbook 输出中，也没有在生成的HTML文件中：这需要以后的调查研究。</p>
+<a name="math_toolkit.backgrounders.implementation.producing_graphs"></a>
+<h5>
+<a name="id862613"></a>
+        <a href="implementation.html#math_toolkit.backgrounders.implementation.producing_graphs">生成图像(Producing
+        Graphs)</a>
+  </h5>
+<p>
+        图像以SVG格式生成，然后用与方程图像转换相同的方式将SBG文件转换为PNG文件。</p>
+<p>
+       /libs/math/doc/sf_and_dist/graphs/dist_graphs.cpp 程序和 /libs/math/doc/sf_and_dist/graphs<span class="emphasis"><em>sf_graphs.cpp
+        程序使用[@http:</em></span>/code.google.com/soc/2007/boost/about.html
+        Google Summer of Code 2007] project of Jacob Voytko (whose work so far is
+        at .\boost-sandbox\SOC\2007\visualization)直接生成SVG文件。</p>
+</div>
+<table xmlns:rev="http://www.cs.rpi.edu/~gregod/boost/tools/doc/revision" width="100%"><tbody><tr>
+<td align="left"></td>
+<td align="right"><div class="copyright-footer">Copyright © 2006 , 2007, 2008, 2009 John Maddock, Paul A. Bristow, Hubert Holin, 
+Xiaogang Zhang, Bruno Lalande, Johan Råde, Gautam Sewani and Thijs van den Berg<p>
+        Distributed under the Boost Software License, Version 1.0. (See accompanying
+        file LICENSE_1_0.txt or copy at <a href="http://www.boost.org/LICENSE_1_0.txt" target="_top">http://www.boost.org/LICENSE_1_0.txt</a>)
+      </p>
+</div></td>
+</tr></tbody></table>
+<hr>
+<div class="spirit-nav">
+<a accesskey="p" href="../backgrounders.html"><img src="../../../../../../../doc/html/images/prev.png" alt="Prev"></a><a accesskey="u" href="../backgrounders.html"><img src="../../../../../../../doc/html/images/up.png" alt="Up"></a><a accesskey="h" href="../../index.html"><img src="../../../../../../../doc/html/images/home.png" alt="Home"></a><a accesskey="n" href="relative_error.html"><img src="../../../../../../../doc/html/images/next.png" alt="Next"></a>
+</div>
+</body></html>

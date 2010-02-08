@@ -1,0 +1,276 @@
+<!DOCTYPE HTML PUBLIC "-//W3C//DTD HTML 4.01 Transitional//EN">
+<html><head>
+<meta http-equiv="Content-Type" content="text/html; charset=UTF-8"><title>Extending return type deduction system（扩展返回类型推演系统）</title>
+
+<link rel="stylesheet" href="../boostbook.css" type="text/css">
+<meta name="generator" content="DocBook XSL Stylesheets V1.68.1">
+<link rel="start" href="../index.html" title="The Boost C++ Libraries BoostBook Documentation Subset">
+<link rel="up" href="../lambda.html" title="Chapter 8. Boost.Lambda">
+<link rel="prev" href="le_in_details.html" title="Lambda expressions in details">
+<link rel="next" href="s07.html" title="Practical considerations">
+</head>
+<body style="color: black; background-color: white;" alink="#0000ff" link="#0000ff" vlink="#840084">
+<table cellpadding="2" width="100%">
+<tbody>
+<tr>
+<td valign="top"><img alt="Boost C++ Libraries" src="../../../boost.png" height="86" width="277"></td>
+<td align="center"><a href="../../../index.htm">Home</a></td>
+<td align="center"><a href="../../../libs/libraries.htm">Libraries</a></td>
+<td align="center"><a href="../../../people/people.htm">People</a></td>
+<td align="center"><a href="../../../more/faq.htm">FAQ</a></td>
+<td align="center"><a href="../../../more/index.htm">More</a></td>
+</tr>
+</tbody>
+</table>
+<hr>
+<div class="spirit-nav"><a accesskey="p" href="le_in_details.html"><img src="../images/prev.png" alt="Prev"></a><a accesskey="u" href="../lambda.html"><img src="../images/up.png" alt="Up"></a><a accesskey="h" href="../index.html"><img src="../images/home.png" alt="Home"></a><a accesskey="n" href="s07.html"><img src="../images/next.png" alt="Next"></a>
+</div>
+<div class="section" lang="en">
+<div class="titlepage">
+<div>
+<div>
+<h2 class="title" style="clear: both;"><a name="lambda.extending"></a>Extending return type
+deduction system（扩展返回类型推演系统）</h2>
+</div>
+</div>
+</div>
+<p>本节，我们讲解如何扩展返回类型推演系统以包括用户定义操作符。很多情况下这没有必要，因为 BLL
+定义了操作符的缺省返回类型。例如，所有比较操作符的缺省返回类型是 <code class="literal">bool</code>，
+那么，只要用户定义的比较操作符具有一个 bool 类型的返回值，就不需要为返回类型推演类提供新的特化。不过，有时这却必不可少。</p>
+<p>可重载用户定义操作符既有一元的也有二元的。对每一个数量，有两个定义不同操作符的返回类型的特征模板。因此，返回类型系统可以通过提
+供对这些模板的更多特化来进行扩展。用于一元函数的模板是 <code class="literal">plain_return_type_1&lt;Action,
+A&gt;</code> 和 <code class="literal">return_type_1&lt;Action,
+A&gt;</code>，用于二元函数的模板是 <code class="literal">plain_return_type_2&lt;Action,
+A, B&gt;</code> 和 <code class="literal">return_type_2&lt;Action,
+A, B&gt;</code>。</p>
+<p>传给这些模板的第一个参数 (<code class="literal">Action</code>)
+是指定操作符的 <span class="emphasis"><em>action</em></span>
+类，具有相似返回值规则的操作符组织到 <span class="emphasis"><em>action
+groups</em></span>（action 组）中，而且只有 action 类和 action
+组一起可以明确定义操作符。例如，action 类型 <code class="literal">arithmetic_action&lt;plus_action&gt;</code>
+代表 <code class="literal">operator+</code>。各种 action
+类型的完整列表参见 <a href="extending.html#table:actions" title="Table11.2.Action types">Table 11.2 “Action types”</a>。</p>
+<p>后面的参数，一元情况下的 <code class="literal">A</code>，
+或二元情况下的 <code class="literal">A</code> 和 <code class="literal">B</code>，代表操作符调用的参数类型。两套模板，<code class="literal">plain_return_type_<em class="parameter"><code>n</code></em></code>
+和 <code class="literal">return_type_<em class="parameter"><code>n</code></em></code>（<em class="parameter"><code>n</code></em>
+为 1 或 2）的区别在于将参数类型呈现给它们的方法不同。对于前者，参数类型总是以非引用类型提供，而且没有 const 或 volatile
+修饰符。这将使特化比较简单，而且通常对于每一个用户定义操作符，或操作符组只需要一个特化就足够了。另一方面，如果一个特定的操作符针对同样的参数类型
+的不同 cv 修饰进行了重载，而且这些重载版本的返回类型不同，就需要一个更细致的控制机制。因此，对于后者，参数类型带有 cv
+修饰符，而且是非引用类型为好。不利方面在于，对于上面描述的这种操作符的一套重载，有人最多可能会需要 16 个 <code class="literal">return_type_2</code> 的特化。</p>
+<p>假设用户拥有下面的操作符针对某些用户定义类型 <code class="literal">X</code>,
+<code class="literal">Y</code> 和 <code class="literal">Z</code> 的重载：</p>
+<pre class="programlisting">Z operator+(const X&amp;, const Y&amp;);<br>Z operator-(const X&amp;, const Y&amp;);<br></pre>
+<p>现在，要增加一种特化情形，这种情形中左侧参数为类型 <code class="literal">X</code>，
+右侧参数为类型 <code class="literal">Y</code>，所有这样的二元算术操作符的
+返回类型都是 <code class="literal">Z</code>：</p>
+<pre class="programlisting">namespace boost { <br>namespace lambda {<br> <br>template&lt;class Act&gt; <br>struct plain_return_type_2&lt;arithmetic_action&lt;Act&gt;, X, Y&gt; {<br> typedef Z type;<br>};<br><br>}<br>}<br></pre>
+<p>有了这个特化定义，BLL 就可以正确推演上面两个操作符的返回类型。注意，特化必须和原来的模板在同样的名字空间中，<code class="literal">::boost::lambda</code>，为了简单起见，在下面的示例中我们
+没有表明名字空间定义。</p>
+<p>除了为一组操作符提供一个特化外，有时在个别操作符的层次上提供特化可能更好。比如说，我们为参数类型 <code class="literal">X</code> 和 <code class="literal">Y</code>
+增加一个新的算术操作符：</p>
+<pre class="programlisting">X operator*(const X&amp;, const Y&amp;);<br></pre>
+<p>我们先前的规则是针对返回类型为 <code class="literal">Z</code>
+的所有算术操作符特化的，这里显然不是这种情况。因此，我们为乘法操作符提供了一个新的规则：</p>
+<pre class="programlisting">template&lt;&gt; <br>struct plain_return_type_2&lt;arithmetic_action&lt;multiply_action&gt;, X, Y&gt; {<br> typedef X type;<br>};<br></pre>
+<p>
+</p>
+<p>特化可以定义从参数类型到返回类型的任意映射。假设我们有某一数学 vector 类型，它的元素类型被模板化：</p>
+<pre class="programlisting">template &lt;class T&gt; class my_vector;<br></pre>
+<p>假设在任何两个 <code class="literal">my_vector</code>
+实例之间，只要它们的元素之间定义了加法操作符，就要在这两个 <code class="literal">my_vector</code>
+实例之间定义加法操作符。而且，存储结果的 <code class="literal">my_vector</code>
+的元素类型和元素之间加法的结果类型相同。例如，<code class="literal">my_vector&lt;int&gt;</code>
+和 <code class="literal">my_vector&lt;double&gt;</code>
+相加的结果存储在 <code class="literal">my_vector&lt;double&gt;</code>
+中。BLL 中有特征类用来执行整型，浮点数和复杂类之间的隐式内建类型转换和标准类型转换。使用 BLL 工具，上面描述的加法操作符可以定义为：</p>
+<pre class="programlisting">template&lt;class A, class B&gt; <br>my_vector&lt;typename return_type_2&lt;arithmetic_action&lt;plus_action&gt;, A, B&gt;::type&gt;<br>operator+(const my_vector&lt;A&gt;&amp; a, const my_vector&lt;B&gt;&amp; b)<br>{<br> typedef typename <br> return_type_2&lt;arithmetic_action&lt;plus_action&gt;, A, B&gt;::type res_type;<br> return my_vector&lt;res_type&gt;();<br>}<br></pre>
+<p>
+</p>
+<p>为了让 BLL 能够正确推演 <code class="literal">my_vector</code>
+的类型，我们可以定义：</p>
+<pre class="programlisting">template&lt;class A, class B&gt; <br>class plain_return_type_2&lt;arithmetic_action&lt;plus_action&gt;, <br> my_vector&lt;A&gt;, my_vector&lt;B&gt; &gt; {<br> typedef typename <br> return_type_2&lt;arithmetic_action&lt;plus_action&gt;, A, B&gt;::type res_type;<br>public:<br> typedef my_vector&lt;res_type&gt; type;<br>};<br></pre>
+<p>注意，我们复用了对 BLL 的 <code class="literal">return_type_2</code>
+模板的已有的特化，它需要参数类型为引用。</p>
+<div class="table">
+<a name="table:actions"></a>
+<p class="title"><b>Table 11.2 Action types</b></p>
+<table class="table" summary="Action types">
+<colgroup><col><col></colgroup>
+<tbody>
+<tr>
+<td><code class="literal">+</code></td>
+<td><code class="literal">arithmetic_action&lt;plus_action&gt;</code></td>
+</tr>
+<tr>
+<td><code class="literal">-</code></td>
+<td><code class="literal">arithmetic_action&lt;minus_action&gt;</code></td>
+</tr>
+<tr>
+<td><code class="literal">*</code></td>
+<td><code class="literal">arithmetic_action&lt;multiply_action&gt;</code></td>
+</tr>
+<tr>
+<td><code class="literal">/</code></td>
+<td><code class="literal">arithmetic_action&lt;divide_action&gt;</code></td>
+</tr>
+<tr>
+<td><code class="literal">%</code></td>
+<td><code class="literal">arithmetic_action&lt;remainder_action&gt;</code></td>
+</tr>
+<tr>
+<td><code class="literal">+</code></td>
+<td><code class="literal">unary_arithmetic_action&lt;plus_action&gt;</code></td>
+</tr>
+<tr>
+<td><code class="literal">-</code></td>
+<td><code class="literal">unary_arithmetic_action&lt;minus_action&gt;</code></td>
+</tr>
+<tr>
+<td><code class="literal">&amp;</code></td>
+<td><code class="literal">bitwise_action&lt;and_action&gt;</code></td>
+</tr>
+<tr>
+<td><code class="literal">|</code></td>
+<td><code class="literal">bitwise_action&lt;or_action&gt;</code></td>
+</tr>
+<tr>
+<td><code class="literal">~</code></td>
+<td><code class="literal">bitwise_action&lt;not_action&gt;</code></td>
+</tr>
+<tr>
+<td><code class="literal">^</code></td>
+<td><code class="literal">bitwise_action&lt;xor_action&gt;</code></td>
+</tr>
+<tr>
+<td><code class="literal">&lt;&lt;</code></td>
+<td><code class="literal">bitwise_action&lt;leftshift_action_no_stream&gt;</code></td>
+</tr>
+<tr>
+<td><code class="literal">&gt;&gt;</code></td>
+<td><code class="literal">bitwise_action&lt;rightshift_action_no_stream&gt;</code></td>
+</tr>
+<tr>
+<td><code class="literal">&amp;&amp;</code></td>
+<td><code class="literal">logical_action&lt;and_action&gt;</code></td>
+</tr>
+<tr>
+<td><code class="literal">||</code></td>
+<td><code class="literal">logical_action&lt;or_action&gt;</code></td>
+</tr>
+<tr>
+<td><code class="literal">!</code></td>
+<td><code class="literal">logical_action&lt;not_action&gt;</code></td>
+</tr>
+<tr>
+<td><code class="literal">&lt;</code></td>
+<td><code class="literal">relational_action&lt;less_action&gt;</code></td>
+</tr>
+<tr>
+<td><code class="literal">&gt;</code></td>
+<td><code class="literal">relational_action&lt;greater_action&gt;</code></td>
+</tr>
+<tr>
+<td><code class="literal">&lt;=</code></td>
+<td><code class="literal">relational_action&lt;lessorequal_action&gt;</code></td>
+</tr>
+<tr>
+<td><code class="literal">&gt;=</code></td>
+<td><code class="literal">relational_action&lt;greaterorequal_action&gt;</code></td>
+</tr>
+<tr>
+<td><code class="literal">==</code></td>
+<td><code class="literal">relational_action&lt;equal_action&gt;</code></td>
+</tr>
+<tr>
+<td><code class="literal">!=</code></td>
+<td><code class="literal">relational_action&lt;notequal_action&gt;</code></td>
+</tr>
+<tr>
+<td><code class="literal">+=</code></td>
+<td><code class="literal">arithmetic_assignment_action&lt;plus_action&gt;</code></td>
+</tr>
+<tr>
+<td><code class="literal">-=</code></td>
+<td><code class="literal">arithmetic_assignment_action&lt;minus_action&gt;</code></td>
+</tr>
+<tr>
+<td><code class="literal">*=</code></td>
+<td><code class="literal">arithmetic_assignment_action&lt;multiply_action&gt;</code></td>
+</tr>
+<tr>
+<td><code class="literal">/=</code></td>
+<td><code class="literal">arithmetic_assignment_action&lt;divide_action&gt;</code></td>
+</tr>
+<tr>
+<td><code class="literal">%=</code></td>
+<td><code class="literal">arithmetic_assignment_action&lt;remainder_action&gt;</code></td>
+</tr>
+<tr>
+<td><code class="literal">&amp;=</code></td>
+<td><code class="literal">bitwise_assignment_action&lt;and_action&gt;</code></td>
+</tr>
+<tr>
+<td><code class="literal">=|</code></td>
+<td><code class="literal">bitwise_assignment_action&lt;or_action&gt;</code></td>
+</tr>
+<tr>
+<td><code class="literal">^=</code></td>
+<td><code class="literal">bitwise_assignment_action&lt;xor_action&gt;</code></td>
+</tr>
+<tr>
+<td><code class="literal">&lt;&lt;=</code></td>
+<td><code class="literal">bitwise_assignment_action&lt;leftshift_action&gt;</code></td>
+</tr>
+<tr>
+<td><code class="literal">&gt;&gt;=</code></td>
+<td><code class="literal">bitwise_assignment_action&lt;rightshift_action&gt;</code></td>
+</tr>
+<tr>
+<td><code class="literal">++</code></td>
+<td><code class="literal">pre_increment_decrement_action&lt;increment_action&gt;</code></td>
+</tr>
+<tr>
+<td><code class="literal">--</code></td>
+<td><code class="literal">pre_increment_decrement_action&lt;decrement_action&gt;</code></td>
+</tr>
+<tr>
+<td><code class="literal">++</code></td>
+<td><code class="literal">post_increment_decrement_action&lt;increment_action&gt;</code></td>
+</tr>
+<tr>
+<td><code class="literal">--</code></td>
+<td><code class="literal">post_increment_decrement_action&lt;decrement_action&gt;</code></td>
+</tr>
+<tr>
+<td><code class="literal">&amp;</code></td>
+<td><code class="literal">other_action&lt;address_of_action&gt;</code></td>
+</tr>
+<tr>
+<td><code class="literal">*</code></td>
+<td><code class="literal">other_action&lt;contents_of_action&gt;</code></td>
+</tr>
+<tr>
+<td><code class="literal">,</code></td>
+<td><code class="literal">other_action&lt;comma_action&gt;</code></td>
+</tr>
+<tr>
+<td><code class="literal">-&gt;*</code></td>
+<td><code class="literal">other_action&lt;member_pointer_action&gt;</code></td>
+</tr>
+</tbody>
+</table>
+</div>
+</div>
+<table width="100%">
+<tbody>
+<tr>
+<td align="left"></td>
+<td align="right"><small>Copyright 1999-2004
+Jaakko Jrvi, Gary Powell</small></td>
+</tr>
+</tbody>
+</table>
+<hr>
+<div class="spirit-nav"><a accesskey="p" href="le_in_details.html"><img src="../images/prev.png" alt="Prev"></a><a accesskey="u" href="../lambda.html"><img src="../images/up.png" alt="Up"></a><a accesskey="h" href="../index.html"><img src="../images/home.png" alt="Home"></a><a accesskey="n" href="s07.html"><img src="../images/next.png" alt="Next"></a>
+</div>
+</body></html>

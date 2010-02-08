@@ -1,0 +1,135 @@
+<!DOCTYPE HTML PUBLIC "-//W3C//DTD HTML 4.01 Transitional//EN">
+<html><head><meta content="text/html; charset=UTF-8" http-equiv="content-type"><!--   Copyright (c) Jeremy Siek 2000 --><title>Boost Graph Library: Cuthill-Mckee Ordering</title></head>
+
+
+  
+  <body alink="#ff0000" bgcolor="#ffffff" link="#0000ee" text="#000000" vlink="#551a8b">-- Distributed under the Boost Software License, Version 1.0.
+  -- (See accompanying file LICENSE_1_0.txt or copy at
+  -- http://www.boost.org/LICENSE_1_0.txt)
+
+ 
+
+ 
+<img src="../../../boost.png" alt="C++ Boost" height="86" width="277"> 
+
+<br clear="">
+
+<h1>
+<img src="figs/python.gif" alt="(Python)">
+<tt>cuthill_mckee_ordering</tt>
+</h1>
+
+
+<p>
+</p><div align="left">
+<table border="1" cellpadding="3">
+<tbody><tr><th align="left"><b>图：</b></th>
+<td align="left">无向图</td>
+</tr>
+<tr><th align="left"><b>属性：</b></th>
+<td align="left">颜色，度</td>
+</tr>
+<tr><th align="left"><b>复杂度：</b></th>
+<td align="left">时间：<i>O(m log(m)|V|)</i> 其中 <i>m = max { degree(v) | v in V }</i> </td>
+</tr>
+</tbody></table>
+</div>
+
+
+<pre>  (1)<br>  template &lt;class IncidenceGraph, class OutputIterator,<br>            class ColorMap, class DegreeMap&gt;<br>  OutputIterator<br>  cuthill_mckee_ordering(const IncidenceGraph&amp; g,<br>                         typename graph_traits&lt;IncidenceGraph&gt;::vertex_descriptor s,<br>                         OutputIterator inverse_permutation, <br>                         ColorMap color, DegreeMap degree)<br><br>  (2)<br>  template &lt;class VertexListGraph, class OutputIterator&gt;<br>  OutputIterator<br>  cuthill_mckee_ordering(const VertexListGraph&amp; g, OutputIterator inverse_permutation); <br><br>  template &lt;class VertexListGraph, class OutputIterator, class VertexIndexMap&gt;<br>  OutputIterator<br>  cuthill_mckee_ordering(const VertexListGraph&amp; g, OutputIterator inverse_permutation, <br>                         VertexIndexMap index_map); <br> <br>  template &lt;class VertexListGraph, class OutputIterator, <br>            class ColorMap, class DegreeMap&gt;<br>  OutputIterator<br>  cuthill_mckee_ordering(const VertexListGraph&amp; g, OutputIterator inverse_permutation, <br>                         ColorMap color, DegreeMap degree)<br>                         <br>  (3)<br>  template &lt;class IncidenceGraph, class OutputIterator,<br>            class ColorMap, class DegreeMap&gt;<br>  OutputIterator<br>  cuthill_mckee_ordering(const IncidenceGraph&amp; g,<br>    			 std::deque&lt; typename<br>			 graph_traits&lt;IncidenceGraph&gt;::vertex_descriptor &gt; vertex_queue,<br>                         OutputIterator inverse_permutation, <br>                         ColorMap color, DegreeMap degree)<br></pre>Cuthill-Mckee (和逆 Cuthill-Mckee)排序算法[<a href="bibliography.html#george81:__sparse_pos_def">14</a>, <a href="bibliography.html#cuthill69:reducing_bandwith">43</a>, <a href="bibliography.html#liu75:anal_cm_rcm">44</a>, <a href="bibliography.html#george71:fem">45</a> ]的目的是通过重排各顶点的索引，来减少一个图的 <a href="./bandwidth.html">带宽bandwidth</a>。Cuthill-Mckee 排序算法通过局部最小化第 i 个带宽来实现。基本上，顶点被按广度优先搜索来赋予顺序，除了在每一步，邻接顶点被按照其度数的递增序放入队列中。
+
+<p>该算法的版本1由用户选择"开始顶点"，版本2则使用
+pseudo-peripheral pair 策略(对于每个分支)查找优良的开始顶点，而版本3则将作为开始点的各个顶点放在一个 deque 中。"开始顶点"的选择可以显著影响排序的质量。对于版本2和3，会对图中各分支调用 <tt>find_starting_vertex</tt>，会显著增加运行的时间。
+</p>
+
+<p>该算法的输出是以新顺序排列的顶点。根据你所使用的输出迭代器种类，你可以得到 Cuthill-Mckee 顺序或逆
+Cuthill-McKee 顺序。例如，如果你使用一个vector的反向迭代器将输出保存到vector中，那么你将得到逆
+Cuthill-McKee 顺序。
+</p>
+
+<pre>  std::vector&lt;vertex_descriptor&gt; inv_perm(num_vertices(G));<br>  cuthill_mckee_ordering(G, inv_perm.rbegin(), ...);<br></pre>
+
+<p>另一方面，将输出保存在vector中给了你从新顺序到旧顺序的排列。
+</p>
+
+<pre>  inv_perm[new_index[u]] == u<br></pre>
+
+<p>通常，这是你所想要的逆排列，从旧索引到新索引的排列。这可以按以下方法很容易地计算得到。
+</p>
+
+<pre>  for (size_type i = 0; i != inv_perm.size(); ++i)<br>    perm[old_index[inv_perm[i]]] = i;<br></pre>
+
+
+
+<h3>Parameters 参数</h3>对于版本1:
+
+<ul>
+
+<li> <tt>IncidenceGraph&amp; g</tt> &nbsp;(IN) <br>一个无向图。图的类型必须符合 <a href="./IncidenceGraph.html">关联图IncidenceGraph</a>。<br>
+  <b>Python</b>: 该参数名为 <tt>graph</tt>.
+
+</li><li> <tt>vertex_descriptor s</tt> &nbsp;(IN) <br>开始顶点。<br>
+  <b>Python</b>: 不支持该参数。
+
+</li><li> <tt>OutputIterator inverse_permutation</tt> &nbsp;(OUT) <br>新的顶点顺序。这些顶点被按它们的新顺序写出到 <a href="http://www.sgi.com/tech/stl/OutputIterator.html">输出迭代器</a>。<br>
+  <b>Python</b>: 这个参数在Python中无用。新的顶点顺序作为一个 Python <tt>list</tt> 返回。
+  
+</li><li> <tt>ColorMap color_map</tt> &nbsp;(WORK) <br>
+  在内部使用，以跟踪算法的处理过程(避免重复访问同一个顶点两次)。<br>
+  <b>Python</b>: 不支持该参数。
+
+</li><li> <tt>DegreeMap degree_map</tt> &nbsp;(IN) <br>它必须将顶点映射至它们的度数。<br>
+  <b>Python</b>: 不支持该参数。
+</li></ul>对于版本2:
+
+<ul>
+
+<li> <tt>VertexListGraph&amp; g</tt> &nbsp;(IN) <br>一个无向图。图的类型必须符合 <a href="./VertexListGraph.html">点列表图VertexListGraph</a> 和 <a href="./IncidenceGraph.html">关联图IncidenceGraph</a>。<br>
+  <b>Python</b>: 该参数名为 <tt>graph</tt>.
+
+</li><li> <tt><a href="http://www.sgi.com/tech/stl/OutputIterator.html">
+  OutputIterator</a> inverse_permutation</tt> &nbsp;(OUT) <br>新的顶点顺序。这些顶点被按它们的新顺序写出到输出迭代器。<br>
+  <b>Python</b>: 这个参数在Python中无用。新的顶点顺序作为一个 Python <tt>list</tt> 返回。&nbsp;
+
+</li><li> <tt>ColorMap color_map</tt> &nbsp;(WORK) <br>
+  在内部使用，以跟踪算法的处理过程(避免重复访问同一个顶点两次)。<br>
+  <b>Python</b>: 不支持该参数。&nbsp;
+
+</li><li> <tt>DegreeMap degree_map</tt> &nbsp;(IN) <br>它必须将顶点映射至它们的度数。<br>
+  <b>Python</b>: 不支持该参数。
+</li></ul>对于版本3:
+
+<ul>
+
+<li> <tt>IncidenceGraph&amp; g</tt> &nbsp;(IN) <br>一个无向图。图的类型必须符合 <a href="IncidenceGraph.html">关联图IncidenceGraph</a>。<br>
+  <b>Python</b>: 该参数名为 <tt>graph</tt>.&nbsp;
+
+</li><li> <tt> std::deque&lt; typename graph_traits&lt;Graph&gt;::vertex_descriptor &gt; vertex_queue </tt> &nbsp;(IN) <br>包含每个分支的开始顶点的 deque。<br>
+  <b>Python</b>: 不支持该参数。
+
+</li><li> <tt>OutputIterator inverse_permutation</tt> &nbsp;(OUT) <br>新的顶点顺序。这些顶点被按它们的新顺序写出到 <a href="http://www.sgi.com/tech/stl/OutputIterator.html">输出迭代器</a>。<br>
+  <b>Python</b>: 这个参数在Python中无用。新的顶点顺序作为一个 Python <tt>list</tt> 返回。&nbsp;
+  
+</li><li> <tt>ColorMap color_map</tt> &nbsp;(WORK) <br>
+  在内部使用，以跟踪算法的处理过程(避免重复访问同一个顶点两次)。<br>
+  <b>Python</b>: 不支持该参数。&nbsp;
+
+</li><li> <tt>DegreeMap degree_map</tt> &nbsp;(IN) <br>它必须将顶点映射至它们的度数。<br>
+  <b>Python</b>: 不支持该参数。
+</li></ul>
+
+
+
+<h3>Example 示例</h3>见 <a href="../example/cuthill_mckee_ordering.cpp"><tt>example/cuthill_mckee_ordering.cpp</tt></a>.
+
+<h3>See Also 参见</h3>
+
+<a href="./bandwidth.html">bandwidth</a>, 及 <tt>boost/graph/properties.hpp</tt> 中的 <tt>degree_property_map</tt>。<br>
+<hr>
+<table>
+<tbody><tr valign="top">
+<td nowrap="nowrap">Copyright © 2000-2001</td><td>
+<a href="http://www.boost.org/people/jeremy_siek.htm">Jeremy Siek</a>, Indiana University (<a href="mailto:jsiek@osl.iu.edu">jsiek@osl.iu.edu</a>)
+</td></tr></tbody></table>
+
+</body></html>

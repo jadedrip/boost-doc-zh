@@ -1,0 +1,393 @@
+<!DOCTYPE HTML PUBLIC "-//W3C//DTD HTML 4.01 Transitional//EN">
+<html><head>
+
+
+  
+  <meta http-equiv="Content-Type" content="text/html; charset=UTF-8">
+
+
+
+  
+  
+  
+  <title>Design Discussion</title><link rel="stylesheet" href="../boostbook.css" type="text/css">
+
+
+  
+  <meta name="generator" content="DocBook XSL Stylesheets V1.68.1">
+
+
+  
+  <link rel="start" href="../index.html" title="The Boost C++ Libraries BoostBook Documentation Subset">
+
+
+  
+  <link rel="up" href="../program_options.html" title="Chapter&nbsp;10.&nbsp;Boost.Program_options">
+
+
+  
+  <link rel="prev" href="howto.html" title="How To">
+
+
+  
+  <link rel="next" href="s06.html" title="Acknowledgements"></head>
+
+<body alink="#0000ff" bgcolor="white" link="#0000ff" text="black" vlink="#840084">
+
+
+<table cellpadding="2" width="100%">
+
+
+  <tbody>
+
+    <tr>
+
+      <td valign="top"><img alt="Boost C++ Libraries" src="../../../boost.png" height="86" width="277"></td>
+
+
+      <td align="center"><a href="../../../index.htm">Home</a></td>
+
+
+      <td align="center"><a href="../../../libs/libraries.htm">Libraries</a></td>
+
+
+      <td align="center"><a href="../../../people/people.htm">People</a></td>
+
+
+      <td align="center"><a href="../../../more/faq.htm">FAQ</a></td>
+
+
+      <td align="center"><a href="../../../more/index.htm">More</a></td>
+
+
+    </tr>
+
+  
+  </tbody>
+</table>
+
+
+<hr>
+<div class="spirit-nav">
+<a accesskey="p" href="howto.html"><img src="../images/prev.png" alt="Prev"></a><a accesskey="u" href="../program_options.html"><img src="../images/up.png" alt="Up"></a><a accesskey="h" href="../index.html"><img src="../images/home.png" alt="Home"></a><a accesskey="n" href="s06.html"><img src="../images/next.png" alt="Next"></a>
+</div>
+
+
+<div class="section" lang="en">
+<div class="titlepage">
+<div>
+<div>
+<h2 class="title" style="clear: both;">
+<a name="program_options.design"></a>设计讨论</h2>
+
+</div>
+
+</div>
+
+</div>
+
+
+<div class="toc">
+<dl>
+
+  <dt><span class="section"><a href="design.html#program_options.design.unicode">Unicode 支持</a></span></dt>
+
+</dl>
+
+</div>
+
+
+<p>本节关注一些设计的问题。
+  </p>
+
+
+<div class="section" lang="en">
+<div class="titlepage">
+<div>
+<div>
+<h3 class="title">
+<a name="program_options.design.unicode"></a>Unicode 支持</h3>
+
+</div>
+
+</div>
+
+</div>
+
+
+<p>Unicode 支持是在正式评审时被请求增加的一个特性。在本文档中，"Unicode 支持" 就是 "wchar_t" 支持的同义词，"wchar_t" 总是使用
+      Unicode 编码。同样，在谈论 "ascii" (小写)时，我们并不是指7-位 ASCII 编码，而是8位编码的 "char" 字符串。
+    </p>
+
+
+<p>通常，"Unicode 支持" 可以代表很多事情，但对于 program_options 库而言，它代表：
+
+      </p>
+
+
+<div class="itemizedlist">
+<ul type="disc">
+
+
+  <li>
+    
+    <p>每个分析器接受 <code class="computeroutput">char*</code> 或 <code class="computeroutput">wchar_t*</code>,&nbsp;正确地将输入分解为选项名和选项值并返回数据。
+          </p>
+
+  </li>
+
+
+  <li>
+    
+    <p>对于每个选项，可能要指定是否使用 ascii 或 Unicode 从字符串转换为值。
+          </p>
+
+  </li>
+
+
+  <li>
+    
+    <p>程序库保证：
+            </p>
+
+
+    
+    <div class="itemizedlist">
+    
+    <ul type="circle">
+
+
+      <li>
+        
+        <p>ascii 输入传递给 ascii 值时不会改变
+                </p>
+
+      </li>
+
+
+      <li>
+        
+        <p>Unicode 输入传递给 Unicode 值时不会改变</p>
+
+      </li>
+
+
+      <li>
+        
+        <p>ascii 输入传递给 Unicode 值，以及 Unicode 输入传递给 ascii 值时，将使用 codecvt
+                  facet (可以由用户指定)来转换。
+                </p>
+
+      </li>
+
+
+    
+    </ul>
+
+    </div>
+
+
+    
+    <p>
+          </p>
+
+
+  </li>
+
+
+</ul>
+
+</div>
+
+
+<p>
+    </p>
+
+
+<p>重点在于存在 "ascii options" 与 "Unicode options"
+需要一起处理的可能。这有两方面原因。首先，对于一个给定的类型，你可能没有代码来从 Unicode
+字符串中取出选项值，要求写出这样的代码也不太好。其次，想象一个带有一些选项的可重用程序库，它要在接口中提供这些选项描述。如果所有选项要么都是 ascii 要么都是 Unicode, 而该库没有使用
+      Unicode 字符串，那么作者就很可能会使用 ascii 选项，这将使得该库不能用于 Unicode
+      应用。理想的情况是，需要提供两个版本的库 -- ascii 和 Unicode.
+    </p>
+
+
+<p>另一个重点是，ascii 串在传递时不会被修改。换句话说，不能将
+      ascii 转换为 Unicode 以进一步处理 Unicode. 问题是缺省的转换机制 --&nbsp;<code class="computeroutput">codecvt</code> facet -- 不能在没有额外设置的情况下用于 8-位的输入。
+    </p>
+
+
+<p>以上的 Unicode 支持要点是不完整的。例如，我们不支持 Unicode 选项名。Unicode 支持是困难的，需要一个
+Boost-范围的解决方案。甚至于比较两个任意的 Unicode 串都不简单。最后，在选项名中使用 Unicode
+涉及到国际化，它本身就很复杂。即如果选项名依赖于当前的 locale, 那么所有的使用该选项名的程序部分都必须被国际化。 </p>
+
+
+<p>实现 Unicode 支持的主要问题是，使用模板和 <code class="computeroutput">std::basic_string</code>，还是使用一些内部编码以及在接口上对内外部编码间进行转换。            
+    </p>
+
+
+<p>通常，要在代码大小和执行时间上进行选择。模板的解决方案要么将库代码链接入每个应用程序来使用库(从而不能共享库),
+要么在共享库中提供显式实例化(增加了库的大小)。而基于内部编码的解决方案则需要在多处进行转换而稍微慢些。由于在本库中速度不是太大问题，因此第二个
+方案看起来更吸引，但是我们再来仔细看看个别组件。 </p>
+
+
+<p>对于分析器组件，我们有三种选择：
+      </p>
+
+
+<div class="itemizedlist">
+<ul type="disc">
+
+
+  <li>
+    
+    <p>使用完全的模板实现：给定一个指定类型的字符串，分析器返回一个以相同类型的字符串实例化的 <code class="computeroutput">parsed_options</code> (即 <code class="computeroutput">parsed_options</code> 类要模板化)。</p>
+
+  </li>
+
+
+  <li>
+    
+    <p>使用内部编码：同上，但字符串需要与内部编码相互转换。</p>
+
+  </li>
+
+
+  <li>
+    
+    <p>使用并部分公开内部编码：同上，但 <code class="computeroutput">parsed_options</code> 实例中的字符串使用内部编码。 这可以在将
+            <code class="computeroutput">parsed_options</code> 实例直接传给其它组件时避免转换，但也可能有风险或误导用户。
+          </p>
+
+  </li>
+
+
+</ul>
+
+</div>
+
+
+<p>
+    </p>
+
+
+<p>第二种方案看来最好 -- 它没有增加太多的代码大小，也比第三个更清晰。为了避免额外的转换，Unicode 版本的 <code class="computeroutput">parsed_options</code> 也可以保存内部编码的字符串。
+    </p>
+
+
+<p>对于选项描述组件，我们没有太多的选择。由于要求所有选项要么都使用 ascii 要么都使用 Unicode 不能令人满意，更好的办法是可以同时使用 ascii 和 Unicode 选项，这要求 <code class="computeroutput"><a href="../boost/program_options/value_semantic.html" title="Class value_semantic">value_semantic</a></code> 的接口必须可以同时对两者使用。唯一的方法是，传递一个额外的标志来表明字符串是使用 ascii 还是内部编码。<code class="computeroutput"><a href="../boost/program_options/value_semantic.html" title="Class value_semantic">value_semantic</a></code> 实例可以在需要时在不同编码间进行转换。
+    </p>
+
+
+<p>对于存储器组件，唯一受影响的函数是 <code class="computeroutput"><a href="../boost/program_options/store_id2370458.html" title="Function store">store</a></code>.
+      对于 Unicode 输入，<code class="computeroutput"><a href="../boost/program_options/store_id2370458.html" title="Function store">store</a></code> 函数将选项值转换为内部编码。它也会将所使用的编码通知 <code class="computeroutput"><a href="../boost/program_options/value_semantic.html" title="Class value_semantic">value_semantic</a></code> 类。
+    </p>
+
+
+<p>最后，我们应该使用什么内部编码呢？选择有两个：<code class="computeroutput">std::wstring</code> (使用 UCS-4 编码) 和
+    <code class="computeroutput">std::string</code> (使用 UTF-8 编码)。两者的不同在于：
+      </p>
+
+
+<div class="itemizedlist">
+<ul type="disc">
+
+
+  <li>
+    
+    <p>速度: UTF-8 稍慢一些</p>
+
+  </li>
+
+
+  <li>
+    
+    <p>空间: 在输入为 ascii 时，UTF-8 占的空间更少</p>
+
+  </li>
+
+
+  <li>
+    
+    <p>代码大小&nbsp;: UTF-8 需要额外的转换代码。但是，它允许使用已有的分析器而无须转换为
+            <code class="computeroutput">std::wstring</code>，而这种转换需要创建大量新实例。
+          </p>
+
+  </li>
+
+
+</ul>
+
+</div>
+
+
+<p>没有谁明显胜出，但最后一点看起来更重要，因此我们使用了 UTF-8&nbsp;.      
+    </p>
+
+
+<p>选择 UTF-8 编码允许使用已有的分析器，因为 7-位 ascii 字符在 UTF-8 中保持原值，因此查找 7-位 字符串非常简单。但是，还是有两个敏感的问题：
+      </p>
+
+
+<div class="itemizedlist">
+<ul type="disc">
+
+
+  <li>
+    
+    <p>我们需要假定字符集使用 ascii 编码而输入使用 Unicode 编码</p>
+
+  </li>
+
+
+  <li>
+    
+    <p>一个 Unicode 字符 (如 '=') 可以后跟 'composing
+          character' 且该组合与单个 '=' 是不同的，因此简单地查找 '=' 会找到错误的字符
+          </p>
+
+  </li>
+
+
+</ul>
+
+</div>
+
+
+<p>不过在实践中，这些问题都不重要，由于 ascii 几乎是通用的编码，而且 composing characters 跟在 '=' (或其它对于本库而言有特殊意义的字符) 后面这种情况非常罕见。
+    </p>
+
+
+</div>
+
+
+</div>
+
+
+<table width="100%">
+
+  <tbody>
+
+    <tr>
+
+
+      <td align="left"></td>
+
+
+      <td align="right"><small>Copyright © 2002-2004 Vladimir Prus</small></td>
+
+
+    </tr>
+
+  
+  </tbody>
+</table>
+
+
+<hr>
+<div class="spirit-nav">
+<a accesskey="p" href="howto.html"><img src="../images/prev.png" alt="Prev"></a><a accesskey="u" href="../program_options.html"><img src="../images/up.png" alt="Up"></a><a accesskey="h" href="../index.html"><img src="../images/home.png" alt="Home"></a><a accesskey="n" href="s06.html"><img src="../images/next.png" alt="Next"></a>
+</div>
+
+
+</body></html>

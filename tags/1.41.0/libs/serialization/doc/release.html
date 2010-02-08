@@ -1,0 +1,111 @@
+<!DOCTYPE HTML PUBLIC "-//W3C//DTD HTML 4.01 Transitional//EN" "http://www.w3.org/TR/html4/loose.dtd">
+<html><head><!--
+(C) Copyright 2002-4 Robert Ramey - http://www.rrsd.com . 
+Use, modification and distribution is subject to the Boost Software
+License, Version 1.0. (See accompanying file LICENSE_1_0.txt or copy at
+http://www.boost.org/LICENSE_1_0.txt)
+-->
+<meta http-equiv="Content-Type" content="text/html; charset=UTF-8">
+<link rel="stylesheet" type="text/css" href="../../../boost.css">
+<link rel="stylesheet" type="text/css" href="style.css">
+<title>Serialization - Release Notes</title></head>
+<body link="#0000ff" vlink="#800080">
+<table summary="header" border="0" cellpadding="7" cellspacing="0" width="100%">
+  <tbody><tr> 
+    <td valign="top" width="300"> 
+      <h3><a href="../../../index.htm"><img alt="C++ Boost" src="../../../boost.png" border="0" height="86" width="277"></a></h3>
+    </td>
+    <td valign="top"> 
+      <h1 align="center">Serialization</h1>
+      <h2 align="center">Release Notes</h2>
+    </td>
+  </tr>
+</tbody></table>
+<hr>
+<dl class="index">
+  <dt><a href="#requirements">要求</a></dt>
+  <dt><a href="#differences_1_39">与版本 1.39 的差别</a></dt><dt><a href="#differences_1_37">与版本 1.37&nbsp;的差别</a></dt><dt><a href="#differences_1_35">与版本 1.35 的差别</a></dt>
+  <dt><a href="#differences_1_34">与版本 1.34 的差别</a></dt>
+  <dt><a href="#differences_1_33">与版本 1.33 的差别</a></dt>
+  <dt><a href="#differences_1_32">与版本 1.32 的差别</a></dt>
+  <dt><a href="#todo">遗留问题</a></dt>
+</dl>目前没有已知的 bugs。不过，由于编译器/库的原因，在某些编译器和库的组合下有些测试不能通过。
+<h2><a name="requirements"></a>要求</h2>该库已针对 Boost 版本 1.39 和 1.40 进行了测试。 
+<p>本库中的存档类作了一些变化。使用此指南来创建他们自己的存档类的用户会发现，这些很可能不能再编译。这可以通过在对这些存档类进行了实例化的代码中作如下修改来弥补。 
+</p><p>旧代码：<br><code></code></p><pre>    ...<br>    #include &lt;boost/archive/impl/archive_pointer_iserializer.ipp&gt;<br>    ...<br>    template class detail::archive_pointer_iserializer&lt;naked_text_iarchive&gt; ;<br>    ...<br>    template class detail::archive_pointer_iserializer&lt;text_iarchive&gt; ;<br>    </pre>应替换为以下新代码：<code></code><pre>    #include &lt;boost/archive/impl/archive_serializer_map.ipp&gt;<br>    ...<br>    template class detail::archive_serializer_map&lt;naked_text_iarchive&gt; ;<br>    ...<br>    template class detail::archive_serializer_map&lt;text_iarchive&gt; ;<br>    </pre><!--
+<p>
+The serialization library uses the boost spirit package to load XML archives.
+We have found that all tests pass using spirit 1.6x. Spirit 1.8 and higher does not work with
+older compilers - specifically MSVC 6, Borland and GCC < 3.0.
+If you are using one of these compilers, you may download a version
+of spirit 1.6 <a href="http://spirit.sourceforge.net/index.php?doc=download/index.html">here</a>.
+To use this downloaded version rather than the one included with boost,
+set an environmental variable SPIRIT_ROOT to be equal to the root 
+directory where the downloaded copy of spirit has been placed. E. G.
+<pre><code>
+set SPIRIT_ROOT=c:/spirit16
+</code></pre>
+If you're not using bjam and the Jamfile to build the library, be sure that
+the directory which contains the version of spirit you plan to use is placed
+at the front of the list of include paths.
+-->
+<h2><a name="differences_1_39"></a>与 Boost 1.39 的差别</h2>
+<ul><li>现在可以通过一个类的指针来序列化一个对象，即使该类实现了自己的 <code style="white-space: normal;">new/delete</code> 
+操作符。该功能在某些编译器上无效。 
+</li><li>多态对象的序列化速度显著加快。 
+</li></ul>在编写本文档时，所有以 TRAK 
+条目报告的缺陷都已解决。有一些悬而未决的 TRAK 条目最好应该描述为特性请求。请见 <a href="#todo">遗留问题</a>。
+<h2><a name="differences_1_37"></a>与 Boost 1.37 的差别</h2>在本版本中没有新的特性。在编写本文档时，所有以 TRAK 
+条目报告的缺陷都已解决。有一些悬而未决的 TRAK 条目最好应该描述为特性请求。请见 <a href="#todo">遗留问题</a>。 <h2><a name="differences_1_36"></a>与 Boost 1.36 的差别</h2>该版本中没有新的特性。编写本文时，所有标记为 TRAK 
+tickets 的缺陷都已解决。
+
+<h2><a name="differences_1_35"></a>与 Boost 1.35 的差别</h2>
+<ul>
+    <li>本库现在是线程安全的了。即可以在不同线程中打开多个存档。其实现使用了无锁的算法，以避免任何性能瓶颈。
+    </li><li>现在可以支持在共享库中定义的类型的序列化。共享库(DLLS)可以在运行期动态地装入/卸装。它包含抽象基类实例的序列化，这样编写的程序可以写成对未定义和未实现代码相兼容。
+    </li><li>扩展类型信息系统被加强，以实现上述功能。它是一个用于创建和转换仅知道字符串ID和抽象基类的类型的通用系统。
+    </li><li>所有以 TRAK 报告的缺陷已被解决。
+    </li><li>到编写本文之时，本库在一些旧的编译器，如版本7.1之前的 MSVC 和旧版本的 Borland 编译器上不能通过编译。这一情况在未来可能被改变也可能不会改变。
+</li></ul>
+
+<h2><a name="differences_1_34"></a>与 Boost 1.34 的差别</h2>
+<ul>
+    <li>对原生二进制存档的快速序列化的增强支持。由 Mattias Troyer 提供。 
+</li><li>改进了"导出"功能的实现。去掉了对头部顺序的要求，并取消了对"已知存档"的预定列表的维护，由 David Abrahams 实现。 
+</li><li>改进了对 STLPort 的支持。</li></ul>
+
+<h2><a name="differences_1_33"></a>与 Boost 1.33 的差别</h2>
+<ul>
+    <li>原生二进制存档使用 <code style="white-space: normal;">std::streambuf</code> 
+接口。这使得在某些情形下可以执行得更快。</li></ul>
+
+<h2><a name="differences_1_32"></a>与 Boost 1.32 的差别</h2>
+<ul>
+    <li>对于支持的平台，提供了动态链接库(DLLs 和共享库)。请见 <a href="../../../more/getting_started.html#auto-link">Windows平台上的自动链接</a>。 
+</li><li>对于支持的平台，实现了自动链接。 
+</li><li>更好地支持 <em>Argument Dependent Lookup</em> 和两阶段查找。这样放置序列化的名字空间的规则就更为简单了。 
+</li><li>更好的文档以帮助以上功能的使用。 
+</li><li>调整以改进对不符合标准的编译器的支持。 
+</li><li>改进对于保存/导入操作符的 <code>const</code> 正确性。注意，这可能会使得原来可以编译的早期 boost 
+版本产生编译错误。在多数情况下，修改的方法很简单。其它情况下，要仔细地检查代码以确保使用序列化系统的方式不会给程序引入微妙的 bugs. 
+有关这个问题的更完整的解释请见 <a href="traits.html#tracking" target="detail">这里</a>。 
+</li><li>对 <code style="white-space: normal;">shared_ptr&lt;T&gt;</code> 
+进行序列化的一个新的实现。该实现兼容于 <code style="white-space: normal;">shared_ptr&lt;T&gt;</code> 
+的公有接口，所以更为好用，而且以后也无须修改。该实现可以选择是否包含代码以导入保存在由 boost 1.32 所创建的存档中的 <code style="white-space: normal;">shared_ptr&lt;T&gt;</code>. 这部分代码位于头文件 <code style="white-space: normal;">boost/serialization/shared_ptr_132.hpp</code>. 
+如果你的应用需要导入由 boost 1.32 库所创建的存档，则在每次包含 <code style="white-space: normal;">boost/serialization/shared_ptr.hpp</code> 之前包含上述头文件。 
+
+</li><li>更多的编译器被测试和支持。 
+</li><li>修正了多个 bug。</li></ul>
+
+<h2><a name="todo"></a>遗留问题</h2>
+<ul><li>右值不能被序列化。可以对非跟踪类型实现这一点，但目前尚未实现。 </li><li>指针的指针目前还不能进行序列化。</li><li>包含特殊字符如 '\0' 的 <code style="white-space: normal;">std::string</code> 和 <code style="white-space: normal;">std::wstring</code> 不能序列化为 
+XML，如果没有一个转义机制。目前还没有实现这样的转义机制。<code style="white-space: normal;"></code> 
+</li><li>在这个版本中，修正了实现 <code style="white-space: normal;">std::map</code> 
+序列化的一个微妙的错误。但是不幸的是，这个修正使得那些不支持模板偏特化的编译器无法编译 <code style="white-space: normal;">std::map</code> 的序列化。 
+</li></ul>
+<p>除了以上所说的以外，还有一些与特定平台相关的问题。它们在 <a href="implementation.html#othercompilerissues">特定编译器/库的问题</a> 中列出。</p><hr>
+<p><i>© Copyright <a href="http://www.rrsd.com">Robert Ramey</a> 2002-2009. 
+Distributed under the Boost Software License, Version 1.0. (See
+accompanying file LICENSE_1_0.txt or copy at http://www.boost.org/LICENSE_1_0.txt)
+</i></p>
+</body></html>

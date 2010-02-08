@@ -1,0 +1,137 @@
+<!DOCTYPE HTML PUBLIC "-//W3C//DTD HTML 4.01 Transitional//EN">
+<html><head>
+<meta http-equiv="Content-Type" content="text/html; charset=UTF-8"><title>Header boost/utility.hpp Documentation</title>
+
+</head>
+<body style="color: rgb(0, 0, 0); background-color: rgb(255, 255, 255);">
+<h1><img src="../../boost.png" alt="boost.png (6897 bytes)" align="middle" height="86" width="277">头文件 <a href="../../boost/utility.hpp">boost/utility.hpp</a></h1>
+<p>头文件 <code><a href="../../boost/utility.hpp">&lt;boost/utility.hpp&gt;</a></code>
+的所有内容都位于名字空间<code> boost</code>.</p>
+<h2>目录</h2>
+<ul>
+<li>支持 <a href="base_from_member.html">base-from-member
+惯用法</a> 的类模板</li>
+<li>函数模板 <a href="#checked_delete">checked_delete()
+和 checked_array_delete()</a></li>
+<li>函数模板 <a href="#functions_next_prior">next() 和
+prior()</a></li>
+<li> 类 <a href="#Class_noncopyable">noncopyable</a></li>
+<li> 函数模板 <a href="#addressof">addressof()</a></li>
+<li>类模板 <a href="#result_of">result_of</a></li>
+<li>宏 <a href="#BOOST_BINARY">BOOST_BINARY</a></li>
+<li><a href="index.html">其它不在 <code>utility.hpp</code>
+中的工具</a></li>
+</ul>
+<h2> 函数模板 <a name="checked_delete">checked_delete</a>()
+和 checked_array_delete()</h2>
+<p>请看 <a href="checked_delete.html">单独的文档</a>。</p>
+<h2> <a name="functions_next_prior">函数模板</a>
+next() 和 prior()</h2>
+<p>有些数据类型，如C++标准库的前向和双向迭代器，不提供 operator+() 或 operator-()
+的加法和减法。这意味着即使已经有了 operator++() 或 operator--()，但如果想不修改原值而获得 next 或 prior
+值就需要一个临时存储。这也意味着在一个模板中编写象 <code>itr+1</code>
+这样的代码就限制了迭代器类别必须是随机访问迭代器。</p>
+<p>next() 和 prior() 函数提供了一个绕过这些问题的简单方法：</p>
+<blockquote>
+<pre>template &lt;class T&gt;<br>T next(T x) { return ++x; }<br><br>template &lt;class T, class Distance&gt;<br>T next(T x, Distance n)<br>{<br> std::advance(x, n);<br> return x;<br>}<br><br>template &lt;class T&gt;<br>T prior(T x) { return --x; }<br><br>template &lt;class T, class Distance&gt;<br>T prior(T x, Distance n)<br>{<br> std::advance(x, -n);<br> return x;<br>}</pre>
+</blockquote>
+<p>用法也很简单：</p>
+<blockquote>
+<pre>const std::list&lt;T&gt;::iterator p = get_some_iterator();<br>const std::list&lt;T&gt;::iterator prev = boost::prior(p);<br>const std::list&lt;T&gt;::iterator next = boost::next(prev, 2);</pre>
+</blockquote>
+<p>从给定迭代器移动的距离应以绝对值的形式指定。例如，给定迭代器 p 之前的第四个迭代器应写为 <code>prior(p,
+4)</code>.</p>
+<p>这是由 <a href="../../people/dave_abrahams.htm">Dave
+Abrahams</a> 贡献的。两参数版本则是来自 Daniel Walker.</p>
+<h2><a name="Class_noncopyable">类&nbsp;noncopyable</a></h2>
+<p>类&nbsp;<strong>noncopyable</strong>
+是一个基类。当你想禁止复制构造和复制赋值时，可以从 <strong>noncopyable</strong>
+派生你的类。</p>
+<p>有些对象，持有象文件和网络连接这样的复杂资源，它们没有明确的复制语义。有时候可能会有复制语义，不过也只有非常有限的用处，而且要
+正确地实现也非常困难。有时候你是在实现一个没有复制必要的类，你也不想花时间去写这些函数。从 <b>noncopyable</b>
+进行派生可以防止其它隐式生成的函数(它们不具备正确的语义)成为其它程序员的陷阱。</p>
+<p>处理这一情况的传统方法是声明一个私有的复制构造函数和赋值函数，并写明为什么这样做。不过从 <b>noncopyable</b>
+进行派生更简单也更清晰，不需要其它说明。</p>
+<p>程序 <a href="noncopyable_test.cpp">noncopyable_test.cpp</a>
+可用于验证类 <b>noncopyable</b> 是否工作正确。它已经成功地运行于 GCC 2.95,
+Metrowerks CodeWarrior 5.0, 和 Microsoft Visual C++ 6.0 sp 3.</p>
+<p>本库由 <a href="../../people/dave_abrahams.htm">Dave
+Abrahams</a> 贡献。</p>
+<h3>例子</h3>
+<blockquote>
+<pre>// 在你的某个头文件中 ...<br>#include &lt;boost/utility.hpp&gt;<br><br>class ResourceLadenFileSystem : boost::noncopyable {<br>...</pre>
+</blockquote>
+<h3>原理</h3>
+<p>类&nbsp;noncopyable 带有保护的构造函数和析构函数，以强调它只被用作基类。Dave Abrahams
+提到了增加(即使是简单的内联函数)析构函数声明对于编译器优化的影响。他说 "可能这个担心是错误的，因为 noncopyable
+在大多数情况下是用于拥有资源的类，它们通常都会有一个非平凡的析构语义。"</p>
+<h2><a name="addressof">函数模板 addressof()</a></h2>
+<p>函数 <strong>addressof()</strong> 返回一个对象的地址。</p>
+<blockquote>
+<pre>template &lt;typename T&gt; inline T* addressof(T&amp; v);<br>template &lt;typename T&gt; inline const T* addressof(const T&amp; v);<br>template &lt;typename T&gt; inline volatile T* addressof(volatile T&amp; v);<br>template &lt;typename T&gt; inline const volatile T* addressof(const volatile T&amp; v);<br></pre>
+</blockquote>
+<p>C++ 允许程序员替换单参的 <strong>operator&amp;()</strong>，
+该成员原本是用于获得对象地址的。要获得一个对象的真实地址，需要一些丑陋的转换技巧，以避免调用被重载的 <strong>operator&amp;()</strong>.
+函数 <strong>addressof()</strong>
+为这些所需的代码提供了一个包装，使得你可以很容易获得一个对象的真实地址。 </p>
+<p>程序 <a href="addressof_test.cpp">addressof_test.cpp</a>
+可用于验证 <b>addressof()</b> 是否工作正常。</p>
+<p>这是由 Brad King based 基于 Doug Gregor&nbsp;的思路所提供的。</p>
+<h3>例子</h3>
+<blockquote>
+<pre>#include &lt;boost/utility.hpp&gt;<br><br>struct useless_type {};<br>class nonaddressable {<br> useless_type operator&amp;() const;<br>};<br><br>void f() {<br> nonaddressable x;<br> nonaddressable* xp = boost::addressof(x);<br> // nonaddressable* xpe = &amp;x; /* 错误的 */<br>}</pre>
+</blockquote>
+<h2><a name="result_of">类模板 result_of</a></h2>
+<p>类模板 <code>result_of</code> 帮助确定一个调用表达式的类型。给定一个类型
+F 的左值 <code>f</code> 和类型 <code>T1</code>, <code>T2</code>,
+..., <code>T<em>N</em></code> 的左值 <code>t1</code>,
+<code>t2</code>, ..., <code>t<em>N</em></code>
+，类型 <code>result_of&lt;F(T1, T2, ..., T<em>N</em>)&gt;::type</code>
+定义了表达式 <code>f(t1, t2, ...,t<em>N</em>)</code>
+的类型。该实现允许类型 <code>F</code> 是函数指针、函数引用、成员函数指针或类类型。如果 <code>F</code>
+是一个类类型，带有成员类型 <code>result_type</code>, 则 <code>result_of&lt;F(T1,
+T2, ..., T<em>N</em>)&gt;</code> 为 <code>F::result_type</code>.
+否则，<code>result_of&lt;F(T1, T2, ..., T<em>N</em>)&gt;</code>
+当 <code><em>N</em> &gt; 0</code> 时为 <code>F::result&lt;F(T1,
+T2, ..., T<em>N</em>)&gt;::type</code>，当 <code><em>N</em>
+= 0</code> 时为 <code>void</code>. 有关 <code>result_of</code>
+的更多信息，请看 C++ Library TR，<a href="http://www.open-std.org/jtc1/sc22/wg21/docs/papers/2005/n1836.pdf">N1836</a>，
+有关动机和设计原理，请看 <code>result_of</code><code></code>
+<a href="http://anubis.dkuug.dk/jtc1/sc22/wg21/docs/papers/2003/n1454.html">提
+议书</a>。</p>
+<p>类模板 <code>result_of</code> 位于头文件 <code>&lt;<a href="../../boost/utility/result_of.hpp">boost/utility/result_of.hpp</a>&gt;</code>.
+缺省地，<em>N</em> 可以是0到10之间的任意值。要修改上限，请将宏 <code>BOOST_RESULT_OF_NUM_ARGS</code>
+定义为 <em>N</em> 的最大值。</p>
+<a name="BOOST_NO_RESULT_OF"></a>
+<p><code>result_of</code>
+的实现需要类模板偏特化、正确分析函数类型的能力，以及支持 SFINAE. 如果你的编译器不支持 <code>result_of</code>,
+包含头文件 <code>boost/utility/result_of.hpp</code> 将定义宏 <code>BOOST_NO_RESULT_OF</code>.
+这是由 Doug Gregor 贡献的。</p>
+<h2>支持 Base-from-Member 惯用法的类模板</h2>
+<p>请看 <a href="base_from_member.html">单独的文档</a>。</p>
+<h2><a name="BOOST_BINARY">宏&nbsp;BOOST_BINARY</a></h2>
+<p>宏 <code>BOOST_BINARY</code>
+用于表示二进制字面值。它接受一个二进制数字作为参数，这个数字由任意个1和0组成，这些1和0被分为若干组，每组的长度为1到8，各组间以空格分隔。决
+定所产生字面值的类型的规则与十六进制及八进制字面值的规则相同(<i>2.13.1p1</i>)。通过具体实现，这个宏在预
+处理期间被展开为一个八进制字面值，因此它没有运行期开销，而且其结果可以在任何一个可以使用八进制字面值的地方使用。</p>
+<p>为了直接支持带有后缀的二进制字面值，我们还提供了形如 BOOST_BINARY_XXX 的宏，其中 XXX
+是标准的整数后缀，包括所有大小写。另外，在提供了 long long 和 unsigned long long 类型的编译器中，LL 和
+ULL 后缀可以用于表示这两个类型。</p>
+<p>BOOST_BINARY 宏族位于头文件 <a href="../../boost/utility/binary.hpp">&lt;boost/utility/binary.hpp&gt;</a>
+中，自动由 <a href="../../boost/utility.hpp">&lt;boost/utility.hpp&gt;</a>
+包含。 </p>
+<p>由 Matt Calabrese 贡献。</p>
+<h3>Example</h3>
+<blockquote>
+<pre>void foo( int );<br><br>void foo( unsigned long );<br><br>void bar()<br>{<br> int value1 = BOOST_BINARY( 100 111000 01 1 110 );<br><br> unsigned long value2 = BOOST_BINARY_UL( 100 001 ); // unsigned long<br><br> long long value3 = BOOST_BINARY_LL( 11 000 ); // long long if supported<br><br> assert( BOOST_BINARY( 10010 )<br> &amp; BOOST_BINARY( 11000 )<br> == BOOST_BINARY( 10000 )<br> );<br><br> foo( BOOST_BINARY( 1010 ) ); // calls the first foo<br><br> foo( BOOST_BINARY_LU( 1010 ) ); // calls the second foo<br>}<br></pre>
+</blockquote>
+<hr>
+<p>Revised&nbsp;<!--webbot bot="Timestamp" S-Type="EDITED" S-Format="%d %B, %Y" startspan
+-->
+04 September, 2008<!--webbot bot="Timestamp" endspan i-checksum="39369"
+-->
+</p>
+<p>© Copyright Beman Dawes 1999-2003.</p>
+<p>Distributed under the Boost Software License, Version 1.0. See
+<a href="http://www.boost.org/LICENSE_1_0.txt">www.boost.org/LICENSE_1_0.txt</a></p>
+</body></html>

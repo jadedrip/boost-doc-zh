@@ -1,0 +1,334 @@
+<!DOCTYPE html PUBLIC "-//W3C//DTD HTML 4.01 Transitional//EN">
+
+<!-- Copyright David Abrahams 2006. Distributed under the Boost -->
+<!-- Software License, Version 1.0. (See accompanying -->
+<!-- file LICENSE_1_0.txt or copy at http://www.boost.org/LICENSE_1_0.txt) -->
+<html>
+  <head>
+    <meta name="generator" content=
+    "HTML Tidy for Windows (vers 1st August 2002), see www.w3.org">
+    <meta http-equiv="Content-Type" content="text/html; charset=UTF-8">
+    <link rel="stylesheet" type="text/css" href="../boost.css">
+
+    <title>Boost.Python - &lt;boost/python/extract.hpp&gt;</title>
+  </head>
+
+  <body>
+    <table border="0" cellpadding="7" cellspacing="0" width="100%" summary=
+    "header">
+      <tr>
+        <td valign="top" width="300">
+          <h3><a href="../../../../index.htm"><img height="86" width="277"
+          alt="C++ Boost" src="../../../../boost.png" border="0"></a></h3>
+        </td>
+
+        <td valign="top">
+          <h1 align="center"><a href="../index.html">Boost.Python</a></h1>
+
+          <h2 align="center">Header &lt;boost/python/extract.hpp&gt;</h2>
+        </td>
+      </tr>
+    </table>
+    <hr>
+
+    <h2>Contents</h2>
+
+    <dl class="page-index">
+      <dt><a href="#introduction">Introduction</a></dt>
+
+      <dt><a href="#classes">Classes</a></dt>
+
+      <dd>
+        <dl class="page-index">
+          <dt><a href="#extract-spec">Class <code>extract</code></a></dt>
+
+          <dd>
+            <dl class="page-index">
+              <dt><a href="#extract-spec-synopsis">Class <code>extract</code>
+              synopsis</a></dt>
+
+              <dt><a href="#extract-spec-ctors">Class <code>extract</code>
+              constructors and destructor</a></dt>
+
+              <dt><a href="#extract-spec-observers">Class
+              <code>extract</code> observer functions</a></dt>
+            </dl>
+          </dd>
+        </dl>
+      </dd>
+
+
+      <dt><a href="#examples">Example</a></dt>
+    </dl>
+    <hr>
+
+    <h2><a name="introduction"></a>Introduction</h2>
+
+    <p>Exposes a mechanism for extracting C++ object values from
+    generalized Python objects. Note that
+    <code>extract&lt;</code>...<code>&gt;</code> can also be used to
+    &quot;downcast&quot; an <a
+    href="object.html#object-spec">object</a> to some specific <a
+    href="ObjectWrapper.html#ObjectWrapper-concept">ObjectWrapper</a>. Because
+    invoking a mutable python type with an argument of the same type
+    (e.g. <code>list([1,2])</code> typically makes a <em>copy</em> of
+    the argument object, this may be the only way to access the <a
+    href="ObjectWrapper.html#ObjectWrapper-concept">ObjectWrapper</a>'s
+    interface on the original object.
+
+    <p>
+    导出从通用Python对象提取C++对象值的机制
+    
+    注意
+    <code>extract&lt;</code>...<code>&gt;</code>
+    也可用于从 <a
+    href="object.html#object-spec">object</a> 
+    “向下转型（downcast）”到一些特定的 <a
+    href="ObjectWrapper.html#ObjectWrapper-concept">ObjectWrapper</a>。
+    
+    因为用相同类型的参数调用可变的python类型
+    （如 <code>list([1,2])</code>），
+    典型地会<em>复制</em>参数对象，
+    所以这可能是访问原对象 <a
+    href="ObjectWrapper.html#ObjectWrapper-concept">ObjectWrapper</a>
+    接口的唯一方法。
+
+    <h2><a name="classes"></a>Classes</h2>
+
+    <h3><a name="extract-spec"></a>Class template <code>extract</code></h3>
+
+    <p><code>extract&lt;T&gt;</code> can be used to extract a value of
+    an arbitrary C++ type from an instance of <code><a
+    href="object.html#object-spec">object</a></code>. Two usages are supported:
+
+    <p><code>extract&lt;T&gt;</code>
+    可用于从 <code><a
+    href="object.html#object-spec">object</a></code>
+    实例提取任意C++类型值。
+    
+    支持两种使用方法：
+
+<ol>
+<li><b><code>extract&lt;T&gt;(o)</code></b> is a temporary object
+which is implicitly convertible to <code>T</code> (explicit conversion
+is also available through the object's function-call
+operator). However, if no conversion is available which can convert
+<code>o</code> to an object of type <code>T</code>, a Python
+<code>TypeError</code> exception will be <a
+href="definitions.html#raise">raised</a>.
+
+<p><b><code>extract&lt;T&gt;(o)</code></b> 是个可隐式地转换到 
+<code>T</code> 的临时对象
+（也可通过对象的函数调用运算符显式转换）。
+
+然而，如果无法转换
+<code>o</code> 到类型 <code>T</code> 的对象，
+将<a href="definitions.html#raise">引发</a>
+Python <code>TypeError</code> 异常。
+</p>
+
+<li><b><code>extract&lt;T&gt; x(o);</code></b> constructs an extractor
+whose <code>check()</code> member function can be used to ask whether
+a conversion is available without causing an exception to be thrown.
+
+<p><b><code>extract&lt;T&gt; x(o);</code></b> 构建一个提取器（extractor），
+其 <code>check()</code> 成员函数可用于查询转换是否可用，而不会导致抛出异常。
+</p>
+
+</ol>
+
+    <h4><a name="extract-spec-synopsis"></a>Class template <code>extract</code>
+    synopsis</h4>
+<pre>
+namespace boost { namespace python
+{
+  template &lt;class T&gt;
+  struct extract
+  {
+      typedef <i>unspecified</i> result_type;
+
+      extract(PyObject*);
+      extract(object const&amp;);
+
+      result_type operator()() const;
+      operator result_type() const;
+
+      bool check() const;
+  };
+}}
+</pre>
+
+    <h4><a name="extract-spec-ctors"></a>Class <code>extract</code>
+    constructors and destructor</h4>
+<pre>
+extract(PyObject* p);
+extract(object const&amp;);
+</pre>
+
+    <dl class="function-semantics">
+      <dt><b>Requires:</b> The first form requires that <code>p</code> is non-null.</dt>
+
+      <dt><b>Effects:</b>Stores a pointer to the Python object managed
+      by its constructor argument. In particular, the reference
+      count of the object is not incremented. The onus is on the user
+      to be sure it is not destroyed before the extractor's conversion
+      function is called.</dt>
+    </dl>
+
+    <dl class="function-semantics">
+      <dt><b>要求：</b> 第一种形式要求 <code>p</code> 非空。</dt>
+
+      <dt><b>效果：</b>
+      保存一个指向Python对象的指针，
+      该对象是由其构造函数的参数管理的。
+      
+      特别的，对象的引用计数不会递增。
+      确保它不会在提取器的转换函数调用之前销毁是用户的责任。
+      </dt>
+    </dl>
+    
+    <h4><a name="extract-spec-observers"></a>Class <code>extract</code>
+    observer functions</h4>
+<pre>
+result_type operator()() const;
+operator result_type() const;
+</pre>
+
+    <dl class="function-semantics">
+      <dt><b>Effects:</b> Converts the stored pointer to
+      <code>result_type</code>, which is either <code>T</code> or
+      <code>T const&amp;</code>.
+      </dt>
+
+      <dt><b>Returns:</b> An object of <code>result_type</code>
+      corresponding to the one referenced by the stored pointer.</dt>
+
+      <dt><b>Throws:</b> <code><a
+      href="errors.html#error_already_set-spec">error_already_set</a></code>
+      and sets a <code>TypeError</code> if no such conversion is
+      available. May also emit other unspecified exceptions thrown by
+      the converter which is actually used.</dt>
+    </dl>
+
+    <dl class="function-semantics">
+      <dt><b>效果：</b> 将保存的指针转换到
+      <code>result_type</code>，即
+      <code>T</code> 或
+      <code>T const&amp;</code>。
+      </dt>
+
+      <dt><b>返回：</b> 一个 <code>result_type</code> 对象，
+      对应于保存的指针所指的对象。
+      </dt>
+
+      <dt><b>抛异常：</b> 如果无法转换，抛出<code><a
+      href="errors.html#error_already_set-spec">error_already_set</a></code>，
+      并设置 <code>TypeError</code>。
+
+      可能也会发出其他由实际使用的转换器抛出的未定异常。
+      </dt>
+    </dl>
+
+<pre>
+bool check() const;
+</pre>
+
+    <dl class="function-semantics">
+
+      <dt><b>Postconditions:</b> None. In particular, note that a
+      return value of <code>true</code> does not preclude an exception
+      being thrown from <code>operator result_type()</code> or
+      <code>operator()()</code>.</dt>
+
+      <dt><b>Returns:</b> <code>false</code> <i>only</i> if no conversion from the
+      stored pointer to <code>T</code> is available.</dt>
+
+    </dl>
+
+    <dl class="function-semantics">
+
+      <dt><b>后验条件：</b> 无。
+      特别的，返回值 <code>true</code> 不排除
+      <code>operator result_type()</code> 或
+      <code>operator()()</code> 会抛异常。
+      </dt>
+
+      <dt><b>返回：</b> 
+      <i>仅</i>当保存的指针无法转换到
+      <code>T</code>，
+      返回 <code>false</code>。</dt>
+
+    </dl>
+
+
+    <h2><a name="examples"></a>Examples</h2>
+
+<pre>
+#include &lt;cstdio&gt;
+using namespace boost::python;
+int Print(str s)
+{ 
+   // extract a C string from the Python string object
+   char const* c_str = extract&lt;char const*&gt;(s);
+
+   // Print it using printf
+   std::printf(&quot;%s\n&quot;, c_str);
+
+   // Get the Python string's length and convert it to an int
+   return extract&lt;int&gt;(s.attr(&quot;__len__&quot;)())
+}
+</pre>
+
+The following example shows how extract can be used along with
+<code><a
+href="class.html#class_-spec">class_</a>&lt;</code>...<code>&gt;</code>
+to create and access an instance of a wrapped C++ class.
+
+<p>
+下例显示了如何使用 extract 和
+<code><a
+href="class.html#class_-spec">class_</a>&lt;</code>...<code>&gt;</code>
+来创建并访问C++封装类实例。
+</p>
+
+<pre>
+struct X
+{
+   X(int x) : v(x) {}
+   int value() { return v; }
+ private:
+   int v;
+};
+
+BOOST_PYTHON_MODULE(extract_ext)
+{
+    object x_class(
+       class_&lt;X&gt;(&quot;X&quot;, init&lt;int&gt;())
+          .def(&quot;value&quot;, &amp;X::value))
+          ;
+        
+    // Instantiate an X object through the Python interface. 
+    // Its lifetime is now managed by x_obj.
+    object x_obj = x_class(3);
+
+    // Get a reference to the C++ object out of the Python object
+    X&amp; x = extract&lt;X&amp;&gt;(x_obj);
+    assert(x.value() == 3);
+}
+</pre>
+    <p>Revised 15 November, 2002</p>
+
+    <p><i>&copy; Copyright <a href=
+    "http://www.boost.org/people/dave_abrahams.htm">Dave Abrahams</a> 2002.</i></p>
+
+    <p>
+    翻译：<a href="http://blog.csdn.net/jq0123">金庆</a>
+    </p>
+
+    <p>
+    译文更新：2008.6.15
+    </p>
+
+  </body>
+</html>
+

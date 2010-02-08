@@ -1,0 +1,4198 @@
+<!DOCTYPE html PUBLIC "-//W3C//DTD HTML 4.01 Transitional//EN" "http://www.w3.org/TR/html4/loose.dtd">
+<html><head>
+<meta http-equiv="Content-Type" content="text/html; charset=UTF-8"><title>Templated Circular Buffer Container</title>
+
+<link rel="stylesheet" href="../../../boost.css" type="text/css"></head>
+<body>
+<table id="title" border="0">
+<tbody>
+<tr>
+<td>
+<h1>模板化循环缓冲区容器 </h1>
+<h1> circular_buffer&lt;T, Alloc&gt; </h1>
+</td>
+<td> <a href="../../../"><img src="../../../boost.png" alt="Boost" border="0" height="86" width="277"></a> </td>
+</tr>
+</tbody>
+</table>
+<h2> 目录 </h2>
+<a href="#description">描述</a><br>
+<a href="#briefexample">介绍性示例</a><br>
+<a href="#synopsis">概要</a><br>
+<a href="#rationale">原理</a><br>
+- <a href="#threadsafety">线程安全性</a><br>
+- <a href="#overwrite">覆写操作</a><br>
+- <a href="#fullbuffer">写入到一个满的缓冲区</a><br>
+- <a href="#emptybuffer">从一个空的缓冲区读取/删除</a><br>
+- <a href="#iteratorinvalidation">迭代器失效</a><br>
+<a href="#caveats">警告</a><br>
+<a href="#debug">对调试的支持</a><br>
+<a href="#examples">更多例子</a><br>
+<a href="#header">头文件</a><br>
+<a href="#model">模型概念</a><br>
+<a href="#parameters">模板参数</a><br>
+<a href="#types">公有类型</a><br>
+<a href="#constructors">构造函数和析构函数</a><br>
+<a href="#methods">公有成员函数</a><br>
+<a href="#functions">独立函数</a><br>
+<a href="#notes">备注</a><br>
+<a href="#see">参见</a><br>
+<a href="#ack">鸣谢</a><br>
+<a href="#relnotes">发布说明</a>
+<table id="table_figure" align="right" border="0">
+<tbody>
+<tr>
+<td> <img src="circular_buffer.png" alt="Circular Buffer" height="332" width="300">
+</td>
+</tr>
+<tr>
+<td width="300">
+<table id="table_figure_desc" align="right" border="0" cellpadding="5">
+<tbody>
+<tr>
+<td valign="top"> <span style="font-weight: bold;">图</span><b>:</b>
+</td>
+<td valign="top"> 循环缓冲区(也称为 <i>环ring</i>
+或 <i>cyclic buffer</i>)。 </td>
+</tr>
+</tbody>
+</table>
+</td>
+</tr>
+</tbody>
+</table>
+<h2> <a name="description" id="description">描
+述</a> </h2>
+<p>术语 <i>循环缓冲区circular buffer</i>
+通常指的是内存中的一块用于保存输入数据的区域。当缓冲区被填入时，新的数据从缓冲区的开始被写入，并覆盖掉旧的数据。(见图) </p>
+<p><code>circular_buffer</code> 是一个符合STL的容器。它是一种类似于 <code><a href="http://www.sgi.com/tech/stl/List.html">std::list</a></code>
+或 <code><a href="http://www.sgi.com/tech/stl/Deque.html">std::deque</a></code>
+的序列。它支持随机访问迭代器，在缓冲区头部或尾部的常量时间插入和删除操作，与 <code>std</code>
+算法的互操作能力。<code>circular_buffer</code>
+被特别设计为提供固定容量的存储大小。当其容量被用完时，新插入的元素会覆盖缓冲区头部或尾部(取决于使用何种插入操作)的元素。 </p>
+<p><code>circular_buffer</code>
+仅在创建时、显式调整容量时，或需要重新调整大小或赋值操作时才进行内存分配。另一方面，还有一个 <code><a href="space_optimized.html">circular_buffer_space_optimized</a></code>
+可用。它是 <code>circular_buffer</code>
+的一个适配器，它不在创建时分配内存，而是在需要时分配内存。 </p>
+<h2> <a name="briefexample" id="briefexample">介
+绍性示例</a> </h2>
+<p>以是一个使用 <code>circular_buffer</code> 的简单例子： </p>
+<pre> #include &lt;boost/circular_buffer.hpp&gt;<br><br> int main(int /*argc*/, char* /*argv*/[]) {<br><br> // 创建一个容量为3个整数的循环缓冲区。<br> boost::circular_buffer&lt;int&gt; cb(3);<br><br> // 插入一些元素到缓冲区。<br> cb.push_back(1);<br> cb.push_back(2);<br> cb.push_back(3);<br><br> int a = cb[0]; // a == 1<br> int b = cb[1]; // b == 2<br> int c = cb[2]; // c == 3<br><br> // 现在缓冲已满，再插入元素将覆写最前面的元素。<br><br> cb.push_back(4); // 用 4 覆盖 1.<br> cb.push_back(5); // 用 5 覆盖 2.<br><br> // 现在缓冲区包含 3, 4 和 5.<br><br> a = cb[0]; // a == 3<br> b = cb[1]; // b == 4<br> c = cb[2]; // c == 5<br><br> // 可以从前端或后端弹出元素。<br><br> cb.pop_back(); // 5 被删除。<br> cb.pop_front(); // 3 被删除。<br><br> int d = cb[0]; // d == 4<br><br> return 0;<br> }<br></pre>
+<h2> <a name="synopsis" id="synopsis">概要</a>
+</h2>
+<div id="srcdoc_synopsis">
+<table id="table_synopsis" border="0" cellpadding="10">
+<tbody>
+<tr>
+<td>
+<pre>namespace boost {<br><br>template &lt;class <a href="#templateparam_T">T</a>, class <a href="#templateparam_Alloc">Alloc</a>&gt;<br>class circular_buffer<br>{<br>public:<br> typedef typename Alloc::value_type <a href="#classboost_1_1circular__buffer_1cbdd7ca87e147c08cd2be267eefd6540">value_type</a>;<br> typedef typename Alloc::pointer <a href="#classboost_1_1circular__buffer_14ff917f8a6131ec18e91606727592a9c">pointer</a>;<br> typedef typename Alloc::const_pointer <a href="#classboost_1_1circular__buffer_190f7c6bcb624ad507de546366f49028a">const_pointer</a>;<br> typedef typename Alloc::reference <a href="#classboost_1_1circular__buffer_1f38a9bc64d84757c661c2542ff9a7f65">reference</a>;<br> typedef typename Alloc::const_reference <a href="#classboost_1_1circular__buffer_1a8397191092f5bacee991b623ca4b910">const_reference</a>;<br> typedef typename Alloc::difference_type <a href="#classboost_1_1circular__buffer_15313e723fa85d73db5826f8b722aa2a9">difference_type</a>;<br> typedef typename Alloc::size_type <a href="#classboost_1_1circular__buffer_19ba12c0142a21a7d960877c22fa3ea00">size_type</a>;<br> typedef Alloc <a href="#classboost_1_1circular__buffer_14e07c6ddfe89debe384e59bed06e7cb7">allocator_type</a>;<br> typedef <i>implementation-defined</i> <a href="#classboost_1_1circular__buffer_15cab6d46f03c40d1e52d41843319ddb9">const_iterator</a>;<br> typedef <i>implementation-defined</i> <a href="#classboost_1_1circular__buffer_11b8a33f2dc8519b8a7d344ed4408c532">iterator</a>;<br> typedef boost::reverse_iterator&lt;const_iterator&gt; <a href="#classboost_1_1circular__buffer_1c7317701b511bc5f7a663b06b53e2b73">const_reverse_iterator</a>;<br> typedef boost::reverse_iterator&lt;iterator&gt; <a href="#classboost_1_1circular__buffer_1002fb890dded89e75dfeb6f021fb58a5">reverse_iterator</a>;<br> typedef std::pair&lt;pointer, size_type&gt; <a href="#classboost_1_1circular__buffer_126d279f91fef717e25459a0817ff242f">array_range</a>;<br> typedef std::pair&lt;const_pointer, size_type&gt; <a href="#classboost_1_1circular__buffer_11885d7f475b7e7a74c95b2448d243025">const_array_range</a>;<br> typedef size_type <a href="#classboost_1_1circular__buffer_1dc642ff2be4db0be1a457810e5d09595">capacity_type</a>;<br><br> explicit <a href="#classboost_1_1circular__buffer_1e53e744d2f94a2bcbfcdb219a9d93300">circular_buffer</a>(const allocator_type&amp; alloc = allocator_type());<br> explicit <a href="#classboost_1_1circular__buffer_1862a64cbc6a49376ecbb8321c3b44974">circular_buffer</a>(capacity_type capacity, const allocator_type&amp; alloc = allocator_type());<br> <a href="#classboost_1_1circular__buffer_1fdace8f110d5b7a17c02020757f06fe8">circular_buffer</a>(size_type n, const_reference item, const allocator_type&amp; alloc = allocator_type());<br> <a href="#classboost_1_1circular__buffer_10c7e9286d8270357d7e369b183124239">circular_buffer</a>(capacity_type capacity, size_type n, const_reference item, const allocator_type&amp; alloc = allocator_type());<br> <a href="#classboost_1_1circular__buffer_1e515d8a951eeb18b8cc930300e7e13bd">circular_buffer</a>(const circular_buffer&lt;T, Alloc&gt;&amp; cb);<br> template &lt;class InputIterator&gt;<br> <a href="#classboost_1_1circular__buffer_1744ec06b06a5a723386b645a29cb8ed2">circular_buffer</a>(InputIterator first, InputIterator last, const allocator_type&amp; alloc = allocator_type());<br> template &lt;class InputIterator&gt;<br> <a href="#classboost_1_1circular__buffer_1a64dcad327971194a706d52487151eb7">circular_buffer</a>(capacity_type capacity, InputIterator first, InputIterator last, const allocator_type&amp; alloc = allocator_type());<br> <a href="#classboost_1_1circular__buffer_164250ffbbbdbc62b99e8301fc195b80c">~circular_buffer</a>();<br><br> allocator_type <a href="#classboost_1_1circular__buffer_15693ba52e58ef90f1d914cbb63143cd3">get_allocator</a>() const;<br> allocator_type&amp; <a href="#classboost_1_1circular__buffer_1af7758a36ac2f84a3024b50b4fc7e098">get_allocator</a>();<br> iterator <a href="#classboost_1_1circular__buffer_158d1ede2e85f5d46eda8db3f0c4efef0">begin</a>();<br> iterator <a href="#classboost_1_1circular__buffer_1babfa093dad7801223b80626b598dee1">end</a>();<br> const_iterator <a href="#classboost_1_1circular__buffer_1ee6c38b2ecdc8dfec79975dbc685c80b">begin</a>() const;<br> const_iterator <a href="#classboost_1_1circular__buffer_19813e1d191cd04c4cfc100bbc4733e92">end</a>() const;<br> reverse_iterator <a href="#classboost_1_1circular__buffer_1db3d6b10b6763549f54d2627228fa7aa">rbegin</a>();<br> reverse_iterator <a href="#classboost_1_1circular__buffer_1cff9236a50107188b8942847a4dc2697">rend</a>();<br> const_reverse_iterator <a href="#classboost_1_1circular__buffer_146a8356a1aec6abca9c44cfc60b3bb10">rbegin</a>() const;<br> const_reverse_iterator <a href="#classboost_1_1circular__buffer_1a09f7111dde9f52a4d8babfcdef7e798">rend</a>() const;<br> reference <a href="#classboost_1_1circular__buffer_1d219f0d3203fb43b964a8cf63f1865cd">operator[]</a>(size_type index);<br> const_reference <a href="#classboost_1_1circular__buffer_1eb0a7fe7f8a56a4dc4c933b93adfcef4">operator[]</a>(size_type index) const;<br> reference <a href="#classboost_1_1circular__buffer_1cd84838cb4fffb6c113fd0297e502edc">at</a>(size_type index);<br> const_reference <a href="#classboost_1_1circular__buffer_1b233a298f5845a0fcf2ecc56f4170810">at</a>(size_type index) const;<br> reference <a href="#classboost_1_1circular__buffer_10d5fdeabeb352f47d1f7bb1ea8d9819f">front</a>();<br> reference <a href="#classboost_1_1circular__buffer_1d985d974020f88bb4255d8edbae0a30a">back</a>();<br> const_reference <a href="#classboost_1_1circular__buffer_13261c47e81bb5e447fb0d70f096728b8">front</a>() const;<br> const_reference <a href="#classboost_1_1circular__buffer_14cd3a019a9d99b4e29918b51c2181a07">back</a>() const;<br> array_range <a href="#classboost_1_1circular__buffer_1957cccdcb0c4ef7d80a34a990065818d">array_one</a>();<br> array_range <a href="#classboost_1_1circular__buffer_1f5081a54afbc2dfc1a7fb20329df7d5b">array_two</a>();<br> const_array_range <a href="#classboost_1_1circular__buffer_1586cfbdef335f1d3d31faacec63f7b04">array_one</a>() const;<br> const_array_range <a href="#classboost_1_1circular__buffer_191a0e2c33c0e5b4d7b8c497847bc29ce">array_two</a>() const;<br> pointer <a href="#classboost_1_1circular__buffer_1ea728bf57f91aa8946eddf76ce816a4e">linearize</a>();<br> bool <a href="#classboost_1_1circular__buffer_120f64448dc0723cc68c1096f6b00bc0a">is_linearized</a>() const; <br> void <a href="#classboost_1_1circular__buffer_1c591bb9e271b10b5240afcff3bd2c619">rotate</a>(const_iterator new_begin);   <br> size_type <a href="#classboost_1_1circular__buffer_1d666f694897465b0d4d7cdd8ddcbc213">size</a>() const;<br> size_type <a href="#classboost_1_1circular__buffer_195158ed4d4b03794068e259f85291995">max_size</a>() const;<br> bool <a href="#classboost_1_1circular__buffer_105acab2b9a0b41044b5241cfc9d87663">empty</a>() const;<br> bool <a href="#classboost_1_1circular__buffer_174a305e473c0bba9dcf30abb68bff909">full</a>() const;<br> size_type <a href="#classboost_1_1circular__buffer_17e144e8c7acd8e30c08bfb03391a2338">reserve</a>() const;<br> capacity_type <a href="#classboost_1_1circular__buffer_1da435a5884cad746ed5cd55bcb892035">capacity</a>() const;<br> void <a href="#classboost_1_1circular__buffer_161714204ef5172d156e2c7eccd04998f">set_capacity</a>(capacity_type new_capacity);<br> void <a href="#classboost_1_1circular__buffer_180c2e2e66a8fa9d0b7adc1b54921a8c3">resize</a>(size_type new_size, const_reference item = value_type());<br> void <a href="#classboost_1_1circular__buffer_1477715e9d31d2cc5b02ad8ecf3c68c46">rset_capacity</a>(capacity_type new_capacity);<br> void <a href="#classboost_1_1circular__buffer_144ecd9ec5f54a2d61c7d132e445d3483">rresize</a>(size_type new_size, const_reference item = value_type());<br> circular_buffer&lt;T, Alloc&gt;&amp; <a href="#classboost_1_1circular__buffer_1db1558911b2e251a587aeb3d8b3d797d">operator=</a>(const circular_buffer&lt;T, Alloc&gt;&amp; cb);<br> void <a href="#classboost_1_1circular__buffer_19ba4a81df16f386d31b04b49c82d1ada">assign</a>(size_type n, const_reference item);<br> void <a href="#classboost_1_1circular__buffer_1aa10b4e4ec1f1c5918931b04b31d43ca">assign</a>(capacity_type capacity, size_type n, const_reference item);<br> template &lt;class InputIterator&gt;<br> void <a href="#classboost_1_1circular__buffer_1253302d9bda5d7efbc4a6c311de3790c">assign</a>(InputIterator first, InputIterator last);<br> template &lt;class InputIterator&gt;<br> void <a href="#classboost_1_1circular__buffer_11edb80acdf1f7f1df8217d57256e41f6">assign</a>(capacity_type capacity, InputIterator first, InputIterator last);<br> void <a href="#classboost_1_1circular__buffer_1270ab7074c365663a6f18808024fd88b">swap</a>(circular_buffer&lt;T, Alloc&gt;&amp; cb);<br> void <a href="#classboost_1_1circular__buffer_1aa35dd7ef8eb1d04508494d1835cc82e">push_back</a>(const_reference item = value_type());<br> void <a href="#classboost_1_1circular__buffer_10ef57e73c193682a649d8eb4a1096dce">push_front</a>(const_reference item = value_type());<br> void <a href="#classboost_1_1circular__buffer_1df0da00cb501bea75afbbfab9f546a07">pop_back</a>();<br> void <a href="#classboost_1_1circular__buffer_18ac972dc24ef7236faa1875de92b9dd8">pop_front</a>();<br> iterator <a href="#classboost_1_1circular__buffer_128c92740fee1b9deb8c69816e389de95">insert</a>(iterator pos, const_reference item = value_type());<br> void <a href="#classboost_1_1circular__buffer_1b2f197c99d47138db777f0a46783b140">insert</a>(iterator pos, size_type n, const_reference item);<br> template &lt;class InputIterator&gt;<br> void <a href="#classboost_1_1circular__buffer_1d00091d1d794cab3264b3674e99b33f6">insert</a>(iterator pos, InputIterator first, InputIterator last);<br> iterator <a href="#classboost_1_1circular__buffer_12c9332f457bf5bb3128463cf528c058c">rinsert</a>(iterator pos, const_reference item = value_type());<br> void <a href="#classboost_1_1circular__buffer_1a47a5358db1b7d7e4925c16db13d2fc5">rinsert</a>(iterator pos, size_type n, const_reference item);<br> template &lt;class InputIterator&gt;<br> void <a href="#classboost_1_1circular__buffer_1d6479cbc43a304bdbf04262f957fa323">rinsert</a>(iterator pos, InputIterator first, InputIterator last);<br> iterator <a href="#classboost_1_1circular__buffer_197155de712db1759e1698455b49a0be3">erase</a>(iterator pos);<br> iterator <a href="#classboost_1_1circular__buffer_1a96415389509a18bd7d7b5d8e4dda9bd">erase</a>(iterator first, iterator last);<br> iterator <a href="#classboost_1_1circular__buffer_1b6d4ae77d7445f844e30e78592f1e06f">rerase</a>(iterator pos);<br> iterator <a href="#classboost_1_1circular__buffer_1b0f98ae303584ded5397f067bbfc911f">rerase</a>(iterator first, iterator last);<br> void <a href="#classboost_1_1circular__buffer_1826f5770a40b8b752eb9587378464d1e">clear</a>();<br>};<br><br>template &lt;class T, class Alloc&gt;<br> bool <a href="#namespaceboost_1d35871e838359b5215e1cbb353663207">operator==</a>(const circular_buffer&lt;T, Alloc&gt;&amp; lhs, const circular_buffer&lt;T, Alloc&gt;&amp; rhs);<br>template &lt;class T, class Alloc&gt;<br> bool <a href="#namespaceboost_195b08213f201c2067d8acb024756329d">operator&lt;</a>(const circular_buffer&lt;T, Alloc&gt;&amp; lhs, const circular_buffer&lt;T, Alloc&gt;&amp; rhs);<br>template &lt;class T, class Alloc&gt;<br> bool <a href="#namespaceboost_1f5717e2f6532581a6492ff1839b18f6d">operator!=</a>(const circular_buffer&lt;T, Alloc&gt;&amp; lhs, const circular_buffer&lt;T, Alloc&gt;&amp; rhs);<br>template &lt;class T, class Alloc&gt;<br> bool <a href="#namespaceboost_1f575d7a9741c2044424de50c966c12f3">operator&gt;</a>(const circular_buffer&lt;T, Alloc&gt;&amp; lhs, const circular_buffer&lt;T, Alloc&gt;&amp; rhs);<br>template &lt;class T, class Alloc&gt;<br> bool <a href="#namespaceboost_179abcbacd24b67f08185db54aec8600d">operator&lt;=</a>(const circular_buffer&lt;T, Alloc&gt;&amp; lhs, const circular_buffer&lt;T, Alloc&gt;&amp; rhs);<br>template &lt;class T, class Alloc&gt;<br> bool <a href="#namespaceboost_11c31150380272af67deebef578c80b05">operator&gt;=</a>(const circular_buffer&lt;T, Alloc&gt;&amp; lhs, const circular_buffer&lt;T, Alloc&gt;&amp; rhs);<br>template &lt;class T, class Alloc&gt;<br> void <a href="#namespaceboost_14aa8f6a2c9640f3f22e266f0fca85777">swap</a>(circular_buffer&lt;T, Alloc&gt;&amp; lhs, circular_buffer&lt;T, Alloc&gt;&amp; rhs);<br><br>} // namespace boost<br></pre>
+</td>
+</tr>
+</tbody>
+</table>
+</div>
+<h2> <a name="rationale" id="rationale">原理</a>
+</h2>
+<p><code>circular_buffer</code>
+背后的动机是创建一个可以与STL无缝使用的容器。另外，<code>circular_buffer</code>
+的设计受到以下原则的指导： </p>
+<ol>
+<li>对于常见应用具有最大的<em>效率</em>。 </li>
+<li>适用于<em>多种用途</em>。 </li>
+<li>缓冲区的行为应尽可能符合<em>直觉</em>。 </li>
+<li>适合于通过适配器进行<em>特化</em>。(<code><a href="space_optimized.html">circular_buffer_space_optimized</a></code>
+就是一个适配器的例子) </li>
+<li>易于<em>调试</em>。(详见 <a href="#debug">对
+调试的支持</a>) </li>
+</ol>
+<p>为了达到最高的效率，<code>circular_buffer</code> 将它的元素保存在一片<em>连
+续内存</em>中，这样可以： </p>
+<ol>
+<li>使用固定的内存，不需要隐式或意外的内存分配。 </li>
+<li>从前端或后端进行快速的常量时间的插入和删除元素。 </li>
+<li>快速的常量时间的对元素进行随机访问。 </li>
+<li>适用于实时和对性能有严格要求的应用程序。 </li>
+</ol>
+<p><code>circular_buffer</code> 的可能应用包括： </p>
+<ul>
+<li>保存最近接收到的取样数据，在新的取样数据到达时覆盖最旧的数据。 </li>
+<li>作为<span style="font-style: italic;">有界缓冲区</span>的
+底层容器(请见 <a href="#boundedbuffer">有界缓冲区示例</a>)。 </li>
+<li>一种用于保存特定数量的最后插入元素的快速缓冲。 </li>
+<li>高效的固定容量FIFO(先进先出)或LIFO(后进先出)队列，当队列满时删除最旧的(即最早插入的)元素。</li>
+</ul>
+<p><code>circular_buffer</code> 的： </p>
+<h4> <a name="threadsafety" id="threadsafety">线
+程安全性</a> </h4>
+<p><code>circular_buffer</code>
+的线程安全性与大多数STL实现中的容器的线程安全性相同。即 <code>circular_buffer</code>
+<span style="font-weight: bold;">不是</span>线程安全的。线程安全仅
+在以下情形时被保证：对 <code>circular_buffer</code>
+的不同实例进行并发访问是安全的，对共享的 <code>circular_buffer</code>
+进行并发读访问是安全的。 </p>
+<p>如果多个线程访问同一个 <code>circular_buffer</code>,
+且至少有一个线程可能会进行写访问，则用户要负责确保各个线程在访问容器时互斥。线程间的互斥可以通过对底层的 <code>circular_buffer</code>
+操作增加一个锁获取和释放来实现。(请见 <a href="#boundedbuffer">有界缓冲区示例</a>)
+</p>
+<h4> <a name="overwrite" id="overwrite">覆写操作</a>
+</h4>
+<p>覆写操作发生在当一个元素被插入到一个满的 <code>circular_buffer</code>
+中时 -
+旧的元素将被新元素所覆盖。在正式审查时，曾经对"覆写某个元素"的精确意义进行过讨论。它可能是析构一个原有的元素并接着原地构造一个新元素，也可能是
+将新元素赋值到旧元素中。<code>circular_buffer</code> 最终实现了<b>赋值</b>操
+作，因为它更为高效。 </p>
+<p>从被保存元素的业务逻辑观点来看，析构/构造操作与赋值操作其实是一样的。但是，在极少见的情形下(如果有)它们之间可能有不同。如果
+元素本身需要
+以析构/构造操作来替换赋值操作，可能考虑对该元素实现一个赋值操作的包装器，并改为保存该包装器。需要注意，保存这个包装器有一个缺点。对该包装器的每
+次赋值都要调用析构/构造操作 - 不仅是在该包装器被覆写时(即缓冲区满时)，也会发生在对被保存包装器进行移位时(例如，在容器中央插入)。 </p>
+<h4> <a name="fullbuffer" id="fullbuffer">写入到
+一个满的缓冲区</a> </h4>
+<p>当数据源产生的数据多于固定大小缓冲区可以容纳的数量时，通常有以下几种选择： </p>
+<ol>
+<li>通知数据源等待，直至缓冲区有空间为止(如通过抛出一个溢出异常)。 </li>
+<li>如果最旧的数据最为重要，则忽略来自数据源的新数据，直至缓冲区有空间为止。 </li>
+<li>如果最新的数据最为重要，则覆写最旧的数据。 </li>
+<li>让数据产生者负责在写入数据前检查缓冲区的大小。 </li>
+</ol>
+<p>显然，<code>circular_buffer</code> 实现了第三种选择。但是它<span style="font-weight: bold;">不</span>实现其它选择 - 尤其是前两个 -
+则可能不太明显。你可能觉得 <code>circular_buffer</code>
+应该实现前面三种选项并提供一个机制来在它们之间进行选择。这种印象是错的。<code>circular_buffer</code>
+被设计并优化为循环的(这意味着在缓冲区满时将覆写最旧的数据)。如果有这样一种控制机制，它只会把事情弄复杂，而且 <code>circular_buffer</code>
+的使用也可能会不够方便。 </p>
+<p> 此外，前两个选项(还有第四个)并不要求缓冲区是循环的。如果需要前两个选项，请考虑实现 <code>std::vector</code>
+的一个适配器。这种情况下，<code>circular_buffer</code> 不适合用于适配，因为和 <code>std::vector</code>
+相比，它要为其循环行为负出一定的开销。 </p>
+<h4> <a name="emptybuffer" id="emptybuffer">从
+一个空的缓冲区读取/删除</a> </h4>
+<p>当从一个空缓冲区读取或删除元素时，缓冲区应可以通知数据消耗者(例如通过抛出一个下溢异常)它没有元素保存。因为以下两个原因，<code>circular_buffer</code>
+没有实现这一行为： </p>
+<ol>
+<li>它会引入性能的开销。 </li>
+<li>其它 <code>std</code> 容器也没有这样做。 </li>
+</ol>
+<p>从一个空的 <code>std</code> 容器中读取或删除一个元素(如通过调用 <code>front()</code>
+或 <code>pop_back()</code>)被认为是 bug，<code>circular_buffer</code>
+也一样。数据消耗者在从容器中读取/删除元素之前，必须测试它是否为空。不过，从 <code>circular_buffer</code>
+读取时，有一个选项决定 <code>at()</code> 方法在索引超界时是否抛出异常。 </p>
+<h4> <a name="iteratorinvalidation" id="iteratorinvalidation">迭代器失效</a> </h4>
+<p>如果一个迭代器所指的元素被删除或被另一个元素覆写，通常认为该迭代器将失效。该规则是 <a href="#debug">对
+调试的支持</a> 所强制的，并且被记录在每一个方法中。不过，有些使用 <code>circular_buffer</code>
+的应用可能要求较松的规则：迭代器仅当其指向未初始化内存时才无效。考虑以下例子： </p>
+<pre> #define BOOST_CB_DISABLE_DEBUG // 调试支持已关闭，否则代码将引发运行期错误。<br><br> #include &lt;boost/circular_buffer.hpp&gt;<br> #include &lt;assert.h&gt;<br><br> int main(int /*argc*/, char* /*argv*/[]) {<br><br> boost::circular_buffer&lt;int&gt; cb(3);<br><br> cb.push_back(1);<br> cb.push_back(2);<br> cb.push_back(3);<br><br> boost::circular_buffer&lt;int&gt;::iterator it = cb.begin();<br><br> assert(*it == 1);<br><br> cb.push_back(4);<br><br> assert(*it == 4); // 该迭代器仍指向已初始化的内存。<br><br> return 0;<br> }<br></pre>
+<p>该迭代器不再指向原来的元素(从"严格"的观点来看，它被认为是无效的)，但它仍然指向内存中同一个<span style="font-style: italic;">有效的</span>位置。 <code>circular_buffer</code>
+所支持的对迭代器失效的"宽松"定义被认为是实现细节，而不是完整的特性。迭代器依然有效的规则可以由 <code><a href="../test/soft_iterator_invalidation.cpp">soft_iterator_invalidation.cpp</a></code>
+中的代码推断得到。 </p>
+<h2> <a name="caveats" id="caveats">警告</a>
+</h2>
+<p><code>circular_buffer</code> 不能用于保存指向动态分配对象的指针。当一个
+<code>circular_buffer</code> 变满时，后来的插入将覆写已保存的指针 - 这会导致<span style="font-weight: bold;">内存泄漏</span>。建议采用智能指针<a href="#note1">[1]</a>来代替。(任何 <code>std::auto_ptr</code>
+容器都被认为是非常危险的<a href="#note2">[2]</a>) </p>
+<p>虽然 <code>circular_buffer</code> 的内部是循环的，但它的迭代器<span style="font-weight: bold;">不是</span>。<code>circular_buffer</code>
+的迭代器仅在范围 <code>[begin(), end()]</code> 内有效。如，迭代器 <code>(begin()
+- 1)</code> 和 <code>(end() + 1)</code> 均为无效。 </p>
+<h2> <a name="debug" id="debug">对调试的支持</a>
+</h2>
+<p>为了帮助程序员避免和发现常见的 bugs,&nbsp;<code>circular_buffer</code>
+包括了一些对调试的支持。 </p>
+<p><code>circular_buffer</code>
+维护了一个有效迭代器列表。一旦任何元素被销毁，指向该元素的所有迭代器将被从这个列表中删除，明确失效(设置一个失效标志)。对调试的支持还包括多个断
+言(<a href="../../utility/assert.html"><code>BOOST_ASSERT</code></a>
+宏)，这样可以确保 <code>circular_buffer</code>
+和它的迭代器在运行期正确使用。当一个无效迭代器被使用时，断言将报告一个错误。显式的迭代器失效和断言的使用是一种非常强的调试技术，可以捕捉到大多数
+错误。 </p>
+<p>此外，在调试模式下，由 <code>circular_buffer</code>
+分配的未初始化内存会用值 <code>0xcc</code>
+进行填充。这样可以帮助程序员在调试代码时分辨出已初始化和未初始化的内存。详情请参见源代码。 </p>
+<p>对调试的支持仅在调试模式下打开(即在 <code>NDEBUG</code>
+未定义时)。也可以通过定义 <code>BOOST_CB_DISABLE_DEBUG</code> 宏来显式关闭它。
+</p>
+<h2> <a name="examples" id="examples">更多的例子</a>
+</h2>
+<p>以下例子包含了 <code>circular_buffer</code> 的各种用法。 </p>
+<pre> #include &lt;boost/circular_buffer.hpp&gt;<br> #include &lt;numeric&gt;<br> #include &lt;assert.h&gt;<br><br> int main(int /*argc*/, char* /*argv*/[])<br> {<br> // 创建一个容量为3的循环缓冲区<br> boost::circular_buffer&lt;int&gt; cb(3);<br><br> // 插入一些元素到循环缓冲区<br> cb.push_back(1);<br> cb.push_back(2);<br><br> // 断言<br> assert(cb[0] == 1);<br> assert(cb[1] == 2);<br> assert(!cb.full());<br> assert(cb.size() == 2);<br> assert(cb.capacity() == 3);<br><br> // 再插入其它元素<br> cb.push_back(3);<br> cb.push_back(4);<br><br> // 求和<br> int sum = std::accumulate(cb.begin(), cb.end(), 0);<br><br> // 断言<br> assert(cb[0] == 2);<br> assert(cb[1] == 3);<br> assert(cb[2] == 4);<br> assert(*cb.begin() == 2);<br> assert(cb.front() == 2);<br> assert(cb.back() == 4);<br> assert(sum == 9);<br> assert(cb.full());<br> assert(cb.size() == 3);<br> assert(cb.capacity() == 3);<br><br> return 0;<br> }<br></pre>
+<p> 该 <code>circular_buffer</code> 的容量为3个 <code>int</code>.
+因此，缓冲区的大小不会超过3。算法 <code><a href="http://www.sgi.com/tech/stl/accumulate.html">accumulate</a></code>
+计算被存元素的总和。<code>circular_buffer</code> 的语义可以从断言进行推断。 </p>
+<h4> <a name="boundedbuffer" id="boundedbuffer">有
+界缓冲区示例</a> </h4>
+<p>有界缓冲区通常用于生产者-消费者模式，其中生产者线程产生一些事项并将它们保存在容器中，而消费者线程从容器中取出这些事项并处理它
+们。有界缓冲区必须保证当容器满时，生产者不会插入，同样当容器空时消费者不会取出，并且每个事项正好被一个消费者消耗。 </p>
+<p>下例示范了 <code>circular_buffer</code>
+如何被用作有界缓冲区的底层容器。 </p>
+<pre>   #include &lt;boost/circular_buffer.hpp&gt;<br>   #include &lt;boost/thread/mutex.hpp&gt;<br>   #include &lt;boost/thread/condition.hpp&gt;<br>   #include &lt;boost/thread/thread.hpp&gt;<br>   #include &lt;boost/call_traits.hpp&gt;<br>   #include &lt;boost/progress.hpp&gt;<br>   #include &lt;boost/bind.hpp&gt;<br><br>   template &lt;class T&gt;<br>   class bounded_buffer {<br>   public:<br><br>      typedef boost::circular_buffer&lt;T&gt; container_type;<br>      typedef typename container_type::size_type size_type;<br>      typedef typename container_type::value_type value_type;<br>      typedef typename boost::call_traits&lt;value_type&gt;::param_type param_type;<br><br>      explicit bounded_buffer(size_type capacity) : m_unread(0), m_container(capacity) {}<br><br>      void push_front(boost::call_traits&lt;value_type&gt;::param_type item) {<br>         // param_type represents the "best" way to pass a parameter of type value_type to a method<br><br>         boost::mutex::scoped_lock lock(m_mutex);<br>         m_not_full.wait(lock, boost::bind(&amp;bounded_buffer&lt;value_type&gt;::is_not_full, this));<br>         m_container.push_front(item);<br>         ++m_unread;<br>         lock.unlock();<br>         m_not_empty.notify_one();<br>      }<br><br>      void pop_back(value_type* pItem) {<br>         boost::mutex::scoped_lock lock(m_mutex);<br>         m_not_empty.wait(lock, boost::bind(&amp;bounded_buffer&lt;value_type&gt;::is_not_empty, this));<br>         *pItem = m_container[--m_unread];<br>         lock.unlock();<br>         m_not_full.notify_one();<br>      }<br><br>   private:<br>      bounded_buffer(const bounded_buffer&amp;);              // 禁止复制构造函数<br>      bounded_buffer&amp; operator = (const bounded_buffer&amp;); // 禁止赋值操作符<br><br>      bool is_not_empty() const { return m_unread &gt; 0; }<br>      bool is_not_full() const { return m_unread &lt; m_container.capacity(); }<br><br>      size_type m_unread;<br>      container_type m_container;<br>      boost::mutex m_mutex;<br>      boost::condition m_not_empty;<br>      boost::condition m_not_full;<br>   };<br></pre>
+<p><code>bounded_buffer</code> 依赖于 <a href="../../thread/doc/">Boost 
+Threads</a> 和 <a href="../../bind/bind.html">Boost Bind</a> 库以及 <a href="../../utility/call_traits.htm">Boost call_traits</a> 工具。</p><p>方法 <code>push_front()</code>
+被生产者线程调用以插入新事项到缓冲区中。该方法锁住互斥体并等待至有空间容纳新事项。(互斥体在等待期间会被解锁，当条件满足时再重新锁住)。如果缓冲
+区中有空间可用，执行将继续，该方法插入新事项到 <code>circular_buffer</code>
+的尾部。然后递增未读项计数并解锁互斥体(如果在互斥体解锁前抛出异常，互斥体会由 <code>scoped_lock</code>
+的析构函数自动解锁)。最后该方法通知正在等待新事项被插入到缓冲区中的消费者线程。 </p>
+<p>方法 <code>pop_back()</code>
+被消费者线程调用以从缓冲区读取一个事项。该方法锁住互斥体并等待至缓冲区中有未读项。如果有至少一个未读项，该方法就递减未读项计数并从 <code>circular_buffer</code>
+读出下一个事项。然后解锁互斥体并通知正在等待缓冲区有空间容纳新事项的生产者线程。 </p>
+<p>方法 <code>pop_back()</code> 并不删除事项，被读事项保留在 <code>circular_buffer</code>
+中，当 <code>circular_buffer</code>
+满时它将被新事项(由生产者插入)所替换。该方法比显式调用 <code>circular_buffer</code>
+的 <code>pop_back()</code>
+方法删除该事项更为高效。这种方法基于以下假设，即新事项的赋值(替换)操作比析构(删除)旧项并原地构造(插入)新项更为高效。 </p>
+<p>要和基于不同容器的有界缓冲区进行比较，可以编译并运行 <a href="../test/bounded_buffer_comparison.cpp">bounded_buffer_comparison.cpp</a>.
+该测试将表明，基于 <code>circular_buffer</code> 的有界缓冲区比基于 <code>std::deque</code>
+的有界缓冲区更为高效。(在实践中的结果可能不一样，因为该测试总是会受到如即时CPU负荷等外部因素的影响)。 </p>
+<h2> <a name="header" id="header">头文件</a>
+</h2>
+<p><code>circular_buffer</code> 定义于文件 <code><a href="../../../boost/circular_buffer.hpp">boost/circular_buffer.hpp</a></code>
+中。头文件 <code><a href="../../../boost/circular_buffer_fwd.hpp">boost/circular_buffer_fwd.hpp</a></code>
+中有 <code>circular_buffer</code> 的前向声明。 </p>
+<h2> <a name="model" id="model">模型概念</a>
+</h2>
+<p> <a href="http://www.sgi.com/tech/stl/RandomAccessContainer.html">随
+机访问容器Random Access Container</a>, <a href="http://www.sgi.com/tech/stl/FrontInsertionSequence.html">前
+端插入序列Front Insertion Sequence</a> 和 <a href="http://www.sgi.com/tech/stl/BackInsertionSequence.html">后
+端插入序列Back Insertion Sequence</a>。 </p>
+<h2> <a name="parameters" id="parameters">模板参
+数</a> </h2>
+<div id="srcdoc_params">
+<table id="table_template_params" border="1" cellpadding="3">
+<tbody>
+<tr>
+<th>参数 </th>
+<th>说明 </th>
+<th>缺省值 </th>
+</tr>
+</tbody>
+</table>
+</div>
+<h2> <a name="types" id="types">公有类型</a>
+</h2>
+<div id="srcdoc_types">
+<table id="table_public_types" border="1" cellpadding="3">
+<tbody>
+<tr>
+<th>类型 </th>
+<th>说明 </th>
+</tr>
+<tr>
+<td> <a id="classboost_1_1circular__buffer_1cbdd7ca87e147c08cd2be267eefd6540" name="classboost_1_1circular__buffer_1cbdd7ca87e147c08cd2be267eefd6540"><code>value_type</code></a>
+</td>
+<td>保存在 <code>circular_buffer</code> 中的元素的类型。 </td>
+</tr>
+<tr>
+<td> <a id="classboost_1_1circular__buffer_14ff917f8a6131ec18e91606727592a9c" name="classboost_1_1circular__buffer_14ff917f8a6131ec18e91606727592a9c"><code>pointer</code></a>
+</td>
+<td>元素的指针类型。 </td>
+</tr>
+<tr>
+<td> <a id="classboost_1_1circular__buffer_190f7c6bcb624ad507de546366f49028a" name="classboost_1_1circular__buffer_190f7c6bcb624ad507de546366f49028a"><code>const_pointer</code></a>
+</td>
+<td>元素的常量指针类型。 </td>
+</tr>
+<tr>
+<td> <a id="classboost_1_1circular__buffer_1f38a9bc64d84757c661c2542ff9a7f65" name="classboost_1_1circular__buffer_1f38a9bc64d84757c661c2542ff9a7f65"><code>reference</code></a>
+</td>
+<td>元素的引用类型。 </td>
+</tr>
+<tr>
+<td> <a id="classboost_1_1circular__buffer_1a8397191092f5bacee991b623ca4b910" name="classboost_1_1circular__buffer_1a8397191092f5bacee991b623ca4b910"><code>const_reference</code></a>
+</td>
+<td>元素的常量引用类型。 </td>
+</tr>
+<tr>
+<td> <a id="classboost_1_1circular__buffer_15313e723fa85d73db5826f8b722aa2a9" name="classboost_1_1circular__buffer_15313e723fa85d73db5826f8b722aa2a9"><code>difference_type</code></a>
+</td>
+<td> 距离类型。(用于表示两个迭代器间距离的有符号整数类型) </td>
+</tr>
+<tr>
+<td> <a id="classboost_1_1circular__buffer_19ba12c0142a21a7d960877c22fa3ea00" name="classboost_1_1circular__buffer_19ba12c0142a21a7d960877c22fa3ea00"><code>size_type</code></a>
+</td>
+<td> 大小类型。(用于表示容器距离类型的任一非负值的无符号整数类型) </td>
+</tr>
+<tr>
+<td> <a id="classboost_1_1circular__buffer_14e07c6ddfe89debe384e59bed06e7cb7" name="classboost_1_1circular__buffer_14e07c6ddfe89debe384e59bed06e7cb7"><code>allocator_type</code></a>
+</td>
+<td>在 <code>circular_buffer</code> 中使用的分配器类型。 </td>
+</tr>
+<tr>
+<td> <a id="classboost_1_1circular__buffer_15cab6d46f03c40d1e52d41843319ddb9" name="classboost_1_1circular__buffer_15cab6d46f03c40d1e52d41843319ddb9"><code>const_iterator</code></a>
+</td>
+<td>用于遍历 <code>circular_buffer</code>
+的常量(随机访问)迭代器 </td>
+</tr>
+<tr>
+<td> <a id="classboost_1_1circular__buffer_11b8a33f2dc8519b8a7d344ed4408c532" name="classboost_1_1circular__buffer_11b8a33f2dc8519b8a7d344ed4408c532"><code>iterator</code></a>
+</td>
+<td>用于遍历 <code>circular_buffer</code>
+的(随机访问)迭代器 </td>
+</tr>
+<tr>
+<td> <a id="classboost_1_1circular__buffer_1c7317701b511bc5f7a663b06b53e2b73" name="classboost_1_1circular__buffer_1c7317701b511bc5f7a663b06b53e2b73"><code>const_reverse_iterator</code></a>
+</td>
+<td>用于反向遍历 <code>circular_buffer</code>
+的常量迭代器。 </td>
+</tr>
+<tr>
+<td> <a id="classboost_1_1circular__buffer_1002fb890dded89e75dfeb6f021fb58a5" name="classboost_1_1circular__buffer_1002fb890dded89e75dfeb6f021fb58a5"><code>reverse_iterator</code></a>
+</td>
+<td>用于反向遍历 <code>circular_buffer</code> 的迭代器。 </td>
+</tr>
+<tr>
+<td> <a id="classboost_1_1circular__buffer_126d279f91fef717e25459a0817ff242f" name="classboost_1_1circular__buffer_126d279f91fef717e25459a0817ff242f"><code>array_range</code></a>
+</td>
+<td>数组范围。(一个 <a href="http://www.sgi.com/tech/stl/pair.html"><code>std::pair</code></a>
+的 typedef，其 first 元素是指向数组头部的指针，second 元素表示数组的大小) </td>
+</tr>
+<tr>
+<td> <a id="classboost_1_1circular__buffer_11885d7f475b7e7a74c95b2448d243025" name="classboost_1_1circular__buffer_11885d7f475b7e7a74c95b2448d243025"><code>const_array_range</code></a>
+</td>
+<td>常量数组的范围。(一个 <a href="http://www.sgi.com/tech/stl/pair.html"><code>std::pair</code></a>
+的 typedef，其 first 元素是指向常量数组头部的指针，second 元素表示常量数组的大小) </td>
+</tr>
+<tr>
+<td> <a id="classboost_1_1circular__buffer_1dc642ff2be4db0be1a457810e5d09595" name="classboost_1_1circular__buffer_1dc642ff2be4db0be1a457810e5d09595"><code>capacity_type</code></a>
+</td>
+<td>容量类型。(和 <code>size_type</code> 一样 - 为了和 <a href="space_optimized.html"><code>circular_buffer_space_optimized</code></a>
+的一致性而定义) </td>
+</tr>
+</tbody>
+</table>
+</div>
+<h2> <a name="constructors" id="constructors">构
+造函数和析构函数</a> </h2>
+<div id="srcdoc_constructors">
+<table id="table_constructors" border="1" cellpadding="3">
+<tbody>
+<tr>
+<td> <a id="classboost_1_1circular__buffer_1e53e744d2f94a2bcbfcdb219a9d93300" name="classboost_1_1circular__buffer_1e53e744d2f94a2bcbfcdb219a9d93300"></a><code><b>explicit
+circular_buffer(const <a href="#classboost_1_1circular__buffer_14e07c6ddfe89debe384e59bed06e7cb7">allocator_type</a>&amp;
+alloc = allocator_type());</b></code><br>
+<br>
+以最大容量创建一个空的 <code>circular_buffer</code>.
+<dl>
+<dt> <b>作用：</b> </dt>
+<dd> <code><a href="#classboost_1_1circular__buffer_1da435a5884cad746ed5cd55bcb892035">capacity()</a>
+== <a href="#classboost_1_1circular__buffer_195158ed4d4b03794068e259f85291995">max_size()</a>
+&amp;&amp; <a href="#classboost_1_1circular__buffer_1d666f694897465b0d4d7cdd8ddcbc213">size()</a>
+== 0</code> </dd>
+</dl>
+<dl>
+<dt> <b>参数：</b> </dt>
+<dd>
+<dl compact="compact">
+<dt> <code>alloc</code> </dt>
+<dd>分配器。 </dd>
+</dl>
+</dd>
+</dl>
+<dl>
+<dt> <b>抛出：</b> </dt>
+<dd>如果内存耗尽则抛出一个分配错误(如果使用标准分配器则为 <code>std::bad_alloc</code>)。
+</dd>
+</dl>
+<dl>
+<dt> <b>复杂度：</b> </dt>
+<dd>常数。 </dd>
+</dl>
+<dl>
+<dt> <b>警告：</b> </dt>
+<dd>该构造函数只是为了与STL容器的定义兼容而定义的。应避免使用它，因为它会分配<span style="font-weight: bold;">很大</span>的内存空间(取决于分配器的
+max_size())。 </dd>
+</dl>
+</td>
+</tr>
+<tr>
+<td> <a id="classboost_1_1circular__buffer_1862a64cbc6a49376ecbb8321c3b44974" name="classboost_1_1circular__buffer_1862a64cbc6a49376ecbb8321c3b44974"></a><code><b>explicit
+circular_buffer(<a href="#classboost_1_1circular__buffer_1dc642ff2be4db0be1a457810e5d09595">capacity_type</a>
+buffer_capacity, const <a href="#classboost_1_1circular__buffer_14e07c6ddfe89debe384e59bed06e7cb7">allocator_type</a>&amp;
+alloc = allocator_type());</b></code><br>
+<br>
+以指定容量创建一个空的 <code>circular_buffer</code>.
+<dl>
+<dt> <b>作用：</b> </dt>
+<dd> <code><a href="#classboost_1_1circular__buffer_1da435a5884cad746ed5cd55bcb892035">capacity()</a>
+== buffer_capacity &amp;&amp; <a href="#classboost_1_1circular__buffer_1d666f694897465b0d4d7cdd8ddcbc213">size()</a>
+== 0</code> </dd>
+</dl>
+<dl>
+<dt> <b>参数：</b> </dt>
+<dd>
+<dl compact="compact">
+<dt> <code>buffer_capacity</code> </dt>
+<dd>可以保存在 <code>circular_buffer</code>
+中的元素最大数量。 </dd>
+</dl>
+</dd>
+<dd>
+<dl compact="compact">
+<dt> <code>alloc</code> </dt>
+<dd>分配器。 </dd>
+</dl>
+</dd>
+</dl>
+<dl>
+<dt> <span style="font-weight: bold;">抛出：</span>
+</dt>
+<dd>如果内存耗尽则抛出一个分配错误(如果使用标准分配器则为 <code>std::bad_alloc</code>)。
+</dd>
+</dl>
+<dl>
+<dt> <b>复杂度：</b> </dt>
+<dd>常数。 </dd>
+</dl>
+</td>
+</tr>
+<tr>
+<td> <a id="classboost_1_1circular__buffer_1fdace8f110d5b7a17c02020757f06fe8" name="classboost_1_1circular__buffer_1fdace8f110d5b7a17c02020757f06fe8"></a><code><b>circular_buffer(<a href="#classboost_1_1circular__buffer_19ba12c0142a21a7d960877c22fa3ea00">size_type</a>
+n, <a href="#classboost_1_1circular__buffer_1a8397191092f5bacee991b623ca4b910">const_reference</a>
+item, const <a href="#classboost_1_1circular__buffer_14e07c6ddfe89debe384e59bed06e7cb7">allocator_type</a>&amp;
+alloc = allocator_type());</b></code><br>
+<br>
+以指定容量创建一个满的 <code>circular_buffer</code>，并填入 <code>item</code>
+的 <code>n</code> 份拷贝。
+<dl>
+<dt> <b>作用：</b> </dt>
+<dd> <code><a href="#classboost_1_1circular__buffer_1da435a5884cad746ed5cd55bcb892035">capacity()</a>
+== n &amp;&amp; <a href="#classboost_1_1circular__buffer_174a305e473c0bba9dcf30abb68bff909">full()</a>
+&amp;&amp; (*this)[0] == item &amp;&amp; (*this)[1] ==
+item &amp;&amp; ... &amp;&amp; (*this)[n - 1] == item</code>
+</dd>
+</dl>
+<dl>
+<dt> <b>参数：</b> </dt>
+<dd>
+<dl compact="compact">
+<dt> <code>n</code> </dt>
+<dd> 要填入到被创建 <code>circular_buffer</code>
+中的元素数量。 </dd>
+</dl>
+</dd>
+<dd>
+<dl compact="compact">
+<dt> <code>item</code> </dt>
+<dd>要填入到被创建 <code>circular_buffer</code>
+中的元素。 </dd>
+</dl>
+</dd>
+<dd>
+<dl compact="compact">
+<dt> <code>alloc</code> </dt>
+<dd>分配器。 </dd>
+</dl>
+</dd>
+</dl>
+<dl>
+<dt> <b>抛出：</b> </dt>
+<dd> <code></code>如果内存耗尽则抛出一个分配错误(如果使用标准分配器则为
+<code>std::bad_alloc</code>)。 </dd>
+<dd><code>T::T(const T&amp;)</code>
+抛出的任何异常。 </dd>
+</dl>
+<dl>
+<dt> <b>复杂度：</b> </dt>
+<dd>线性(与 <code>n</code> 相关)。 </dd>
+</dl>
+</td>
+</tr>
+<tr>
+<td> <a id="classboost_1_1circular__buffer_10c7e9286d8270357d7e369b183124239" name="classboost_1_1circular__buffer_10c7e9286d8270357d7e369b183124239"></a><code><b>circular_buffer(<a href="#classboost_1_1circular__buffer_1dc642ff2be4db0be1a457810e5d09595">capacity_type</a>
+buffer_capacity, <a href="#classboost_1_1circular__buffer_19ba12c0142a21a7d960877c22fa3ea00">size_type</a>
+n, <a href="#classboost_1_1circular__buffer_1a8397191092f5bacee991b623ca4b910">const_reference</a>
+item, const <a href="#classboost_1_1circular__buffer_14e07c6ddfe89debe384e59bed06e7cb7">allocator_type</a>&amp;
+alloc = allocator_type());</b></code><br>
+<br>
+以指定容量创建一个 <code>circular_buffer</code>，并填入 <code>item</code>
+的 <code>n</code> 份拷贝。
+<dl>
+<dt> <span style="font-weight: bold;">前提条件：</span>
+</dt>
+<dd> <code>buffer_capacity &gt;= n</code> </dd>
+</dl>
+<dl>
+<dt> <b>作用：</b> </dt>
+<dd> <code><a href="#classboost_1_1circular__buffer_1da435a5884cad746ed5cd55bcb892035">capacity()</a>
+== buffer_capacity &amp;&amp; <a href="#classboost_1_1circular__buffer_1d666f694897465b0d4d7cdd8ddcbc213">size()</a>
+== n &amp;&amp; (*this)[0] == item &amp;&amp;
+(*this)[1] == item &amp;&amp; ... &amp;&amp; (*this)[n
+- 1] == item</code> </dd>
+</dl>
+<dl>
+<dt> </dt>
+<dt> <b>参数：</b></dt>
+<dd>
+<dl compact="compact">
+<dt> <code>buffer_capacity</code> </dt>
+<dd>被创建 <code>circular_buffer</code>
+的容量。 </dd>
+</dl>
+</dd>
+<dd>
+<dl compact="compact">
+<dt> <code>n</code> </dt>
+<dd> 要填入到被创建 <code>circular_buffer</code>
+中的元素数量。 </dd>
+</dl>
+</dd>
+<dd>
+<dl compact="compact">
+<dt> <code>item</code> </dt>
+<dd>要填入到被创建 <code>circular_buffer</code>
+中的元素。 </dd>
+</dl>
+</dd>
+<dd>
+<dl compact="compact">
+<dt> <code>alloc</code> </dt>
+<dd>分配器。 </dd>
+</dl>
+</dd>
+</dl>
+<dl>
+<dt> <b>抛出：</b> </dt>
+<dd> <code></code>如果内存耗尽则抛出一个分配错误(如果使用标准分配器则为
+<code>std::bad_alloc</code>)。 </dd>
+<dd><code>T::T(const T&amp;)</code>
+抛出的任何异常。 </dd>
+</dl>
+<dl>
+<dt> <b>复杂度：</b> </dt>
+<dd>线性(与 <code>n</code> 相关)。</dd>
+</dl>
+</td>
+</tr>
+<tr>
+<td> <a id="classboost_1_1circular__buffer_1e515d8a951eeb18b8cc930300e7e13bd" name="classboost_1_1circular__buffer_1e515d8a951eeb18b8cc930300e7e13bd"></a><code><b>circular_buffer(const
+circular_buffer&lt;T,Alloc&gt;&amp; cb);</b></code><br>
+<br>
+复制构造函数。
+<p>创建指定 <code>circular_buffer</code> 的一个拷贝。 </p>
+<dl>
+<dt> <b>作用：</b> </dt>
+<dd> <code>*this == cb</code> </dd>
+</dl>
+<dl>
+<dt> <b>参数：</b> </dt>
+<dd>
+<dl compact="compact">
+<dt> <code>cb</code> </dt>
+<dd>被复制的 <code>circular_buffer</code>. </dd>
+</dl>
+</dd>
+</dl>
+<dl>
+<dt> </dt>
+<dt> <b>抛出：</b> </dt>
+<dd> <code></code>如果内存耗尽则抛出一个分配错误(如果使用标准分配器则为
+<code>std::bad_alloc</code>)。 </dd>
+<dd><code>T::T(const T&amp;)</code>
+抛出的任何异常。 </dd>
+</dl>
+<dl>
+<dt> <b>复杂度：</b> </dt>
+<dd>线性(与&nbsp;<code>cb</code> 的大小相关)。</dd>
+</dl>
+</td>
+</tr>
+<tr>
+<td> <a id="classboost_1_1circular__buffer_1744ec06b06a5a723386b645a29cb8ed2" name="classboost_1_1circular__buffer_1744ec06b06a5a723386b645a29cb8ed2"></a>
+<code><b>template &lt;class InputIterator&gt;<br>
+circular_buffer(InputIterator first, InputIterator last, const <a href="#classboost_1_1circular__buffer_14e07c6ddfe89debe384e59bed06e7cb7">allocator_type</a>&amp;
+alloc = allocator_type());</b></code><br>
+<br>
+创建一个满的 <code>circular_buffer</code>，以指定区间的拷贝填充。
+<dl>
+<dt> <b>前提条件：</b> </dt>
+<dd>有效区间 <code>[first, last)</code>.<br>
+<code>first</code> 和 <code>last</code>
+必须符合 <a href="http://www.sgi.com/tech/stl/InputIterator.html">输
+入迭代器InputIterator</a> 的要求。 </dd>
+</dl>
+<dl>
+<dt> <span style="font-weight: bold;">作用：</span>
+</dt>
+<dd> <code><a href="#classboost_1_1circular__buffer_1da435a5884cad746ed5cd55bcb892035">capacity()</a>
+== std::distance(first, last) &amp;&amp; <a href="#classboost_1_1circular__buffer_174a305e473c0bba9dcf30abb68bff909">full()</a>
+&amp;&amp; (*this)[0]== *first &amp;&amp; (*this)[1] ==
+*(first + 1) &amp;&amp; ... &amp;&amp;
+(*this)[std::distance(first, last) - 1] == *(last - 1)</code> </dd>
+</dl>
+<dl>
+<dt> <b>参数：</b> </dt>
+<dd>
+<dl compact="compact">
+<dt> <code>first</code> </dt>
+<dd> 被复制的区间的开始。 </dd>
+</dl>
+</dd>
+<dd>
+<dl compact="compact">
+<dt> <code>last</code> </dt>
+<dd>被复制的区间的结束。 </dd>
+</dl>
+</dd>
+<dd>
+<dl compact="compact">
+<dt> <code>alloc</code> </dt>
+<dd>分配器。 </dd>
+</dl>
+</dd>
+</dl>
+<dl>
+<dt> </dt>
+<dt> <b>抛出：</b> </dt>
+<dd> <code></code>如果内存耗尽则抛出一个分配错误(如果使用标准分配器则为
+<code>std::bad_alloc</code>)。 </dd>
+<dd><code>T::T(const T&amp;)</code>
+抛出的任何异常。 </dd>
+</dl>
+<dl>
+<dt> <b>复杂度：</b> </dt>
+<dd>线性(与&nbsp;<code>std::distance(first, last)</code>&amp;
+nbsp;相关)。</dd>
+</dl>
+</td>
+</tr>
+<tr>
+<td> <a id="classboost_1_1circular__buffer_1a64dcad327971194a706d52487151eb7" name="classboost_1_1circular__buffer_1a64dcad327971194a706d52487151eb7"></a>
+<code><b>template &lt;class InputIterator&gt;<br>
+circular_buffer(<a href="#classboost_1_1circular__buffer_1dc642ff2be4db0be1a457810e5d09595">capacity_type</a>
+buffer_capacity, InputIterator first, InputIterator last, const <a href="#classboost_1_1circular__buffer_14e07c6ddfe89debe384e59bed06e7cb7">allocator_type</a>&amp;
+alloc = allocator_type());</b></code><br>
+<br>
+创建一个指定容量的 <code>circular_buffer</code>，以指定区间的拷贝填充。
+<dl>
+<dt> <b>前提条件：</b> </dt>
+<dd>有效区间 <code>[first, last)</code>.<br>
+<code>first</code> 和 <code>last</code>
+必须符合 <a href="http://www.sgi.com/tech/stl/InputIterator.html">输
+入迭代器InputIterator</a> 的要求。 </dd>
+</dl>
+<dl>
+<dt> <span style="font-weight: bold;">作用：</span>
+</dt>
+<dd> <code></code><code><a href="circular_buffer.html#classboost_1_1circular__buffer_1da435a5884cad746ed5cd55bcb892035">capacity()</a>
+== buffer_capacity &amp;&amp; <a href="circular_buffer.html#classboost_1_1circular__buffer_1d666f694897465b0d4d7cdd8ddcbc213">size()</a>
+&lt;= std::distance(first, last) &amp;&amp; (*this)[0]==
+*(last - </code><code>buffer_</code><code>capacity) &amp;&amp; (*this)[1] == *(last - </code><code>buffer_</code><code>capacity +
+1) &amp;&amp; ... &amp;&amp; (*this)[</code><code>buffer_</code><code>capacity - 1] ==
+*(last - 1)</code></dd>
+</dl>
+<dl>
+<dd>如果被复制的区间 <code>[first, last)</code>
+中的元素数量大于指定的容量，则只有区间 <code>[last - </code><code>buffer_</code><code>capacity, last)</code>
+中的元素被复制。</dd>
+<dt><b>参数：</b></dt>
+<dd>
+<dl compact="compact">
+<dt> <code>buffer_</code><code>capacity</code> </dt>
+<dd>被创建的 <code>circular_buffer</code>
+的容量。 </dd>
+</dl>
+</dd>
+<dt> </dt>
+<dd>
+<dl compact="compact">
+<dt> <code>first</code> </dt>
+<dd> 被复制的区间的开始。 </dd>
+</dl>
+</dd>
+<dd>
+<dl compact="compact">
+<dt> <code>last</code> </dt>
+<dd>被复制的区间的结束。 </dd>
+</dl>
+</dd>
+<dd>
+<dl compact="compact">
+<dt> <code>alloc</code> </dt>
+<dd>分配器。 </dd>
+</dl>
+</dd>
+</dl>
+<dl>
+<dt> <b>抛出：</b> </dt>
+<dd> <code></code>如果内存耗尽则抛出一个分配错误(如果使用标准分配器则为
+<code>std::bad_alloc</code>)。 </dd>
+<dd><code>T::T(const T&amp;)</code>
+抛出的任何异常。 </dd>
+</dl>
+<dl>
+<dt> <b>复杂度：</b></dt>
+</dl>
+<dl>
+<dd>线性(与 <code>std::distance(first, last)</code>
+相关; 如果 <code>InputIterator</code> 为 <a href="http://www.sgi.com/tech/stl/RandomAccessIterator.html">随
+机访问迭代器RandomAccessIterator</a> 则与 <code>min[capacity,
+std::distance(first, last)]</code> 相关)。 </dd>
+</dl>
+</td>
+</tr>
+<tr>
+<td> <a id="classboost_1_1circular__buffer_164250ffbbbdbc62b99e8301fc195b80c" name="classboost_1_1circular__buffer_164250ffbbbdbc62b99e8301fc195b80c"></a><code><b>~circular_buffer();</b></code><br>
+<br>
+析构函数。
+<p>销毁 <code>circular_buffer</code>. </p>
+<dl>
+<dt> <b>抛出：</b> </dt>
+<dd>无。 </dd>
+</dl>
+<dl>
+<dt> <b>迭代器失效：</b> </dt>
+<dd>所有指向 <code>circular_buffer</code>
+的迭代器(包括等于 <code><a href="#classboost_1_1circular__buffer_1babfa093dad7801223b80626b598dee1">end()</a></code>
+的迭代器)均失效。 </dd>
+</dl>
+<dl>
+<dt> <b>复杂度：</b> </dt>
+<dd>线性(与 <code>circular_buffer</code>
+的大小相关)。 </dd>
+</dl>
+<dl>
+<dt> <b>参见：</b> </dt>
+<dd> <code><a href="#classboost_1_1circular__buffer_1826f5770a40b8b752eb9587378464d1e">clear()</a></code>
+</dd>
+</dl>
+</td>
+</tr>
+</tbody>
+</table>
+</div>
+<h2> <a name="methods" id="methods">公有成员函数</a>
+</h2>
+<div id="srcdoc_methods">
+<table id="table_methods" border="1" cellpadding="3">
+<tbody>
+<tr>
+<td> <a id="classboost_1_1circular__buffer_15693ba52e58ef90f1d914cbb63143cd3" name="classboost_1_1circular__buffer_15693ba52e58ef90f1d914cbb63143cd3"></a><code><b><a href="#classboost_1_1circular__buffer_14e07c6ddfe89debe384e59bed06e7cb7">allocator_type</a>
+get_allocator() const;</b></code><br>
+<br>
+取出分配器。
+<dl>
+<dt> <b>返回：</b> </dt>
+<dd>分配器。 </dd>
+</dl>
+<dl>
+<dt> <b>抛出：</b> </dt>
+<dd>无。 </dd>
+</dl>
+<dl>
+<dt> <b>异常安全性：</b> </dt>
+<dd>无抛出。 </dd>
+</dl>
+<dl>
+<dt> <b>迭代器失效：</b> </dt>
+<dd>不会令任何迭代器失效。 </dd>
+</dl>
+<dl>
+<dt> <b>复杂度：</b> </dt>
+<dd>常数(与 <code>circular_buffer</code>
+的大小相关)。 </dd>
+</dl>
+<dl>
+<dt> <b>参见：</b> </dt>
+<dd> <code></code>&nbsp;获取分配器引用的 <code><a href="circular_buffer.html#classboost_1_1circular__buffer_1af7758a36ac2f84a3024b50b4fc7e098">get_allocator()</a></code>。
+</dd>
+</dl>
+</td>
+</tr>
+<tr>
+<td> <a id="classboost_1_1circular__buffer_1af7758a36ac2f84a3024b50b4fc7e098" name="classboost_1_1circular__buffer_1af7758a36ac2f84a3024b50b4fc7e098"></a><code><b><a href="#classboost_1_1circular__buffer_14e07c6ddfe89debe384e59bed06e7cb7">allocator_type</a>&amp;
+get_allocator();</b></code><br>
+<br>
+取出分配器的引用。
+<dl>
+<dt> <span style="font-weight: bold;">返回：</span>
+</dt>
+<dd>分配器的一个引用。 </dd>
+</dl>
+<dl>
+<dt> <b>抛出：</b> </dt>
+<dd>无。 </dd>
+</dl>
+<dl>
+<dt> <b>异常安全性：</b> </dt>
+<dd>无抛出。 </dd>
+</dl>
+<dl>
+<dt> <b>迭代器失效：</b> </dt>
+<dd>不会令任何迭代器失效。 </dd>
+</dl>
+<dl>
+<dt> <b>复杂度：</b> </dt>
+<dd>常数(与 <code>circular_buffer</code>
+的大小相关)。 </dd>
+</dl>
+<dl>
+<dt> <b>说明：</b> </dt>
+<dd>加入这一方法是为了优化带状态分配器的获取，虽然使用带状态分配器在STL中是不好的。 </dd>
+</dl>
+<dl>
+<dt> <b>参见：</b> </dt>
+<dd> <code><a href="#classboost_1_1circular__buffer_15693ba52e58ef90f1d914cbb63143cd3">get_allocator()
+const</a></code> </dd>
+</dl>
+</td>
+</tr>
+<tr>
+<td> <a id="classboost_1_1circular__buffer_158d1ede2e85f5d46eda8db3f0c4efef0" name="classboost_1_1circular__buffer_158d1ede2e85f5d46eda8db3f0c4efef0"></a><code><b><a href="#classboost_1_1circular__buffer_11b8a33f2dc8519b8a7d344ed4408c532">iterator</a>
+begin();</b></code><br>
+<br>
+取得指向 <code>circular_buffer</code> 头部的迭代器。
+<dl>
+<dt> <b>返回：</b> </dt>
+<dd>一个随机访问迭代器，指向 <code>circular_buffer</code>
+的第一个元素。如果 <code>circular_buffer</code> 为空则返回一个等于 <code><a href="#classboost_1_1circular__buffer_1babfa093dad7801223b80626b598dee1">end()</a></code>
+的迭代器。 </dd>
+</dl>
+<dl>
+<dt> <b>抛出：</b> </dt>
+<dd>无。 </dd>
+</dl>
+<dl>
+<dt> <b>异常安全性：</b> </dt>
+<dd>无抛出。 </dd>
+</dl>
+<dl>
+<dt> <b>迭代器失效：</b> </dt>
+<dd>不会令任何迭代器失效。 </dd>
+</dl>
+<dl>
+<dt> <b>复杂度：</b></dt>
+<dd>常数(与 <code>circular_buffer</code> 的大小相关)。</dd>
+</dl>
+<dl>
+<dt> <b>参见：</b> </dt>
+<dd> <code><a href="#classboost_1_1circular__buffer_1babfa093dad7801223b80626b598dee1">end()</a></code>,
+<code><a href="#classboost_1_1circular__buffer_1db3d6b10b6763549f54d2627228fa7aa">rbegin()</a></code>,
+<code><a href="#classboost_1_1circular__buffer_1cff9236a50107188b8942847a4dc2697">rend()</a></code>
+</dd>
+</dl>
+</td>
+</tr>
+<tr>
+<td> <a id="classboost_1_1circular__buffer_1babfa093dad7801223b80626b598dee1" name="classboost_1_1circular__buffer_1babfa093dad7801223b80626b598dee1"></a><code><b><a href="#classboost_1_1circular__buffer_11b8a33f2dc8519b8a7d344ed4408c532">iterator</a>
+end();</b></code><br>
+<br>
+取得指向 <code>circular_buffer</code> 尾部的迭代器。
+<dl>
+<dt> <b>返回：</b> </dt>
+<dd>一个随机访问迭代器，指向 <code>circular_buffer</code>
+最后一个元素的下一个位置。如果 <code>circular_buffer</code> 为空则返回一个等于 <code><a href="#classboost_1_1circular__buffer_158d1ede2e85f5d46eda8db3f0c4efef0">begin()</a></code>
+的迭代器。 </dd>
+</dl>
+<dl>
+<dt> <b>抛出：</b> </dt>
+<dd>无。 </dd>
+</dl>
+<dl>
+<dt> <b>异常安全性：</b> </dt>
+<dd>无抛出。 </dd>
+</dl>
+<dl>
+<dt> <b>迭代器失效：</b> </dt>
+<dd>不会令任何迭代器失效。 </dd>
+</dl>
+<dl>
+<dt> <b>复杂度：</b> </dt>
+<dd>常数(与 <code>circular_buffer</code>
+的大小相关)。 </dd>
+</dl>
+<dl>
+<dt> <b>参见：</b> </dt>
+<dd> <code><a href="#classboost_1_1circular__buffer_158d1ede2e85f5d46eda8db3f0c4efef0">begin()</a></code>,
+<code><a href="#classboost_1_1circular__buffer_1db3d6b10b6763549f54d2627228fa7aa">rbegin()</a></code>,
+<code><a href="#classboost_1_1circular__buffer_1cff9236a50107188b8942847a4dc2697">rend()</a></code>
+</dd>
+</dl>
+</td>
+</tr>
+<tr>
+<td> <a id="classboost_1_1circular__buffer_1ee6c38b2ecdc8dfec79975dbc685c80b" name="classboost_1_1circular__buffer_1ee6c38b2ecdc8dfec79975dbc685c80b"></a><code><b><a href="#classboost_1_1circular__buffer_15cab6d46f03c40d1e52d41843319ddb9">const_iterator</a>
+begin() const;</b></code><br>
+<br>
+取得指向 <code>circular_buffer</code> 头部的常量迭代器。
+<dl>
+<dt> <b>返回：</b> </dt>
+<dd>一个常量随机访问迭代器，指向 <code>circular_buffer</code>
+的第一个元素。如果 <code>circular_buffer</code> 为空则返回一个等于&nbsp;<code><a href="circular_buffer.html#classboost_1_1circular__buffer_19813e1d191cd04c4cfc100bbc4733e92">end()
+const</a></code>&nbsp; 的迭代器。 </dd>
+</dl>
+<dl>
+<dt> <b>抛出：</b> </dt>
+<dd>无。 </dd>
+</dl>
+<dl>
+<dt> <b>异常安全性：</b> </dt>
+<dd>无抛出。 </dd>
+</dl>
+<dl>
+<dt> <b>迭代器失效：</b> </dt>
+<dd>不会令任何迭代器失效。 </dd>
+</dl>
+<dl>
+<dt> <b>复杂度：</b></dt>
+<dd>常数(与 <code>circular_buffer</code> 的大小相关)。</dd>
+</dl>
+<dl>
+<dt> <b>参见：</b></dt>
+</dl>
+<dl>
+<dd> <code><a href="#classboost_1_1circular__buffer_19813e1d191cd04c4cfc100bbc4733e92">end()
+const</a></code>, <code><a href="#classboost_1_1circular__buffer_146a8356a1aec6abca9c44cfc60b3bb10">rbegin()
+const</a></code>, <code><a href="#classboost_1_1circular__buffer_1a09f7111dde9f52a4d8babfcdef7e798">rend()
+const</a></code> </dd>
+</dl>
+</td>
+</tr>
+<tr>
+<td> <a id="classboost_1_1circular__buffer_19813e1d191cd04c4cfc100bbc4733e92" name="classboost_1_1circular__buffer_19813e1d191cd04c4cfc100bbc4733e92"></a><code><b><a href="#classboost_1_1circular__buffer_15cab6d46f03c40d1e52d41843319ddb9">const_iterator</a>
+end() const;</b></code><br>
+<br>
+取得指向 <code>circular_buffer</code> 尾部的常量迭代器。
+<dl>
+<dt> <b>返回：</b> </dt>
+<dd>一个常量随机访问迭代器，指向 <code>circular_buffer</code>
+最后一个元素的下一个位置。如果 <code>circular_buffer</code> 为空则返回一个等于 <code><a href="circular_buffer.html#classboost_1_1circular__buffer_1ee6c38b2ecdc8dfec79975dbc685c80b">begin()
+const</a></code><code></code>
+的迭代器。 </dd>
+</dl>
+<dl>
+<dt> <b>抛出：</b> </dt>
+<dd>无。 </dd>
+</dl>
+<dl>
+<dt> <b>异常安全性：</b> </dt>
+<dd>无抛出。 </dd>
+</dl>
+<dl>
+<dt> <b>迭代器失效：</b> </dt>
+<dd>不会令任何迭代器失效。 </dd>
+</dl>
+<dl>
+<dt> <b>复杂度：</b> </dt>
+<dd>常数(与 <code>circular_buffer</code>
+的大小相关)。 </dd>
+</dl>
+<dl>
+<dt> <b>参见：</b></dt>
+</dl>
+<dl>
+<dd> <code><a href="#classboost_1_1circular__buffer_1ee6c38b2ecdc8dfec79975dbc685c80b">begin()
+const</a></code>, <code><a href="#classboost_1_1circular__buffer_146a8356a1aec6abca9c44cfc60b3bb10">rbegin()
+const</a></code>, <code><a href="#classboost_1_1circular__buffer_1a09f7111dde9f52a4d8babfcdef7e798">rend()
+const</a></code> </dd>
+</dl>
+</td>
+</tr>
+<tr>
+<td> <a id="classboost_1_1circular__buffer_1db3d6b10b6763549f54d2627228fa7aa" name="classboost_1_1circular__buffer_1db3d6b10b6763549f54d2627228fa7aa"></a><code><b><a href="#classboost_1_1circular__buffer_1002fb890dded89e75dfeb6f021fb58a5">reverse_iterator</a>
+rbegin();</b></code><br>
+<br>
+取得指向"反向" <code>circular_buffer</code> 头部的迭代器。
+<dl>
+<dt> <b>返回：</b> </dt>
+<dd>一个反向随机访问迭代器，指向 <code>circular_buffer</code>
+的最后一个元素。如果 <code>circular_buffer</code> 为空则返回一个等于 <code><a href="#classboost_1_1circular__buffer_1cff9236a50107188b8942847a4dc2697">rend()</a></code>
+的迭代器。 </dd>
+</dl>
+<dl>
+<dt> <b>抛出：</b> </dt>
+<dd>无。 </dd>
+</dl>
+<dl>
+<dt> <b>异常安全性：</b> </dt>
+<dd>无抛出。 </dd>
+</dl>
+<dl>
+<dt> <b>迭代器失效：</b> </dt>
+<dd>不会令任何迭代器失效。 </dd>
+</dl>
+<dl>
+<dt> <b>复杂度：</b> </dt>
+<dd>常数(与 <code>circular_buffer</code>
+的大小相关)。 </dd>
+</dl>
+<dl>
+<dt> <span style="font-weight: bold;">参见：</span></dt>
+<dd> <code><a href="#classboost_1_1circular__buffer_1cff9236a50107188b8942847a4dc2697">rend()</a></code>,
+<code><a href="#classboost_1_1circular__buffer_158d1ede2e85f5d46eda8db3f0c4efef0">begin()</a></code>,
+<code><a href="#classboost_1_1circular__buffer_1babfa093dad7801223b80626b598dee1">end()</a></code>
+</dd>
+</dl>
+</td>
+</tr>
+<tr>
+<td> <a id="classboost_1_1circular__buffer_1cff9236a50107188b8942847a4dc2697" name="classboost_1_1circular__buffer_1cff9236a50107188b8942847a4dc2697"></a><code><b><a href="#classboost_1_1circular__buffer_1002fb890dded89e75dfeb6f021fb58a5">reverse_iterator</a>
+rend();</b></code><br>
+<br>
+取得指向"反向" <code>circular_buffer</code> 的尾部的迭代器。
+<dl>
+<dt> <b>返回：</b> </dt>
+<dd>一个反向随机访问迭代器，指向 <code>circular_buffer</code>
+第一个元素的前一个位置。如果 <code>circular_buffer</code> 为空则返回一个等于 <code><a href="#classboost_1_1circular__buffer_1db3d6b10b6763549f54d2627228fa7aa">rbegin()</a></code>
+的迭代器。 </dd>
+</dl>
+<dl>
+<dt> <b>抛出：</b> </dt>
+<dd>无。 </dd>
+</dl>
+<dl>
+<dt> <b>异常安全性：</b> </dt>
+<dd>无抛出。 </dd>
+</dl>
+<dl>
+<dt> <b>迭代器失效：</b> </dt>
+<dd>不会令任何迭代器失效。 </dd>
+</dl>
+<dl>
+<dt> <b>复杂度：</b> </dt>
+<dd>常数(与 <code>circular_buffer</code>
+的大小相关)。 </dd>
+</dl>
+<dl>
+<dt> <b>参见：</b> </dt>
+<dd> <code><a href="#classboost_1_1circular__buffer_1db3d6b10b6763549f54d2627228fa7aa">rbegin()</a></code>,
+<code><a href="#classboost_1_1circular__buffer_158d1ede2e85f5d46eda8db3f0c4efef0">begin()</a></code>,
+<code><a href="#classboost_1_1circular__buffer_1babfa093dad7801223b80626b598dee1">end()</a></code>
+</dd>
+</dl>
+</td>
+</tr>
+<tr>
+<td> <a id="classboost_1_1circular__buffer_146a8356a1aec6abca9c44cfc60b3bb10" name="classboost_1_1circular__buffer_146a8356a1aec6abca9c44cfc60b3bb10"></a><code><b><a href="#classboost_1_1circular__buffer_1c7317701b511bc5f7a663b06b53e2b73">const_reverse_iterator</a>
+rbegin() const;</b></code><br>
+<br>
+取得指向"反向" <code>circular_buffer</code> 头部的常量迭代器。
+<dl>
+<dt> <b>返回：</b> </dt>
+<dd>一个常量反向随机访问迭代器，指向 <code>circular_buffer</code>
+的最后一个元素。如果 <code>circular_buffer</code> 为空则返回一个等于 <code><a href="#classboost_1_1circular__buffer_1a09f7111dde9f52a4d8babfcdef7e798">rend()
+const</a></code> 的迭代器。 </dd>
+</dl>
+<dl>
+<dt> <b>抛出：</b> </dt>
+<dd>无。 </dd>
+</dl>
+<dl>
+<dt> <b>异常安全性：</b> </dt>
+<dd>无抛出。 </dd>
+</dl>
+<dl>
+<dt> <b>迭代器失效：</b> </dt>
+<dd>不会令任何迭代器失效。 </dd>
+</dl>
+<dl>
+<dt> <b>复杂度：</b> </dt>
+<dd>常数(与 <code>circular_buffer</code>
+的大小相关)。 </dd>
+</dl>
+<dl>
+<dt> <b>参见：</b> </dt>
+<dd> <code><a href="#classboost_1_1circular__buffer_1a09f7111dde9f52a4d8babfcdef7e798">rend()
+const</a></code>, <code><a href="#classboost_1_1circular__buffer_1ee6c38b2ecdc8dfec79975dbc685c80b">begin()
+const</a></code>, <code><a href="#classboost_1_1circular__buffer_19813e1d191cd04c4cfc100bbc4733e92">end()
+const</a></code> </dd>
+</dl>
+</td>
+</tr>
+<tr>
+<td> <a id="classboost_1_1circular__buffer_1a09f7111dde9f52a4d8babfcdef7e798" name="classboost_1_1circular__buffer_1a09f7111dde9f52a4d8babfcdef7e798"></a><code><b><a href="#classboost_1_1circular__buffer_1c7317701b511bc5f7a663b06b53e2b73">const_reverse_iterator</a>
+rend() const;</b></code><br>
+<br>
+取得指向"reversed" <code>circular_buffer</code> 尾部的常量迭代器。
+<dl>
+<dt> <b>返回：</b> </dt>
+<dd>一个常量反向随机访问迭代器，指向 <code>circular_buffer</code>
+第一个元素的前一个位置。如果 <code>circular_buffer</code> 为空则返回一个等于 <code><a href="#classboost_1_1circular__buffer_146a8356a1aec6abca9c44cfc60b3bb10">rbegin()
+const</a></code> 的迭代器。 </dd>
+</dl>
+<dl>
+<dt> <b>抛出：</b> </dt>
+<dd>无。 </dd>
+</dl>
+<dl>
+<dt> <b>异常安全性：</b> </dt>
+<dd>无抛出。 </dd>
+</dl>
+<dl>
+<dt> <b>迭代器失效：</b> </dt>
+<dd>不会令任何迭代器失效。 </dd>
+</dl>
+<dl>
+<dt> <b>复杂度：</b> </dt>
+<dd>常数(与 <code>circular_buffer</code>
+的大小相关)。 </dd>
+</dl>
+<dl>
+<dt> <b>参见：</b> </dt>
+<dd> <code><a href="#classboost_1_1circular__buffer_146a8356a1aec6abca9c44cfc60b3bb10">rbegin()
+const</a></code>, <code><a href="#classboost_1_1circular__buffer_1ee6c38b2ecdc8dfec79975dbc685c80b">begin()
+const</a></code>, <code><a href="#classboost_1_1circular__buffer_19813e1d191cd04c4cfc100bbc4733e92">end()
+const</a></code> </dd>
+</dl>
+</td>
+</tr>
+<tr>
+<td> <a id="classboost_1_1circular__buffer_1d219f0d3203fb43b964a8cf63f1865cd" name="classboost_1_1circular__buffer_1d219f0d3203fb43b964a8cf63f1865cd"></a><code><b><a href="#classboost_1_1circular__buffer_1f38a9bc64d84757c661c2542ff9a7f65">reference</a>
+operator[](<a href="#classboost_1_1circular__buffer_19ba12c0142a21a7d960877c22fa3ea00">size_type</a>
+index);</b></code><br>
+<br>
+取得在 <code>index</code> 位置上的元素。
+<dl>
+<dt> <b>前提条件：</b> </dt>
+<dd> <code>0 &lt;= index &amp;&amp;
+index &lt; <a href="#classboost_1_1circular__buffer_1d666f694897465b0d4d7cdd8ddcbc213">size()</a></code>
+</dd>
+</dl>
+<dl>
+<dt> <b>参数：</b> </dt>
+<dd>
+<dl compact="compact">
+<dt> <code>index</code> </dt>
+<dd>元素的位置。 </dd>
+</dl>
+</dd>
+</dl>
+<dl>
+<dt> <span style="font-weight: bold;">返回：</span></dt>
+<dd>位于 <code>index</code> 位置上的元素的引用。 </dd>
+</dl>
+<dl>
+<dt> <b>抛出：</b> </dt>
+<dd>无。 </dd>
+</dl>
+<dl>
+<dt> <b>异常安全性：</b> </dt>
+<dd>无抛出。 </dd>
+</dl>
+<dl>
+<dt> <b>迭代器失效：</b> </dt>
+<dd>不会令任何迭代器失效。 </dd>
+</dl>
+<dl>
+<dt> <b>复杂度：</b> </dt>
+<dd>常数(与 <code>circular_buffer</code>
+的大小相关)。 </dd>
+</dl>
+<dl>
+<dt> <b>参见：</b> </dt>
+<dd> <code><a href="#classboost_1_1circular__buffer_1cd84838cb4fffb6c113fd0297e502edc">at()</a></code>
+</dd>
+</dl>
+</td>
+</tr>
+<tr>
+<td> <a id="classboost_1_1circular__buffer_1eb0a7fe7f8a56a4dc4c933b93adfcef4" name="classboost_1_1circular__buffer_1eb0a7fe7f8a56a4dc4c933b93adfcef4"></a><code><b><a href="#classboost_1_1circular__buffer_1a8397191092f5bacee991b623ca4b910">const_reference</a>
+operator[](<a href="#classboost_1_1circular__buffer_19ba12c0142a21a7d960877c22fa3ea00">size_type</a>
+index) const;</b></code><br>
+<br>
+取得位于 <code>index</code> 位置的元素。
+<dl>
+<dt> <b>前提条件：</b> </dt>
+<dd> <code>0 &lt;= index &amp;&amp;
+index &lt; <a href="#classboost_1_1circular__buffer_1d666f694897465b0d4d7cdd8ddcbc213">size()</a></code>
+</dd>
+</dl>
+<dl>
+<dt> <b>参数：</b> </dt>
+<dd>
+<dl compact="compact">
+<dt> <code>index</code> </dt>
+<dd>元素的位置。 </dd>
+</dl>
+</dd>
+</dl>
+<dl>
+<dt> <b>返回：</b> </dt>
+<dd>位于 <code>index</code> 位置的元素的常量引用。 </dd>
+</dl>
+<dl>
+<dt> <b>抛出：</b> </dt>
+<dd>无。 </dd>
+</dl>
+<dl>
+<dt> <b>异常安全性：</b> </dt>
+<dd>无抛出。 </dd>
+</dl>
+<dl>
+<dt> <b>迭代器失效：</b> </dt>
+<dd>不会令任何迭代器失效。 </dd>
+</dl>
+<dl>
+<dt> <b>复杂度：</b> </dt>
+<dd>常数(与 <code>circular_buffer</code>
+的大小相关)。 </dd>
+</dl>
+<dl>
+<dt> <b>参见：</b> </dt>
+<dd> <code><a href="#classboost_1_1circular__buffer_1b233a298f5845a0fcf2ecc56f4170810">at()
+const</a></code> </dd>
+</dl>
+</td>
+</tr>
+<tr>
+<td> <a id="classboost_1_1circular__buffer_1cd84838cb4fffb6c113fd0297e502edc" name="classboost_1_1circular__buffer_1cd84838cb4fffb6c113fd0297e502edc"></a><code><b><a href="#classboost_1_1circular__buffer_1f38a9bc64d84757c661c2542ff9a7f65">reference</a>
+at(<a href="#classboost_1_1circular__buffer_19ba12c0142a21a7d960877c22fa3ea00">size_type</a>
+index);</b></code><br>
+<br>
+取得位于 <code>index</code> 位置的元素。
+<dl>
+<dt> <b>参数：</b> </dt>
+<dd>
+<dl compact="compact">
+<dt> <code>index</code> </dt>
+<dd>元素的位置。 </dd>
+</dl>
+</dd>
+</dl>
+<dl>
+<dt> <b>返回：</b> </dt>
+<dd>位于 <code>index</code> 位置的元素的引用。 </dd>
+</dl>
+<dl>
+<dt> <b>抛出：</b> </dt>
+<dd> <code>std::out_of_range</code> 当 <code>index</code>
+无效(若 <code>index &gt;= <a href="#classboost_1_1circular__buffer_1d666f694897465b0d4d7cdd8ddcbc213">size()</a></code>)。
+</dd>
+</dl>
+<dl>
+<dt> <b>异常安全性：</b> </dt>
+<dd>强。 </dd>
+</dl>
+<dl>
+<dt> <b>迭代器失效：</b> </dt>
+<dd>不会令任何迭代器失效。 </dd>
+</dl>
+<dl>
+<dt> <b>复杂度：</b> </dt>
+<dd>常数(与 <code>circular_buffer</code>
+的大小相关)。 </dd>
+</dl>
+<dl>
+<dt> <b>参见：</b> </dt>
+<dd> <code><a href="#classboost_1_1circular__buffer_1d219f0d3203fb43b964a8cf63f1865cd">operator[]</a></code>
+</dd>
+</dl>
+</td>
+</tr>
+<tr>
+<td> <a id="classboost_1_1circular__buffer_1b233a298f5845a0fcf2ecc56f4170810" name="classboost_1_1circular__buffer_1b233a298f5845a0fcf2ecc56f4170810"></a><code><b><a href="#classboost_1_1circular__buffer_1a8397191092f5bacee991b623ca4b910">const_reference</a>
+at(<a href="#classboost_1_1circular__buffer_19ba12c0142a21a7d960877c22fa3ea00">size_type</a>
+index) const;</b></code><br>
+<br>
+取得位于 <code>index</code> 位置的元素。
+<dl>
+<dt> <b>参数</b> </dt>
+<dd>
+<dl compact="compact">
+<dt> <code>index</code> </dt>
+<dd>元素的位置。 </dd>
+</dl>
+</dd>
+</dl>
+<dl>
+<dt> <b>返回：</b> </dt>
+<dd>位于 <code>index</code> 位置的元素的常量引用。 </dd>
+</dl>
+<dl>
+<dt> <b>抛出：</b> </dt>
+<dd> <code>std::out_of_range</code> 当 <code>index</code>
+无效(若 <code>index &gt;= <a href="#classboost_1_1circular__buffer_1d666f694897465b0d4d7cdd8ddcbc213">size()</a></code>)。
+</dd>
+</dl>
+<dl>
+<dt> <b>异常安全性：</b> </dt>
+<dd>强。 </dd>
+</dl>
+<dl>
+<dt> <b>迭代器失效：</b> </dt>
+<dd>不会令任何迭代器失效。 </dd>
+</dl>
+<dl>
+<dt> <b>复杂度：</b> </dt>
+<dd>常数(与 <code>circular_buffer</code>
+的大小相关)。 </dd>
+</dl>
+<dl>
+<dt> <b>参见：</b> </dt>
+<dd> <code><a href="#classboost_1_1circular__buffer_1eb0a7fe7f8a56a4dc4c933b93adfcef4">operator[]
+const</a></code> </dd>
+</dl>
+</td>
+</tr>
+<tr>
+<td> <a id="classboost_1_1circular__buffer_10d5fdeabeb352f47d1f7bb1ea8d9819f" name="classboost_1_1circular__buffer_10d5fdeabeb352f47d1f7bb1ea8d9819f"></a><code><b><a href="#classboost_1_1circular__buffer_1f38a9bc64d84757c661c2542ff9a7f65">reference</a>
+front();</b></code><br>
+<br>
+取得第一个元素。
+<dl>
+<dt> <b>前提条件：</b> </dt>
+<dd> <code>!empty()</code> </dd>
+</dl>
+<dl>
+<dt> <b>返回：</b> </dt>
+<dd><code>circular_buffer</code> 的第一个元素的引用。 </dd>
+</dl>
+<dl>
+<dt> <b>抛出：</b> </dt>
+<dd>无。 </dd>
+</dl>
+<dl>
+<dt> <b>异常安全性：</b> </dt>
+<dd>无抛出。 </dd>
+</dl>
+<dl>
+<dt> <b>迭代器失效：</b> </dt>
+<dd>不会令任何迭代器失效。 </dd>
+</dl>
+<dl>
+<dt> <b>复杂度：</b> </dt>
+<dd>常数(与 <code>circular_buffer</code>
+的大小相关)。 </dd>
+</dl>
+<dl>
+<dt> <b>参见：</b> </dt>
+<dd> <code><a href="#classboost_1_1circular__buffer_1d985d974020f88bb4255d8edbae0a30a">back()</a></code>
+</dd>
+</dl>
+</td>
+</tr>
+<tr>
+<td> <a id="classboost_1_1circular__buffer_1d985d974020f88bb4255d8edbae0a30a" name="classboost_1_1circular__buffer_1d985d974020f88bb4255d8edbae0a30a"></a><code><b><a href="#classboost_1_1circular__buffer_1f38a9bc64d84757c661c2542ff9a7f65">reference</a>
+back();</b></code><br>
+<br>
+取得最后一个元素。
+<dl>
+<dt> <b>前提条件：</b> </dt>
+<dd> <code>!empty()</code> </dd>
+</dl>
+<dl>
+<dt> <b>返回：</b> </dt>
+<dd><code>circular_buffer</code> 最后一个元素的引用。 </dd>
+</dl>
+<dl>
+<dt> <b>抛出：</b> </dt>
+<dd>无。 </dd>
+</dl>
+<dl>
+<dt> <b>异常安全性：</b> </dt>
+<dd>无抛出。 </dd>
+</dl>
+<dl>
+<dt> <b>迭代器失效：</b> </dt>
+<dd>不会令任何迭代器失效。 </dd>
+</dl>
+<dl>
+<dt> <b>复杂度：</b> </dt>
+<dd>常数(与 <code>circular_buffer</code>
+的大小相关)。 </dd>
+</dl>
+<dl>
+<dt> <b>参见：</b> </dt>
+<dd> <code><a href="#classboost_1_1circular__buffer_10d5fdeabeb352f47d1f7bb1ea8d9819f">front()</a></code>
+</dd>
+</dl>
+</td>
+</tr>
+<tr>
+<td> <a id="classboost_1_1circular__buffer_13261c47e81bb5e447fb0d70f096728b8" name="classboost_1_1circular__buffer_13261c47e81bb5e447fb0d70f096728b8"></a><code><b><a href="#classboost_1_1circular__buffer_1a8397191092f5bacee991b623ca4b910">const_reference</a>
+front() const;</b></code><br>
+<br>
+取得第一个元素。
+<dl>
+<dt> <b>前提条件：</b> </dt>
+<dd> <code>!empty()</code> </dd>
+</dl>
+<dl>
+<dt> <b>返回：</b> </dt>
+<dd> <code>circular_buffer</code>
+第一个元素的常量引用。 </dd>
+</dl>
+<dl>
+<dt> <b>抛出：</b> </dt>
+<dd>无。 </dd>
+</dl>
+<dl>
+<dt> <b>异常安全性：</b> </dt>
+<dd>无抛出。 </dd>
+</dl>
+<dl>
+<dt> <b>迭代器失效：</b> </dt>
+<dd>不会令任何迭代器失效。 </dd>
+</dl>
+<dl>
+<dt> <b>复杂度：</b> </dt>
+<dd>常数(与 <code>circular_buffer</code>
+的大小相关)。 </dd>
+</dl>
+<dl>
+<dt> <b>参见：</b> </dt>
+<dd> <code><a href="#classboost_1_1circular__buffer_14cd3a019a9d99b4e29918b51c2181a07">back()
+const</a></code> </dd>
+</dl>
+</td>
+</tr>
+<tr>
+<td> <a id="classboost_1_1circular__buffer_14cd3a019a9d99b4e29918b51c2181a07" name="classboost_1_1circular__buffer_14cd3a019a9d99b4e29918b51c2181a07"></a><code><b><a href="#classboost_1_1circular__buffer_1a8397191092f5bacee991b623ca4b910">const_reference</a>
+back() const;</b></code><br>
+<br>
+取得最后一个元素。
+<dl>
+<dt> <b>前提条件：</b> </dt>
+<dd> <code>!empty()</code> </dd>
+</dl>
+<dl>
+<dt> <b>返回：</b> </dt>
+<dd><code>circular_buffer</code> 最后一个元素的常量引用。
+</dd>
+</dl>
+<dl>
+<dt> <b>抛出：</b> </dt>
+<dd>无。 </dd>
+</dl>
+<dl>
+<dt> <b>异常安全性：</b> </dt>
+<dd>无抛出。 </dd>
+</dl>
+<dl>
+<dt> <b>迭代器失效：</b> </dt>
+<dd>不会令任何迭代器失效。 </dd>
+</dl>
+<dl>
+<dt> <b>复杂度：</b> </dt>
+<dd>常数(与 <code>circular_buffer</code>
+的大小相关)。 </dd>
+</dl>
+<dl>
+<dt> <b>参见：</b> </dt>
+<dd> <code><a href="#classboost_1_1circular__buffer_13261c47e81bb5e447fb0d70f096728b8">front()
+const</a></code> </dd>
+</dl>
+</td>
+</tr>
+<tr>
+<td> <a id="classboost_1_1circular__buffer_1957cccdcb0c4ef7d80a34a990065818d" name="classboost_1_1circular__buffer_1957cccdcb0c4ef7d80a34a990065818d"></a><code><b><a href="#classboost_1_1circular__buffer_126d279f91fef717e25459a0817ff242f">array_range</a>
+array_one();</b></code><br>
+<br>
+取得内部缓冲区的首个连续数组。
+<p>该方法与 <code><a href="#classboost_1_1circular__buffer_1f5081a54afbc2dfc1a7fb20329df7d5b">array_two()</a></code>
+结合可用于将所存数据以数组方式传递给传统的 C API。假设有一个容量为10的 <code>circular_buffer</code>，
+包含7个字符 <code>'a', 'b', ..., 'g'</code>，其中 <code>buff[0]
+== 'a'</code>, <code>buff[1] == 'b'</code>, ... <code>buff[6]
+== 'g'</code>:<br>
+<br>
+<code>circular_buffer&lt;char&gt; buff(10);</code><br>
+<br>
+其内部的表示通常不是线性的，内部缓冲区的状态可能如下：<br>
+<br>
+<code>|e|f|g| | | |a|b|c|d|<br>
+end ---^<br>
+begin -------^</code><br>
+<br>
+其中 <code>|a|b|c|d|</code> 表示"数组一"，<code>|e|f|g|</code>
+表示"数组二"，而 <code>| | | |</code> 为空闲空间。<br>
+现在考虑一个典型的C风格函数，它写入数据到一个文件中：<br>
+<br>
+<code>int write(int file_desc, char* buff, int num_bytes);</code><br>
+<br>
+有两种方法将 <code>circular_buffer</code> 中的内容写到一个文件中。要么使用 <code><a href="#classboost_1_1circular__buffer_1957cccdcb0c4ef7d80a34a990065818d">array_one()</a></code>
+和 <code><a href="#classboost_1_1circular__buffer_1f5081a54afbc2dfc1a7fb20329df7d5b">array_two()</a></code>
+方法并调用 write 函数两次：<br>
+<br>
+<code>array_range ar = buff.array_one();<br>
+write(file_desc, ar.first, ar.second);<br>
+ar = buff.array_two();<br>
+write(file_desc, ar.first, ar.second);</code><br>
+<br>
+或者使用 <code><a href="#classboost_1_1circular__buffer_1ea728bf57f91aa8946eddf76ce816a4e">linearize()</a></code>
+方法：<br>
+<br>
+<code>write(file_desc, buff.linearize(), buff.size());</code><br>
+<br>
+由于 <code><a href="#classboost_1_1circular__buffer_1957cccdcb0c4ef7d80a34a990065818d">array_one()</a></code>
+和 <code><a href="#classboost_1_1circular__buffer_1f5081a54afbc2dfc1a7fb20329df7d5b">array_two()</a></code>
+方法的复杂度为常数，所以当 write 方法较为"廉价"时第一个选择更适合。另一方面，当调用 write 方法较为"昂贵"时第二个选择更为适合，<code><a href="#classboost_1_1circular__buffer_1ea728bf57f91aa8946eddf76ce816a4e">linearize()</a></code>
+方法的调用是线性复杂度的。 </p>
+<dl>
+<dt> <b>返回：</b> </dt>
+<dd>内部缓冲区首个连续数组的数组区间。当 <code>circular_buffer</code>
+为空时，返回数组的大小为 <code>0</code>. </dd>
+</dl>
+<dl>
+<dt> <b>抛出：</b> </dt>
+<dd>无。 </dd>
+</dl>
+<dl>
+<dt> <b>异常安全性：</b> </dt>
+<dd>无抛出。 </dd>
+</dl>
+<dl>
+<dt> <b>迭代器失效：</b> </dt>
+<dd>不会令任何迭代器失效。 </dd>
+</dl>
+<dl>
+<dt> <b>复杂度：</b> </dt>
+<dd>常数(与 <code>circular_buffer</code>
+的大小相关)。 </dd>
+</dl>
+<dl>
+<dt> <b>警告：</b> </dt>
+<dd>通常，调用任何修改 circular_buffer 内部状态的方法都可能会破坏内部缓冲区的线性，并令得由 <code><a href="#classboost_1_1circular__buffer_1957cccdcb0c4ef7d80a34a990065818d">array_one()</a></code>
+和 <code><a href="#classboost_1_1circular__buffer_1f5081a54afbc2dfc1a7fb20329df7d5b">array_two()</a></code>&amp;
+nbsp;(以及它们的常量版本)所返回的数组区间失效。 </dd>
+</dl>
+<dl>
+<dt> <b>说明：</b> </dt>
+<dd>当内部缓冲区为线性时，如 <code>|a|b|c|d|e|f|g| | | |</code>
+，"数组一"代表 <code>|a|b|c|d|e|f|g|</code> 而"数组二"不存在(<code><a href="#classboost_1_1circular__buffer_1f5081a54afbc2dfc1a7fb20329df7d5b">array_two()</a></code>
+方法返回一个大小为 <code>0</code> 的数组)。 </dd>
+</dl>
+<dl>
+<dt> <b>参见：</b> </dt>
+<dd> <code><a href="#classboost_1_1circular__buffer_1f5081a54afbc2dfc1a7fb20329df7d5b">array_two()</a></code>,
+<code><a href="#classboost_1_1circular__buffer_1ea728bf57f91aa8946eddf76ce816a4e">linearize()</a></code>
+</dd>
+</dl>
+</td>
+</tr>
+<tr>
+<td> <a id="classboost_1_1circular__buffer_1f5081a54afbc2dfc1a7fb20329df7d5b" name="classboost_1_1circular__buffer_1f5081a54afbc2dfc1a7fb20329df7d5b"></a><code><b><a href="#classboost_1_1circular__buffer_126d279f91fef717e25459a0817ff242f">array_range</a>
+array_two();</b></code><br>
+<br>
+取得内部缓冲区的第二个连续数组。
+<p>该方法与 <code><a href="#classboost_1_1circular__buffer_1957cccdcb0c4ef7d80a34a990065818d">array_one()</a></code>
+结合可用于将所存数据以数组方式传递给传统的 C API。 </p>
+<dl>
+<dt> <b>返回：</b> </dt>
+<dd>内部缓冲区的第二个连续数组的数组区间。当内部缓冲区为线性时或 <code>circular_buffer</code>
+为空时，返回数组的大小为 <code>0</code>. </dd>
+</dl>
+<dl>
+<dt> <b>抛出：</b> </dt>
+<dd>无。 </dd>
+</dl>
+<dl>
+<dt> <b>异常安全性：</b> </dt>
+<dd>无抛出。 </dd>
+</dl>
+<dl>
+<dt> <b>迭代器失效：</b> </dt>
+<dd>不会令任何迭代器失效。 </dd>
+</dl>
+<dl>
+<dt> <b>复杂度：</b> </dt>
+<dd>常数(与 <code>circular_buffer</code>
+的大小相关)。 </dd>
+</dl>
+<dl>
+<dt> <span style="font-weight: bold;">参见：</span></dt>
+<dd> <code><a href="#classboost_1_1circular__buffer_1957cccdcb0c4ef7d80a34a990065818d">array_one()</a></code>
+</dd>
+</dl>
+</td>
+</tr>
+<tr>
+<td> <a id="classboost_1_1circular__buffer_1586cfbdef335f1d3d31faacec63f7b04" name="classboost_1_1circular__buffer_1586cfbdef335f1d3d31faacec63f7b04"></a><code><b><a href="#classboost_1_1circular__buffer_11885d7f475b7e7a74c95b2448d243025">const_array_range</a>
+array_one() const;</b></code><br>
+<br>
+取得内部缓冲区的首个连续数组。
+<p>该方法与 <code><a href="#classboost_1_1circular__buffer_191a0e2c33c0e5b4d7b8c497847bc29ce">array_two()
+const</a></code> 结合可用于将所存数据以数组方式传递给传统的 C API。 </p>
+<dl>
+<dt> <b>返回：</b> </dt>
+<dd>内部缓冲区的首个连续数组的数组区间。当 <code>circular_buffer</code>
+为空时，返回数组的大小为 <code>0</code>. </dd>
+</dl>
+<dl>
+<dt> <b>抛出：</b> </dt>
+<dd>无。 </dd>
+</dl>
+<dl>
+<dt> <b>异常安全性：</b> </dt>
+<dd>无抛出。 </dd>
+</dl>
+<dl>
+<dt> <b>迭代器失效：</b> </dt>
+<dd>不会令任何迭代器失效。 </dd>
+</dl>
+<dl>
+<dt> <b>复杂度：</b> </dt>
+<dd>常数(与 <code>circular_buffer</code>
+的大小相关)。 </dd>
+</dl>
+<dl>
+<dt> <b>参见：</b> </dt>
+<dd> <code><a href="#classboost_1_1circular__buffer_191a0e2c33c0e5b4d7b8c497847bc29ce">array_two()
+const</a></code>; <code><a href="#classboost_1_1circular__buffer_1957cccdcb0c4ef7d80a34a990065818d">array_one()</a></code>
+详细说明了如何传递数据给传统的 C API. </dd>
+</dl>
+</td>
+</tr>
+<tr>
+<td> <a id="classboost_1_1circular__buffer_191a0e2c33c0e5b4d7b8c497847bc29ce" name="classboost_1_1circular__buffer_191a0e2c33c0e5b4d7b8c497847bc29ce"></a><code><b><a href="#classboost_1_1circular__buffer_11885d7f475b7e7a74c95b2448d243025">const_array_range</a>
+array_two() const;</b></code><br>
+<br>
+取得内部缓冲区的第二个连续数组。
+<p>该方法与 <code><a href="#classboost_1_1circular__buffer_1586cfbdef335f1d3d31faacec63f7b04">array_one()
+const</a></code> 结合可用于将所存数据以数组方式传递给传统的 C API。 </p>
+<dl>
+<dt> <b>返回：</b> </dt>
+<dd>内部缓冲区的第二个连续数组的数组区间。当内部缓冲区为线性时或 <code>circular_buffer</code>
+为空时，返回数组的大小为 <code>0</code>. </dd>
+</dl>
+<dl>
+<dt> <b>抛出：</b> </dt>
+<dd>无。 </dd>
+</dl>
+<dl>
+<dt> <b>异常安全性：</b> </dt>
+<dd>无抛出。 </dd>
+</dl>
+<dl>
+<dt> <b>迭代器失效：</b> </dt>
+<dd>不会令任何迭代器失效。 </dd>
+</dl>
+<dl>
+<dt> <b>复杂度：</b> </dt>
+<dd>常数(与 <code>circular_buffer</code>
+的大小相关)。 </dd>
+</dl>
+<dl>
+<dt> <b>参见：</b> </dt>
+<dd> <code><a href="#classboost_1_1circular__buffer_1586cfbdef335f1d3d31faacec63f7b04">array_one()
+const</a></code> </dd>
+</dl>
+</td>
+</tr>
+<tr>
+<td> <a id="classboost_1_1circular__buffer_1ea728bf57f91aa8946eddf76ce816a4e" name="classboost_1_1circular__buffer_1ea728bf57f91aa8946eddf76ce816a4e"></a><code><b><a href="#classboost_1_1circular__buffer_14ff917f8a6131ec18e91606727592a9c">pointer</a>
+linearize();</b></code><br>
+<br>
+将内部缓冲区线性化至一个连续数组。
+<p>该方法用于将所存数据以数组方式传递给传统的 C API。 </p>
+<dl>
+<dt> <b>作用:</b> </dt>
+<dd> <code>&amp;(*this)[0] &lt;
+&amp;(*this)[1] &lt; ... &lt; &amp;(*this)[<a href="#classboost_1_1circular__buffer_1d666f694897465b0d4d7cdd8ddcbc213">size()</a>
+- 1]</code> </dd>
+</dl>
+<dl>
+<dt> <b>返回:</b> </dt>
+<dd>指向数组起始的指针，或者如果为空则返回 <code>0</code>. </dd>
+</dl>
+<dl>
+<dt> <b>抛出:</b> </dt>
+<dd><code>T::T(const T&amp;)</code>
+抛出的任何异常。 </dd>
+<dd><code>T::operator = (const T&amp;)</code>
+抛出的任何异常。 </dd>
+</dl>
+<dl>
+<dt> <b>异常安全性:</b> </dt>
+<dd>基本；如果在<i>抛出</i>一节中所列的操作不抛出的话则没有异常抛出。 </dd>
+</dl>
+<dl>
+<dt> <b>迭代器失效:</b> </dt>
+<dd>所有指向 <code>circular_buffer</code>
+的迭代器均失效(除了等于 <code><a href="#classboost_1_1circular__buffer_1babfa093dad7801223b80626b598dee1">end()</a></code>
+的迭代器)；如果后续条件(见<i>作用</i>)在调用之前已满足则不会令任何迭代器失效。 </dd>
+</dl>
+<dl>
+<dt> <b>复杂度:</b> </dt>
+<dd>线性(与 <code>circular_buffer</code>
+的大小相关)；如果后续条件(见<i>作用</i>)已满足则为常数复杂度。 </dd>
+</dl>
+<dl>
+<dt> <b>警告:</b> </dt>
+<dd>通常，调用任何会修改 <code>circular_buffer</code>
+内部状态的方法都可能会破坏内部缓冲区的线性，并令得返回的指针失效。 </dd>
+</dl>
+<dl>
+<dt> <b>参见:</b> </dt>
+<dd> <code><a href="#classboost_1_1circular__buffer_1957cccdcb0c4ef7d80a34a990065818d">array_one()</a></code>
+和 <code><a href="#classboost_1_1circular__buffer_1f5081a54afbc2dfc1a7fb20329df7d5b">array_two()</a></code>
+给出了另一个方法来传递数据给传统的 C API；<code><a href="#classboost_1_1circular__buffer_120f64448dc0723cc68c1096f6b00bc0a">is_linearized()</a></code>,
+<code><a href="#classboost_1_1circular__buffer_1c591bb9e271b10b5240afcff3bd2c619">rotate(const_iterator)</a></code><code></code>
+</dd>
+</dl>
+</td>
+</tr>
+<tr>
+<td>
+<a id="classboost_1_1circular__buffer_120f64448dc0723cc68c1096f6b00bc0a" name="classboost_1_1circular__buffer_120f64448dc0723cc68c1096f6b00bc0a"></a><code><b>bool is_linearized()
+const;</b></code><br>
+<br>这个 <code>circular_buffer</code> 是线性化的吗？
+<dl>
+<dt>
+<b>返回:</b>
+</dt>
+<dd>
+如果内部缓冲区被线性化到一个连续数组(即
+<code>circular_buffer</code> 符合条件 <code>&amp;(*this)[0] &lt; &amp;(*this)[1] &lt; ... &lt;
+&amp;(*this)[<a href="#classboost_1_1circular__buffer_15fa0edd153e2591dd6bf070eb663ee32">size()</a> -
+1]</code>)则返回 <code>true</code>；否则返回 <code>false</code>。
+</dd>
+</dl>
+<dl>
+<dt>
+<b>抛出:</b>
+</dt>
+<dd>无。
+</dd>
+</dl>
+<dl>
+<dt>
+<span style="font-weight: bold;">异常安全性</span><b>:</b>
+</dt>
+<dd>无抛出。
+</dd>
+</dl>
+<dl>
+<dt>
+<span style="font-weight: bold;">迭代器失效</span><b>:</b>
+</dt>
+<dd>
+不会令任何迭代器失效。
+</dd>
+</dl>
+<dl>
+<dt>
+<span style="font-weight: bold;">复杂度</span><b>:</b>
+</dt>
+<dd>
+常数(与 <code>circular_buffer</code> 的大小相关)。&nbsp;
+</dd>
+</dl>
+<dl>
+<dt>
+<span style="font-weight: bold;">参见</span><b>:</b>
+</dt>
+<dd>
+<code><a href="#classboost_1_1circular__buffer_1ea728bf57f91aa8946eddf76ce816a4e">linearize()</a></code>,
+<code><a href="#classboost_1_1circular__buffer_1957cccdcb0c4ef7d80a34a990065818d">array_one()</a></code>,
+<code><a href="#classboost_1_1circular__buffer_1f5081a54afbc2dfc1a7fb20329df7d5b">array_two()</a></code>
+</dd>
+</dl>
+</td>
+</tr>
+<tr>
+<td>
+<a id="classboost_1_1circular__buffer_1c591bb9e271b10b5240afcff3bd2c619" name="classboost_1_1circular__buffer_1c591bb9e271b10b5240afcff3bd2c619"></a><code><b>void rotate(<a href="#classboost_1_1circular__buffer_15cab6d46f03c40d1e52d41843319ddb9">const_iterator</a>
+new_begin);</b></code><br>
+<br>
+旋转 <code>circular_buffer</code> 中的元素。
+<p>
+一个比 <code><a href="http://www.sgi.com/tech/stl/rotate.html">std::rotate</a></code> 更为高效的实现。
+</p>
+<dl>
+<dt>
+<b>先验条件:</b>
+</dt>
+<dd>
+<code>new_begin</code> 是一个指向 <code>circular_buffer</code> <b>除</b>末尾以外地方的有效迭代器。
+</dd>
+</dl>
+<dl>
+<dt>
+<span style="font-weight: bold;">作用</span><b>:</b>
+</dt>
+<dd>
+假设在调用该方法之前有：<br>
+<br>
+<code>m == std::distance(new_begin, <a href="#classboost_1_1circular__buffer_1babfa093dad7801223b80626b598dee1">end()</a>)</code><br>
+<code>n == std::distance(<a href="#classboost_1_1circular__buffer_158d1ede2e85f5d46eda8db3f0c4efef0">begin()</a>, new_begin)</code><br>
+<code>val_0 == *new_begin, val_1 == *(new_begin + 1), ... val_m == *(new_begin + m)</code><br>
+<code>val_r1 == *(new_begin - 1), val_r2 == *(new_begin - 2), ... val_rn == *(new_begin - n)</code><br>
+<br>
+则在调用之后有：<br>
+<br>
+<code>val_0 == (*this)[0] &amp;&amp; val_1 == (*this)[1] &amp;&amp; ... &amp;&amp; val_m == (*this)[m -
+1] &amp;&amp; val_r1 == (*this)[m + n - 1] &amp;&amp; val_r2 == (*this)[m + n - 2] &amp;&amp; ...
+&amp;&amp; val_rn == (*this)[m]</code>
+</dd>
+</dl>
+<dl>
+<dt>
+<span style="font-weight: bold;">参数</span><b>:</b>
+</dt>
+<dd>
+<dl compact="compact">
+<dt>
+<code>new_begin</code>
+</dt>
+<dd>
+新的起始点。
+</dd>
+</dl>
+</dd>
+</dl>
+<dl>
+<dt>
+<span style="font-weight: bold;">抛出</span><b>:</b>
+</dt>
+<dd><code>T::T(const T&amp;)</code> 抛出的任何异常。
+</dd>
+<dd><code>T::operator = (const T&amp;)</code>&nbsp;<code></code>抛出的任何异常。
+</dd>
+</dl>
+<dl>
+<dt>
+<span style="font-weight: bold;">异常安全性</span><b>:</b>
+</dt>
+<dd>
+基本；如果 <code>circular_buffer</code> 为满或 <code>new_begin</code> 指向
+<code><a href="#classboost_1_1circular__buffer_158d1ede2e85f5d46eda8db3f0c4efef0">begin()</a></code> 或在<i>抛出</i>一节中给出的操作没有抛出，则不抛出。
+</dd>
+</dl>
+<dl>
+<dt>
+<span style="font-weight: bold;">迭代器失效</span><b>:</b>
+</dt>
+<dd>
+如果 <code>m &lt; n</code>，则指向最后 <code>m</code> 个元素的迭代器失效(<b>包括</b> <code>new_begin</code>，但不包括等于 <code><a href="#classboost_1_1circular__buffer_1babfa093dad7801223b80626b598dee1">end()</a></code> 的迭代器)，否则指向头 <code>n</code> 个元素的迭代器失效；如果
+<code>circular_buffer</code> 为满则没有迭代器失效。
+</dd>
+</dl>
+<dl>
+<dt>
+<b>复杂度:</b>
+</dt>
+<dd>
+线怀(与 <code>(std::min)(m, n)</code> 相关)；如果 <code>circular_buffer</code> 为满则为常数。
+</dd>
+</dl>
+<dl>
+<dt>
+<b>参见:</b>
+</dt>
+<dd>
+<code><a href="http://www.sgi.com/tech/stl/rotate.html">std::rotate</a></code>
+</dd>
+</dl>
+</td>
+</tr>
+<tr>
+<td> <a id="classboost_1_1circular__buffer_1d666f694897465b0d4d7cdd8ddcbc213" name="classboost_1_1circular__buffer_1d666f694897465b0d4d7cdd8ddcbc213"></a><code><b><a href="#classboost_1_1circular__buffer_19ba12c0142a21a7d960877c22fa3ea00">size_type</a>
+size() const;</b></code><br>
+<br>
+取得当前保存在 <code>circular_buffer</code> 中的元素数量。
+<dl>
+<dt> <b>返回:</b> </dt>
+<dd>保存在 <code>circular_buffer</code> 中的元素数量。
+</dd>
+</dl>
+<dl>
+<dt> <b>抛出:</b> </dt>
+<dd>无。 </dd>
+</dl>
+<dl>
+<dt> <b>异常安全性:</b> </dt>
+<dd>无抛出。 </dd>
+</dl>
+<dl>
+<dt> <b>迭代器失效:</b> </dt>
+<dd>不会令任何迭代器失效。 </dd>
+</dl>
+<dl>
+<dt> <b>复杂度:</b> </dt>
+<dd>常数(与 <code>circular_buffer</code>
+的大小相关)。 </dd>
+</dl>
+<dl>
+<dt> <b>参见:</b> </dt>
+<dd> <code><a href="#classboost_1_1circular__buffer_1da435a5884cad746ed5cd55bcb892035">capacity()</a></code>,
+<code><a href="#classboost_1_1circular__buffer_195158ed4d4b03794068e259f85291995">max_size()</a></code>,
+<code><a href="#classboost_1_1circular__buffer_17e144e8c7acd8e30c08bfb03391a2338">reserve()</a></code>,
+<code><a href="#classboost_1_1circular__buffer_180c2e2e66a8fa9d0b7adc1b54921a8c3">resize(size_type,
+const_reference)</a></code> </dd>
+</dl>
+</td>
+</tr>
+<tr>
+<td> <a id="classboost_1_1circular__buffer_195158ed4d4b03794068e259f85291995" name="classboost_1_1circular__buffer_195158ed4d4b03794068e259f85291995"></a><code><b><a href="#classboost_1_1circular__buffer_19ba12c0142a21a7d960877c22fa3ea00">size_type</a>
+max_size() const;</b></code><br>
+<br>
+取得 <code>circular_buffer</code> 的最大可能大小或容量(取决于分配器的
+max_size())。
+<dl>
+<dt> <b>返回:</b> </dt>
+<dd>可以设置的 <code>circular_buffer</code>
+的最大大小/容量。 </dd>
+</dl>
+<dl>
+<dt> <b>抛出:</b> </dt>
+<dd>无。 </dd>
+</dl>
+<dl>
+<dt> <b>异常安全性:</b> </dt>
+<dd>无抛出。 </dd>
+</dl>
+<dl>
+<dt> <b>迭代器失效:</b> </dt>
+<dd>不会令任何迭代器失效。 </dd>
+</dl>
+<dl>
+<dt> <b>复杂度:</b> </dt>
+<dd>常数(与 <code>circular_buffer</code>
+的大小相关)。 </dd>
+</dl>
+<dl>
+<dt> <b>参见:</b> </dt>
+<dd> <code><a href="#classboost_1_1circular__buffer_1d666f694897465b0d4d7cdd8ddcbc213">size()</a></code>,
+<code><a href="#classboost_1_1circular__buffer_1da435a5884cad746ed5cd55bcb892035">capacity()</a></code>,
+<code><a href="#classboost_1_1circular__buffer_17e144e8c7acd8e30c08bfb03391a2338">reserve()</a></code>
+</dd>
+</dl>
+</td>
+</tr>
+<tr>
+<td> <a id="classboost_1_1circular__buffer_105acab2b9a0b41044b5241cfc9d87663" name="classboost_1_1circular__buffer_105acab2b9a0b41044b5241cfc9d87663"></a><code><b>bool
+empty() const;</b></code><br>
+<br>
+<code>circular_buffer</code> 是否为空？
+<dl>
+<dt> <b>返回:</b> </dt>
+<dd> <code>true</code> 如果 <code>circular_buffer</code>
+中没有元素；否则返回 <code>false</code>. </dd>
+</dl>
+<dl>
+<dt> <b>抛出:</b> </dt>
+<dd>无。 </dd>
+</dl>
+<dl>
+<dt> <b>异常安全性:</b> </dt>
+<dd>无抛出。 </dd>
+</dl>
+<dl>
+<dt> <b>迭代器失效:</b> </dt>
+<dd>不会令任何迭代器失效。 </dd>
+</dl>
+<dl>
+<dt> <b>复杂度:</b> </dt>
+<dd>常数(与 <code>circular_buffer</code>
+的大小相关)。 </dd>
+</dl>
+<dl>
+<dt> <b>参见:</b> </dt>
+<dd> <code><a href="#classboost_1_1circular__buffer_174a305e473c0bba9dcf30abb68bff909">full()</a></code>
+</dd>
+</dl>
+</td>
+</tr>
+<tr>
+<td> <a id="classboost_1_1circular__buffer_174a305e473c0bba9dcf30abb68bff909" name="classboost_1_1circular__buffer_174a305e473c0bba9dcf30abb68bff909"></a><code><b>bool
+full() const;</b></code><br>
+<br>
+<code>circular_buffer</code> 是否已满？
+<dl>
+<dt> <b>返回:</b> </dt>
+<dd> <code>true</code> 如果保存在 <code>circular_buffer</code>
+中的元素数量等于 <code>circular_buffer</code> 的容量；否则返回 <code>false</code>.
+</dd>
+</dl>
+<dl>
+<dt> <b>抛出:</b> </dt>
+<dd>无。 </dd>
+</dl>
+<dl>
+<dt> <b>异常安全性:</b> </dt>
+<dd>无抛出。 </dd>
+</dl>
+<dl>
+<dt> <b>迭代器失效:</b> </dt>
+<dd>不会令任何迭代器失效。 </dd>
+</dl>
+<dl>
+<dt> <b>复杂度:</b> </dt>
+<dd>常数(与 <code>circular_buffer</code>
+的大小相关)。 </dd>
+</dl>
+<dl>
+<dt> <b>参见:</b> </dt>
+<dd> <code><a href="#classboost_1_1circular__buffer_105acab2b9a0b41044b5241cfc9d87663">empty()</a></code>
+</dd>
+</dl>
+</td>
+</tr>
+<tr>
+<td> <a id="classboost_1_1circular__buffer_17e144e8c7acd8e30c08bfb03391a2338" name="classboost_1_1circular__buffer_17e144e8c7acd8e30c08bfb03391a2338"></a><code><b><a href="#classboost_1_1circular__buffer_19ba12c0142a21a7d960877c22fa3ea00">size_type</a>
+reserve() const;</b></code><br>
+<br>
+取得可以插入到 <code>circular_buffer</code> 中而不覆写任何已存元素的最大元素数量。
+<dl>
+<dt> <b>返回:</b> </dt>
+<dd> <code><a href="#classboost_1_1circular__buffer_1da435a5884cad746ed5cd55bcb892035">capacity()</a>
+- <a href="#classboost_1_1circular__buffer_1d666f694897465b0d4d7cdd8ddcbc213">size()</a></code>
+</dd>
+</dl>
+<dl>
+<dt> <b>抛出:</b> </dt>
+<dd>无。 </dd>
+</dl>
+<dl>
+<dt> <b>异常安全性:</b> </dt>
+<dd>无抛出。 </dd>
+</dl>
+<dl>
+<dt> <b>迭代器失效:</b> </dt>
+<dd>不会令任何迭代器失效。 </dd>
+</dl>
+<dl>
+<dt> <b>复杂度:</b> </dt>
+<dd>常数(与 <code>circular_buffer</code>
+的大小相关)。 </dd>
+</dl>
+<dl>
+<dt> <b>参见:</b> </dt>
+<dd> <code><a href="#classboost_1_1circular__buffer_1da435a5884cad746ed5cd55bcb892035">capacity()</a></code>,
+<code><a href="#classboost_1_1circular__buffer_1d666f694897465b0d4d7cdd8ddcbc213">size()</a></code>,
+<code><a href="#classboost_1_1circular__buffer_195158ed4d4b03794068e259f85291995">max_size()</a></code>
+</dd>
+</dl>
+</td>
+</tr>
+<tr>
+<td> <a id="classboost_1_1circular__buffer_1da435a5884cad746ed5cd55bcb892035" name="classboost_1_1circular__buffer_1da435a5884cad746ed5cd55bcb892035"></a><code><b><a href="#classboost_1_1circular__buffer_1dc642ff2be4db0be1a457810e5d09595">capacity_type</a>
+capacity() const;</b></code><br>
+<br>
+取得 <code>circular_buffer</code> 的容量。
+<dl>
+<dt> <b>返回:</b> </dt>
+<dd>可以保存在 <code>circular_buffer</code>
+的最大元素数量。 </dd>
+</dl>
+<dl>
+<dt> <b>抛出:</b> </dt>
+<dd>无。 </dd>
+</dl>
+<dl>
+<dt> <b>异常安全性:</b> </dt>
+<dd>无抛出。 </dd>
+</dl>
+<dl>
+<dt> <b>迭代器失效:</b> </dt>
+<dd>不会令任何迭代器失效。 </dd>
+</dl>
+<dl>
+<dt> <b>复杂度:</b> </dt>
+<dd>常数(与 <code>circular_buffer</code>
+的大小相关)。 </dd>
+</dl>
+<dl>
+<dt> <b>参见:</b> </dt>
+<dd> <code><a href="#classboost_1_1circular__buffer_17e144e8c7acd8e30c08bfb03391a2338">reserve()</a></code>,
+<code><a href="#classboost_1_1circular__buffer_1d666f694897465b0d4d7cdd8ddcbc213">size()</a></code>,
+<code><a href="#classboost_1_1circular__buffer_195158ed4d4b03794068e259f85291995">max_size()</a></code>,
+<code><a href="#classboost_1_1circular__buffer_161714204ef5172d156e2c7eccd04998f">set_capacity(capacity_type)</a></code>
+</dd>
+</dl>
+</td>
+</tr>
+<tr>
+<td> <a id="classboost_1_1circular__buffer_161714204ef5172d156e2c7eccd04998f" name="classboost_1_1circular__buffer_161714204ef5172d156e2c7eccd04998f"></a><code><b>void
+set_capacity(<a href="#classboost_1_1circular__buffer_1dc642ff2be4db0be1a457810e5d09595">capacity_type</a>
+new_capacity);</b></code><br>
+<br>
+修改 <code>circular_buffer</code> 的容量。
+<dl>
+<dt> <b>作用:</b> </dt>
+<dd> <code><a href="#classboost_1_1circular__buffer_1da435a5884cad746ed5cd55bcb892035">capacity()</a>
+== new_capacity &amp;&amp; <a href="#classboost_1_1circular__buffer_1d666f694897465b0d4d7cdd8ddcbc213">size()</a>
+&lt;= new_capacity</code><br>
+<br>
+如果当前保存在 <code>circular_buffer</code> 中的元素数量大于希望设置的新容量，则 <code>[<a href="#classboost_1_1circular__buffer_1d666f694897465b0d4d7cdd8ddcbc213">size()</a>
+- new_capacity]</code> 个<b>最后</b>的元素将被删除，新的 size 将等于 <code>new_capacity</code>.
+</dd>
+</dl>
+<dl>
+<dt> <b>参数：</b> </dt>
+<dd>
+<dl compact="compact">
+<dt> <code>new_capacity</code> </dt>
+<dd>新的容量。 </dd>
+</dl>
+</dd>
+</dl>
+<dl>
+<dt> <b>抛出:</b> </dt>
+<dd>如果内存耗尽则抛出一个内存分配错误(<code>std::bad_alloc</code>
+如果使用标准分配器)。 </dd>
+<dd><code>T::T(const T&amp;)</code>
+抛出的任何异常。 </dd>
+</dl>
+<dl>
+<dt> <b>异常安全性:</b> </dt>
+<dd>强。 </dd>
+</dl>
+<dl>
+<dt> <b>迭代器失效:</b> </dt>
+<dd>指向 <code>circular_buffer</code>
+的所有迭代器均失效(除了等于 <code><a href="#classboost_1_1circular__buffer_1babfa093dad7801223b80626b598dee1">end()</a></code>
+的迭代器)，如果新的容量与原有容量不同。 </dd>
+</dl>
+<dl>
+<dt> <b>复杂度:</b> </dt>
+<dd>线性(与 <code>min[<a href="#classboost_1_1circular__buffer_1d666f694897465b0d4d7cdd8ddcbc213">size()</a>,
+new_capacity]</code> 相关)。 </dd>
+</dl>
+<dl>
+<dt> <b>参见:</b> </dt>
+<dd> <code><a href="#classboost_1_1circular__buffer_1477715e9d31d2cc5b02ad8ecf3c68c46">rset_capacity(capacity_type)</a></code>,
+<code><a href="#classboost_1_1circular__buffer_180c2e2e66a8fa9d0b7adc1b54921a8c3">resize(size_type,
+const_reference)</a></code> </dd>
+</dl>
+</td>
+</tr>
+<tr>
+<td> <a id="classboost_1_1circular__buffer_180c2e2e66a8fa9d0b7adc1b54921a8c3" name="classboost_1_1circular__buffer_180c2e2e66a8fa9d0b7adc1b54921a8c3"></a><code><b>void
+resize(<a href="#classboost_1_1circular__buffer_19ba12c0142a21a7d960877c22fa3ea00">size_type</a>
+new_size, <a href="#classboost_1_1circular__buffer_1a8397191092f5bacee991b623ca4b910">const_reference</a>
+item = value_type());</b></code><br>
+<br>
+修改 <code>circular_buffer</code> 的大小。
+<dl>
+<dt> <b>作用:</b> </dt>
+<dd> <code><a href="#classboost_1_1circular__buffer_1d666f694897465b0d4d7cdd8ddcbc213">size()</a>
+== new_size &amp;&amp; <a href="#classboost_1_1circular__buffer_1da435a5884cad746ed5cd55bcb892035">capacity()</a>
+&gt;= new_size</code><br>
+<br>
+如果新的大小大于当前大小，则 <code>item</code> 的多个拷贝被插入到 <code>circular_buffer</code>
+的<span style="font-weight: bold;">后端</span>以达到希望的大小。如
+果最终的大小超出当前的容量，则将容量设置为 <code>new_size</code>.<br>
+如果当前保存在 <code>circular_buffer</code> 中的元素数量大于希望的新大小，则<span style="font-weight: bold;">最后</span> <code>[<a href="#classboost_1_1circular__buffer_1d666f694897465b0d4d7cdd8ddcbc213">size()</a>
+- new_size]</code> 个元素将被删除。(容量保持不变) </dd>
+</dl>
+<dl>
+<dt> <b>参数：</b> </dt>
+<dd>
+<dl compact="compact">
+<dt> <code>new_size</code> </dt>
+<dd>新的大小。 </dd>
+</dl>
+</dd>
+<dd>
+<dl compact="compact">
+<dt> <code>item</code> </dt>
+<dd>用于填充 <code>circular_buffer</code>
+的元素，以达到所要求的大小(见<i>作用</i>)。 </dd>
+</dl>
+</dd>
+</dl>
+<dl>
+<dt> <b>抛出:</b> </dt>
+<dd>如果内存耗尽则抛出一个内存分配错误(<code>std::bad_alloc</code>
+如果使用标准分配器)。 </dd>
+<dd><code>T::T(const T&amp;)</code>
+抛出的任何异常。</dd>
+</dl>
+<dl>
+<dt> <b>异常安全性:</b> </dt>
+<dd>基本。 </dd>
+</dl>
+<dl>
+<dt> <b>迭代器失效:</b> </dt>
+<dd>指向 <code>circular_buffer</code>
+的所有迭代器均失效(除了等于 <code><a href="circular_buffer.html#classboost_1_1circular__buffer_1babfa093dad7801223b80626b598dee1">end()</a></code>
+的迭代器)，如果新的大小大于当前容量。如果新的大小小于当前大小则指向被删除元素的迭代器失效。否则没有迭代器失效。 </dd>
+</dl>
+<dl>
+<dt> <b>复杂度:</b> </dt>
+<dd>线性(与 <code>circular_buffer</code>
+的新大小相关)。 </dd>
+</dl>
+<dl>
+<dt> <b>参见:</b> </dt>
+<dd> <code><a href="#classboost_1_1circular__buffer_144ecd9ec5f54a2d61c7d132e445d3483">rresize(size_type,
+const_reference)</a></code>, <code><a href="#classboost_1_1circular__buffer_161714204ef5172d156e2c7eccd04998f">set_capacity(capacity_type)</a></code>
+</dd>
+</dl>
+</td>
+</tr>
+<tr>
+<td> <a id="classboost_1_1circular__buffer_1477715e9d31d2cc5b02ad8ecf3c68c46" name="classboost_1_1circular__buffer_1477715e9d31d2cc5b02ad8ecf3c68c46"></a><code><b>void
+rset_capacity(<a href="#classboost_1_1circular__buffer_1dc642ff2be4db0be1a457810e5d09595">capacity_type</a>
+new_capacity);</b></code><br>
+<br>
+修改 <code>circular_buffer</code> 的容量。
+<dl>
+<dt> <b>作用:</b> </dt>
+<dd> <code><a href="#classboost_1_1circular__buffer_1da435a5884cad746ed5cd55bcb892035">capacity()</a>
+== new_capacity &amp;&amp; <a href="#classboost_1_1circular__buffer_1d666f694897465b0d4d7cdd8ddcbc213">size()</a>
+&lt;= new_capacity</code><br>
+<br>
+如果当前保存在 <code>circular_buffer</code> 中的元素数量大于所希望的新容量，则<span style="font-weight: bold;">头</span> <code>[<a href="#classboost_1_1circular__buffer_1d666f694897465b0d4d7cdd8ddcbc213">size()</a>
+- new_capacity]</code> 个元素被删除，新的大小等于 <code>new_capacity</code>.
+</dd>
+</dl>
+<dl>
+<dt> <b>Parameter(s):</b> </dt>
+<dd>
+<dl compact="compact">
+<dt> <code>new_capacity</code> </dt>
+<dd>新的容量。 </dd>
+</dl>
+</dd>
+</dl>
+<dl>
+<dt> <b>抛出:</b> </dt>
+<dd>如果内存耗尽则抛出一个内存分配错误(<code>std::bad_alloc</code>
+如果使用标准分配器)。 </dd>
+<dd><code>T::T(const T&amp;)</code>
+抛出的任何异常。</dd>
+</dl>
+<dl>
+<dt> <b>异常安全性:</b> </dt>
+<dd>强。 </dd>
+</dl>
+<dl>
+<dt> <b>迭代器失效:</b> </dt>
+<dd>如果新的容量不同于原有容量，则指向 <code>circular_buffer</code>
+的所有迭代器均失效(除了等于 <code><a href="#classboost_1_1circular__buffer_1babfa093dad7801223b80626b598dee1">end()</a></code>
+的迭代器)。 </dd>
+</dl>
+<dl>
+<dt> <b>复杂度:</b> </dt>
+<dd>线性(与 <code>min[<a href="#classboost_1_1circular__buffer_1d666f694897465b0d4d7cdd8ddcbc213">size()</a>,
+new_capacity]</code> 相关)。 </dd>
+</dl>
+<dl>
+<dt> <b>参见:</b> </dt>
+<dd> <code><a href="#classboost_1_1circular__buffer_161714204ef5172d156e2c7eccd04998f">set_capacity(capacity_type)</a></code>,
+<code><a href="#classboost_1_1circular__buffer_144ecd9ec5f54a2d61c7d132e445d3483">rresize(size_type,
+const_reference)</a></code> </dd>
+</dl>
+</td>
+</tr>
+<tr>
+<td> <a id="classboost_1_1circular__buffer_144ecd9ec5f54a2d61c7d132e445d3483" name="classboost_1_1circular__buffer_144ecd9ec5f54a2d61c7d132e445d3483"></a><code><b>void
+rresize(<a href="#classboost_1_1circular__buffer_19ba12c0142a21a7d960877c22fa3ea00">size_type</a>
+new_size, <a href="#classboost_1_1circular__buffer_1a8397191092f5bacee991b623ca4b910">const_reference</a>
+item = value_type());</b></code><br>
+<br>
+修改 <code>circular_buffer</code> 的大小。
+<dl>
+<dt> <b>作用:</b> </dt>
+<dd> <code><a href="#classboost_1_1circular__buffer_1d666f694897465b0d4d7cdd8ddcbc213">size()</a>
+== new_size &amp;&amp; <a href="#classboost_1_1circular__buffer_1da435a5884cad746ed5cd55bcb892035">capacity()</a>
+&gt;= new_size</code><br>
+<br>
+如果新的大小大于当前大小，则 <code>item</code> 的多份拷贝将被插入到 <code>circular_buffer</code>
+的<span style="font-weight: bold;">前端</span>以达到所希望的大小。
+如果所得的大小超过当前的容量，则容量被设置为 <code>new_size</code>.<br>
+如果当前保存在 <code>circular_buffer</code> 中的元素数量大于所希望的新大小，则<span style="font-weight: bold;">头</span> <code>[<a href="#classboost_1_1circular__buffer_1d666f694897465b0d4d7cdd8ddcbc213">size()</a>
+- new_size]</code> 个元素将被删除。(容量保持不变) </dd>
+</dl>
+<dl>
+<dt> <b>参数：</b> </dt>
+<dd>
+<dl compact="compact">
+<dt> <code>new_size</code> </dt>
+<dd>新的大小。 </dd>
+</dl>
+</dd>
+<dd>
+<dl compact="compact">
+<dt> <code>item</code> </dt>
+<dd>被填充到 <code>circular_buffer</code>
+中的元素，以达到所要求的大小。(见<i>作用</i>) </dd>
+</dl>
+</dd>
+</dl>
+<dl>
+<dt> <b>抛出:</b> </dt>
+<dd>如果内存耗尽则抛出一个内存分配错误(<code>std::bad_alloc</code>
+如果使用标准分配器)。 </dd>
+<dd><code>T::T(const T&amp;)</code>
+抛出的任何异常。</dd>
+</dl>
+<dl>
+<dt> <b>异常安全性:</b> </dt>
+<dd>基本。 </dd>
+</dl>
+<dl>
+<dt> <b>迭代器失效:</b> </dt>
+<dd>如果新的大小大于当前容量，则指向 <code>circular_buffer</code>
+的所有迭代器均失效(除了等于 <code><a href="#classboost_1_1circular__buffer_1babfa093dad7801223b80626b598dee1">end()</a></code>
+的迭代器)。如果新的大小小于原有大小，则指向被删除元素的迭代器失效。否则没有迭代器失效。 </dd>
+</dl>
+<dl>
+<dt> <b>复杂度:</b> </dt>
+<dd>线性(与 <code>circular_buffer</code>
+的新大小相关)。 </dd>
+</dl>
+<dl>
+<dt> <b>参见:</b> </dt>
+<dd> <code><a href="#classboost_1_1circular__buffer_180c2e2e66a8fa9d0b7adc1b54921a8c3">resize(size_type,
+const_reference)</a></code>, <code><a href="#classboost_1_1circular__buffer_1477715e9d31d2cc5b02ad8ecf3c68c46">rset_capacity(capacity_type)</a></code>
+</dd>
+</dl>
+</td>
+</tr>
+<tr>
+<td> <a id="classboost_1_1circular__buffer_1db1558911b2e251a587aeb3d8b3d797d" name="classboost_1_1circular__buffer_1db1558911b2e251a587aeb3d8b3d797d"></a><code><b>circular_buffer&lt;T,Alloc&gt;&amp;
+operator=(const circular_buffer&lt;T,Alloc&gt;&amp; cb);</b></code><br>
+<br>
+赋值操作符。
+<p>使得 <code>circular_buffer</code> 成为给定 <code>circular_buffer</code>
+的一个拷贝。 </p>
+<dl>
+<dt> <b>作用:</b> </dt>
+<dd> <code>*this == cb</code> </dd>
+</dl>
+<dl>
+<dt> <b>参数：</b> </dt>
+<dd>
+<dl compact="compact">
+<dt> <code>cb</code> </dt>
+<dd>被复制的 <code>circular_buffer</code>. </dd>
+</dl>
+</dd>
+</dl>
+<dl>
+<dt> <b>抛出:</b> </dt>
+<dd>如果内存耗尽则抛出一个内存分配错误(<code>std::bad_alloc</code>
+如果使用标准分配器)。 </dd>
+<dd><code>T::T(const T&amp;)</code>
+抛出的任何异常。</dd>
+</dl>
+<dl>
+<dt> <b>异常安全性:</b> </dt>
+<dd>强。 </dd>
+</dl>
+<dl>
+<dt> <b>迭代器失效:</b> </dt>
+<dd>所有指向 <code>circular_buffer</code>
+的迭代器均失效(除了等于 <code><a href="#classboost_1_1circular__buffer_1babfa093dad7801223b80626b598dee1">end()</a></code>
+的迭代器)。 </dd>
+</dl>
+<dl>
+<dt> <b>复杂度:</b> </dt>
+<dd>线性(与 <code>cb</code> 的大小相关)。 </dd>
+</dl>
+<dl>
+<dt> <b>参见:</b> </dt>
+<dd> <code><a href="#classboost_1_1circular__buffer_19ba4a81df16f386d31b04b49c82d1ada">assign(size_type,
+const_reference)</a></code>, <code><a href="#classboost_1_1circular__buffer_1aa10b4e4ec1f1c5918931b04b31d43ca">assign(capacity_type,
+size_type, const_reference)</a></code>, <code><a href="#classboost_1_1circular__buffer_1253302d9bda5d7efbc4a6c311de3790c">assign(InputIterator,
+InputIterator)</a></code>, <code><a href="#classboost_1_1circular__buffer_11edb80acdf1f7f1df8217d57256e41f6">assign(capacity_type,
+InputIterator, InputIterator)</a></code> </dd>
+</dl>
+</td>
+</tr>
+<tr>
+<td> <a id="classboost_1_1circular__buffer_19ba4a81df16f386d31b04b49c82d1ada" name="classboost_1_1circular__buffer_19ba4a81df16f386d31b04b49c82d1ada"></a><code><b>void
+assign(<a href="#classboost_1_1circular__buffer_19ba12c0142a21a7d960877c22fa3ea00">size_type</a>
+n, <a href="#classboost_1_1circular__buffer_1a8397191092f5bacee991b623ca4b910">const_reference</a>
+item);</b></code><br>
+<br>
+赋值 <code>n</code> 个 items 到 <code>circular_buffer</code>
+中。
+<p><code>circular_buffer</code> 中的原有内容将被删除并替换为 <code>item</code>
+的 <code>n</code> 个拷贝。 </p>
+<dl>
+<dt> <b>作用:</b> </dt>
+<dd> <code><a href="#classboost_1_1circular__buffer_1da435a5884cad746ed5cd55bcb892035">capacity()</a>
+== n &amp;&amp; <a href="#classboost_1_1circular__buffer_1d666f694897465b0d4d7cdd8ddcbc213">size()</a>
+== n &amp;&amp; (*this)[0] == item &amp;&amp;
+(*this)[1] == item &amp;&amp; ... &amp;&amp; (*this) [n
+- 1] == item</code> </dd>
+</dl>
+<dl>
+<dt> <b>参数：</b> </dt>
+<dd>
+<dl compact="compact">
+<dt> <code>n</code> </dt>
+<dd>被填充到 <code>circular_buffer</code>
+中的元素数量。 </dd>
+</dl>
+</dd>
+<dd>
+<dl compact="compact">
+<dt> <code>item</code> </dt>
+<dd>被填充到 <code>circular_buffer</code>
+中的元素。 </dd>
+</dl>
+</dd>
+</dl>
+<dl>
+<dt> <b>抛出:</b> </dt>
+<dd>如果内存耗尽则抛出一个内存分配错误(<code>std::bad_alloc</code>
+如果使用标准分配器)。 </dd>
+<dd><code>T::T(const T&amp;)</code>
+抛出的任何异常。</dd>
+</dl>
+<dl>
+<dt> <b>异常安全性:</b> </dt>
+<dd>基本。 </dd>
+</dl>
+<dl>
+<dt> <b>迭代器失效:</b> </dt>
+<dd>指向 <code>circular_buffer</code>
+的所有迭代器均失效(除了等于 <code><a href="#classboost_1_1circular__buffer_1babfa093dad7801223b80626b598dee1">end()</a></code>
+的迭代器)。 </dd>
+</dl>
+<dl>
+<dt> <b>复杂度:</b> </dt>
+<dd>线性(与 <code>n</code> 相关)。 </dd>
+</dl>
+<dl>
+<dt> <b>参见:</b> </dt>
+<dd> <code><a href="#classboost_1_1circular__buffer_1db1558911b2e251a587aeb3d8b3d797d">operator=</a></code>,
+<code><a href="#classboost_1_1circular__buffer_1aa10b4e4ec1f1c5918931b04b31d43ca">assign(capacity_type,
+size_type, const_reference)</a></code>, <code><a href="#classboost_1_1circular__buffer_1253302d9bda5d7efbc4a6c311de3790c">assign(InputIterator,
+InputIterator)</a></code>, <code><a href="#classboost_1_1circular__buffer_11edb80acdf1f7f1df8217d57256e41f6">assign(capacity_type,
+InputIterator, InputIterator)</a></code> </dd>
+</dl>
+</td>
+</tr>
+<tr>
+<td> <a id="classboost_1_1circular__buffer_1aa10b4e4ec1f1c5918931b04b31d43ca" name="classboost_1_1circular__buffer_1aa10b4e4ec1f1c5918931b04b31d43ca"></a><code><b>void
+assign(<a href="#classboost_1_1circular__buffer_1dc642ff2be4db0be1a457810e5d09595">capacity_type</a>
+buffer_capacity, <a href="#classboost_1_1circular__buffer_19ba12c0142a21a7d960877c22fa3ea00">size_type</a>
+n, <a href="#classboost_1_1circular__buffer_1a8397191092f5bacee991b623ca4b910">const_reference</a>
+item);</b></code><br>
+<br>
+赋值 <code>n</code> 个 items 到指定容量的 <code>circular_buffer</code>.
+<p><code>circular_buffer</code> 的容量将被设置为给定值，<code>circular_buffer</code>
+中的内容被删除并替换为 <code>item</code> 的 <code>n</code>
+份拷贝。 </p>
+<dl>
+<dt> <b>前提条件：</b> </dt>
+<dd> <code>capacity &gt;= n</code> </dd>
+</dl>
+<dl>
+<dt> <b>作用:</b> </dt>
+<dd> <code><a href="#classboost_1_1circular__buffer_1da435a5884cad746ed5cd55bcb892035">capacity()</a>
+== buffer_capacity &amp;&amp; <a href="#classboost_1_1circular__buffer_1d666f694897465b0d4d7cdd8ddcbc213">size()</a>
+== n &amp;&amp; (*this)[0] == item &amp;&amp;
+(*this)[1] == item &amp;&amp; ... &amp;&amp; (*this) [n
+- 1] == item</code> </dd>
+</dl>
+<dl>
+<dt> <b>参数：</b> </dt>
+<dd>
+<dl compact="compact">
+<dt> <code>buffer_capacity</code> </dt>
+<dd>新的容量。 </dd>
+</dl>
+</dd>
+<dd>
+<dl compact="compact">
+<dt> <code>n</code> </dt>
+<dd>被填充到 <code>circular_buffer</code>
+中的元素数量。 </dd>
+</dl>
+</dd>
+<dd>
+<dl compact="compact">
+<dt> <code>item</code> </dt>
+<dd>被填充到 <code>circular_buffer</code>
+中的元素。 </dd>
+</dl>
+</dd>
+</dl>
+<dl>
+<dt> <b>抛出:</b> </dt>
+<dd>如果内存耗尽则抛出一个内存分配错误(<code>std::bad_alloc</code>
+如果使用标准分配器)。 </dd>
+<dd><code>T::T(const T&amp;)</code>
+抛出的任何异常。</dd>
+</dl>
+<dl>
+<dt> <b>异常安全性:</b> </dt>
+<dd>基本。 </dd>
+</dl>
+<dl>
+<dt> <b>迭代器失效:</b> </dt>
+<dd>指向 <code>circular_buffer</code>
+的所有迭代器均失效(除了等于 <code><a href="circular_buffer.html#classboost_1_1circular__buffer_1babfa093dad7801223b80626b598dee1">end()</a></code>
+的迭代器)。 </dd>
+</dl>
+<dl>
+<dt> <b>复杂度:</b> </dt>
+<dd> 线性(与 <code>n</code> 相关)。 </dd>
+</dl>
+<dl>
+<dt> <b>参见:</b> </dt>
+<dd> <code><a href="#classboost_1_1circular__buffer_1db1558911b2e251a587aeb3d8b3d797d">operator=</a></code>,
+<code><a href="#classboost_1_1circular__buffer_19ba4a81df16f386d31b04b49c82d1ada">assign(size_type,
+const_reference)</a></code>, <code><a href="#classboost_1_1circular__buffer_1253302d9bda5d7efbc4a6c311de3790c">assign(InputIterator,
+InputIterator)</a></code>, <code><a href="#classboost_1_1circular__buffer_11edb80acdf1f7f1df8217d57256e41f6">assign(capacity_type,
+InputIterator, InputIterator)</a></code> </dd>
+</dl>
+</td>
+</tr>
+<tr>
+<td> <a id="classboost_1_1circular__buffer_1253302d9bda5d7efbc4a6c311de3790c" name="classboost_1_1circular__buffer_1253302d9bda5d7efbc4a6c311de3790c"></a>
+<code><b>template &lt;class InputIterator&gt;<br>
+void assign(InputIterator first, InputIterator last);</b></code><br>
+<br>
+将给定区间赋值到 <code>circular_buffer</code>.
+<p><code>circular_buffer</code>
+的内容被删除并替换为来自给定区间的元素的拷贝。 </p>
+<dl>
+<dt> <b>前提条件：</b> </dt>
+<dd>有效区间 <code>[first, last)</code>.<br>
+<code>first</code> 和 <code>last</code>
+必须符合 <a href="http://www.sgi.com/tech/stl/InputIterator.html">输
+入迭代器InputIterator</a> 的要求。 </dd>
+</dl>
+<dl>
+<dt> <b>作用:</b> </dt>
+<dd> <code><a href="#classboost_1_1circular__buffer_1da435a5884cad746ed5cd55bcb892035">capacity()</a>
+== std::distance(first, last) &amp;&amp; <a href="#classboost_1_1circular__buffer_1d666f694897465b0d4d7cdd8ddcbc213">size()</a>
+== std::distance(first, last) &amp;&amp; (*this)[0]== *first
+&amp;&amp; (*this)[1] == *(first + 1) &amp;&amp; ...
+&amp;&amp; (*this)[std::distance(first, last) - 1] == *(last -
+1)</code> </dd>
+</dl>
+<dl>
+<dt> <b>参数</b> </dt>
+<dd>
+<dl compact="compact">
+<dt> <code>first</code> </dt>
+<dd>被复制区间的开始。 </dd>
+</dl>
+</dd>
+<dd>
+<dl compact="compact">
+<dt> <code>last</code> </dt>
+<dd>被复制区间的结束。 </dd>
+</dl>
+</dd>
+</dl>
+<dl>
+<dt> <b>抛出:</b> </dt>
+<dd>如果内存耗尽则抛出一个内存分配错误(<code>std::bad_alloc</code>
+如果使用标准分配器)。 </dd>
+<dd><code>T::T(const T&amp;)</code>
+抛出的任何异常。</dd>
+</dl>
+<dl>
+<dt> <b>异常安全性:</b> </dt>
+<dd>基本。 </dd>
+</dl>
+<dl>
+<dt> <b>迭代器失效:</b> </dt>
+<dd>指向 <code>circular_buffer</code>
+的所有迭代器均失效(除了等于 <code><a href="circular_buffer.html#classboost_1_1circular__buffer_1babfa093dad7801223b80626b598dee1">end()</a></code>
+的迭代器)。 </dd>
+</dl>
+<dl>
+<dt> <b>复杂度:</b> </dt>
+<dd> 线性(与 <code>std::distance(first, last)</code>
+相关)。 </dd>
+</dl>
+<dl>
+<dt> <b>参见:</b> </dt>
+<dd> <code><a href="#classboost_1_1circular__buffer_1db1558911b2e251a587aeb3d8b3d797d">operator=</a></code>,
+<code><a href="#classboost_1_1circular__buffer_19ba4a81df16f386d31b04b49c82d1ada">assign(size_type,
+const_reference)</a></code>, <code><a href="#classboost_1_1circular__buffer_1aa10b4e4ec1f1c5918931b04b31d43ca">assign(capacity_type,
+size_type, const_reference)</a></code>, <code><a href="#classboost_1_1circular__buffer_11edb80acdf1f7f1df8217d57256e41f6">assign(capacity_type,
+InputIterator, InputIterator)</a></code> </dd>
+</dl>
+</td>
+</tr>
+<tr>
+<td> <a id="classboost_1_1circular__buffer_11edb80acdf1f7f1df8217d57256e41f6" name="classboost_1_1circular__buffer_11edb80acdf1f7f1df8217d57256e41f6"></a>
+<code><b>template &lt;class InputIterator&gt;<br>
+void assign(<a href="#classboost_1_1circular__buffer_1dc642ff2be4db0be1a457810e5d09595">capacity_type</a>
+buffer_capacity, InputIterator first, InputIterator last);</b></code><br>
+<br>
+将给定区间赋值到指定容量的 <code>circular_buffer</code> 中。
+<p><code>circular_buffer</code> 的容量将被设置为指定值，<code>circular_buffer</code>
+的内容被删除并替换为来自给定区间的元素的拷贝。 </p>
+<dl>
+<dt> <b>前提条件：</b> </dt>
+<dd>有效区间 <code>[first, last)</code>.<br>
+<code>first</code> 和 <code>last</code>
+必须符合 <a href="http://www.sgi.com/tech/stl/InputIterator.html">输
+入迭代器InputIterator</a> 的要求。 </dd>
+</dl>
+<dl>
+<dt> <b>作用:</b> </dt>
+<dd> <code><a href="#classboost_1_1circular__buffer_1da435a5884cad746ed5cd55bcb892035">capacity()</a>
+== buffer_capacity &amp;&amp; <a href="#classboost_1_1circular__buffer_1d666f694897465b0d4d7cdd8ddcbc213">size()</a>
+&lt;= std::distance(first, last) &amp;&amp; (*this)[0]==
+*(last - </code><code>buffer_</code><code>capacity) &amp;&amp; (*this)[1] == *(last - </code><code>buffer_</code><code>capacity +
+1) &amp;&amp; ... &amp;&amp; (*this)[</code><code>buffer_</code><code>capacity - 1] ==
+*(last - 1)</code><br>
+<br>
+如果被复制的来自 range <code>[first, last)</code> 的元素数量大于给定的 <code>buffer_</code><code>capacity</code>，
+则只有区间 <code>[last - </code><code>buffer_</code><code>capacity, last)</code> 中的元素被复制。 </dd>
+</dl>
+<dl>
+<dt> <b>参数：</b> </dt>
+<dd>
+<dl compact="compact">
+<dt> <code>buffer_</code><code>capacity</code> </dt>
+<dd>新的容量。 </dd>
+</dl>
+</dd>
+<dd>
+<dl compact="compact">
+<dt> <code>first</code> </dt>
+<dd>被复制区间的开始。 </dd>
+</dl>
+</dd>
+<dd>
+<dl compact="compact">
+<dt> <code>last</code> </dt>
+<dd>被复制区间的结束。 </dd>
+</dl>
+</dd>
+</dl>
+<dl>
+<dt> <b>抛出:</b> </dt>
+<dd>如果内存耗尽则抛出一个内存分配错误(<code>std::bad_alloc</code>
+如果使用标准分配器)。 </dd>
+<dd><code>T::T(const T&amp;)</code>
+抛出的任何异常。</dd>
+</dl>
+<dl>
+<dt> <b>异常安全性:</b> </dt>
+<dd>基本。 </dd>
+</dl>
+<dl>
+<dt> <b>迭代器失效:</b> </dt>
+<dd>指向 <code>circular_buffer</code>
+的所有迭代器均失效(除了等于 <code><a href="circular_buffer.html#classboost_1_1circular__buffer_1babfa093dad7801223b80626b598dee1">end()</a></code>
+的迭代器)。 </dd>
+</dl>
+<dl>
+<dt> <b>复杂度:</b> </dt>
+<dd>线性(与 <code>std::distance(first, last)</code>
+相关；如果 <code>InputIterator</code> 为 <a href="http://www.sgi.com/tech/stl/RandomAccessIterator.html">随
+机访问迭代器RandomAccessIterator</a> 则与 <code>min[capacity,
+std::distance(first, last)]</code> 相关)。
+</dd>
+</dl>
+<dl>
+<dt> <b>参见:</b> </dt>
+<dd> <code><a href="#classboost_1_1circular__buffer_1db1558911b2e251a587aeb3d8b3d797d">operator=</a></code>,
+<code><a href="#classboost_1_1circular__buffer_19ba4a81df16f386d31b04b49c82d1ada">assign(size_type,
+const_reference)</a></code>, <code><a href="#classboost_1_1circular__buffer_1aa10b4e4ec1f1c5918931b04b31d43ca">assign(capacity_type,
+size_type, const_reference)</a></code>, <code><a href="#classboost_1_1circular__buffer_1253302d9bda5d7efbc4a6c311de3790c">assign(InputIterator,
+InputIterator)</a></code> </dd>
+</dl>
+</td>
+</tr>
+<tr>
+<td> <a id="classboost_1_1circular__buffer_1270ab7074c365663a6f18808024fd88b" name="classboost_1_1circular__buffer_1270ab7074c365663a6f18808024fd88b"></a><code><b>void
+swap(circular_buffer&lt;T,Alloc&gt;&amp; cb);</b></code><br>
+<br>
+交换两个 <code>circular_buffer</code>s 的内容。
+<dl>
+<dt> <b>作用:</b> </dt>
+<dd> <code>this</code> 包含 <code>cb</code>
+中的元素，反之亦然；<code>this</code> 的容量等于 <code>cb</code>
+的容量，反之亦然。 </dd>
+</dl>
+<dl>
+<dt> <b>参数：</b> </dt>
+<dd>
+<dl compact="compact">
+<dt> <code>cb</code> </dt>
+<dd>被交换的 <code>circular_buffer</code>. </dd>
+</dl>
+</dd>
+</dl>
+<dl>
+<dt> <b>抛出:</b> </dt>
+<dd>无。 </dd>
+</dl>
+<dl>
+<dt> <b>异常安全性:</b> </dt>
+<dd>无抛出。 </dd>
+</dl>
+<dl>
+<dt> <b>迭代器失效:</b> </dt>
+<dd>两个 <code>circular_buffer</code>s
+的所有迭代器均失效。(另一方面，这些迭代器仍旧指向同一个元素但却是不同的容器。如果你想使用这一特性，则必须关闭 <a href="#debug">对调试的支持</a>，否则在使用这些失效迭代器时就会报告一个断言。) </dd>
+</dl>
+<dl>
+<dt> <b>复杂度:</b> </dt>
+<dd>常数(与 <code>circular_buffer</code>
+的大小相关)。 </dd>
+</dl>
+<dl>
+<dt> <b>参见:</b> </dt>
+<dd> <code><a href="#namespaceboost_14aa8f6a2c9640f3f22e266f0fca85777">swap(circular_buffer&lt;T,
+Alloc&gt;&amp;, circular_buffer&lt;T,
+Alloc&gt;&amp;)</a></code> </dd>
+</dl>
+</td>
+</tr>
+<tr>
+<td> <a id="classboost_1_1circular__buffer_1aa35dd7ef8eb1d04508494d1835cc82e" name="classboost_1_1circular__buffer_1aa35dd7ef8eb1d04508494d1835cc82e"></a><code><b>void
+push_back(<a href="#classboost_1_1circular__buffer_1a8397191092f5bacee991b623ca4b910">const_reference</a>
+item = value_type());</b></code><br>
+<br>
+插入一个新元素到 <code>circular_buffer</code> 的末端。
+<dl>
+<dt> <b>作用:</b> </dt>
+<dd>如果 <code><a href="#classboost_1_1circular__buffer_1da435a5884cad746ed5cd55bcb892035">capacity()</a>
+&gt; 0</code> 则 <code><a href="#classboost_1_1circular__buffer_1d985d974020f88bb4255d8edbae0a30a">back()</a>
+== item</code><br>
+如果 <code>circular_buffer</code> 已满，则删除第一个元素。如果容量为 <code>0</code>,
+则不插入。 </dd>
+</dl>
+<dl>
+<dt> <b>参数：</b> </dt>
+<dd>
+<dl compact="compact">
+<dt> <code>item</code> </dt>
+<dd>被插入的元素。 </dd>
+</dl>
+</dd>
+</dl>
+<dl>
+<dt> <b>抛出:</b> </dt>
+<dd><code>T::T(const T&amp;)</code>
+抛出的任何异常。</dd>
+</dl>
+<dl>
+<dt> <b>异常安全性:</b> </dt>
+<dd>基本；如果在<i>抛出</i>一节中列出的操作没有抛出的话则无抛出。 </dd>
+</dl>
+<dl>
+<dt> <b>迭代器失效:</b> </dt>
+<dd>除了指向被覆写元素的迭代器外，没有迭代器失效。 </dd>
+</dl>
+<dl>
+<dt> <b>复杂度:</b> </dt>
+<dd>常数(与 <code>circular_buffer</code>
+的大小相关)。 </dd>
+</dl>
+<dl>
+<dt> <b>参见:</b> </dt>
+<dd> <code><a href="#classboost_1_1circular__buffer_10ef57e73c193682a649d8eb4a1096dce">push_front(const_reference)</a></code>,
+<code><a href="#classboost_1_1circular__buffer_1df0da00cb501bea75afbbfab9f546a07">pop_back()</a></code>,
+<code><a href="#classboost_1_1circular__buffer_18ac972dc24ef7236faa1875de92b9dd8">pop_front()</a></code>
+</dd>
+</dl>
+</td>
+</tr>
+<tr>
+<td> <a id="classboost_1_1circular__buffer_10ef57e73c193682a649d8eb4a1096dce" name="classboost_1_1circular__buffer_10ef57e73c193682a649d8eb4a1096dce"></a><code><b>void
+push_front(<a href="#classboost_1_1circular__buffer_1a8397191092f5bacee991b623ca4b910">const_reference</a>
+item = value_type());</b></code><br>
+<br>
+插入一个新元素到 <code>circular_buffer</code> 的头部。
+<dl>
+<dt> <b>作用:</b> </dt>
+<dd>如果 <code><a href="#classboost_1_1circular__buffer_1da435a5884cad746ed5cd55bcb892035">capacity()</a>
+&gt; 0</code> 则 <code><a href="#classboost_1_1circular__buffer_10d5fdeabeb352f47d1f7bb1ea8d9819f">front()</a>
+== item</code><br>
+如果 <code>circular_buffer</code> 已满，则最后一个元素被删除。如果容量为 <code>0</code>,
+则不插入。 </dd>
+</dl>
+<dl>
+<dt> <b>参数：</b> </dt>
+<dd>
+<dl compact="compact">
+<dt> <code>item</code> </dt>
+<dd>被插入的元素。 </dd>
+</dl>
+</dd>
+</dl>
+<dl>
+<dt> <b>抛出:</b> </dt>
+<dd><code>T::T(const T&amp;)</code>
+抛出的任何异常。</dd>
+</dl>
+<dl>
+<dt> <b>异常安全性:</b> </dt>
+<dd>基本；如果在<i>抛出</i>一节中列出的操作没有抛出的话则无抛出。 </dd>
+</dl>
+<dl>
+<dt> <b>迭代器失效:</b> </dt>
+<dd>除了指向被覆写元素的迭代器外，没有迭代器失效。 </dd>
+</dl>
+<dl>
+<dt> <b>复杂度:</b> </dt>
+<dd>常数(与 <code>circular_buffer</code>
+的大小相关)。 </dd>
+</dl>
+<dl>
+<dt> <b>参见:</b> </dt>
+<dd> <code><a href="#classboost_1_1circular__buffer_1aa35dd7ef8eb1d04508494d1835cc82e">push_back(const_reference)</a></code>,
+<code><a href="#classboost_1_1circular__buffer_1df0da00cb501bea75afbbfab9f546a07">pop_back()</a></code>,
+<code><a href="#classboost_1_1circular__buffer_18ac972dc24ef7236faa1875de92b9dd8">pop_front()</a></code>
+</dd>
+</dl>
+</td>
+</tr>
+<tr>
+<td> <a id="classboost_1_1circular__buffer_1df0da00cb501bea75afbbfab9f546a07" name="classboost_1_1circular__buffer_1df0da00cb501bea75afbbfab9f546a07"></a><code><b>void
+pop_back();</b></code><br>
+<br>
+从 <code>circular_buffer</code> 中删除最后一个元素。
+<dl>
+<dt> <b>前提条件：</b> </dt>
+<dd> <code>!empty()</code> </dd>
+</dl>
+<dl>
+<dt> <b>作用:</b> </dt>
+<dd>从 <code>circular_buffer</code>
+中删除最后一个元素。 </dd>
+</dl>
+<dl>
+<dt> <b>抛出:</b> </dt>
+<dd>无。 </dd>
+</dl>
+<dl>
+<dt> <b>异常安全性:</b> </dt>
+<dd>无抛出。 </dd>
+</dl>
+<dl>
+<dt> <b>迭代器失效:</b> </dt>
+<dd>只有指向被删元素的迭代器失效。 </dd>
+</dl>
+<dl>
+<dt> <b>复杂度:</b> </dt>
+<dd>常数(与 <code>circular_buffer</code>
+的大小相关)。 </dd>
+</dl>
+<dl>
+<dt> <b>参见:</b> </dt>
+<dd> <code><a href="#classboost_1_1circular__buffer_18ac972dc24ef7236faa1875de92b9dd8">pop_front()</a></code>,
+<code><a href="#classboost_1_1circular__buffer_1aa35dd7ef8eb1d04508494d1835cc82e">push_back(const_reference)</a></code>,
+<code><a href="#classboost_1_1circular__buffer_10ef57e73c193682a649d8eb4a1096dce">push_front(const_reference)</a></code>
+</dd>
+</dl>
+</td>
+</tr>
+<tr>
+<td> <a id="classboost_1_1circular__buffer_18ac972dc24ef7236faa1875de92b9dd8" name="classboost_1_1circular__buffer_18ac972dc24ef7236faa1875de92b9dd8"></a><code><b>void
+pop_front();</b></code><br>
+<br>
+从 <code>circular_buffer</code> 中删除第一个元素。
+<dl>
+<dt> <b>前提条件：</b> </dt>
+<dd> <code>!empty()</code> </dd>
+</dl>
+<dl>
+<dt> <b>作用:</b> </dt>
+<dd><code>circular_buffer</code> 中的第一个元素被删除。 </dd>
+</dl>
+<dl>
+<dt> <b>抛出:</b> </dt>
+<dd>无。 </dd>
+</dl>
+<dl>
+<dt> <b>异常安全性:</b> </dt>
+<dd>无抛出。 </dd>
+</dl>
+<dl>
+<dt> <b>迭代器失效:</b> </dt>
+<dd>只有指向被删元素的迭代器失效。 </dd>
+</dl>
+<dl>
+<dt> <b>复杂度:</b> </dt>
+<dd>常数(与 <code>circular_buffer</code>
+的大小相关)。 </dd>
+</dl>
+<dl>
+<dt> <b>参见:</b> </dt>
+<dd> <code><a href="#classboost_1_1circular__buffer_1df0da00cb501bea75afbbfab9f546a07">pop_back()</a></code>,
+<code><a href="#classboost_1_1circular__buffer_1aa35dd7ef8eb1d04508494d1835cc82e">push_back(const_reference)</a></code>,
+<code><a href="#classboost_1_1circular__buffer_10ef57e73c193682a649d8eb4a1096dce">push_front(const_reference)</a></code>
+</dd>
+</dl>
+</td>
+</tr>
+<tr>
+<td> <a id="classboost_1_1circular__buffer_128c92740fee1b9deb8c69816e389de95" name="classboost_1_1circular__buffer_128c92740fee1b9deb8c69816e389de95"></a><code><b><a href="#classboost_1_1circular__buffer_11b8a33f2dc8519b8a7d344ed4408c532">iterator</a>
+insert(<a href="#classboost_1_1circular__buffer_11b8a33f2dc8519b8a7d344ed4408c532">iterator</a>
+pos, <a href="#classboost_1_1circular__buffer_1a8397191092f5bacee991b623ca4b910">const_reference</a>
+item = value_type());</b></code><br>
+<br>
+在指定位置插入一个元素。
+<dl>
+<dt> <b>前提条件：</b> </dt>
+<dd> <code>pos</code> 是一个指向 <code>circular_buffer</code>
+或其尾部的有效迭代器。 </dd>
+</dl>
+<dl>
+<dt> <b>作用:</b> </dt>
+<dd><code>item</code> 被插入到位置 <code>pos</code>.<br>
+如果 <code>circular_buffer</code> 是满的，则第一个元素被覆写。如果 <code>circular_buffer</code>
+是满的且 <code>pos</code> 指向 <code><a href="#classboost_1_1circular__buffer_158d1ede2e85f5d46eda8db3f0c4efef0">begin()</a></code>,
+则该元素不会被插入。如果容量为 <code>0</code>, 则不插入。 </dd>
+</dl>
+<dl>
+<dt> <b>参数：</b> </dt>
+<dd>
+<dl compact="compact">
+<dt> <code>pos</code> </dt>
+<dd>指定 <code>item</code> 插入的位置的迭代器。 </dd>
+</dl>
+</dd>
+<dd>
+<dl compact="compact">
+<dt> <code>item</code> </dt>
+<dd>被插入的元素。 </dd>
+</dl>
+</dd>
+</dl>
+<dl>
+<dt> <b>返回:</b> </dt>
+<dd>指向插入后元素的迭代器，如果 <code>item</code> 未插入则返回 <code><a href="#classboost_1_1circular__buffer_158d1ede2e85f5d46eda8db3f0c4efef0">begin()</a></code>。(见<i>作
+用</i>) </dd>
+</dl>
+<dl>
+<dt> <b>抛出:</b> </dt>
+<dd><code>T::T(const T&amp;)</code>
+抛出的任何异常。 </dd>
+<dd><code>T::operator = (const T&amp;)</code>
+抛出的任何异常。 </dd>
+</dl>
+<dl>
+<dt> <b>异常安全性:</b> </dt>
+<dd>基本；如果<i>抛出</i>一节中列出的操作没有抛出则不抛出异常。 </dd>
+</dl>
+<dl>
+<dt> <b>迭代器失效:</b> </dt>
+<dd>指向插入点(包括 <code>pos</code>)及插入点之后的迭代器(直至未
+尾；除了等于 <code><a href="circular_buffer.html#classboost_1_1circular__buffer_1babfa093dad7801223b80626b598dee1">end()</a></code>
+的迭代器)均失效。指向被覆写元素的迭代器也失效。 </dd>
+</dl>
+<dl>
+<dt> <b>复杂度:</b> </dt>
+<dd>线性(与 <code>std::distance(pos, <a href="#classboost_1_1circular__buffer_1babfa093dad7801223b80626b598dee1">end()</a>)</code>
+相关)。 </dd>
+</dl>
+<dl>
+<dt> <b>参见:</b> </dt>
+<dd> <code><a href="#classboost_1_1circular__buffer_1b2f197c99d47138db777f0a46783b140">insert(iterator,
+size_type, value_type)</a></code>, <code><a href="#classboost_1_1circular__buffer_1d00091d1d794cab3264b3674e99b33f6">insert(iterator,
+InputIterator, InputIterator)</a></code>, <code><a href="#classboost_1_1circular__buffer_12c9332f457bf5bb3128463cf528c058c">rinsert(iterator,
+value_type)</a></code>, <code><a href="#classboost_1_1circular__buffer_1a47a5358db1b7d7e4925c16db13d2fc5">rinsert(iterator,
+size_type, value_type)</a></code>, <code><a href="#classboost_1_1circular__buffer_1d6479cbc43a304bdbf04262f957fa323">rinsert(iterator,
+InputIterator, InputIterator)</a></code> </dd>
+</dl>
+</td>
+</tr>
+<tr>
+<td> <a id="classboost_1_1circular__buffer_1b2f197c99d47138db777f0a46783b140" name="classboost_1_1circular__buffer_1b2f197c99d47138db777f0a46783b140"></a><code><b>void
+insert(<a href="#classboost_1_1circular__buffer_11b8a33f2dc8519b8a7d344ed4408c532">iterator</a>
+pos, <a href="#classboost_1_1circular__buffer_19ba12c0142a21a7d960877c22fa3ea00">size_type</a>
+n, <a href="#classboost_1_1circular__buffer_1a8397191092f5bacee991b623ca4b910">const_reference</a>
+item);</b></code><br>
+<br>
+插入 <code>item</code> 的 <code>n</code>
+份拷贝到指定位置。
+<dl>
+<dt> <b>前提条件：</b> </dt>
+<dd> <code>pos</code> 为指向 <code>circular_buffer</code>
+或其尾部的有效迭代器。 </dd>
+</dl>
+<dl>
+<dt> <b>作用:</b> </dt>
+<dd><code>min[n, (pos - <a href="#classboost_1_1circular__buffer_158d1ede2e85f5d46eda8db3f0c4efef0">begin()</a>)
++ <a href="#classboost_1_1circular__buffer_17e144e8c7acd8e30c08bfb03391a2338">reserve()</a>]</code>
+个元素将被插入到位置 <code>pos</code>.<br>
+<code>circular_buffer</code> 头部的 <code>min[pos
+- <a href="#classboost_1_1circular__buffer_158d1ede2e85f5d46eda8db3f0c4efef0">begin()</a>,
+max[0, n - <a href="#classboost_1_1circular__buffer_17e144e8c7acd8e30c08bfb03391a2338">reserve()</a>]]</code>
+个元素将被覆写。<br>
+(详细解释请见<i>例子</i>) </dd>
+</dl>
+<dl>
+<dt> <b>参数：</b> </dt>
+<dd>
+<dl compact="compact">
+<dt> <code>pos</code> </dt>
+<dd>指定 <code>item</code>s 插入位置的迭代器。 </dd>
+</dl>
+</dd>
+<dd>
+<dl compact="compact">
+<dt> <code>n</code> </dt>
+<dd>被插入的 <code>item</code>s 数量。 </dd>
+</dl>
+</dd>
+<dd>
+<dl compact="compact">
+<dt> <code>item</code> </dt>
+<dd>被插入的元素。 </dd>
+</dl>
+</dd>
+</dl>
+<dl>
+<dt> <b>抛出:</b> </dt>
+<dd><code>T::T(const T&amp;)</code>&nbsp;
+抛出的任何异常。 </dd>
+<dd> <code>T::operator = (const T&amp;)</code>&amp;
+nbsp;抛出的任何异常。 </dd>
+</dl>
+<dl>
+<dt> <b>异常安全性:</b> </dt>
+<dd>基本；如果<i>抛出</i>一节中列出的操作没有抛出则不抛出异常。 </dd>
+</dl>
+<dl>
+<dt> <b>迭代器失效:</b> </dt>
+<dd>指向插入点(包括 <code>pos</code>)及插入点之后的迭代器(直至未
+尾；除了等于 <code><a href="circular_buffer.html#classboost_1_1circular__buffer_1babfa093dad7801223b80626b598dee1">end()</a></code>
+的迭代器)均失效。指向被覆写元素的迭代器也失效。 </dd>
+</dl>
+<dl>
+<dt> <b>复杂度:</b> </dt>
+<dd> 线性(与 <code>min[<a href="#classboost_1_1circular__buffer_1da435a5884cad746ed5cd55bcb892035">capacity()</a>,
+std::distance(pos, <a href="#classboost_1_1circular__buffer_1babfa093dad7801223b80626b598dee1">end()</a>)
++ n]</code> 相关)。 </dd>
+</dl>
+<dl>
+<dt> <b>例子：</b> </dt>
+<dd>考虑一个容量为6而大小为4的 <code>circular_buffer</code>。
+其内部缓冲区可能如下：<br>
+<br>
+<code>|1|2|3|4| | |</code><br>
+<code>p ---^</code><br>
+<br>
+在位置 <code>p</code> 插入5个元素后：<br>
+<br>
+<code>insert(p, (size_t)5, 0);</code><br>
+<br>
+实际上只有4个元素被插入而元素 <code>1</code> 和 <code>2</code>
+则被覆写。这是由于插入操作要保持容量不变。插入后的内部缓冲区如下：<br>
+<br>
+<code>|0|0|0|0|3|4|</code><br>
+<br>
+作为比较，如果容量无需保持，则内部缓冲区会是这样：<code>|1|2|0|0|0|0|0|3|4|</code>. </dd>
+</dl>
+<dl>
+<dt> <b>参见:</b> </dt>
+<dd> <code><a href="#classboost_1_1circular__buffer_128c92740fee1b9deb8c69816e389de95">insert(iterator,
+value_type)</a></code>, <code><a href="#classboost_1_1circular__buffer_1d00091d1d794cab3264b3674e99b33f6">insert(iterator,
+InputIterator, InputIterator)</a></code>, <code><a href="#classboost_1_1circular__buffer_12c9332f457bf5bb3128463cf528c058c">rinsert(iterator,
+value_type)</a></code>, <code><a href="#classboost_1_1circular__buffer_1a47a5358db1b7d7e4925c16db13d2fc5">rinsert(iterator,
+size_type, value_type)</a></code>, <code><a href="#classboost_1_1circular__buffer_1d6479cbc43a304bdbf04262f957fa323">rinsert(iterator,
+InputIterator, InputIterator)</a></code> </dd>
+</dl>
+</td>
+</tr>
+<tr>
+<td> <a id="classboost_1_1circular__buffer_1d00091d1d794cab3264b3674e99b33f6" name="classboost_1_1circular__buffer_1d00091d1d794cab3264b3674e99b33f6"></a>
+<code><b>template &lt;class InputIterator&gt;<br>
+void insert(<a href="#classboost_1_1circular__buffer_11b8a33f2dc8519b8a7d344ed4408c532">iterator</a>
+pos, InputIterator first, InputIterator last);</b></code><br>
+<br>
+将区间 <code>[first, last)</code> 插入到指定位置。
+<dl>
+<dt> <b>前提条件：</b> </dt>
+<dd> <code>pos</code> 为指向 <code>circular_buffer</code>
+或其尾部的有效迭代器。&nbsp;<br>
+有效区间 <code>[first, last)</code> 其中 <code>first</code>
+和 <code>last</code> 符合 <a href="http://www.sgi.com/tech/stl/InputIterator.html">输入迭代器
+InputIterator</a> 的要求。 </dd>
+</dl>
+<dl>
+<dt> <b>作用:</b> </dt>
+<dd> 区间 <code>[first + max[0, distance(first,
+last) - (pos - <a href="#classboost_1_1circular__buffer_158d1ede2e85f5d46eda8db3f0c4efef0">begin()</a>)
+- <a href="#classboost_1_1circular__buffer_17e144e8c7acd8e30c08bfb03391a2338">reserve()</a>],
+last)</code> 中的元素被插入到位置 <code>pos</code>.<br>
+<code>circular_buffer</code> 头部的 <code>min[pos
+- <a href="#classboost_1_1circular__buffer_158d1ede2e85f5d46eda8db3f0c4efef0">begin()</a>,
+max[0, distance(first, last) - <a href="#classboost_1_1circular__buffer_17e144e8c7acd8e30c08bfb03391a2338">reserve()</a>]]</code>
+个元素被覆写。<br>
+(详细解释请见<i>例子</i>) </dd>
+</dl>
+<dl>
+<dt> <b>参数：</b> </dt>
+<dd>
+<dl compact="compact">
+<dt> <code>pos</code> </dt>
+<dd>指定区间插入位置的迭代器。 </dd>
+</dl>
+</dd>
+<dd>
+<dl compact="compact">
+<dt> <code>first</code> </dt>
+<dd>被插入区间的开始。 </dd>
+</dl>
+</dd>
+<dd>
+<dl compact="compact">
+<dt> <code>last</code> </dt>
+<dd>被插入区间的结束。 </dd>
+</dl>
+</dd>
+</dl>
+<dl>
+<dt> <b>抛出:</b> </dt>
+<dd> <code>T::T(const T&amp;)</code>&nbsp;
+抛出的任何异常。 </dd>
+<dd> <code>T::operator = (const T&amp;)</code>&amp;
+nbsp;抛出的任何异常。 </dd>
+</dl>
+<dl>
+<dt> <b>异常安全性:</b> </dt>
+<dd>基本；如果<i>抛出</i>一节中列出的操作没有抛出则不抛出异常。 </dd>
+</dl>
+<dl>
+<dt> <b>迭代器失效:</b> </dt>
+<dd>指向插入点(包括 <code>pos</code>)及插入点之后的迭代器(直至未
+尾；除了等于 <code><a href="circular_buffer.html#classboost_1_1circular__buffer_1babfa093dad7801223b80626b598dee1">end()</a></code>
+的迭代器)均失效。指向被覆写元素的迭代器也失效。 </dd>
+</dl>
+<dl>
+<dt> <b>复杂度:</b> </dt>
+<dd> 线性(与 <code>[std::distance(pos, <a href="#classboost_1_1circular__buffer_1babfa093dad7801223b80626b598dee1">end()</a>)
++ std::distance(first, last)]</code> 相关；如果 <code>InputIterator</code>
+为 <a href="http://www.sgi.com/tech/stl/RandomAccessIterator.html">随
+机访问迭代器RandomAccessIterator</a> 则与 <code>min[<a href="#classboost_1_1circular__buffer_1da435a5884cad746ed5cd55bcb892035">capacity()</a>,
+std::distance(pos, <a href="#classboost_1_1circular__buffer_1babfa093dad7801223b80626b598dee1">end()</a>)
++ std::distance(first, last)]</code> 相关)。
+</dd>
+</dl>
+<dl>
+<dt> <b>例子：</b> </dt>
+<dd>考虑一个容量为6而大小为4的 <code>circular_buffer</code>。
+其内部缓冲区可能如下：<br>
+<br>
+<code>|1|2|3|4| | |</code><br>
+<code>p ---^</code><br>
+<br>
+在位置 <code>p</code> 插入一个区间的元素后：<br>
+<br>
+<code>int array[] = { 5, 6, 7, 8, 9 };</code><br>
+<code>insert(p, array, array + 5);</code><br>
+<br>
+实际上只有指定区间中的元素 <code>6</code>, <code>7</code>,
+<code>8</code> 和 <code>9</code>
+被插入，而元素 <code>1</code> 和 <code>2</code>
+被覆写。这是由于插入操作要保持容量不变。插入后的内部缓冲区如下：<br>
+<br>
+<code>|6|7|8|9|3|4|</code><br>
+<br>
+作为比较，如果容量无需保持，则内部缓冲区会是这样：<code>|</code><code>1|2|5|6|7|8|9|3|4|</code>.
+</dd>
+</dl>
+<dl>
+<dt> <b>参见:</b> </dt>
+<dd> <code><a href="#classboost_1_1circular__buffer_128c92740fee1b9deb8c69816e389de95">insert(iterator,
+value_type)</a></code>, <code><a href="#classboost_1_1circular__buffer_1b2f197c99d47138db777f0a46783b140">insert(iterator,
+size_type, value_type)</a></code>, <code><a href="#classboost_1_1circular__buffer_12c9332f457bf5bb3128463cf528c058c">rinsert(iterator,
+value_type)</a></code>, <code><a href="#classboost_1_1circular__buffer_1a47a5358db1b7d7e4925c16db13d2fc5">rinsert(iterator,
+size_type, value_type)</a></code>, <code><a href="#classboost_1_1circular__buffer_1d6479cbc43a304bdbf04262f957fa323">rinsert(iterator,
+InputIterator, InputIterator)</a></code> </dd>
+</dl>
+</td>
+</tr>
+<tr>
+<td> <a id="classboost_1_1circular__buffer_12c9332f457bf5bb3128463cf528c058c" name="classboost_1_1circular__buffer_12c9332f457bf5bb3128463cf528c058c"></a><code><b><a href="#classboost_1_1circular__buffer_11b8a33f2dc8519b8a7d344ed4408c532">iterator</a>
+rinsert(<a href="#classboost_1_1circular__buffer_11b8a33f2dc8519b8a7d344ed4408c532">iterator</a>
+pos, <a href="#classboost_1_1circular__buffer_1a8397191092f5bacee991b623ca4b910">const_reference</a>
+item = value_type());</b></code><br>
+<br>
+在指定位置之前插入一个元素。
+<dl>
+<dt> <b>前提条件：</b> </dt>
+<dd> <code>pos</code>&nbsp;是一个指向 <code>circular_buffer</code>
+或其尾部的有效迭代器。&nbsp; </dd>
+</dl>
+<dl>
+<dt> <b>作用:</b> </dt>
+<dd><code>item</code>&nbsp;被插入到位置&amp;
+nbsp; <code>pos</code> 之前。<br>
+如果 <code>circular_buffer</code> 已满，则最后一个元素被覆写。如果 <code>circular_buffer</code>
+已满且 <code>pos</code> 指向 <code><a href="#classboost_1_1circular__buffer_1babfa093dad7801223b80626b598dee1">end()</a></code>,
+则 <code>item</code> 不会被插入。如果容量为 <code>0</code>,
+也不插入。 </dd>
+</dl>
+<dl>
+<dt> <b>参数：</b> </dt>
+<dd>
+<dl compact="compact">
+<dt> <code>pos</code> </dt>
+<dd>指定 <code>item</code> 插入的位置之前的迭代器。 </dd>
+</dl>
+</dd>
+<dd>
+<dl compact="compact">
+<dt> <code>item</code> </dt>
+<dd>被插入的元素。&nbsp; </dd>
+</dl>
+</dd>
+</dl>
+<dl>
+<dt> <b>返回:</b> </dt>
+<dd>指向插入后元素的迭代器，如果 <code>item</code> 未插入则返回 <code><a href="circular_buffer.html#classboost_1_1circular__buffer_1babfa093dad7801223b80626b598dee1">end()</a></code>。(见<i>作
+用</i>)</dd>
+</dl>
+<dl>
+<dt> <b>抛出:</b> </dt>
+<dd> <code>T::T(const T&amp;)</code>&nbsp;
+抛出的任何异常。 </dd>
+<dd> <code>T::operator = (const T&amp;)</code>&amp;
+nbsp;抛出的任何异常。 </dd>
+</dl>
+<dl>
+<dt> <b>异常安全性:</b> </dt>
+<dd>基本；如果<i>抛出</i>一节中列出的操作没有抛出则不抛出异常。 </dd>
+</dl>
+<dl>
+<dt> <b>迭代器失效:</b> </dt>
+<dd>指向插入点之前的迭代器(直至开始，除了 <code>pos</code>)均失效。
+指向被覆写元素的迭代器也失效。 </dd>
+</dl>
+<dl>
+<dt> <b>复杂度:</b> </dt>
+<dd> 线性(与 <code>std::distance(<a href="#classboost_1_1circular__buffer_158d1ede2e85f5d46eda8db3f0c4efef0">begin()</a>,
+pos)</code> 相关)。 </dd>
+</dl>
+<dl>
+<dt> <b>参见:</b> </dt>
+<dd> <code><a href="#classboost_1_1circular__buffer_1a47a5358db1b7d7e4925c16db13d2fc5">rinsert(iterator,
+size_type, value_type)</a></code>, <code><a href="#classboost_1_1circular__buffer_1d6479cbc43a304bdbf04262f957fa323">rinsert(iterator,
+InputIterator, InputIterator)</a></code>, <code><a href="#classboost_1_1circular__buffer_128c92740fee1b9deb8c69816e389de95">insert(iterator,
+value_type)</a></code>, <code><a href="#classboost_1_1circular__buffer_1b2f197c99d47138db777f0a46783b140">insert(iterator,
+size_type, value_type)</a></code>, <code><a href="#classboost_1_1circular__buffer_1d00091d1d794cab3264b3674e99b33f6">insert(iterator,
+InputIterator, InputIterator)</a></code> </dd>
+</dl>
+</td>
+</tr>
+<tr>
+<td> <a id="classboost_1_1circular__buffer_1a47a5358db1b7d7e4925c16db13d2fc5" name="classboost_1_1circular__buffer_1a47a5358db1b7d7e4925c16db13d2fc5"></a><code><b>void
+rinsert(<a href="#classboost_1_1circular__buffer_11b8a33f2dc8519b8a7d344ed4408c532">iterator</a>
+pos, <a href="#classboost_1_1circular__buffer_19ba12c0142a21a7d960877c22fa3ea00">size_type</a>
+n, <a href="#classboost_1_1circular__buffer_1a8397191092f5bacee991b623ca4b910">const_reference</a>
+item);</b></code><br>
+<br>
+插入 <code>item</code> 的 <code>n</code>
+份拷贝到指定位置之前。
+<dl>
+<dt> <b>前提条件：</b> </dt>
+<dd> <code>pos</code>&nbsp;为指向 <code>circular_buffer</code>
+或其尾部的有效迭代器。 </dd>
+</dl>
+<dl>
+<dt> <b>作用:</b> </dt>
+<dd><code>min[n, (<a href="#classboost_1_1circular__buffer_1babfa093dad7801223b80626b598dee1">end()</a>
+- pos) + <a href="#classboost_1_1circular__buffer_17e144e8c7acd8e30c08bfb03391a2338">reserve()</a>]</code>&amp;
+nbsp;个元素将被插入到位置 <code>pos</code> 之前。<br>
+<code>circular_buffer</code> 尾部的 <code>min[</code><code><a href="circular_buffer.html#classboost_1_1circular__buffer_1babfa093dad7801223b80626b598dee1">end()</a>
+- pos</code><code>, max[0, n - <a href="#classboost_1_1circular__buffer_17e144e8c7acd8e30c08bfb03391a2338">reserve()</a>]]</code>
+个元素将被覆写。<br>
+(详细解释请见<i>例子</i>)&nbsp; </dd>
+</dl>
+<dl>
+<dt> <b>参数：</b> </dt>
+<dd>
+<dl compact="compact">
+<dt> <code>pos</code> </dt>
+<dd>指定 <code>item</code>s 插入位置的迭代器。 </dd>
+</dl>
+</dd>
+<dd>
+<dl compact="compact">
+<dt> <code>n</code> </dt>
+<dd>被插入的 <code>item</code>s
+数量。&nbsp; </dd>
+</dl>
+</dd>
+<dd>
+<dl compact="compact">
+<dt> <code>item</code> </dt>
+<dd>被插入的元素。</dd>
+</dl>
+</dd>
+</dl>
+<dl>
+<dt> <b>抛出:</b> </dt>
+<dd> <code>T::T(const T&amp;)</code>&nbsp;
+抛出的任何异常。 </dd>
+<dd> <code>T::operator = (const T&amp;)</code>&amp;
+nbsp;抛出的任何异常。 </dd>
+</dl>
+<dl>
+<dt> <b>异常安全性:</b> </dt>
+<dd>基本；如果<i>抛出</i>一节中列出的操作没有抛出则不抛出异常。 </dd>
+</dl>
+<dl>
+<dt> <b>迭代器失效:</b> </dt>
+<dd>指向插入点之前的迭代器(直至开始，除了 <code>pos</code>)均失效。
+指向被覆写元素的迭代器也失效。&nbsp; </dd>
+</dl>
+<dl>
+<dt> <b>复杂度:</b> </dt>
+<dd> 线性(与 <code>min[<a href="#classboost_1_1circular__buffer_1da435a5884cad746ed5cd55bcb892035">capacity()</a>,
+std::distance(<a href="#classboost_1_1circular__buffer_158d1ede2e85f5d46eda8db3f0c4efef0">begin()</a>,
+pos) + n]</code> 相关)。 </dd>
+</dl>
+<dl>
+<dt> <span style="font-weight: bold;">例子：</span>
+</dt>
+<dd>考虑一个容量为6而大小为4的 <code>circular_buffer</code>。
+其内部缓冲区可能如下：<br>
+<br>
+<code>|1|2|3|4| | |</code><br>
+<code>p ---^</code><br>
+<br>
+在位置 <code>p</code> 之前插入5个元素后:<br>
+<br>
+<code>rinsert(p, (size_t)5, 0);</code><br>
+<br>
+实际上只有4个元素被插入，而元素 <code>3</code> 和 <code>4</code>
+被覆写。这是由于插入操作要保持容量不变。插入后的内部缓冲区如下：<br>
+<br>
+<code>|1|2|0|0|0|0|</code><br>
+<br>
+作为比较，如果容量无需保持，则内部缓冲区会是这样: <code>|1|2|0|0|0|0|0|3|4|</code>.
+</dd>
+</dl>
+<dl>
+<dt> <b>参见:</b> </dt>
+<dd> <code><a href="#classboost_1_1circular__buffer_12c9332f457bf5bb3128463cf528c058c">rinsert(iterator,
+value_type)</a></code>, <code><a href="#classboost_1_1circular__buffer_1d6479cbc43a304bdbf04262f957fa323">rinsert(iterator,
+InputIterator, InputIterator)</a></code>, <code><a href="#classboost_1_1circular__buffer_128c92740fee1b9deb8c69816e389de95">insert(iterator,
+value_type)</a></code>, <code><a href="#classboost_1_1circular__buffer_1b2f197c99d47138db777f0a46783b140">insert(iterator,
+size_type, value_type)</a></code>, <code><a href="#classboost_1_1circular__buffer_1d00091d1d794cab3264b3674e99b33f6">insert(iterator,
+InputIterator, InputIterator)</a></code> </dd>
+</dl>
+</td>
+</tr>
+<tr>
+<td> <a id="classboost_1_1circular__buffer_1d6479cbc43a304bdbf04262f957fa323" name="classboost_1_1circular__buffer_1d6479cbc43a304bdbf04262f957fa323"></a>
+<code><b>template &lt;class InputIterator&gt;<br>
+void rinsert(<a href="#classboost_1_1circular__buffer_11b8a33f2dc8519b8a7d344ed4408c532">iterator</a>
+pos, InputIterator first, InputIterator last);</b></code><br>
+<br>
+将区间 <code>[first, last)</code> 插入到指定位置之前。
+<dl>
+<dt> <b>前提条件：</b> </dt>
+<dd> <code>pos</code> 为指向 <code>circular_buffer</code>
+或其尾部的有效迭代器。&nbsp;<br>
+有效区间 <code>[first, last)</code> 其中 <code>first</code>
+和 <code>last</code> 符合 <a href="http://www.sgi.com/tech/stl/InputIterator.html">输入迭代器
+InputIterator</a> 的要求。 </dd>
+</dl>
+<dl>
+<dt> <b>作用:</b> </dt>
+<dd>区间&nbsp;<code>[first, last - max[0,
+distance(first, last) - (<a href="circular_buffer.html#classboost_1_1circular__buffer_1babfa093dad7801223b80626b598dee1">end()</a>
+- pos) - <a href="circular_buffer.html#classboost_1_1circular__buffer_17e144e8c7acd8e30c08bfb03391a2338">reserve()</a>])</code>
+中的元素被插入到位置 <code>pos</code> 之前。<br>
+<code>circular_buffer</code> 尾部的 <code>min[</code><code><a href="circular_buffer.html#classboost_1_1circular__buffer_1babfa093dad7801223b80626b598dee1">end()</a>
+- pos</code><code>, max[0, distance(first, last) - <a href="#classboost_1_1circular__buffer_17e144e8c7acd8e30c08bfb03391a2338">reserve()</a>]]</code>
+个元素被覆写。<br>
+(详细解释请见<i>例子</i>)</dd>
+</dl>
+<dl>
+<dt> <b>参数：</b> </dt>
+<dd>
+<dl compact="compact">
+<dt> <code>pos</code> </dt>
+<dd>指定区间插入位置的迭代器。</dd>
+</dl>
+</dd>
+<dd>
+<dl compact="compact">
+<dt> <code>first</code> </dt>
+<dd>被插入区间的开始。</dd>
+</dl>
+</dd>
+<dd>
+<dl compact="compact">
+<dt> <code>last</code> </dt>
+<dd>被插入区间的结束。</dd>
+</dl>
+</dd>
+</dl>
+<dl>
+<dt> <b>抛出:</b> </dt>
+<dd> <code>T::T(const T&amp;)</code>&nbsp;
+抛出的任何异常。 </dd>
+<dd> <code>T::operator = (const T&amp;)</code>&amp;
+nbsp;抛出的任何异常。 </dd>
+</dl>
+<dl>
+<dt> <b>异常安全性:</b> </dt>
+<dd>基本；如果<i>抛出</i>一节中列出的操作没有抛出则不抛出异常。 </dd>
+</dl>
+<dl>
+<dt> <b>迭代器失效:</b> </dt>
+<dd>指向插入点之前的迭代器(直至开始，除了 <code>pos</code>)均失效。
+指向被覆写元素的迭代器也失效。&nbsp; </dd>
+</dl>
+<dl>
+<dt> <b>复杂度:</b> </dt>
+<dd>线性(与 <code>[std::distance(<a href="#classboost_1_1circular__buffer_158d1ede2e85f5d46eda8db3f0c4efef0">begin()</a>,
+pos) + std::distance(first, last)]</code> 相关；如果 <code>InputIterator</code>
+为 <a href="http://www.sgi.com/tech/stl/RandomAccessIterator.html">随
+机访问迭代器RandomAccessIterator</a> 则与 <code>min[<a href="#classboost_1_1circular__buffer_1da435a5884cad746ed5cd55bcb892035">capacity()</a>,
+std::distance(</code><code><a href="circular_buffer.html#classboost_1_1circular__buffer_158d1ede2e85f5d46eda8db3f0c4efef0">begin()</a>,
+pos</code><code>) + std::distance(first, last)]</code>
+相关)。 </dd>
+</dl>
+<dl>
+<dt> <b>例子：</b> </dt>
+<dd>考虑一个容量为6而大小为4的 <code>circular_buffer</code>。
+其内部缓冲区可能如下：<br>
+<br>
+<code>|1|2|3|4| | |</code><br>
+<code>p ---^</code><br>
+<br>
+在位置 <code>p</code> 之前插入一个区间的元素后：<br>
+<br>
+<code>int array[] = { 5, 6, 7, 8, 9 };</code><br>
+<code>insert(p, array, array + 5);</code><br>
+<br>
+实际上只有指定区间中的元素&nbsp;<code>5</code>, <code>6</code>,
+<code>7</code> 和 <code>8</code><code></code>
+被插入，而元素&nbsp;<code>3</code> 和 <code>4</code><code></code>
+被覆写。这是由于插入操作要保持容量不变。插入后的内部缓冲区如下：<br>
+<br>
+<code>|1|2|5|6|7|8|</code><br>
+<br>
+作为比较，如果容量无需保持，则内部缓冲区会是这样：<code>|1|2|5|6|7|8|9|3|4|</code>. </dd>
+</dl>
+<dl>
+<dt> <b>参见:</b> </dt>
+<dd> <code><a href="#classboost_1_1circular__buffer_12c9332f457bf5bb3128463cf528c058c">rinsert(iterator,
+value_type)</a></code>, <code><a href="#classboost_1_1circular__buffer_1a47a5358db1b7d7e4925c16db13d2fc5">rinsert(iterator,
+size_type, value_type)</a></code>, <code><a href="#classboost_1_1circular__buffer_128c92740fee1b9deb8c69816e389de95">insert(iterator,
+value_type)</a></code>, <code><a href="#classboost_1_1circular__buffer_1b2f197c99d47138db777f0a46783b140">insert(iterator,
+size_type, value_type)</a></code>, <code><a href="#classboost_1_1circular__buffer_1d00091d1d794cab3264b3674e99b33f6">insert(iterator,
+InputIterator, InputIterator)</a></code> </dd>
+</dl>
+</td>
+</tr>
+<tr>
+<td> <a id="classboost_1_1circular__buffer_197155de712db1759e1698455b49a0be3" name="classboost_1_1circular__buffer_197155de712db1759e1698455b49a0be3"></a><code><b><a href="#classboost_1_1circular__buffer_11b8a33f2dc8519b8a7d344ed4408c532">iterator</a>
+erase(<a href="#classboost_1_1circular__buffer_11b8a33f2dc8519b8a7d344ed4408c532">iterator</a>
+pos);</b></code><br>
+<br>
+删除指定位置的一个元素。
+<dl>
+<dt> <b>前提条件：</b> </dt>
+<dd> <code>pos</code> 是一个指向 <code>circular_buffer</code>&amp;
+nbsp;的有效迭代器(但不是 <code><a href="#classboost_1_1circular__buffer_1babfa093dad7801223b80626b598dee1">end()</a></code>)。
+</dd>
+</dl>
+<dl>
+<dt> <b>作用:</b> </dt>
+<dd>位置 <code>pos</code> 的元素被删除。 </dd>
+</dl>
+<dl>
+<dt> <b>参数：</b> </dt>
+<dd>
+<dl compact="compact">
+<dt> <code>pos</code> </dt>
+<dd>指向被删除元素的迭代器。 </dd>
+</dl>
+</dd>
+</dl>
+<dl>
+<dt> <b>返回:</b> </dt>
+<dd>指向被删除元素之后第一个元素的迭代器，如果不存在这样的元素则返回 <code><a href="#classboost_1_1circular__buffer_1babfa093dad7801223b80626b598dee1">end()</a></code>.
+</dd>
+</dl>
+<dl>
+<dt> <b>抛出:</b> </dt>
+<dd> <code>T::operator = (const T&amp;)</code>&amp;
+nbsp;抛出的任何异常。 </dd>
+</dl>
+<dl>
+<dt> <b>异常安全性:</b> </dt>
+<dd>基本；如果<i>抛出</i>一节中列出的操作没有抛出则不抛出异常。 </dd>
+</dl>
+<dl>
+<dt> <b>迭代器失效:</b> </dt>
+<dd>指向被删除元素及其之后的元素的迭代器(直至未尾；除了等于 <code><a href="#classboost_1_1circular__buffer_1babfa093dad7801223b80626b598dee1">end()</a></code>
+的迭代器)均失效。 </dd>
+</dl>
+<dl>
+<dt> <b>复杂度:</b> </dt>
+<dd>线性(与 <code>std::distance(pos, <a href="#classboost_1_1circular__buffer_1babfa093dad7801223b80626b598dee1">end()</a>)</code>
+相关)。 </dd>
+</dl>
+<dl>
+<dt> <b>参见:</b> </dt>
+<dd> <code><a href="#classboost_1_1circular__buffer_1a96415389509a18bd7d7b5d8e4dda9bd">erase(iterator,
+iterator)</a></code>, <code><a href="#classboost_1_1circular__buffer_1b6d4ae77d7445f844e30e78592f1e06f">rerase(iterator)</a></code>,
+<code><a href="#classboost_1_1circular__buffer_1b0f98ae303584ded5397f067bbfc911f">rerase(iterator,
+iterator)</a></code>, <code><a href="#classboost_1_1circular__buffer_1826f5770a40b8b752eb9587378464d1e">clear()</a></code>
+</dd>
+</dl>
+</td>
+</tr>
+<tr>
+<td> <a id="classboost_1_1circular__buffer_1a96415389509a18bd7d7b5d8e4dda9bd" name="classboost_1_1circular__buffer_1a96415389509a18bd7d7b5d8e4dda9bd"></a><code><b><a href="#classboost_1_1circular__buffer_11b8a33f2dc8519b8a7d344ed4408c532">iterator</a>
+erase(<a href="#classboost_1_1circular__buffer_11b8a33f2dc8519b8a7d344ed4408c532">iterator</a>
+first, <a href="#classboost_1_1circular__buffer_11b8a33f2dc8519b8a7d344ed4408c532">iterator</a>
+last);</b></code><br>
+<br>
+删除区间 <code>[first, last)</code>.
+<dl>
+<dt> <b>前提条件：</b> </dt>
+<dd>有效区间 <code>[first, last)</code>. </dd>
+</dl>
+<dl>
+<dt> <b>作用:</b> </dt>
+<dd>区间 <code>[first, last)</code>
+中的元素被删除。(如果 <code>first == last</code> 则没有删除) </dd>
+</dl>
+<dl>
+<dt> <b>参数：</b> </dt>
+<dd>
+<dl compact="compact">
+<dt> <code>first</code> </dt>
+<dd>被删除区间的开始。 </dd>
+</dl>
+</dd>
+<dd>
+<dl compact="compact">
+<dt> <code>last</code> </dt>
+<dd>被删除区间的结束。 </dd>
+</dl>
+</dd>
+</dl>
+<dl>
+<dt> <b>返回:</b> </dt>
+<dd>指向被删除元素之后第一个元素的迭代器，如果不存在这样的元素则返回 <code><a href="#classboost_1_1circular__buffer_1babfa093dad7801223b80626b598dee1">end()</a></code>.</dd>
+</dl>
+<dl>
+<dt> <b>抛出:</b> </dt>
+<dd> <code>T::operator = (const T&amp;)</code>&amp;
+nbsp;抛出的任何异常。 </dd>
+</dl>
+<dl>
+<dt> <b>异常安全性:</b> </dt>
+<dd>基本；如果<i>抛出</i>一节中列出的操作没有抛出则不抛出异常。 </dd>
+</dl>
+<dl>
+<dt> <b>迭代器失效:</b> </dt>
+<dd>指向被删除元素及其之后的元素的迭代器(直至未尾；除了等于 <code><a href="#classboost_1_1circular__buffer_1babfa093dad7801223b80626b598dee1">end()</a></code>
+的迭代器)均失效。 </dd>
+</dl>
+<dl>
+<dt> <b>复杂度:</b> </dt>
+<dd>线性(与 <code>std::distance(first, <a href="#classboost_1_1circular__buffer_1babfa093dad7801223b80626b598dee1">end()</a>)</code>
+相关)。 </dd>
+</dl>
+<dl>
+<dt> <b>参见:</b> </dt>
+<dd> <code><a href="#classboost_1_1circular__buffer_197155de712db1759e1698455b49a0be3">erase(iterator)</a></code>,
+<code><a href="#classboost_1_1circular__buffer_1b6d4ae77d7445f844e30e78592f1e06f">rerase(iterator)</a></code>,
+<code><a href="#classboost_1_1circular__buffer_1b0f98ae303584ded5397f067bbfc911f">rerase(iterator,
+iterator)</a></code>, <code><a href="#classboost_1_1circular__buffer_1826f5770a40b8b752eb9587378464d1e">clear()</a></code>
+</dd>
+</dl>
+</td>
+</tr>
+<tr>
+<td> <a id="classboost_1_1circular__buffer_1b6d4ae77d7445f844e30e78592f1e06f" name="classboost_1_1circular__buffer_1b6d4ae77d7445f844e30e78592f1e06f"></a><code><b><a href="#classboost_1_1circular__buffer_11b8a33f2dc8519b8a7d344ed4408c532">iterator</a>
+rerase(<a href="#classboost_1_1circular__buffer_11b8a33f2dc8519b8a7d344ed4408c532">iterator</a>
+pos);</b></code><br>
+<br>
+删除指定位置的一个元素。
+<dl>
+<dt> <b>前提条件：</b> </dt>
+<dd> <code>pos</code> 是一个指向 <code>circular_buffer</code>&amp;
+nbsp;的有效迭代器(但不是 <code><a href="#classboost_1_1circular__buffer_1babfa093dad7801223b80626b598dee1">end()</a></code>)。
+&nbsp; </dd>
+</dl>
+<dl>
+<dt> <b>作用:</b> </dt>
+<dd>位置 <code>pos</code> 的元素被删除。</dd>
+</dl>
+<dl>
+<dt> <b>参数：</b> </dt>
+<dd>
+<dl compact="compact">
+<dt> <code>pos</code> </dt>
+<dd>指向被删除元素的迭代器。</dd>
+</dl>
+</dd>
+</dl>
+<dl>
+<dt> <b>返回:</b> </dt>
+<dd>指向被删除元素之前第一个元素的迭代器，如果不存在这样的元素则返回 <code><a href="circular_buffer.html#classboost_1_1circular__buffer_158d1ede2e85f5d46eda8db3f0c4efef0">begin()</a></code>.</dd>
+</dl>
+<dl>
+<dt> <b>抛出:</b> </dt>
+<dd> <code>T::operator = (const T&amp;)</code>&amp;
+nbsp;抛出的任何异常。 </dd>
+</dl>
+<dl>
+<dt> <b>异常安全性:</b> </dt>
+<dd>基本；如果<i>抛出</i>一节中列出的操作没有抛出则不抛出异常。 </dd>
+</dl>
+<dl>
+<dt> <b>迭代器失效:</b> </dt>
+<dd>指向被删除元素及其之前的元素的迭代器(直至开始)均失效。</dd>
+</dl>
+<dl>
+<dt> <b>复杂度:</b> </dt>
+<dd>线性(与 <code>std::distance(<a href="#classboost_1_1circular__buffer_158d1ede2e85f5d46eda8db3f0c4efef0">begin()</a>,
+pos)</code> 相关)。 </dd>
+</dl>
+<dl>
+<dt> <b>说明：</b> </dt>
+<dd>该方法与 <code><a href="#classboost_1_1circular__buffer_197155de712db1759e1698455b49a0be3">erase(iterator)</a></code>
+方法对称，且如果迭代器 <code>pos</code> 靠近 <code>circular_buffer</code>
+的头部则比 <code><a href="circular_buffer.html#classboost_1_1circular__buffer_197155de712db1759e1698455b49a0be3">erase(iterator)</a></code>
+更高效。(请见<i>复杂度</i>) </dd>
+</dl>
+<dl>
+<dt> <b>参见:</b> </dt>
+<dd> <code><a href="#classboost_1_1circular__buffer_197155de712db1759e1698455b49a0be3">erase(iterator)</a></code>,
+<code><a href="#classboost_1_1circular__buffer_1a96415389509a18bd7d7b5d8e4dda9bd">erase(iterator,
+iterator)</a></code>, <code><a href="#classboost_1_1circular__buffer_1b0f98ae303584ded5397f067bbfc911f">rerase(iterator,
+iterator)</a></code>, <code><a href="#classboost_1_1circular__buffer_1826f5770a40b8b752eb9587378464d1e">clear()</a></code>
+</dd>
+</dl>
+</td>
+</tr>
+<tr>
+<td> <a id="classboost_1_1circular__buffer_1b0f98ae303584ded5397f067bbfc911f" name="classboost_1_1circular__buffer_1b0f98ae303584ded5397f067bbfc911f"></a><code><b><a href="#classboost_1_1circular__buffer_11b8a33f2dc8519b8a7d344ed4408c532">iterator</a>
+rerase(<a href="#classboost_1_1circular__buffer_11b8a33f2dc8519b8a7d344ed4408c532">iterator</a>
+first, <a href="#classboost_1_1circular__buffer_11b8a33f2dc8519b8a7d344ed4408c532">iterator</a>
+last);</b></code><br>
+<br>
+删除区间 <code>[first, last)</code>.
+<dl>
+<dt> <b>前提条件：</b> </dt>
+<dd>有效区间 <code>[first, last)</code>. </dd>
+</dl>
+<dl>
+<dt> <b>作用:</b> </dt>
+<dd>区间 <code>[first, last)</code>
+中的元素被删除。(如果 <code>first == last</code> 则没有删除)</dd>
+</dl>
+<dl>
+<dt> <b>参数：</b> </dt>
+<dd>
+<dl compact="compact">
+<dt> <code>first</code> </dt>
+<dd>被删除区间的开始。</dd>
+</dl>
+</dd>
+<dd>
+<dl compact="compact">
+<dt> <code>last</code> </dt>
+<dd>被删除区间的结束。</dd>
+</dl>
+</dd>
+</dl>
+<dl>
+<dt> <b>返回:</b> </dt>
+<dd>指向被删除元素之前第一个元素的迭代器，如果不存在这样的元素则返回 <code><a href="circular_buffer.html#classboost_1_1circular__buffer_158d1ede2e85f5d46eda8db3f0c4efef0">begin()</a></code><code></code>.</dd>
+</dl>
+<dl>
+<dt> <b>抛出:</b> </dt>
+<dd> <code>T::operator = (const T&amp;)</code>&amp;
+nbsp;抛出的任何异常。 </dd>
+</dl>
+<dl>
+<dt> <b>异常安全性:</b> </dt>
+<dd>基本；如果<i>抛出</i>一节中列出的操作没有抛出则不抛出异常。 </dd>
+</dl>
+<dl>
+<dt> <b>迭代器失效:</b> </dt>
+<dd>指向被删除元素及其之前的元素的迭代器(直至开始)均失效。 </dd>
+</dl>
+<dl>
+<dt> <b>复杂度:</b> </dt>
+<dd>线性(与 <code>std::distance(<a href="#classboost_1_1circular__buffer_158d1ede2e85f5d46eda8db3f0c4efef0">begin()</a>,&nbsp;</code><code>last</code><code>)</code>
+相关)。</dd>
+</dl>
+<dl>
+<dt> <b>说明：</b> </dt>
+<dd>该方法与 <code><a href="#classboost_1_1circular__buffer_1a96415389509a18bd7d7b5d8e4dda9bd">erase(iterator,
+iterator)</a></code> 方法对称，且如果 <code>std::distance(<a href="circular_buffer.html#classboost_1_1circular__buffer_158d1ede2e85f5d46eda8db3f0c4efef0">begin()</a>,
+first)</code> 小于 <code>std::distance(last, <a href="circular_buffer.html#classboost_1_1circular__buffer_1babfa093dad7801223b80626b598dee1">end()</a>)</code>
+则比&nbsp;<code><a href="circular_buffer.html#classboost_1_1circular__buffer_1a96415389509a18bd7d7b5d8e4dda9bd">erase(iterator,
+iterator)</a></code> 更高效。 </dd>
+</dl>
+<dl>
+<dt> <b>参见:</b> </dt>
+<dd> <code><a href="#classboost_1_1circular__buffer_197155de712db1759e1698455b49a0be3">erase(iterator)</a></code>,
+<code><a href="#classboost_1_1circular__buffer_1a96415389509a18bd7d7b5d8e4dda9bd">erase(iterator,
+iterator)</a></code>, <code><a href="#classboost_1_1circular__buffer_1b6d4ae77d7445f844e30e78592f1e06f">rerase(iterator)</a></code>,
+<code><a href="#classboost_1_1circular__buffer_1826f5770a40b8b752eb9587378464d1e">clear()</a></code>
+</dd>
+</dl>
+</td>
+</tr>
+<tr>
+<td> <a id="classboost_1_1circular__buffer_1826f5770a40b8b752eb9587378464d1e" name="classboost_1_1circular__buffer_1826f5770a40b8b752eb9587378464d1e"></a><code><b>void
+clear();</b></code><br>
+<br>
+删除 <code>circular_buffer</code> 中的所有元素。
+<dl>
+<dt> <b>作用:</b> </dt>
+<dd> <code><a href="#classboost_1_1circular__buffer_1d666f694897465b0d4d7cdd8ddcbc213">size()</a>
+== 0</code> </dd>
+</dl>
+<dl>
+<dt> <b>抛出:</b> </dt>
+<dd>无。 </dd>
+</dl>
+<dl>
+<dt> <b>异常安全性:</b> </dt>
+<dd>无抛出。 </dd>
+</dl>
+<dl>
+<dt> <b>迭代器失效:</b> </dt>
+<dd>指向 <code>circular_buffer</code>
+的所有迭代器(除了等于 <code><a href="#classboost_1_1circular__buffer_1babfa093dad7801223b80626b598dee1">end()</a></code>
+的迭代器)均失效。 </dd>
+</dl>
+<dl>
+<dt> <b>复杂度:</b> </dt>
+<dd>线性(与 <code>circular_buffer</code>
+的大小相关)。 </dd>
+</dl>
+<dl>
+<dt> <b>参见:</b> </dt>
+<dd> <code><a href="#classboost_1_1circular__buffer_164250ffbbbdbc62b99e8301fc195b80c">~circular_buffer()</a></code>,
+<code><a href="#classboost_1_1circular__buffer_197155de712db1759e1698455b49a0be3">erase(iterator)</a></code>,
+<code><a href="#classboost_1_1circular__buffer_1a96415389509a18bd7d7b5d8e4dda9bd">erase(iterator,
+iterator)</a></code>, <code><a href="#classboost_1_1circular__buffer_1b6d4ae77d7445f844e30e78592f1e06f">rerase(iterator)</a></code>,
+<code><a href="#classboost_1_1circular__buffer_1b0f98ae303584ded5397f067bbfc911f">rerase(iterator,
+iterator)</a></code> </dd>
+</dl>
+</td>
+</tr>
+</tbody>
+</table>
+</div>
+<h2> <a name="functions" id="functions">独立函数</a>
+</h2>
+<div id="srcdoc_functions">
+<table id="table_functions" border="1" cellpadding="3">
+<tbody>
+<tr>
+<td> <a id="namespaceboost_1d35871e838359b5215e1cbb353663207" name="namespaceboost_1d35871e838359b5215e1cbb353663207"></a>
+<code><b>template &lt;class T, class Alloc&gt;<br>
+bool operator==(const circular_buffer&lt;T,Alloc&gt;&amp;
+lhs, const circular_buffer&lt;T,Alloc&gt;&amp; rhs);</b></code><br>
+<br>
+逐个元素比较两个 <code>circular_buffer</code>s 判断它们是否相等。
+<dl>
+<dt> <b>参数：</b> </dt>
+<dd>
+<dl compact="compact">
+<dt> <code>lhs</code> </dt>
+<dd>用于比较的 <code>circular_buffer</code>. </dd>
+</dl>
+</dd>
+<dd>
+<dl compact="compact">
+<dt> <code>rhs</code> </dt>
+<dd>用于比较的 <code>circular_buffer</code>. </dd>
+</dl>
+</dd>
+</dl>
+<dl>
+<dt> <b>返回:</b> </dt>
+<dd> <code>lhs.<a href="#classboost_1_1circular__buffer_1d666f694897465b0d4d7cdd8ddcbc213">size()</a>
+== rhs.<a href="#classboost_1_1circular__buffer_1d666f694897465b0d4d7cdd8ddcbc213">size()</a>
+&amp;&amp; <a href="http://www.sgi.com/tech/stl/equal.html">std::equal</a>(lhs.<a href="#classboost_1_1circular__buffer_158d1ede2e85f5d46eda8db3f0c4efef0">begin()</a>,
+lhs.<a href="#classboost_1_1circular__buffer_1babfa093dad7801223b80626b598dee1">end()</a>,
+rhs.<a href="#classboost_1_1circular__buffer_158d1ede2e85f5d46eda8db3f0c4efef0">begin()</a>)</code>
+</dd>
+</dl>
+<dl>
+<dt> <b>抛出:</b> </dt>
+<dd>无。 </dd>
+</dl>
+<dl>
+<dt> <b>复杂度:</b> </dt>
+<dd>线性(与 <code>circular_buffer</code>s
+的大小相关)。 </dd>
+</dl>
+<dl>
+<dt> <b>迭代器失效:</b> </dt>
+<dd>不会令任何迭代器失效。 </dd>
+</dl>
+</td>
+</tr>
+<tr>
+<td> <a id="namespaceboost_195b08213f201c2067d8acb024756329d" name="namespaceboost_195b08213f201c2067d8acb024756329d"></a>
+<code><b>template &lt;class T, class Alloc&gt;<br>
+bool operator&lt;(const
+circular_buffer&lt;T,Alloc&gt;&amp; lhs, const
+circular_buffer&lt;T,Alloc&gt;&amp; rhs);</b></code><br>
+<br>
+逐个元素比较两个 <code>circular_buffer</code>s 判断左操作数是否小于右操作数。
+<dl>
+<dt> <b>参数</b> </dt>
+<dd>
+<dl compact="compact">
+<dt> <code>lhs</code> </dt>
+<dd>用于比较的 <code>circular_buffer</code>. </dd>
+</dl>
+</dd>
+<dd>
+<dl compact="compact">
+<dt> <code>rhs</code> </dt>
+<dd>用于比较的 <code>circular_buffer</code>. </dd>
+</dl>
+</dd>
+</dl>
+<dl>
+<dt> <b>返回:</b> </dt>
+<dd> <code><a href="http://www.sgi.com/tech/stl/lexicographical_compare.html">std::lexicographical_compare</a>(lhs.<a href="#classboost_1_1circular__buffer_158d1ede2e85f5d46eda8db3f0c4efef0">begin()</a>,
+lhs.<a href="#classboost_1_1circular__buffer_1babfa093dad7801223b80626b598dee1">end()</a>,
+rhs.<a href="#classboost_1_1circular__buffer_158d1ede2e85f5d46eda8db3f0c4efef0">begin()</a>,
+rhs.<a href="#classboost_1_1circular__buffer_1babfa093dad7801223b80626b598dee1">end()</a>)</code>
+</dd>
+</dl>
+<dl>
+<dt> <b>抛出:</b> </dt>
+<dd> 无。 </dd>
+</dl>
+<dl>
+<dt> <b>复杂度:</b> </dt>
+<dd>线性(与 <code>circular_buffer</code>s
+的大小相关)。 </dd>
+</dl>
+<dl>
+<dt> <b>迭代器失效:</b> </dt>
+<dd> 不会令任何迭代器失效。 </dd>
+</dl>
+</td>
+</tr>
+<tr>
+<td> <a id="namespaceboost_1f5717e2f6532581a6492ff1839b18f6d" name="namespaceboost_1f5717e2f6532581a6492ff1839b18f6d"></a>
+<code><b>template &lt;class T, class Alloc&gt;<br>
+bool operator!=(const circular_buffer&lt;T,Alloc&gt;&amp;
+lhs, const circular_buffer&lt;T,Alloc&gt;&amp; rhs);</b></code><br>
+<br>
+逐个元素比较两个 <code>circular_buffer</code>s 判断它们是否不等。
+<dl>
+<dt> <b>参数：</b> </dt>
+<dd>
+<dl compact="compact">
+<dt> <code>lhs</code> </dt>
+<dd>用于比较的 <code>circular_buffer</code>. </dd>
+</dl>
+</dd>
+<dd>
+<dl compact="compact">
+<dt> <code>rhs</code> </dt>
+<dd>用于比较的 <code>circular_buffer</code>. </dd>
+</dl>
+</dd>
+</dl>
+<dl>
+<dt> <b>返回:</b> </dt>
+<dd> <code>!(lhs == rhs)</code> </dd>
+</dl>
+<dl>
+<dt> <b>抛出:</b> </dt>
+<dd> 无。 </dd>
+</dl>
+<dl>
+<dt> <b>复杂度:</b> </dt>
+<dd>线性(与 <code>circular_buffer</code>s
+的大小相关)。 </dd>
+</dl>
+<dl>
+<dt> <b>迭代器失效:</b> </dt>
+<dd> 不会令任何迭代器失效。 </dd>
+</dl>
+<dl>
+<dt> <b>参见:</b> </dt>
+<dd> <code><a href="#namespaceboost_1d35871e838359b5215e1cbb353663207">operator==(const
+circular_buffer&lt;T,Alloc&gt;&amp;, const
+circular_buffer&lt;T,Alloc&gt;&amp;)</a></code>
+</dd>
+</dl>
+</td>
+</tr>
+<tr>
+<td> <a id="namespaceboost_1f575d7a9741c2044424de50c966c12f3" name="namespaceboost_1f575d7a9741c2044424de50c966c12f3"></a>
+<code><b>template &lt;class T, class Alloc&gt;<br>
+bool operator&gt;(const
+circular_buffer&lt;T,Alloc&gt;&amp; lhs, const
+circular_buffer&lt;T,Alloc&gt;&amp; rhs);</b></code><br>
+<br>
+逐个元素比较两个 <code>circular_buffer</code>s 判断左操作数是否大于右操作数。
+<dl>
+<dt> <b>参数：</b> </dt>
+<dd>
+<dl compact="compact">
+<dt> <code>lhs</code> </dt>
+<dd>用于比较的 <code>circular_buffer</code>. </dd>
+</dl>
+</dd>
+<dd>
+<dl compact="compact">
+<dt> <code>rhs</code> </dt>
+<dd> 用于比较的 <code>circular_buffer</code>.
+</dd>
+</dl>
+</dd>
+</dl>
+<dl>
+<dt> <b>返回:</b> </dt>
+<dd> <code>rhs &lt; lhs</code> </dd>
+</dl>
+<dl>
+<dt> <b>抛出:</b> </dt>
+<dd> 无。 </dd>
+</dl>
+<dl>
+<dt> <b>复杂度:</b> </dt>
+<dd>线性(与 <code>circular_buffer</code>s
+的大小相关)。 </dd>
+</dl>
+<dl>
+<dt> <b>迭代器失效:</b> </dt>
+<dd> 不会令任何迭代器失效。 </dd>
+</dl>
+<dl>
+<dt> <b>参见:</b> </dt>
+<dd> <code><a href="#namespaceboost_195b08213f201c2067d8acb024756329d">operator&lt;(const
+circular_buffer&lt;T,Alloc&gt;&amp;, const
+circular_buffer&lt;T,Alloc&gt;&amp;)</a></code>
+</dd>
+</dl>
+</td>
+</tr>
+<tr>
+<td> <a id="namespaceboost_179abcbacd24b67f08185db54aec8600d" name="namespaceboost_179abcbacd24b67f08185db54aec8600d"></a>
+<code><b>template &lt;class T, class Alloc&gt;<br>
+bool operator&lt;=(const
+circular_buffer&lt;T,Alloc&gt;&amp; lhs, const
+circular_buffer&lt;T,Alloc&gt;&amp; rhs);</b></code><br>
+<br>
+逐个元素比较两个 <code>circular_buffer</code>s 判断左操作数小于等于右操作数。
+<dl>
+<dt> <b>参数：</b> </dt>
+<dd>
+<dl compact="compact">
+<dt> <code>lhs</code> </dt>
+<dd>用于比较的 <code>circular_buffer</code>. </dd>
+</dl>
+</dd>
+<dd>
+<dl compact="compact">
+<dt> <code>rhs</code> </dt>
+<dd>用于比较的 <code>circular_buffer</code>. </dd>
+</dl>
+</dd>
+</dl>
+<dl>
+<dt> <b>返回:</b> </dt>
+<dd> <code>!(rhs &lt; lhs)</code> </dd>
+</dl>
+<dl>
+<dt> <b>抛出:</b> </dt>
+<dd> 无。 </dd>
+</dl>
+<dl>
+<dt> <b>复杂度:</b> </dt>
+<dd>线性(与 <code>circular_buffer</code>s
+的大小相关)。 </dd>
+</dl>
+<dl>
+<dt> <b>迭代器失效:</b> </dt>
+<dd> 不会令任何迭代器失效。 </dd>
+</dl>
+<dl>
+<dt> <b>参见:</b> </dt>
+<dd> <code><a href="#namespaceboost_195b08213f201c2067d8acb024756329d">operator&lt;(const
+circular_buffer&lt;T,Alloc&gt;&amp;, const
+circular_buffer&lt;T,Alloc&gt;&amp;)</a></code>
+</dd>
+</dl>
+</td>
+</tr>
+<tr>
+<td> <a id="namespaceboost_11c31150380272af67deebef578c80b05" name="namespaceboost_11c31150380272af67deebef578c80b05"></a>
+<code><b>template &lt;class T, class Alloc&gt;<br>
+bool operator&gt;=(const
+circular_buffer&lt;T,Alloc&gt;&amp; lhs, const
+circular_buffer&lt;T,Alloc&gt;&amp; rhs);</b></code><br>
+<br>
+逐个元素比较两个 <code>circular_buffer</code>s 判断左操作数是否大于等于右操作数。
+<dl>
+<dt> <b>参数：</b> </dt>
+<dd>
+<dl compact="compact">
+<dt> <code>lhs</code> </dt>
+<dd>用于比较的 <code>circular_buffer</code>. </dd>
+</dl>
+</dd>
+<dd>
+<dl compact="compact">
+<dt> <code>rhs</code> </dt>
+<dd>用于比较的 <code>circular_buffer</code>. </dd>
+</dl>
+</dd>
+</dl>
+<dl>
+<dt> <b>返回:</b> </dt>
+<dd> <code>!(lhs &lt; rhs)</code> </dd>
+</dl>
+<dl>
+<dt> <b>抛出:</b> </dt>
+<dd> 无。 </dd>
+</dl>
+<dl>
+<dt> <b>复杂度:</b> </dt>
+<dd>线性(与 <code>circular_buffer</code>s
+的大小相关)。 </dd>
+</dl>
+<dl>
+<dt> <b>迭代器失效:</b> </dt>
+<dd> 不会令任何迭代器失效。 </dd>
+</dl>
+<dl>
+<dt> <b>参见:</b> </dt>
+<dd> <code><a href="#namespaceboost_195b08213f201c2067d8acb024756329d">operator&lt;(const
+circular_buffer&lt;T,Alloc&gt;&amp;, const
+circular_buffer&lt;T,Alloc&gt;&amp;)</a></code>
+</dd>
+</dl>
+</td>
+</tr>
+<tr>
+<td> <a id="namespaceboost_14aa8f6a2c9640f3f22e266f0fca85777" name="namespaceboost_14aa8f6a2c9640f3f22e266f0fca85777"></a>
+<code><b>template &lt;class T, class Alloc&gt;<br>
+void swap(circular_buffer&lt;T,Alloc&gt;&amp; lhs,
+circular_buffer&lt;T,Alloc&gt;&amp; rhs);</b></code><br>
+<br>
+交换两个 <code>circular_buffer</code>s 的内容。
+<dl>
+<dt> <b>作用:</b> </dt>
+<dd> <code>lhs</code> 包含原 <code>rhs</code>
+的元素，反之亦然。 </dd>
+</dl>
+<dl>
+<dt> <b>参数：</b> </dt>
+<dd>
+<dl compact="compact">
+<dt> <code>lhs</code> </dt>
+<dd>与 <code>rhs</code> 交换内容的 <code>circular_buffer</code>.
+</dd>
+</dl>
+</dd>
+<dd>
+<dl compact="compact">
+<dt> <code>rhs</code> </dt>
+<dd> 与&nbsp;<code>lhs</code> 交换内容的 <code>circular_buffer</code>.
+</dd>
+</dl>
+</dd>
+</dl>
+<dl>
+<dt> <b>抛出:</b> </dt>
+<dd>无。 </dd>
+</dl>
+<dl>
+<dt> <b>复杂度:</b> </dt>
+<dd>常数(与 <code>circular_buffer</code>s
+的大小相关)。 </dd>
+</dl>
+<dl>
+<dt> <b>迭代器失效:</b> </dt>
+<dd>两个 <code>circular_buffer</code>s
+的所有迭代器均失效。(另一方面，这些迭代器仍旧指向同一个元素但却是不同的容器。如果你想使用这一特性，则必须关闭 <a href="#debug">对调试的支持</a>，否则在使用这些失效迭代器时就会报告一个断言。)</dd>
+</dl>
+<dl>
+<dt> <b>参见:</b> </dt>
+<dd> <code><a href="#classboost_1_1circular__buffer_1270ab7074c365663a6f18808024fd88b">swap(circular_buffer&lt;T,
+Alloc&gt;&amp;)</a></code> </dd>
+</dl>
+</td>
+</tr>
+</tbody>
+</table>
+</div>
+<h2> <a name="notes" id="notes">备注</a>
+</h2>
+<ol>
+<li> <a name="note1" id="note1"></a>
+<p><a href="../../smart_ptr/">Boost</a>
+中包含有智能指针的一个很好的实现。 </p>
+</li>
+<li> <a name="note2" id="note2"></a>
+<p> 永远不要创建 <code>std::auto_ptr</code>
+的循环缓冲区。详细讨论请参考 <a href="http://www.aristeia.com">Scott
+Meyers</a> 的名著 <em>作用ive STL</em>. (Meyers S., <i>Effective
+STL: 50 Specific Ways to Improve Your Use of the Standard Template
+Library</i>. Addison-Wesley, 2001.) </p>
+</li>
+</ol>
+<h2> <a name="see" id="see">参见</a> </h2>
+<p> <code><a href="space_optimized.html">boost::circular_buffer_space_optimized</a>,
+<a href="http://www.sgi.com/tech/stl/Vector.html">std::vector</a>,
+<a href="http://www.sgi.com/tech/stl/List.html">std::list</a>,
+<a href="http://www.sgi.com/tech/stl/Deque.html">std::deque</a></code>
+</p>
+<h2> <a name="ack" id="ack">鸣谢</a> </h2>
+<p> The <code>circular_buffer</code> has a short
+history. Its first version was a <code>std::deque</code>
+adaptor. This container was not very effective because of many
+reallocations when inserting/removing an element. Thomas Wenish did a
+review of this version and motivated me to create a circular buffer
+which allocates memory at once when created. </p>
+<p> The second version adapted <code>std::vector</code>
+but it has been abandoned soon because of limited control over iterator
+invalidation. </p>
+<p> The current version is a full-fledged STL compliant
+container. Pavel Vozenilek did a thorough review of this version and
+came with many good ideas and improvements. Also, I would like to thank
+Howard Hinnant, Nigel Stewart and everyone who participated at the
+formal review for valuable comments and ideas.</p>
+<h2><a id="relnotes" name="relnotes">发布说明</a>
+</h2>
+<dl>
+<dd>
+<h3>Boost 1.37 </h3>
+</dd>
+<dd>
+<ul>
+<li>增加了新的方法 <code>is_linearized()</code> 和 <code>rotate(const_iterator)</code>.
+</li>
+<li>修正缺陷：<br>
+#1987 修补以使得 <code>circular_buffer.hpp</code> #includes 完全。<br>
+#1852 复制构造函数不复制容量。 </li>
+</ul>
+</dd>
+<dd>
+<h3>Boost 1.36 </h3>
+</dd>
+<dd>
+<ul>
+<li>变更 <code>circular_buffer(const
+allocator_type&amp;)</code>
+构造函数的行为。因为这个版本的构造函数不分配任何内存，其容量和大小均设为零。 </li>
+<li>修正缺陷：<br>
+#1919 缺省构造的 circular buffer 抛出 <code>std::bad_alloc</code>.<br>
+</li>
+</ul>
+</dd>
+<dd>
+<h3>Boost 1.35 </h3>
+</dd>
+<dd>
+<ul>
+<li>初始发布。</li>
+</ul>
+</dd>
+</dl>
+<hr size="1">
+<table id="footer" border="0" width="100%">
+<tbody>
+<tr valign="top">
+<td align="left" valign="top">
+<p> <small>Copyright © 2003-2008 Jan Gaspar</small>
+</p>
+<p> <small>Use, modification, and distribution is
+subject to the Boost Software License, Version 1.0.<br>
+(See accompanying file <code>LICENSE_1_0.txt</code> or
+copy at <a href="http://www.boost.org/LICENSE_1_0.txt">http://www.boost.org/LICENSE_1_0.txt</a>)</small>
+</p>
+</td>
+<td align="right" valign="top"> <a href="http://validator.w3.org/check?uri=referer"><img style="border: 0px solid ; width: 88px; height: 31px;" src="../../../valid-html401.png" alt="This is a Valid HTML 4.01 Transitional Document."></a>
+</td>
+</tr>
+</tbody>
+</table>
+</body></html>

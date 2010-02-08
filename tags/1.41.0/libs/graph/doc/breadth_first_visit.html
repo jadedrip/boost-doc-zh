@@ -1,0 +1,124 @@
+<!DOCTYPE HTML PUBLIC "-//W3C//DTD HTML 4.01 Transitional//EN">
+<html><head><meta content="text/html; charset=UTF-8" http-equiv="content-type"><!--
+  -- Copyright (c) Jeremy Siek 2000, 2001
+  --
+  -- Distributed under the Boost Software License, Version 1.0.
+  -- (See accompanying file LICENSE_1_0.txt or copy at
+  -- http://www.boost.org/LICENSE_1_0.txt)
+  -->
+<title>Boost Graph Library: Breadth-First Visit</title></head>
+<body alink="#ff0000" bgcolor="#ffffff" link="#0000ee" text="#000000" vlink="#551a8b"> 
+<img src="../../../boost.png" alt="C++ Boost" height="86" width="277"> 
+
+<br clear="">
+
+<h1><a name="sec:bfv"><img src="figs/python.gif" alt="(Python)">
+<tt>breadth_first_visit</tt>
+</a></h1>
+
+<p>
+</p><pre><a name="sec:bfv">  template &lt;class </a><a href="./IncidenceGraph.html">IncidenceGraph</a>, class P, class T, class R&gt;<br>  void breadth_first_visit(IncidenceGraph&amp; G, <br>    typename graph_traits&lt;IncidenceGraph&gt;::vertex_descriptor s, <br>    const bgl_named_params&lt;P, T, R&gt;&amp; params);<br><br>  template &lt;class <a href="./IncidenceGraph.html">IncidenceGraph</a>, class <a href="./Buffer.html">Buffer</a>, class <a href="./BFSVisitor.html">BFSVisitor</a>, class ColorMap&gt;<br>  void breadth_first_visit<br>    (const IncidenceGraph&amp; g, <br>     typename graph_traits&lt;IncidenceGraph&gt;::vertex_descriptor s, <br>     Buffer&amp; Q, BFSVisitor vis, ColorMap color)<br></pre>这个函数基本上与 <tt>breadth_first_search()</tt>
+相同，除了在该算法中不对颜色着色器进行初始化。用户要负责确保在调用该算法之前每个顶点的颜色为白色。由于这个差异，图的类型只要求是 <a href="./IncidenceGraph.html">关联图Incidence Graph</a> 即可，不再是 <a href="./VertexListGraph.html">点列表图Vertex List Graph</a>。另外，这点差异还使得颜色属性映射具有更多的灵活性。例如，你可以使用一个只实现了部分顶点功能的映射，这样当搜索只涉及图的小部分时，可以提高空间效率。
+
+<h3>Where Defined 定义于</h3>
+
+<p>
+<a href="../../../boost/graph/breadth_first_search.hpp"><tt>boost/graph/breadth_first_search.hpp</tt></a>
+
+
+</p><h3>Parameters 参数</h3>
+
+IN: <tt>IncidenceGraph&amp; g</tt>
+<blockquote>一个有向图或无向图。图类型必须符合 <a href="./IncidenceGraph.html">关联图Incidence Graph</a>.<br>
+
+  <b>Python</b>:&nbsp;该参数被命名为 <tt>graph</tt>.
+
+</blockquote>
+
+IN: <tt>vertex_descriptor s</tt>
+<blockquote>开始搜索的源顶点。<br>
+
+  <b>Python</b>:&nbsp;该参数被命名为 <tt>root_vertex</tt>.
+
+</blockquote>
+
+
+<h3>Named Parameters 命名参数</h3>
+
+IN: <tt>visitor(BFSVisitor vis)</tt>
+<blockquote>一个遍历器对象，在算法内部某些由&nbsp; <a href="BFSVisitor.html">BFS
+  遍历器</a>&nbsp;概念所指定的事件点被调用。这个遍历器对象是以值方式传递的<a href="#1">[1]</a>。<br> <b>缺省值：</b><tt>bfs_visitor&lt;null_visitor&gt;</tt><br>
+
+  <b>Python</b>: 该参数应为派生自该图的 <a href="BFSVisitor.html#python"><tt>BFSVisitor</tt></a>&nbsp;类型的一个对象。
+
+
+</blockquote>
+
+UTIL/OUT: <tt>color_map(ColorMap color)</tt>
+<blockquote>被该算法用于跟踪对图的处理过程。类型 <tt>ColorMap</tt> 必须符合 <a href="../../property_map/doc/ReadWritePropertyMap.html">读/写属性映射Read/Write
+  Property Map</a> 并且其键类型必须为图的顶点描述符类型，值类型必须符合
+  <a href="./ColorValue.html">ColorValue</a>。<br>
+  <b>缺省值：</b><tt>get(vertex_color, g)</tt><br>
+
+  <b>Python</b>: 这个颜色映射必须是图的一个 <tt>vertex_color_map</tt>。
+</blockquote>
+
+UTIL: <tt>buffer(Buffer&amp; Q)</tt>
+<blockquote>该队列用于决定顶点被发现的顺序。如果用的是 FIFO 队列，则遍历顺序为通常的 BFS 顺序。也可以使用其它类型的队列，但遍历顺序将会不同。例如，Dijkstra 算法可以通过使用一个优先队列来实现。类型 <tt>Buffer</tt> 必须符合 <a href="./Buffer.html">Buffer</a>。<br>
+  <b>缺省值：</b><tt>boost::queue</tt><br>
+
+  <b>Python</b>:&nbsp;该缓冲区必须派生自图的 <a href="./Buffer.html">Buffer</a> 类型。
+</blockquote>  
+
+
+<h3><a name="SECTION001330300000000000000">
+Complexity 复杂度</a>
+</h3>
+
+<p>时间复杂度为 <i>O(E)</i>。 
+
+</p><p>
+
+</p><h3>Visitor Event Points 遍历器事件点</h3>
+
+<ul>
+<li><b><tt>vis.examine_vertex(u, g)</tt></b> 当各顶点被移出队列时被调用。
+
+</li><li><b><tt>vis.examine_edge(e, g)</tt></b> 在某顶点被移出队列时，对其每条出边调用。 
+
+</li><li><b><tt>vis.tree_edge(e, g)</tt></b> 如果该边为树边，则被调用(在
+  <tt>examine_edge()</tt> 之后)。边 <tt>e</tt> 的目标顶点在此时被发现。
+
+</li><li><b><tt>vis.discover_vertex(u, g)</tt></b> 在该算法第一次遇到顶点 <i>u</i> 时调用。所有离源顶点更近的顶点已被发出，而离源顶点更远的顶点则尚未被发现。 
+
+</li><li><b><tt>vis.non_tree_edge(e, g)</tt></b> 如是该边为非树边，则被调用(在
+  <tt>examine_edge()</tt> 之后)。 
+
+</li><li><b><tt>vis.gray_target(e, g)</tt></b> 如果目标顶点在检查时被着色为灰色，则被调用(在
+  <tt>non_tree_edge()</tt> 之后)。灰色表示该顶点已在队列中。 
+
+</li><li><b><tt>vis.black_target(e, g)</tt></b> 如果目标顶点在检查时被着色为黑色，则被调用(在
+  <tt>non_tree_edge()</tt> 之后)。黑色表示该顶点已不在队列中。 
+
+</li><li><b><tt>vis.finish_vertex(u, g)</tt></b> 当 <i>u</i> 的所有出边都完成检查且所有邻接顶点都被发现后调用。
+
+</li></ul>
+
+<h3>See Also 参见</h3>
+
+<a href="./breadth_first_search.html"><tt>breadth_first_search()</tt></a>,
+<a href="./bfs_visitor.html"><tt>bfs_visitor</tt></a>, 和
+<a href="./depth_first_search.html"><tt>depth_first_search()</tt></a>
+
+<h3>Notes 备注</h3>
+
+<p><a name="1">[1]</a> 
+  由于 visitor 参数是以值方式传递的，所以如果你的遍历器含有状态，则在算法中对该状态的所有修改都是针对该遍历器对象的一个拷贝，而不对传入的遍历器对象进行的。因此你应该让该遍历器以指针或引用的方式保存该状态。<br>
+</p><hr>
+<table>
+<tbody><tr valign="top">
+<td nowrap="nowrap">Copyright © 2000-2001</td><td>
+<a href="http://www.boost.org/people/jeremy_siek.htm">Jeremy Siek</a>, Indiana University (<a href="mailto:jsiek@osl.iu.edu">jsiek@osl.iu.edu</a>)
+</td></tr></tbody></table>
+
+</body></html>

@@ -1,0 +1,438 @@
+<!DOCTYPE HTML PUBLIC "-//W3C//DTD HTML 4.01 Transitional//EN">
+<html><head>
+<meta http-equiv="Content-Type" content="text/html; charset=UTF-8">
+
+<title>The Lanczos Approximation</title><link rel="stylesheet" href="../../../../../../../doc/html/boostbook.css" type="text/css">
+<meta name="generator" content="DocBook XSL Stylesheets Vsnapshot_2006-12-17_0120">
+<link rel="start" href="../../index.html" title="Math Toolkit">
+<link rel="up" href="../backgrounders.html" title="Backgrounders">
+<link rel="prev" href="relative_error.html" title="Relative Error">
+<link rel="next" href="remez.html" title="The Remez Method"></head>
+<body alink="#0000ff" bgcolor="white" link="#0000ff" text="black" vlink="#840084">
+<table cellpadding="2" width="100%"><tbody><tr>
+<td valign="top"><img alt="Boost C++ Libraries" src="../../../../../../../boost.png" height="86" width="277"></td>
+<td align="center"><a href="../../../../../../../index.html">Home</a></td>
+<td align="center"><a href="../../../../../../../libs/libraries.htm">Libraries</a></td>
+<td align="center"><a href="http://www.boost.org/users/people.html">People</a></td>
+<td align="center"><a href="http://www.boost.org/users/faq.html">FAQ</a></td>
+<td align="center"><a href="../../../../../../../more/index.htm">More</a></td>
+</tr></tbody></table>
+<hr>
+<div class="spirit-nav">
+<a accesskey="p" href="relative_error.html"><img src="../../../../../../../doc/html/images/prev.png" alt="Prev"></a><a accesskey="u" href="../backgrounders.html"><img src="../../../../../../../doc/html/images/up.png" alt="Up"></a><a accesskey="h" href="../../index.html"><img src="../../../../../../../doc/html/images/home.png" alt="Home"></a><a accesskey="n" href="remez.html"><img src="../../../../../../../doc/html/images/next.png" alt="Next"></a>
+</div>
+<div class="section" lang="en">
+<div class="titlepage"><div><div>
+  <h3 class="title">
+<a name="math_toolkit.backgrounders.lanczos"></a><a href="lanczos.html" title="The Lanczos Approximation"> 兰克泽斯逼近(The Lanczos Approximation)</a>
+</h3>
+</div></div></div>
+<a name="math_toolkit.backgrounders.lanczos.motivation"></a>
+<h5>
+<a name="id862971"></a>
+        <a href="lanczos.html#math_toolkit.backgrounders.lanczos.motivation">动机(Motivation)</a>
+  </h5>
+<p>
+      <span class="emphasis"><em>为什么让γ及类似γ的函数基于兰克泽斯逼近？</em></span></p>
+<p>
+        首先，我必须说明的是在实数域上的函数使用兰克泽斯逼近(参考<a href="http://en.wikipedia.org/wiki/Lanczos_approximation" target="_top">Wikipedia 或 </a> <a href="http://mathworld.wolfram.com/LanczosApproximation.html" target="_top">Mathworld</a>) ，对于其它传统的方法，比如<a href="http://en.wikipedia.org/wiki/Stirling_approximation" target="_top">Stirling's
+  approximation</a>，并没有提供很明显的优点。<a href="lanczos.html#pugh">Pugh</a> 为多种可用的方法进行了一个扩展的比较，并发现在误差和复杂性方面它们都是很类似的。然而，兰克泽斯逼近却有一些特性使得它值得进一步的考虑：</p>
+<div class="itemizedlist"><ul type="disc">
+<li>
+      这种逼近有一个容易计算的截断误差适用于<span class="emphasis"><em>z &gt; 0</em></span>。在实际中，这意味着我们可以对所有的<span class="emphasis"><em>z &gt; 0</em></span>使用同样的逼近，并且可以肯定不管z多大或是多小。截断误差最坏情况下可以被某个有限值确定范围。</li>
+<li>
+      这种逼近有一种形式特别适合于进行分析操作，尤其是γ和类似的γ函数可以很容易的计算而不必求助于对数算法。</li>
+</ul></div>
+<p>
+  这两个属性的组合使得这个逼近方法非常具有吸引力：斯特林( Stirling approximation)逼近对于较大的z值很精确，并且与兰克泽斯逼近有一些相同的分析性质，但是不能在整个z的范围上使用。</p>
+<p>
+        作为一个简单的例子，考虑两个γ函数的比：可以使用 lgamma 函数来计算：</p>
+<pre class="programlisting"><span class="identifier">exp</span><span class="special">(</span><span class="identifier">lgamma</span><span class="special">(</span><span class="identifier">a</span><span class="special">)</span> <span class="special">-</span> <span class="identifier">lgamma</span><span class="special">(</span><span class="identifier">b</span><span class="special">));</span>
+</pre>
+<p>
+  然而，即使 lgamma 是一致地精确到0.5ulp，上面的方法的最严重的相对误差，可以写作：</p>
+<pre class="programlisting"><span class="identifier">Erel</span> <span class="special">&gt;</span> <span class="identifier">a</span> <span class="special">*</span> <span class="identifier">log</span><span class="special">(</span><span class="identifier">a</span><span class="special">)/</span><span class="number">2</span> <span class="special">+</span> <span class="identifier">b</span> <span class="special">*</span> <span class="identifier">log</span><span class="special">(</span><span class="identifier">b</span><span class="special">)/</span><span class="number">2</span>
+</pre>
+<p>
+        对于小的<span class="emphasis"><em>a</em></span> 和 <span class="emphasis"><em>b</em></span> ，这并不是一个问题，但以另外一种方式来看待这种关系：<span class="emphasis"><em>每次以10为因子来增大 a 和
+        b 的值，那么至少有一个十进制数字的精度丢失。</em></span>
+  </p>
+<p> 相反，通过组合相似的幂项为一个兰克泽斯逼近，对于较小的a 和
+b，这些误差可以消除，并且对于非常大的a和b，可以使误差在可控制的范围之内。当然，计算次数巨大
+的幂本来就是一个很艰难的问题，但即使是这样，兰克泽斯分析组合可以在一个合理的结果和一个无用值之间产生差别。参考<a href="../special/sf_beta/beta_function.html" title="Beta">β</a>
+  函数的实现说明来了解实际中使用这个方法的例子，不完全<a href="../special/sf_gamma/igamma.html" title="Incomplete Gamma Functions">gamma_p gamma</a> 和 <a href="../special/sf_beta/ibeta_function.html" title="Incomplete Beta Functions">β</a> 函数使用类似的幂项的分析组合，将被大的幂项除的γ和β函数组合成一个单独的(更简单的)表达式。</p>
+<a name="math_toolkit.backgrounders.lanczos.the_approximation"></a>
+<h5>
+<a name="id863354"></a>
+        <a href="lanczos.html#math_toolkit.backgrounders.lanczos.the_approximation">逼近</a>
+  </h5>
+<p>
+  对数的兰克泽斯逼近由下面的方程给定：</p>
+<p>
+        <span class="inlinemediaobject"><img src="../../../equations/lanczos0.png"></span>
+  </p>
+<p>
+  其中 S<sub>g</sub>(z) 是一个无限求和，对于 所有的 z &gt; 0收敛，且<span class="emphasis"><em>g</em></span> 是一个控制这个求和式中的项的“形状”的任何的参数：</p>
+<p>
+        <span class="inlinemediaobject"><img src="../../../equations/lanczos0a.png"></span>
+  </p>
+<p>
+  单独的系数由闭型(closed form)定义为：</p>
+<p>
+        <span class="inlinemediaobject"><img src="../../../equations/lanczos0b.png"></span>
+  </p>
+<p>
+        然而，在计算上长阶乘和下降阶乘的过程中，以这种形式的求和方式会导致数值不稳定性(我们可以有效地乘以一系列的非常接近于1的值，所以舍入误差可以很快进行统计。)。</p>
+<p>
+  兰克泽斯逼近通常写作部分阶乘的形式，前导常量被求和式中的系数所吸收：</p>
+<p>
+        <span class="inlinemediaobject"><img src="../../../equations/lanczos1.png"></span>
+  </p>
+<p>
+        其中：</p>
+<p>
+        <span class="inlinemediaobject"><img src="../../../equations/lanczos2.png"></span>
+  </p>
+<p>
+  参数<span class="emphasis"><em>g</em></span> 是一个任意选定的常量，且<span class="emphasis"><em>N</em></span> 是在“兰克泽斯和”中任意选定的计算的项的数目。</p>
+<div class="note">
+  <table summary="Note" border="0">
+<tbody><tr>
+<td rowspan="2" align="center" valign="top" width="25"><img alt="[Note]" src="../../../../../../../doc/html/images/note.png"></td>
+<th align="left">注意</th>
+</tr>
+<tr><td align="left" valign="top"><p>
+          一些作者选择定义从1到N定义和式，因此有N＋1个系数。这会使下面的讨论和代码发生混淆(因为C++处理关开的数级范围而不是求和式的闭全范围)。这种约定形式与<a href="lanczos.html#godfrey">Godfrey</a>一致，但是与<a href="lanczos.html#pugh">Pugh</a>不一致，因此在涉及到这些术语的时候要注意。</p></td></tr>
+</tbody></table></div>
+<a name="math_toolkit.backgrounders.lanczos.computing_the_coefficients"></a>
+<h5>
+<a name="id863617"></a>
+        <a href="lanczos.html#math_toolkit.backgrounders.lanczos.computing_the_coefficients">计算系数(Computing
+        the Coefficients)</a>
+  </h5>
+<p>
+        系数 C0..CN-1 在精度较高时从<span class="emphasis"><em>N</em></span>
+  和<span class="emphasis"><em>g</em></span> 中进行计算，然后存储为程序的一部分。计算系数使用<a href="lanczos.html#godfrey">Godfrey</a>方法;修定常量被存储在一个列向量P中，那么：</p>
+<p>
+        P = B D C F
+  </p>
+<p>
+        其中 B是一个 NxN 矩阵：</p>
+<p>
+        <span class="inlinemediaobject"><img src="../../../equations/lanczos4.png"></span>
+  </p>
+<p>
+        D 是一个 NxN 矩阵：</p>
+<p>
+        <span class="inlinemediaobject"><img src="../../../equations/lanczos3.png"></span>
+  </p>
+<p>
+        C 是一个 NxN 矩阵：</p>
+<p>
+        <span class="inlinemediaobject"><img src="../../../equations/lanczos5.png"></span>
+  </p>
+<p>
+        F是一个有N个元素的列向量：</p>
+<p>
+        <span class="inlinemediaobject"><img src="../../../equations/lanczos6.png"></span>
+  </p>
+<p>
+        注意矩阵 B, D 和 C 包含所有的项数并只依赖于<span class="emphasis"><em>N</em></span>，这种结果必须首先计算然而乘以F作为最后一步。</p>
+<a name="math_toolkit.backgrounders.lanczos.choosing_the_right_parameters"></a>
+<h5>
+<a name="id863823"></a>
+        <a href="lanczos.html#math_toolkit.backgrounders.lanczos.choosing_the_right_parameters">选择正确的参数(Choosing
+        the Right Parameters)</a>
+  </h5>
+<p>
+        这里的技巧是选择<span class="emphasis"><em>N</em></span> 和 <span class="emphasis"><em>g</em></span>
+        来给定预期的精度：为g选择一个较小的值将产生一个严格收敛的级数，但收敛很慢。为g选择一个较大的值，导致级数的项数非常大，并且对于开始的<span class="emphasis"><em>g-1</em></span>
+        项是多种多样的，然后突然收敛。</p>
+<p>
+  <a href="lanczos.html#pugh">Pugh</a> 对于在范围 <span class="emphasis"><em>1 &lt;= N &lt;= 60</em></span>中
+的N值推导出了优化的g值：不幸的是，在实际中选择这些值会导致在兰克泽斯求和中发生消去错误，错误中的最大项大约比结果大1000倍。除非这些计算可以
+使用一些guard数字并将这些系数以高于结果精度的精度存储，否则这些优化的值在实际中是没有用的。这些值最好为使用double精度的算术来计算
+float精度。</p>
+<div class="table">
+<a name="id863906"></a>
+<p class="title"><b>当使用保护位来计算的时候，N和g的最佳值 (source: Pugh)</b></p>
+<div class="table-contents"><table class="table" summary="Optimal choices for N and g when computing with
+      guard digits (source: Pugh)">
+<colgroup><col><col><col><col></colgroup>
+<thead><tr>
+<th>
+            <p>
+              有效数字位数</p>
+            </th>
+<th>
+            <p>
+              N
+            </p>
+            </th>
+<th>
+            <p>
+              g
+            </p>
+            </th>
+<th>
+            <p>
+              最大误差</p>
+            </th>
+</tr></thead>
+<tbody>
+<tr>
+<td>
+            <p>
+              24
+            </p>
+            </td>
+<td>
+            <p>
+              6
+            </p>
+            </td>
+<td>
+            <p>
+              5.581
+            </p>
+            </td>
+<td>
+            <p>
+              9.51e-12
+            </p>
+            </td>
+</tr>
+<tr>
+<td>
+            <p>
+              53
+            </p>
+            </td>
+<td>
+            <p>
+              13
+            </p>
+            </td>
+<td>
+            <p>
+              13.144565
+            </p>
+            </td>
+<td>
+            <p>
+              9.2213e-23
+            </p>
+            </td>
+</tr>
+</tbody>
+</table></div>
+</div>
+<br class="table-break">
+<p>
+        由<a href="lanczos.html#godfrey">Godfrey</a> 描述的另一种方法是：对于一个给定p个数字的浮点类型，在N和p的参数空间上进行足够多的查找，来找出最佳的N和g的组合。重复这种操作，对于double精度的算术找到最好的逼近 (接近于<a href="lanczos.html#godfrey">Godfrey</a>
+      找到的一个)，但是对于80-bit或128-bit的long double类型不能找到真正好的逼近。此外，获得的逼近趋向于对用于测试这些实现的较小的z值更优化一些。用巨大的参数来计算函数的比被发现会因为对兰克泽斯级数的截断而产生误差。</p>
+<p>
+        <a href="lanczos.html#pugh">Pugh</a> 鉴定出了所有的逼近的理论误差的最小值的位置，但不幸的是，只发布了这些极小值中的最大的那一部分。然而，他观测到：极值非常接近兰克泽斯逼近中的第一个被忽略的项。这些位置很容易定位，尽管需要大量的计算时间。这些"sweet
+  spots" 只需要计算一次，制表，然而对于某些固定精度的类型进行所需要的精度的逼近时进行查找。</p>
+<p>
+  不幸的是，沿着这种方式不能为128-bit的long double类型找到真正好的逼近，并且为64-bit和80-bit的实数类型查找逼近需要大量的系数项。这有两个竞争的因素：更高的精度要求巨大的g值，但是避免消去错误要求一个小的g值。</p>
+<p>
+在这里，注意兰克泽斯逼近可以转换为有理形式(两个多项式的比，使用多项式算术从部分阶乘的形式中得到)，并且这样做会改变系数，使得它们都为正数。这意
+味着在有理形式中的和可以在没有消去错误的情况下计算得到，即使对于一个给定的N将系数的个数加倍。重复查找"sweet
+spots"，这一次使用有理函数的形式来计算兰克泽斯逼近，并且只测试这些理论误差与正大测试的类型的机器精度更小的"sweet
+spots"，对于所有的测试的类型都产生了很好的逼近。这些最佳值与<a href="lanczos.html#pugh">Pugh</a> 报告的最佳情况非常吻合(对于一个给定的精度，<span class="emphasis"><em>N</em></span>
+  比 <a href="lanczos.html#pugh">Pugh</a> 的报告值要稍大一些，<span class="emphasis"><em>g</em></span> 比<a href="lanczos.html#pugh">Pugh</a> 报告的值要稍小一些)，尽管转换为有理函数形式将系数个数增加了两倍，但应当指出的是它们中有一半是整数(因此只需要更少的存储空间)并且将会要求使用较小的N值，所以只需要使用更少的浮点运算操作。</p>
+<p>
+        当以一个固定精度来计算时，下面的表中显示了<span class="emphasis"><em>N</em></span> 和 <span class="emphasis"><em>g</em></span>
+的最佳值。这些值应当在配合运算时使用：对于106-bit的机器没有最佳值 (Darwin long doubles &amp; NTL
+quad_float)，并且对g值的近一步优化也是可能的。这个表中的误差是将一个无限兰克泽斯逼近截断到N项时的估计误差。误差从最开始的5个被忽略
+的项计算得来－并已知是非常悲观的估计－当估计的截断误差与问题中所讨论的类型的机器精度几乎完全相符时，N和g的最佳组合就出现了。</p>
+<div class="table">
+<a name="id864228"></a>
+<p class="title"><b>当在固定精度计算时N和g的最优值</b></p>
+<div class="table-contents"><table class="table" summary="Optimum value for N and g when computing at fixed
+      precision">
+<colgroup><col><col><col><col><col></colgroup>
+<thead><tr>
+<th>
+            <p>
+              有效数字位数</p>
+            </th>
+<th>
+            <p>
+              平台和编译器</p>
+            </th>
+<th>
+            <p>
+              N
+            </p>
+            </th>
+<th>
+            <p>
+              g
+            </p>
+            </th>
+<th>
+            <p>
+              最大截断误差</p>
+            </th>
+</tr></thead>
+<tbody>
+<tr>
+<td>
+            <p>
+              24
+            </p>
+            </td>
+<td>
+            <p>
+              Win32, VC++ 7.1
+            </p>
+            </td>
+<td>
+            <p>
+              6
+            </p>
+            </td>
+<td>
+            <p>
+              1.428456135094165802001953125
+            </p>
+            </td>
+<td>
+            <p>
+              9.41e-007
+            </p>
+            </td>
+</tr>
+<tr>
+<td>
+            <p>
+              53
+            </p>
+            </td>
+<td>
+            <p>
+              Win32, VC++ 7.1
+            </p>
+            </td>
+<td>
+            <p>
+              13
+            </p>
+            </td>
+<td>
+            <p>
+              6.024680040776729583740234375
+            </p>
+            </td>
+<td>
+            <p>
+              3.23e-016
+            </p>
+            </td>
+</tr>
+<tr>
+<td>
+            <p>
+              64
+            </p>
+            </td>
+<td>
+            <p>
+              Suse Linux 9 IA64, gcc-3.3.3
+            </p>
+            </td>
+<td>
+            <p>
+              17
+            </p>
+            </td>
+<td>
+            <p>
+              12.2252227365970611572265625
+            </p>
+            </td>
+<td>
+            <p>
+              2.34e-024
+            </p>
+            </td>
+</tr>
+<tr>
+<td>
+            <p>
+              116
+            </p>
+            </td>
+<td>
+            <p>
+              HP Tru64 Unix 5.1B / Alpha, Compaq C++ V7.1-006
+            </p>
+            </td>
+<td>
+            <p>
+              24
+            </p>
+            </td>
+<td>
+            <p>
+              20.3209821879863739013671875
+            </p>
+            </td>
+<td>
+            <p>
+              4.75e-035
+            </p>
+            </td>
+</tr>
+</tbody>
+</table></div>
+</div>
+<br class="table-break">
+<p>
+      最后请注意，通过将一个因子从exp(g)的分母中删除可以将兰克泽斯逼近写为下面的形式，然后用exp(g)除以所有的系数：</p>
+<p>
+        <span class="inlinemediaobject"><img src="../../../equations/lanczos7.png"></span>
+  </p>
+<p>
+  这种形式对于计算 lgamma函数更方便，但是对于 gamma 函数，除以e值会导致将一个可能完全精确的值变为一个不精确的值：这会在输入为精确值的情况下降低精度，因此这种形式没有用在 gamma 函数中。</p>
+<a name="math_toolkit.backgrounders.lanczos.references"></a>
+<h5>
+<a name="id864506"></a>
+        <a href="lanczos.html#math_toolkit.backgrounders.lanczos.references">参考资料</a>
+      </h5>
+<a name="godfrey"></a><a name="pugh"></a><div class="orderedlist"><ol type="1">
+<li>
+          Paul Godfrey, <a href="http://my.fit.edu/%7Egabdo/gamma.txt" target="_top">"A note
+          on the computation of the convergent Lanczos complex Gamma approximation"</a>.
+      </li>
+<li>
+          Glendon Ralph Pugh, <a href="http://bh0.physics.ubc.ca/People/matt/Doc/ThesesOthers/Phd/pugh.pdf" target="_top">"An
+          Analysis of the Lanczos Gamma Approximation"</a>, PhD Thesis November
+          2004.
+      </li>
+<li>
+          Viktor T. Toth, <a href="http://www.rskey.org/gamma.htm" target="_top">"Calculators
+          and the Gamma Function"</a>.
+      </li>
+<li>
+          Mathworld, <a href="http://mathworld.wolfram.com/LanczosApproximation.html" target="_top">The
+          Lanczos Approximation</a>.
+      </li>
+</ol></div>
+</div>
+<table xmlns:rev="http://www.cs.rpi.edu/~gregod/boost/tools/doc/revision" width="100%"><tbody><tr>
+<td align="left"></td>
+<td align="right"><div class="copyright-footer">Copyright © 2006 , 2007, 2008, 2009 John Maddock, Paul A. Bristow, Hubert Holin, 
+Xiaogang Zhang, Bruno Lalande, Johan Råde, Gautam Sewani and Thijs van den Berg<p>
+        Distributed under the Boost Software License, Version 1.0. (See accompanying
+        file LICENSE_1_0.txt or copy at <a href="http://www.boost.org/LICENSE_1_0.txt" target="_top">http://www.boost.org/LICENSE_1_0.txt</a>)
+      </p>
+</div></td>
+</tr></tbody></table>
+<hr>
+<div class="spirit-nav">
+<a accesskey="p" href="relative_error.html"><img src="../../../../../../../doc/html/images/prev.png" alt="Prev"></a><a accesskey="u" href="../backgrounders.html"><img src="../../../../../../../doc/html/images/up.png" alt="Up"></a><a accesskey="h" href="../../index.html"><img src="../../../../../../../doc/html/images/home.png" alt="Home"></a><a accesskey="n" href="remez.html"><img src="../../../../../../../doc/html/images/next.png" alt="Next"></a>
+</div>
+</body></html>

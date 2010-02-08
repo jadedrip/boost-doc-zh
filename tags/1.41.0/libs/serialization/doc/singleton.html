@@ -1,0 +1,164 @@
+<!DOCTYPE HTML PUBLIC "-//W3C//DTD HTML 4.01 Transitional//EN" "http://www.w3.org/TR/html4/loose.dtd">
+<html><head><!--
+(C) Copyright 2002-4 Robert Ramey - http://www.rrsd.com . 
+Use, modification and distribution is subject to the Boost Software
+License, Version 1.0. (See accompanying file LICENSE_1_0.txt or copy at
+http://www.boost.org/LICENSE_1_0.txt)
+-->
+<meta http-equiv="Content-Type" content="text/html; charset=UTF-8">
+<link rel="stylesheet" type="text/css" href="../../../boost.css">
+<link rel="stylesheet" type="text/css" href="style.css">
+<title>Serialization - singleton</title></head>
+
+
+<body link="#0000ff" vlink="#800080">
+<table summary="header" border="0" cellpadding="7" cellspacing="0" width="100%">
+  <tbody><tr> 
+    <td valign="top" width="300"> 
+      <h3><a href="../../../index.htm"><img alt="C++ Boost" src="../../../boost.png" border="0" height="86" width="277"></a></h3>
+    </td>
+    <td valign="top"> 
+      <h1 align="center">Serialization 序列化</h1>
+      <h2 align="center"><code style="white-space: normal;">singleton 单件</code></h2>
+    </td>
+  </tr>
+</tbody></table>
+<hr>
+<dl class="page-index">
+  <dt><a href="#motivation">动机</a>
+  </dt><dt><a href="#features">特性</a>
+  </dt><dt><a href="#classinterface">类的接口</a>
+  </dt><dt><a href="#requirements">要求</a>
+  </dt><dt><a href="#example">例子</a>
+  </dt><dt><a href="#multithreading">多线程</a>
+</dt></dl>
+
+<h3><a name="motivation">动机</a></h3>serialization 库依赖于大量静态变量和表格来保存与运行期类型相关的信息。那些将导出名字关联至类型的表格以及将基类关联至派生类的表格都是例子。这些变量的构造、析构和使用都需要考虑以上问题：
+<ul>
+  <li>有些静态数据变量和常量项要引用其它项。初始化的顺序不能是任意的，必须按正确的顺序进行</li>
+  <li>大量的静态变量并不是显式引用的，没有特别的预防措施的话，会被大多数代码优化器所破坏</li>
+  <li>这些变量中的多数是通过模板创建的，必须特别小心地确保它们被实例化</li>
+  <li>在一个多线程的系统中，这些静态变量有可能被不同的线程同时访问。这样将导致未知行为的竞争条件</li>
+</ul>singleton 类解决了以上所有问题。
+
+<h3><a name="features">特性</a></h3>singleton 的实现有以下特点：
+<ul>
+  <li>任何实例都会在访问它之前被构造。</li>
+  <li>任何通过模板创建的实例都会保证被实例化。
+  </li><li>一个实例不论是否被显式引用，当使用发布模式构建可执行程序时，它都不会被优化器破坏。
+  </li><li>所有实例在 
+    <code style="white-space: normal;">main</code> 被调用之前构造，不论它们在程序的哪里被引用。在多任务系统中，保证在任何实例的构造过程中没有竞争条件。保证这一点不需要线程锁。
+  </li><li>以上几点意味着任何 <code style="white-space: normal;">const</code>
+    实例在整个程序中都是线程安全的。同样，不需要线程锁。
+  </li><li>如果创建了一个可变的实例，并且该实例在调用&nbsp;main 之后在一个多线程系统中被修改，则存在发生竞争条件的可能性。在需要可变单件的少数几个地方，serialization
+    库进行了特别的处理，使得在 
+    <code style="white-space: normal;">main</code> 被调用后不会再改变。对于大多数通常的用法，对该单件使用线程锁更容易实现。但是由于 serialization
+    库不需要它，所以它没有被实现。
+</li></ul>
+
+<h3><a name="classinterface">类的接口</a></h3>
+<pre><code>
+namespace boost { 
+namespace serialization {
+
+template <class t="">
+class singleton : public boost::noncopyable
+{
+public:
+    static const T &amp; get_const_instance();
+    static T &amp; get_mutable_instance();
+};
+
+} // namespace serialization 
+} // namespace boost
+</class></code></pre>
+
+<dl>
+
+<dt></dt><h4><pre><code>
+static const T &amp; get_const_instance();</code></pre></h4>
+<dd>获得该类型的单件的一个常量引用。
+</dd>
+
+<dt></dt><h4><pre><code>
+static T &amp; get_mutable_instance();</code></pre></h4>
+<dd>获得该类型的单件的一个可变引用。
+</dd>
+
+</dl>
+
+<h3><a name="requirements">要求</a></h3>为了使用 
+<a target="singleton.hpp" href="../../../boost/serialization/singleton.hpp">
+<code style="white-space: normal;">
+singleton&lt;T&gt;
+</code> 
+</a>
+，类型 T 必须是可缺省构造的。它不要求有静态变量 - 虽然可能会有。因为库保证了只有一个 
+<a target="singleton.hpp" href="../../../boost/serialization/singleton.hpp">
+<code style="white-space: normal;">
+singleton&lt;T&gt;
+</code> 
+</a>
+实例，且所有访问都是通过上述静态接口函数来进行的，所以 T 的公用成员函数就变得和 
+<code style="white-space: normal;">static</code> 函数一样了。
+
+<h3><a name="example">例子</a></h3>至少有两种不同的方法来使用这个类模板。在 serialization 库中两种方法都用到了。
+<p>第一种方法通过文件
+<code style="white-space: normal;"><a target="extended_type_info" href="../src/extended_type_info.cpp">extended_type_info.cpp</a></code> 来示范，其中包含以下代码：
+
+</p><pre><code>
+typedef std::set<const extended_type_info="" *="" key_compare=""> ktmap;<br>...<br>void<br>extended_type_info::key_register(const char *key) {<br>    ...<br>    result = singleton<ktmap>::get_mutable_instance().insert(this);<br>    ...<br>}<br></ktmap></const></code></pre>在程序的所有地方只通过单件实例来引用，可以保证在整个程序中有且只有一个特定类型(本例中为 <code style="white-space: normal;">ktmap</code>)的实例。不需要任何其它的声明或定义。
+<p>第二种方法是将 
+<a target="singleton.hpp" href="../../../boost/serialization/singleton.hpp">
+<code style="white-space: normal;">
+singleton&lt;T&gt;
+</code> 
+</a>
+用作该类型的基类。这一方法在
+<a target="extended_type_info_typeid.hpp" href="../../../boost/serialization/extended_type_info_typeid.hpp">
+<code style="white-space: normal;">
+extended_type_info_typeid.hpp</code></a> 中示范：<a target="extended_type_info_typeid.hpp" href="../../../boost/serialization/extended_type_info_typeid.hpp"><code style="white-space: normal;">
+</code> 
+</a>
+
+</p><pre><code>
+template&lt;class T&gt;
+class extended_type_info_typeid : 
+    public detail::extended_type_info_typeid_0,
+    public singleton&lt;extended_type_info_typeid&lt;const T&gt; &gt;
+{
+    friend class singleton&lt;extended_type_info_typeid&lt;const T&gt; &gt;;
+private:
+    // 私有构造函数，禁止除静态变量外的其它实例。
+    // 注意：不是所有编译器都支持!!!
+    extended_type_info_typeid() :
+        detail::extended_type_info_typeid_0()
+    {
+        type_register(typeid(T));
+    }
+    ~extended_type_info_typeid(){}
+    ...
+};
+</code></pre>这一方法可以使用更为自然的语法：
+<pre><code>
+extended_type_info_typeid&lt;T&gt;::get_const_instance()
+</code></pre>同样，在程序的任何地方包含一个或多个以上语句，可以保证有且只有一个实例被创建和引用。
+
+<h3><a name="multithreading">多线程</a></h3>这个 singleton 可以安全地用于多线程应用，如果你仔细地遵守以下规则：
+<p>
+<b>不要在多于一个线程在运行时调用 get_mutable_instance!</b>
+</p><p>在 serialization 库中的所有单件都遵守这一规则。为了帮助检查对该规则的意外违反，提供一对单件锁定/解锁函数。
+</p><pre><code>
+boost::serialization::global_lock::get_mutable_instance().lock();
+boost::serialization::global_lock::get_mutable_instance().unlock();
+</code></pre>当程序以调试模式编译时，如果本库处于"锁定"状态，则所有对 
+<code style="white-space: normal;">get_mutable_instance()</code>
+的调用将导致一个断言。global_lock 状态被初始化为"未锁定"状态，以允许在 
+<code style="white-space: normal;">main</code> 被调用之前修改静态变量。所有序列化测试都会在程序开始调用 <code style="white-space: normal;">lock()</code>。对于以发布模式编译的程序，这些函数没有任何作用。
+
+<hr>
+<p><i>© Copyright <a href="http://www.rrsd.com">Robert Ramey</a> 2007. 
+Distributed under the Boost Software License, Version 1.0. (See
+accompanying file LICENSE_1_0.txt or copy at http://www.boost.org/LICENSE_1_0.txt)
+</i></p>
+</body></html>

@@ -1,0 +1,542 @@
+<!DOCTYPE HTML PUBLIC "-//W3C//DTD HTML 4.01 Transitional//EN">
+<html><head>
+<meta http-equiv="Content-Type" content="text/html; charset=UTF-8">
+
+<title>Lambda expressions in details</title><link rel="stylesheet" href="../boostbook.css" type="text/css">
+<meta name="generator" content="DocBook XSL Stylesheets V1.68.1">
+<link rel="start" href="../index.html" title="The Boost C++ Libraries BoostBook Documentation Subset">
+<link rel="up" href="../lambda.html" title="Chapter8.Boost.Lambda">
+<link rel="prev" href="using_library.html" title="Using the library">
+<link rel="next" href="extending.html" title="Extending return type deduction system"></head>
+<body alink="#0000ff" bgcolor="white" link="#0000ff" text="black" vlink="#840084">
+<table cellpadding="2" width="100%">
+<tbody><tr><td valign="top"><img alt="Boost C++ Libraries" src="../../../boost.png" height="86" width="277"></td>
+<td align="center"><a href="../../../index.htm">Home</a></td>
+<td align="center"><a href="../../../libs/libraries.htm">Libraries</a></td>
+<td align="center"><a href="../../../people/people.htm">People</a></td>
+<td align="center"><a href="../../../more/faq.htm">FAQ</a></td>
+<td align="center"><a href="../../../more/index.htm">More</a></td>
+</tr></tbody></table>
+<hr>
+<div class="spirit-nav">
+<a accesskey="p" href="using_library.html"><img src="../images/prev.png" alt="Prev"></a><a accesskey="u" href="../lambda.html"><img src="../images/up.png" alt="Up"></a><a accesskey="h" href="../index.html"><img src="../images/home.png" alt="Home"></a><a accesskey="n" href="extending.html"><img src="../images/next.png" alt="Next"></a>
+</div>
+<div class="section" lang="en">
+<div class="titlepage"><div><div><h2 class="title" style="clear: both;">
+<a name="lambda.le_in_details"></a>Lambda expressions in details（lambda 表达式详细研究）</h2></div></div></div>
+<div class="toc"><dl>
+<dt><span class="section"><a href="le_in_details.html#lambda.placeholders">Placeholders（占位符）</a></span></dt>
+<dt><span class="section"><a href="le_in_details.html#lambda.operator_expressions">Operator expressions（操作符表达式）</a></span></dt>
+<dt><span class="section"><a href="le_in_details.html#lambda.bind_expressions">Bind expressions（bind 表达式）</a></span></dt>
+<dt><span class="section"><a href="le_in_details.html#lambda.overriding_deduced_return_type">Overriding the deduced return type（越过推演出的返回类型）</a></span></dt>
+<dt><span class="section"><a href="le_in_details.html#lambda.delaying_constants_and_variables">Delaying constants and variables（延迟常量和变量）</a></span></dt>
+<dt><span class="section"><a href="le_in_details.html#lambda.lambda_expressions_for_control_structures">Lambda expressions for control structures（控制结构的 lambda 表达式）</a></span></dt>
+<dt><span class="section"><a href="le_in_details.html#lambda.exceptions">Exceptions（异常）</a></span></dt>
+<dt><span class="section"><a href="le_in_details.html#lambda.construction_and_destruction">Construction and destruction（构造函数和析构函数）</a></span></dt>
+<dt><span class="section"><a href="le_in_details.html#id1247290">Special lambda expressions（特殊lambda 表达式）</a></span></dt>
+<dt><span class="section"><a href="le_in_details.html#id1247769">Casts, sizeof and typeid（强制转型，sizeof 和 typeid）</a></span></dt>
+<dt><span class="section"><a href="le_in_details.html#lambda.nested_stl_algorithms">Nesting STL algorithm invocations（嵌入 STL 算法调用）</a></span></dt>
+</dl></div>
+<p>本节详细描述 lambda 表达式的各个不同方面。我们为一个 lambda 表达式的每一种可能的形式都投入一个专门的部分。</p>
+<div class="section" lang="en">
+<div class="titlepage"><div><div><h3 class="title">
+<a name="lambda.placeholders"></a>Placeholders（占位符）</h3></div></div></div>
+<p>BLL 定义了三个占位符类型：<code class="literal">placeholder1_type</code>，<code class="literal">placeholder2_type</code> 和 <code class="literal">placeholder3_type</code>。BLL 为每一个占位符类型提供了一个预定义的占位符变量：<code class="literal">_1</code>，<code class="literal">_2</code> 和 <code class="literal">_3</code>。然而，用户并没有被强制使用这些变量，定义其它名字的占位符也很简单。可以通过定义新的占位符类型的变量来做到这一点。例如：</p>
+<pre class="programlisting">boost::lambda::placeholder1_type X;<br>boost::lambda::placeholder2_type Y;<br>boost::lambda::placeholder3_type Z;<br></pre>
+<p>有了这些变量定义，那么 <code class="literal">X += Y * Z</code> 就等价于 <code class="literal">_1 += _2 * _3</code>。</p>
+<p>占位符在 lambda 表达式中的使用决定了结果函数是无元的，一元的，二元的还是三元的。这由最高的占位符索引决定。例如：</p>
+<pre class="programlisting">_1 + 5              // unary<br>_1 * _1 + _1        // unary<br>_1 + _2             // binary<br>bind(f, _1, _2, _3) // 3-ary<br>_3 + 10             // 3-ary<br></pre>
+<p>注意，最后一行创建了一个三元函数，它在它的第三个参数上加 <code class="literal">10</code>。不去理会前两个参数。而且，lambda 仿函数只有一个最小的数量。它总能提供真正需要的更多的参数（增加支持占位符的数量）。多余的参数只是被丢弃。例如：</p>
+<pre class="programlisting">int i, j, k; <br>_1(i, j, k)        // returns i, discards j and k<br>(_2 + _2)(i, j, k) // returns j+j, discards i and k<br></pre>
+<p>如果要了解这一功能背后的设计原理，参见 <a href="../apa.html#lambda.why_weak_arity" title="Lambda functor arity">“Lambda functor arity” 部分</a>。</p>
+<p>除了这三个占位符类型之外，还有第四个占位符类型 <code class="literal">placeholderE_type</code>。这个占位符的作用是定义 <a href="le_in_details.html#lambda.exceptions" title="Exceptions">“Exceptions” 部分</a>描述的 lambda 表达式中的异常处理。</p>
+<p>为一个占位符提供真正的参数的时候，参数传递的方式总是传引用。这就意味着任何影响占位符的副作用都会反映到实际参数上。例如：</p>
+<pre class="programlisting">int i = 1; <br>(_1 += 2)(i);         // i is now 3<br>(++_1, cout &lt;&lt; _1)(i) // i is now 4, outputs 4<br></pre>
+<p>
+</p>
+</div>
+<div class="section" lang="en">
+<div class="titlepage"><div><div><h3 class="title">
+<a name="lambda.operator_expressions"></a>Operator expressions（操作符表达式）</h3></div></div></div>
+<div class="toc"><dl>
+<dt><span class="section"><a href="le_in_details.html#id1244744">Operators that cannot be overloaded（不能被重载的操作符）</a></span></dt>
+<dt><span class="section"><a href="le_in_details.html#lambda.assignment_and_subscript">Assignment and subscript operators（赋值和下标操作符）</a></span></dt>
+<dt><span class="section"><a href="le_in_details.html#lambda.logical_operators">Logical operators（逻辑操作符）</a></span></dt>
+<dt><span class="section"><a href="le_in_details.html#lambda.comma_operator">Comma operator（逗号操作符）</a></span></dt>
+<dt><span class="section"><a href="le_in_details.html#lambda.function_call_operator">Function call operator（函数调用操作符）</a></span></dt>
+<dt><span class="section"><a href="le_in_details.html#lambda.member_pointer_operator">Member pointer operator（成员指针操作符）</a></span></dt>
+</dl></div>
+<p>基本规则是任何 C++ 操作符调用，只要它的参数中至少有一个是 lambda 表达式，则这个调用本身也是 lambda 表达式。几乎所有的能重载操作符都已被支持。例如，下面就是一个合法的 lambda 表达式：</p>
+<pre class="programlisting">cout &lt;&lt; _1, _2[_3] = _1 &amp;&amp; false</pre>
+<p>
+</p>
+<p>然而，有一些来自于 C++ 操作符重载规则的限制，以及一些特殊情况。</p>
+<div class="section" lang="en">
+<div class="titlepage"><div><div><h4 class="title">
+<a name="id1244744"></a>Operators that cannot be overloaded（不能重载的操作符）</h4></div></div></div>
+<p>有些操作符根本不能重载（<code class="literal">::</code>, <code class="literal">.</code>, <code class="literal">.*</code>）。对于有些操作符，对返回类型的要求阻碍了它们为创建 lambda 函数而重载。这些操作符有 <code class="literal">-&gt;.</code>, <code class="literal">-&gt;</code>, <code class="literal">new</code>, <code class="literal">new[]</code>, <code class="literal">delete</code>, <code class="literal">delete[]</code> 和 <code class="literal">?:</code>（条件操作符）。</p>
+</div>
+<div class="section" lang="en">
+<div class="titlepage"><div><div><h4 class="title">
+<a name="lambda.assignment_and_subscript"></a>Assignment and subscript operators（赋值和下标操作符）</h4></div></div></div>
+<p>这些操作符必须被实现为类成员。因此，左操作数必须是一个 lambda 表达式。例如：</p>
+<pre class="programlisting">int i; <br>_1 = i;      // ok<br>i = _1;      // not ok. i is not a lambda expression<br></pre>
+<p>关于这一限制有一个简单的解决方案，在 <a href="le_in_details.html#lambda.delaying_constants_and_variables" title="Delaying constants and variables">“Delaying constants and variables” 部分</a>描述。简而言之，就是通过用一个特殊的 <code class="literal">var</code> 函数进行包装，左侧参数可以被显式转变为 lambda 仿函数：</p>
+<pre class="programlisting">var(i) = _1; // ok<br></pre>
+<p>
+
+</p>
+</div>
+<div class="section" lang="en">
+<div class="titlepage"><div><div><h4 class="title">
+<a name="lambda.logical_operators"></a>Logical operators（逻辑操作符）</h4></div></div></div>
+<p>逻辑操作符服从短路求值规则。例如，在下面的代码中，<code class="literal">i</code> 没有被增加：</p>
+<pre class="programlisting">bool flag = true; int i = 0;<br>(_1 || ++_2)(flag, i);<br></pre>
+<p>
+</p>
+</div>
+<div class="section" lang="en">
+<div class="titlepage"><div><div><h4 class="title">
+<a name="lambda.comma_operator"></a>Comma operator（逗号操作符）</h4></div></div></div>
+<p>逗号操作符在 lambda 表达式中是“<span class="quote">语句分隔符</span>”。因为逗号也是函数调用中的参数分隔符，所以有时需要额外的括号：</p>
+<pre class="programlisting">for_each(a.begin(), a.end(), (++_1, cout &lt;&lt; _1));<br></pre>
+<p>如果没有包围 <code class="literal">++_1, cout &lt;&lt; _1</code> 的额外括号，这行代码的意图会被解释为用四个参数调用 <code class="literal">for_each</code>。</p>
+<p>使用逗号操作符建立的 lambda 仿函数坚 C++ 中左操作数的求值总是先于右操作数的规则。在上面的示例中，<code class="literal">a</code> 中的每一个元素首先被增 1，然后才写入流中。</p>
+</div>
+<div class="section" lang="en">
+<div class="titlepage"><div><div><h4 class="title">
+<a name="lambda.function_call_operator"></a>Function call operator（函数调用操作符）</h4></div></div></div>
+<p>函数调用操作符有求 lambda 仿函数的值的作用。用过多的参数调用会导致一个编译时错误。</p>
+</div>
+<div class="section" lang="en">
+<div class="titlepage"><div><div><h4 class="title">
+<a name="lambda.member_pointer_operator"></a>Member pointer operator（成员指针操作符）</h4></div></div></div>
+<p>成员指针操作符 <code class="literal">operator-&gt;*</code> 可以随意重载，因此，对于用户定义类型，成员指针操作符没有特定的情况。然而，它的内建的意义，却稍微有些复杂。内建成员指针操作符被用于以下情况：左参数是一个指向某个类 <code class="literal">A</code> 的对象的指针，而右手参数是一个指向 <code class="literal">A</code> 的一个成员的指针，或者是一个指向从 <code class="literal">A</code> 派生的类的一个成员的指针。我们必须区分以下两种情况：</p>
+<div class="itemizedlist"><ul type="disc">
+<li>
+<p>右手参数是一个数据成员的指针。在这种情况下，lambda 仿函数简单地执行参数替换并调用内建成员指针操作符，它返回一个引向它所指向的成员的引用。例如：</p>
+<pre class="programlisting">struct A { int d; };<br>A* a = new A();<br>  ...<br>(a -&gt;* &amp;A::d);     // returns a reference to a-&gt;d <br>(_1 -&gt;* &amp;A::d)(a); // likewise<br></pre>
+<p>
+</p>
+</li>
+<li>
+<p>右侧参数是一个指向成员函数的指针。对于一个像这样的内建调用，结果有点儿像一个被延迟的成员函数调用。这样一个表达式必须在后面跟一个函数参数列表，以使得这个被延迟的成员函数调用可以被执行。例如：</p>
+<pre class="programlisting">struct B { int foo(int); };<br>B* b = new B();<br>  ...<br>(b -&gt;* &amp;B::foo)         // returns a delayed call to b-&gt;foo<br>                        // a function argument list must follow<br>(b -&gt;* &amp;B::foo)(1)      // ok, calls b-&gt;foo(1)<br><br>(_1 -&gt;* &amp;B::foo)(b);    // returns a delayed call to b-&gt;foo, <br>                        // no effect as such<br>(_1 -&gt;* &amp;B::foo)(b)(1); // calls b-&gt;foo(1)<br></pre>
+<p>
+</p>
+</li>
+</ul></div>
+<p>
+</p>
+</div>
+</div>
+<div class="section" lang="en">
+<div class="titlepage"><div><div><h3 class="title">
+<a name="lambda.bind_expressions"></a>Bind expressions（bind 表达式）</h3></div></div></div>
+<div class="toc"><dl>
+<dt><span class="section"><a href="le_in_details.html#lambda.function_pointers_as_targets">Function pointers or references as targets（以函数指针或引用为目标）</a></span></dt>
+<dt><span class="section"><a href="le_in_details.html#member_functions_as_targets">Member functions as targets（以成员函数为目标）</a></span></dt>
+<dt><span class="section"><a href="le_in_details.html#lambda.members_variables_as_targets">Member variables as targets（以成员变量为目标）</a></span></dt>
+<dt><span class="section"><a href="le_in_details.html#lambda.function_objects_as_targets">Function objects as targets（以函数对象为目标）</a></span></dt>
+</dl></div>
+<p>bind 表达式可以有两种形式：</p>
+<pre class="programlisting">bind(<em class="parameter"><code>target-function</code></em>, <em class="parameter"><code>bind-argument-list</code></em>)<br>bind(<em class="parameter"><code>target-member-function</code></em>, <em class="parameter"><code>object-argument</code></em>, <em class="parameter"><code>bind-argument-list</code></em>)<br></pre>
+<p>一个 bind 表达式延迟了一个函数的调用。如果这个 <span class="emphasis"><em>target function</em></span> 是 <span class="emphasis"><em>n</em></span> 元的，那么 <code class="literal"><span class="emphasis"><em>bind-argument-list</em></span></code> 也必须同样包含 <span class="emphasis"><em>n</em></span>  个参数。在 BLL 的当前版本中，必须保证 0 &lt;= n &lt;= 9。对于成员函数来说，参数的数目最高为 8，因为对象参数要占有一个参数位置。总的来说，除了任何一个参数都能被一个占位符（更一般地说，是 lambda 表达式）取代之外，还要求 <span class="emphasis"><em><code class="literal">bind-argument-list</code></em></span> 对于目标函数来说必须是一个合法的参数列表。注意，目标函数也可以是一个 lambda 表达式。根据在 <span class="emphasis"><em><code class="literal">bind-argument-list</code></em></span> 中占位符的使用，一个 bind 表达式的结果可以是无元的，一元的，二元的或三元的函数对象（参见 <a href="le_in_details.html#lambda.placeholders" title="Placeholders">“Placeholders” 部分</a>）。</p>
+<p>bind 表达式创建的 lambda 仿函数的返回类型可以由显式特化的模板参数给定，就像下面的示例：</p>
+<pre class="programlisting">bind&lt;<span class="emphasis"><em>RET</em></span>&gt;(<span class="emphasis"><em>target-function</em></span>, <span class="emphasis"><em>bind-argument-list</em></span>)<br></pre>
+<p>这一方法只有在目标函数的返回类型不能被推演出来的情况下才是必要的。</p>
+<p>以下部分描述 bind 表达式的不同类型。</p>
+<div class="section" lang="en">
+<div class="titlepage"><div><div><h4 class="title">
+<a name="lambda.function_pointers_as_targets"></a>Function pointers or references as targets（以函数指针或引用为目标）</h4></div></div></div>
+<p>目标函数可以是指向一个函数的指针或引向一个函数的引用，而且它可以使已被绑定的或未被绑定的。例如：</p>
+<pre class="programlisting">X foo(A, B, C); A a; B b; C c;<br>bind(foo, _1, _2, c)(a, b);<br>bind(&amp;foo, _1, _2, c)(a, b);<br>bind(_1, a, b, c)(foo);<br></pre>
+<p>这种类型的 bind 表达式的返回类型推演总是能够成功。</p>
+<p>注意，在 C++ 中，只有当一个重载函数的地址符合以下条件，才可能持有这个地址，它被赋值给一个变量，或用于初始化一个变量，这个变量的类型消除了多义性，或者使用了一个显式的强制转型表达式。这就意味着重载函数不能直接用于一个 bind 表达式，例如：</p>
+<pre class="programlisting">void foo(int);<br>void foo(float);<br>int i; <br>  ...<br>bind(&amp;foo, _1)(i);                            // error <br>  ...<br>void (*pf1)(int) = &amp;foo;<br>bind(pf1, _1)(i);                             // ok<br>bind(static_cast&lt;void(*)(int)&gt;(&amp;foo), _1)(i); // ok<br></pre>
+<p>
+</p>
+</div>
+<div class="section" lang="en">
+<div class="titlepage"><div><div><h4 class="title">
+<a name="member_functions_as_targets"></a>Member functions as targets（以成员函数为目标）</h4></div></div></div>
+<p>在 bind 表达式内使用指向成员函数的指针的语法为：</p>
+<pre class="programlisting">bind(<em class="parameter"><code>target-member-function</code></em>, <em class="parameter"><code>object-argument</code></em>, <em class="parameter"><code>bind-argument-list</code></em>)<br></pre>
+<p>对象参数可以是一个引向对象的引用或指向对象的指针，BLL 以同样的接口支持这两种情况：</p>
+<pre class="programlisting">bool A::foo(int) const; <br>A a;<br>vector&lt;int&gt; ints; <br>  ...<br>find_if(ints.begin(), ints.end(), bind(&amp;A::foo, a, _1)); <br>find_if(ints.begin(), ints.end(), bind(&amp;A::foo, &amp;a, _1));<br></pre>
+<p>类似地，如果对象参数是未绑定的，则作为结果的 lambda 仿函数可以通过指针或者引用调用：</p>
+<pre class="programlisting">bool A::foo(int); <br>list&lt;A&gt; refs; <br>list&lt;A*&gt; pointers; <br>  ...<br>find_if(refs.begin(), refs.end(), bind(&amp;A::foo, _1, 1)); <br>find_if(pointers.begin(), pointers.end(), bind(&amp;A::foo, _1, 1));<br></pre>
+<p>
+
+</p>
+<p>尽管接口相同，但是使用一个指针或一个引用作为对象参数还是有重要的语义上的区别。这些区别主要来自于 <code class="literal">bind</code>-functions 持有它们的参数的方法是不同的，以及被绑定参数是如何存储在 lambda 仿函数中的。对象参数与任何其它 bind 参数具有相同的参数传递和存储机制（参见 <a href="using_library.html#lambda.storing_bound_arguments" title="Storing bound arguments in lambda functions">“Storing bound arguments in lambda functions” 部分</a>），它以一个常引用传递并以一个常拷贝存储在 lambda 仿函数中。这就造成了 lambda 仿函数和原来的成员函数之间的不对称，也造成了表面上类似的 lambda 仿函数之间的不对称。例如：</p>
+<pre class="programlisting">class A {<br>  int i; mutable int j;<br>public:<br><br>  A(int ii, int jj) : i(ii), j(jj) {};<br>  void set_i(int x) { i = x; }; <br>  void set_j(int x) const { j = x; }; <br>};<br></pre>
+<p>使用一个指针的时候，它的行为可能正符合程序员的预期：</p>
+<pre class="programlisting">A a(0,0); int k = 1;<br>bind(&amp;A::set_i, &amp;a, _1)(k); // a.i == 1<br>bind(&amp;A::set_j, &amp;a, _1)(k); // a.j == 1<br></pre>
+<p>尽管存储的是一个对象参数的常拷贝，原始对象 <code class="literal">a</code> 还是被改变了。这是因为对象参数是一个指针，是这个指针本身，而不是它指向的对象，被拷贝。使用一个引用的时候，程序的行为会有所不同：</p>
+<pre class="programlisting">A a(0,0); int k = 1;<br>bind(&amp;A::set_i, a, _1)(k); // error; a const copy of a is stored. <br>                           // Cannot call a non-const function set_i<br>bind(&amp;A::set_j, a, _1)(k); // a.j == 0, as a copy of a is modified<br></pre>
+<p>
+</p>
+<p>为了防止拷贝的发生，可以使用 <code class="literal">ref</code> 或 <code class="literal">cref</code> 包装（<code class="literal">var</code> 和 <code class="literal">constant_ref</code> 也同样可以使用）：</p>
+<pre class="programlisting">bind(&amp;A::set_i, ref(a), _1)(k); // a.j == 1<br>bind(&amp;A::set_j, cref(a), _1)(k); // a.j == 1<br></pre>
+<p>
+</p>
+<p>注意，前面的讨论只与被绑定参数有关。如果这个对象参数是未绑定的，参数传递模式总是以传引用的方式。因此，在下面两个 lambda 仿函数的调用中参数 <code class="literal">a</code> 不会被拷贝进来：</p>
+<pre class="programlisting">A a(0,0);<br>bind(&amp;A::set_i, _1, 1)(a); // a.i == 1<br>bind(&amp;A::set_j, _1, 1)(a); // a.j == 1<br></pre>
+<p>
+</p>
+</div>
+<div class="section" lang="en">
+<div class="titlepage"><div><div><h4 class="title">
+<a name="lambda.members_variables_as_targets"></a>Member variables as targets（以成员变量为目标）</h4></div></div></div>
+<p>一个指向成员变量的指针不是一个真正的函数，但是 <code class="literal">bind</code> 函数的第一个参数依然可以是一个指向成员变量的指针。调用这样一个 bind 表达式会返回一个引向这个数据成员的引用。例如：</p>
+<pre class="programlisting">struct A { int data; };<br>A a;<br>bind(&amp;A::data, _1)(a) = 1;     // a.data == 1<br></pre>
+<p>成员被访问的那个对象的 cv 修饰符（c 为 const，v 为 volatile ——译者注）也需要被考虑。例如，下面的例子就是试图写到一个 const 区域中：</p>
+<pre class="programlisting">const A ca = a;<br>bind(&amp;A::data, _1)(ca) = 1;     // error<br></pre>
+<p>
+
+</p>
+</div>
+<div class="section" lang="en">
+<div class="titlepage"><div><div><h4 class="title">
+<a name="lambda.function_objects_as_targets"></a>Function objects as targets（以函数对象为目标）</h4></div></div></div>
+<p>函数对象，换句话说，就是定义了函数调用操作符，可以像目标函数一样使用的类对象。通常，BLL 不能推演一个任意的函数对象的返回类型。然而，有两种方法赋予 BLL 这种针对某一函数对象类的能力。</p>
+<div class="simplesect" lang="en">
+<div class="titlepage"><div><div><h5 class="title">
+<a name="id1245471"></a>The result_type typedef（结果类型 typedef）</h5></div></div></div>
+<p>BLL 支持标准库的在一个函数对象类中用一个名为 <code class="literal">result_type</code> 的成员 typedef 声明一个函数对象的返回类型的惯例。这是一个简单的示例：</p>
+<pre class="programlisting">struct A {<br>  typedef B result_type;<br>  B operator()(X, Y, Z); <br>};<br></pre>
+<p>如果一个函数对象没有定义 <code class="literal">result_type</code> typedef，下面描述的方法（<code class="literal">sig</code> 模板）也可以用来决定函数对象的返回类型。如果一个函数对象既定义了 <code class="literal">result_type</code> 也定义了 <code class="literal">sig</code>，优先使用 <code class="literal">result_type</code>。</p>
+</div>
+<div class="simplesect" lang="en">
+<div class="titlepage"><div><div><h5 class="title">
+<a name="id1245528"></a>The sig template（sig 模板）</h5></div></div></div>
+<p>另一种可以让 BLL 感知一个函数对象的返回类型的机制是定义一个成员模板结构 <code class="literal">sig&lt;Args&gt;</code>，其中包含一个指定返回类型的 typedef <code class="literal">type</code>。这是一个简单的示例：</p>
+<pre class="programlisting">struct A {<br>  template &lt;class Args&gt; struct sig { typedef B type; }<br>  B operator()(X, Y, Z); <br>};<br></pre>
+<p>模板参数 <code class="literal">Args</code> 是一个 <code class="literal">tuple</code>（或者更精确些，一个 <code class="literal">cons</code> list（部件链表））类型 [<a href="../lambda.html#cit:boost::tuple" title="[tuple]"><span class="abbrev">tuple</span></a>]，它的第一个元素是函数对象类型本身，而剩下的元素是调用这个函数对象的参数的类型。这与 定义一个 <code class="literal">result_type</code> typedef 相比似乎过于复杂了。但是，仅仅用一个简单的 typedef 表示返回类型有两个重要的限制：</p>
+<div class="orderedlist"><ol type="1">
+<li><p>如果这个函数对象定义了不止一个函数调用操作符，它们没有办法指定不同的返回类型。</p></li>
+<li><p>如果函数调用操作符是一个模板，则结果类型可能依赖于模板参数。因此，typedef 也应该是一个模板，但 C++ 语言并不支持。</p></li>
+</ol></div>
+<p>下面的代码展示了一个示例，返回类型依赖于一个参数的类型，以及这种依赖是如何通过 <code class="literal">sig</code> 模板表达出来的：</p>
+<pre class="programlisting">struct A {<br><br>  // the return type equals the third argument type:<br>  template&lt;class T1, class T2, class T3&gt;<br>  T3 operator()(const T1&amp; t1, const T2&amp; t2, const T3&amp; t3) const;<br><br>  template &lt;class Args&gt; <br>  class sig {<br>    // get the third argument type (4th element)<br>    typedef typename <br>      boost::tuples::element&lt;3, Args&gt;::type T3;<br>  public:<br>    typedef typename <br>      boost::remove_cv&lt;T3&gt;::type type;<br>  };<br>};<br></pre>
+<p><code class="literal">Args</code> 的元素总是非引用类型。而且，元素的类型可以有一个 const 或 volatile 修饰符（合在一起，被称为 <span class="emphasis"><em>cv-qualifiers</em></span>（cv 修饰符）），或者两者都有。这是因为参数中的 cv 修饰符会影响返回类型。将潜在的被 cv 修饰过的函数返回类型本身包含到 <code class="literal">Args</code> tuple 中的理由，在于函数对象类可以包含 const 和非 const（或者 volatile，甚至 const volatile）的函数调用操作符，而且它们每一个都会有一个不同的返回类型。</p>
+<p><code class="literal">sig</code> 模板可以被看做一个 <span class="emphasis"><em>meta-function</em></span>（元
+函数），它使用 tuple 中的参数类型将参数类型 tuple
+映射出为调用的返回类型。从上面的示例看来，那个模板最终变得有些复杂。它所执行的典型任务就是从 tuple 中提取相关类型，移除 cv
+修饰符等等。对于这些能帮助这个任务的工具可以参见 Boost type_traits [<a href="../lambda.html#cit:boost::type_traits" title="[type_traits]"><span class="abbrev">type_traits</span></a>] 和 Tuple [<a href="../lambda.html#cit:boost::type_traits" title="[type_traits]"><span class="abbrev">type_traits</span></a>] 库。<code class="literal">sig</code> 模板是一个最初在 FC++ 库 [<a href="../lambda.html#cit:fc++" title="[fc++]"><span class="abbrev">fc++</span></a>] 中引入的类似机制的一个优雅的版本。</p>
+</div>
+</div>
+</div>
+<div class="section" lang="en">
+<div class="titlepage"><div><div><h3 class="title">
+<a name="lambda.overriding_deduced_return_type"></a>Overriding the deduced return type（越过推演出的返回类型）</h3></div></div></div>
+<div class="toc"><dl><dt><span class="section"><a href="le_in_details.html#lambda.nullary_functors_and_ret">Nullary lambda functors and ret（无元 lambda 仿函数和 ret）</a></span></dt></dl></div>
+<p>返回类型推演系统可能不能推演某些用户定义操作符或带有类对象的 bind 表达式的返回类型。有一种特殊的 lambda 表达式类型被提供，用于显式表述返回类型和越过推演系统。为了表述由 lambda 表达式 <code class="literal">e</code> 定义的 lambda 仿函数的返回值的类型为 <code class="literal">T</code>，你可以这样写：</p>
+<pre class="programlisting">ret&lt;T&gt;(e);</pre>
+<p>这样的效果是对这个 lambda 表达式 <code class="literal">e</code> 的返回类型推演根本就不被执行，改为使用 <code class="literal">T</code> 作为返回类型。很明显，<code class="literal">T</code> 不能是任意类型，那个 lambda 仿函数的真正的返回类型必须能够被隐式转换到 <code class="literal">T</code>。例如：</p>
+<pre class="programlisting">A a; B b;<br>C operator+(A, B);<br>int operator*(A, B); <br>  ...<br>ret&lt;D&gt;(_1 + _2)(a, b);     // error (C cannot be converted to D)<br>ret&lt;C&gt;(_1 + _2)(a, b);     // ok<br>ret&lt;float&gt;(_1 * _2)(a, b); // ok (int can be converted to float)<br>  ...<br>struct X {<br>  Y operator(int)();   <br>};<br>  ...<br>X x; int i;<br>bind(x, _1)(i);            // error, return type cannot be deduced<br>ret&lt;Y&gt;(bind(x, _1))(i);    // ok<br></pre>
+<p>对于 bind 表达式，有一个简单的记法用来代替 <code class="literal">ret</code>。最后一行可以用这种写法：</p>
+<pre class="programlisting">bind&lt;Z&gt;(x, _1)(i);</pre>
+<p>
+这一特性是模仿了 Boost Bind 库 [[<a href="../lambda.html#cit:boost::bind" title="[bind]"><span class="abbrev">bind</span></a>]。</p>
+<p>注意，在嵌套 lambda 表达式中，<code class="literal">ret</code> 必须被用于每一个推演被舍弃的子表达式。例如：</p>
+<pre class="programlisting">A a; B b;<br>C operator+(A, B); D operator-(C);<br>  ...<br>ret&lt;D&gt;( - (_1 + _2))(a, b); // error <br>ret&lt;D&gt;( - ret&lt;C&gt;(_1 + _2))(a, b); // ok<br></pre>
+<p>
+</p>
+<p>如果你发现你在相同的类型上重复使用 <code class="literal">ret</code>，那就值得扩展返回类型推演（参见 <a href="extending.html" title="Extending return type deduction system">“Extending return type deduction system” 部分</a>）。</p>
+<div class="section" lang="en">
+<div class="titlepage"><div><div><h4 class="title">
+<a name="lambda.nullary_functors_and_ret"></a>Nullary lambda functors and ret（无元 lambda 仿函数和 ret）</h4></div></div></div>
+<p>就像上面所表述的，<code class="literal">ret</code> 的作用是阻止执行返回类型推演。然而，有一个例外。由于 C++ 模板实例化的工作方式，对于 0 参数的 lambda 仿函数，编译器总是强制实例化返回类型推演模板。这里介绍一个 <code class="literal">ret</code> 的小问题，最好用一个例子来说明：</p>
+<pre class="programlisting">struct F { int operator()(int i) const; }; <br>F f;<br>  ...<br>bind(f, _1);           // fails, cannot deduce the return type<br>ret&lt;int&gt;(bind(f, _1)); // ok<br>  ...<br>bind(f, 1);            // fails, cannot deduce the return type<br>ret&lt;int&gt;(bind(f, 1));  // fails as well!<br></pre>
+<p>BLL 不能推演出上面的 bind 调用的返回类型，因为 <code class="literal">F</code> 没有定义 typedef <code class="literal">result_type</code>。有人希望用 <code class="literal">ret</code> 来修复它，但是对于无元 lambda 仿函数来说，来自于 bind 表达式（上面最后一行）的结果不能工作。返回类型推演模板已经被实例化，即使它没有必要而结果是一个编译错误。</p>这个问题的解决方案是不使用 <code class="literal">ret</code> 函数，而是将返回类型定义成 <code class="literal">bind</code> 调用中的一个 explicitly specified template parameter（显式特化的模板参数）：<p></p>
+<pre class="programlisting">bind&lt;int&gt;(f, 1);       // ok<br></pre>
+<p>使用 <code class="literal">ret&lt;<em class="parameter"><code>T</code></em>&gt;(bind(<em class="parameter"><code>arg-list</code></em>))</code> 和 <code class="literal">bind&lt;<em class="parameter"><code>T</code></em>&gt;(<em class="parameter"><code>arg-list</code></em>)</code> 创建的仿函数具有完全相同的功能——实际上的区别是对于某些无元 lambda 仿函数，后者可以工作，而前者不行。</p>
+</div>
+</div>
+<div class="section" lang="en">
+<div class="titlepage"><div><div><h3 class="title">
+<a name="lambda.delaying_constants_and_variables"></a>Delaying constants and variables（延迟常量和变量）</h3></div></div></div>
+<p>一元函数 <code class="literal">constant</code>，<code class="literal">constant_ref</code> 和 <code class="literal">var</code> 将它们的参数变成一个实现恒等映射的 lambda 仿函数，前两个用于常量，后面的用于变量。为了明确 lambda 表达式的语法，这些延迟常量和变量的使用有时是有必要的。例如：</p>
+<pre class="programlisting">for_each(a.begin(), a.end(), cout &lt;&lt; _1 &lt;&lt; ' ');<br>for_each(a.begin(), a.end(), cout &lt;&lt; ' ' &lt;&lt; _1);<br></pre>
+<p>第一行输出以逗号分隔的 <code class="literal">a</code> 的元素，第二行输出一个空格，后面跟着没有任何分隔符的 <code class="literal">a</code> 的元素。这里的原因在于 <code class="literal">cout &lt;&lt; ' '</code> 中的两个操作数都不是 lambda 表达式，因此 <code class="literal">cout &lt;&lt; ' '</code> 被立即求值。为了延迟 <code class="literal">cout &lt;&lt; ' '</code> 的求值，其中一个操作数必须被显式标记为一个 lambda 表达式。这正是 <code class="literal">constant</code> 函数的用武之地：</p>
+<pre class="programlisting">for_each(a.begin(), a.end(), cout &lt;&lt; constant(' ') &lt;&lt; _1);<br></pre>
+<p>调用 <code class="literal">constant(' ')</code> 创建了一个无元 lambda 仿函数，它存储着字符常量 <code class="literal">' '</code> ，并在被调用时返回这个字符常量的一个引用。函数 <code class="literal">constant_ref</code> 与此类似，只不过它存储的是它的参数的一个 constant reference（常引用）。<code class="literal">constant</code> 和 <code class="literal">consant_ref</code> 只有在操作符调用有副作用的时候才需要使用，就像上面的那个例子一样。</p>
+<p>有时我们需要延迟一个变量的求值。假设我们要输出一个容器中的元素到一个带有编号的列表中：</p>
+<pre class="programlisting">int index = 0; <br>for_each(a.begin(), a.end(), cout &lt;&lt; ++index &lt;&lt; ':' &lt;&lt; _1 &lt;&lt; '\n');<br>for_each(a.begin(), a.end(), cout &lt;&lt; ++var(index) &lt;&lt; ':' &lt;&lt; _1 &lt;&lt; '\n');<br></pre>
+<p>第一个 <code class="literal">for_each</code> 调用不会做出我们想要的东西，<code class="literal">index</code> 被增加的次数只有一次，而且它的值被写到输出流中的次数也只有一次。通过使用 <code class="literal">var</code> 使 <code class="literal">index</code> 变成一个 lambda 表达式，我们可以得到想要的效果。</p>
+<p>总的来说，<code class="literal">var(x)</code> 创建一个无元 lambda 仿函数，它存储一个引向变量 <code class="literal">x</code> 的引用。当这个 lambda 仿函数被调用时，返回一个引向 <code class="literal">x</code> 的引用。</p>
+<div class="simplesect" lang="en">
+<div class="titlepage"><div><div><h4 class="title">
+<a name="id1246158"></a>Naming delayed constants and variables（有名字的延迟常量和变量）</h4></div></div></div>
+<p>在一个 lambda 表达式外部预定义和命名一个延迟变量或常量是有可能的。模板 <code class="literal">var_type</code>，<code class="literal">constant_type</code> 和 <code class="literal">constant_ref_type</code> 可以为这一目标提供帮助，可以像这样使用它们：</p>
+<pre class="programlisting">var_type&lt;T&gt;::type delayed_i(var(i));<br>constant_type&lt;T&gt;::type delayed_c(constant(c));<br></pre>
+<p>第一行定义的变量 <code class="literal">delayed_i</code> 是类型为 <code class="literal">T</code> 的变量 <code class="literal">i</code> of type <code class="literal">T</code> 的一个延迟版本。类似地，第二行定义的常量 <code class="literal">delayed_c</code> 是常量 <code class="literal">c</code> 的一个延迟版本。例如：</p>
+<pre class="programlisting">int i = 0; int j;<br>for_each(a.begin(), a.end(), (var(j) = _1, _1 = var(i), var(i) = var(j))); <br></pre>
+<p>等价于：</p>
+<pre class="programlisting">int i = 0; int j;<br>var_type&lt;int&gt;::type vi(var(i)), vj(var(j));<br>for_each(a.begin(), a.end(), (vj = _1, _1 = vi, vi = vj));<br></pre>
+<p>
+</p>
+<p>这是命名一个延迟常量的示例：</p>
+<pre class="programlisting">constant_type&lt;char&gt;::type space(constant(' '));<br>for_each(a.begin(),a.end(), cout &lt;&lt; space &lt;&lt; _1);<br></pre>
+<p>
+</p>
+</div>
+<div class="simplesect" lang="en">
+<div class="titlepage"><div><div><h4 class="title">
+<a name="id1246258"></a>About assignment and subscript operators（关于赋值和下标操作符）</h4></div></div></div>
+<p>就像在 <a href="le_in_details.html#lambda.assignment_and_subscript" title="Assignment and subscript operators">“Assignment and subscript operators” 部分</a>描述的，赋值和下标操作符总是定义为成员函数。这就意味着，为了把 <code class="literal">x = y</code> 或 <code class="literal">x[y]</code> 形式的表达式解释为 lambda 表达式，左侧操作数 <code class="literal">x</code> 必须是一个 lambda 表达式。因此，有时需要用 <code class="literal">var</code> 来达到这个目的。我们再看一看 <a href="le_in_details.html#lambda.assignment_and_subscript" title="Assignment and subscript operators">“Assignment and subscript operators” 部分</a>的示例：</p>
+<pre class="programlisting">int i; <br>i = _1;       // error<br>var(i) = _1;  // ok<br></pre>
+<p>
+</p>
+<p>注意，混合式赋值操作符 <code class="literal">+=</code>，<code class="literal">-=</code> 等可以定义为非成员函数，因此即使只有右侧操作数是一个 lambda 表达式，它们也可以被解释为 lambda 表达式。不过，延迟左操作数还是非常完美的。例如，<code class="literal">i += _1</code> 等价于 <code class="literal">var(i) += _1</code>。</p>
+</div>
+</div>
+<div class="section" lang="en">
+<div class="titlepage"><div><div><h3 class="title">
+<a name="lambda.lambda_expressions_for_control_structures"></a>Lambda expressions for control structures（控制结构的 lambda 表达式）</h3></div></div></div>
+<div class="toc"><dl><dt><span class="section"><a href="le_in_details.html#lambda.switch_statement">Switch statement（switch 语句）</a></span></dt></dl></div>
+<p>BLL 定义了几个函数用来创建代替控制结构的 lambda 仿函数。它们都以 lambda 仿函数作为参数并返回 <code class="literal">void</code>。我们以一个例子开始，下面的代码输出某个容器 <code class="literal">a</code> 的全部偶数元素：</p>
+<pre class="programlisting">for_each(a.begin(), a.end(), <br>         if_then(_1 % 2 == 0, cout &lt;&lt; _1));  <br></pre>
+<p>
+</p>
+<p>BLL 支持以下用于控制结构的函数模板：</p>
+<pre class="programlisting">if_then(condition, then_part)<br>if_then_else(condition, then_part, else_part)<br>if_then_else_return(condition, then_part, else_part)<br>while_loop(condition, body)<br>while_loop(condition) // no body case<br>do_while_loop(condition, body)<br>do_while_loop(condition) // no body case <br>for_loop(init, condition, increment, body)<br>for_loop(init, condition, increment) // no body case<br>switch_statement(...)<br></pre>
+<p>所有控制结构 lambda 仿函数的返回类型都是 <code class="literal">void</code>，但 <code class="literal">if_then_else_return</code> 除外，它包装一个条件操作符的调用</p>
+<pre class="programlisting">condition ? then_part : else_part<br></pre>
+<p>这个操作符的返回类型规则多少有些复杂。主要的是，如果分支有相同的类型，这个类型就是返回类型。如果分支的返回类型不同，一个分支，比方说是类型 <code class="literal">A</code>，必须能够转换到另一个分支，比方说是类型 <code class="literal">B</code>。在这种情况下，结果类型是 <code class="literal">B</code>。更进一步，如果通用类型是一个左值，则返回类型也是一个左值。</p>
+<p>延迟变量在控制结构 lambda 表达式中随处可见。例如，这里我们用 <code class="literal">var</code> 函数将 <code class="literal">for_loop</code> 的参数变成 lambda 表达式。代码的作用是为一个二维数组的每一个元素加 1：</p>
+<pre class="programlisting">int a[5][10]; int i;<br>for_each(a, a+5, <br>  for_loop(var(i)=0, var(i)&lt;10, ++var(i), <br>           _1[var(i)] += 1));  <br></pre>
+<p>
+
+
+</p>
+<p>BLL 还支持另外一种控制机构的语法，这个建议由 Joel de Guzmann 提出。通过重载 <code class="literal">operator[]</code> 我们可以得到一种和内建控制结构非常类似的形式：</p>
+<pre class="programlisting">if_(condition)[then_part]<br>if_(condition)[then_part].else_[else_part]<br>while_(condition)[body]<br>do_[body].while_(condition)<br>for_(init, condition, increment)[body]<br></pre>
+<p>例如，如果使用这种语法，上面的 <code class="literal">if_then</code> 的例子可以写成：</p>
+<pre class="programlisting">for_each(a.begin(), a.end(), <br>         if_(_1 % 2 == 0)[ cout &lt;&lt; _1 ])  <br></pre>
+<p>通过获得更多的经验，我们最终可能会抛弃这些语法中的一种。</p>
+<div class="section" lang="en"><div class="titlepage"><div><div><h4 class="title">
+<a name="lambda.switch_statement"></a>Switch statement（switch 语句）</h4></div></div></div></div>
+<p><code class="literal">switch</code> 控制结构的 lambda 表达式更加复杂，因为 cases 的数量是可以变化的。一个 switch lambda 表达式的常规形式是：</p>
+<pre class="programlisting">switch_statement(<em class="parameter"><code>condition</code></em>, <br>  case_statement&lt;<em class="parameter"><code>label</code></em>&gt;(<em class="parameter"><code>lambda expression</code></em>),<br>  case_statement&lt;<em class="parameter"><code>label</code></em>&gt;(<em class="parameter"><code>lambda expression</code></em>),<br>  ...<br>  default_statement(<em class="parameter"><code>lambda expression</code></em>)<br>)<br></pre>
+<p><code class="literal"><em class="parameter"><code>condition</code></em></code> 参数必须是一个创建带有一个整型返回值的 lambda 仿函数的 lambda 表达式。各种不同的 cases 通过 <code class="literal">case_statement</code> 函数创建，可选的 default case 通过 <code class="literal">default_statement</code> 函数创建。case 标签通过显式特化 <code class="literal">case_statement</code> 函数的模板参数给定，而 <code class="literal">break</code> 语句是每一种 case 的隐含部分。例如，<code class="literal">case_statement&lt;1&gt;(a)</code>，这里 <code class="literal">a</code> 是某一个lambda 仿函数，以上语句生成如下代码：</p>
+<pre class="programlisting">case 1: <br>  <em class="parameter"><code>evaluate lambda functor</code></em> a; <br>  break;<br></pre>
+<p><code class="literal">switch_statement</code> 函数最多可以指定 9 个 case 语句。</p>
+<p>举一个具体的例子，下面的代码迭代遍历某个容器 <code class="literal">v</code> 并针对每一个 <code class="literal">0</code> 输出 “<span class="quote">zero</span>”，针对每一个 <code class="literal">1</code> 输出 “<span class="quote">one</span>”，针对其它的任意值 <em class="parameter"><code>n</code></em> 输出 “<span class="quote">other: <em class="parameter"><code>n</code></em></span>”。注意，依次排列在 <code class="literal">switch_statement</code> 后面的另一个 lambda 表达式在每一个元素后输出一行 break：</p>
+<pre class="programlisting">std::for_each(v.begin(), v.end(),<br>  ( <br>    switch_statement(<br>      _1,<br>      case_statement&lt;0&gt;(std::cout &lt;&lt; constant("zero")),<br>      case_statement&lt;1&gt;(std::cout &lt;&lt; constant("one")),<br>      default_statement(cout &lt;&lt; constant("other: ") &lt;&lt; _1)<br>    ), <br>    cout &lt;&lt; constant("\n") <br>  )<br>);<br></pre>
+<p>
+</p>
+</div>
+<div class="section" lang="en">
+<div class="titlepage"><div><div><h3 class="title">
+<a name="lambda.exceptions"></a>Exceptions （异常）</h3></div></div></div>
+<p>BLL 提供抛出和捕获异常的 lambda 仿函数。用于抛出异常的 lambda 仿函数由一元函数 <code class="literal">throw_exception</code> 创建。传给这个函数的参数是想要抛出的异常，或者是创建想要抛出的异常的 lambda 仿函数。用于重新抛出异常的 lambda 仿函数由一元的 <code class="literal">rethrow</code> 函数创建。</p>
+<p>用于处理异常的 lambda 表达式更加复杂。一个 try catch 块的 lambda 表达式的常规形式如下：</p>
+<pre class="programlisting">try_catch(<br>  <em class="parameter"><code>lambda expression</code></em>,<br>  catch_exception&lt;<em class="parameter"><code>type</code></em>&gt;(<em class="parameter"><code>lambda expression</code></em>),<br>  catch_exception&lt;<em class="parameter"><code>type</code></em>&gt;(<em class="parameter"><code>lambda expression</code></em>),<br>  ...<br>  catch_all(<em class="parameter"><code>lambda expression</code></em>)<br>)<br></pre>
+<p>第一个 lambda 表达式是 try 块。每一个 <code class="literal">catch_exception</code> 定义一个 catch 块，其中的显示特化模板参数定义被捕获的异常的类型。在 <code class="literal">catch_exception</code> 内的 lambda 表达式定义了异常被捕获到时的动作。注意，最终异常处理器捕捉到的异常是引用，例如，<code class="literal">catch_exception&lt;T&gt;(...)</code> 导致的 chatch 块如下：</p>
+<pre class="programlisting">catch(T&amp; e) { ... }<br></pre>
+<p>最后一个 chatch 块可以在 <code class="literal">catch_exception&lt;<em class="parameter"><code>type</code></em>&gt;</code> 或 <code class="literal">catch_all</code>（这一 lambda 表达式等价于 <code class="literal">catch(...)</code>）这两个调用之中选择一个。</p>
+<p><a href="le_in_details.html#ex:exceptions" title="Example8.1.Throwing and handling exceptions in lambda expressions.">Example 8.1 “在 lambda 表达式中抛出和处理异常”</a>示范了 BLL 的异常处理工具的使用。第一个 handler（处理器）捕捉 <code class="literal">foo_exception</code> 类型的异常。注意 handler（处理器）体内 <code class="literal">_1</code> 占位符的使用。</p>
+<p>第二个 handler（处理器）展示如何抛出异常，并示范了 <span class="emphasis"><em>exception placeholder</em></span>（异常占位符）<code class="literal">_e</code> 的使用。这是一个特殊的占位符，它与在 handler（处理器）体内捕捉到的异常对象相关。这里我们处理一个类型为 <code class="literal">std::exception</code> 的异常，它带有一个解释异常原因的字符串。这一解释可以用无参数成员函数 <code class="literal">what</code> 进行查询。表达式 <code class="literal">bind(&amp;std::exception::what, _e)</code> 创建能产生这个调用的 lambda 函数。注意，<code class="literal">_e</code> 不能在一个异常处理器 lambda 表达式之外使用。第二个 handler（处理器）的最后一行构造一个新的异常对象并通过 <code class="literal">throw exception</code> 将它抛出。在 lambda 表达式中构造和析构对象在 <a href="le_in_details.html#lambda.construction_and_destruction" title="Construction and destruction">“Construction and destruction” 部分</a>进行了说明。</p>
+<p>最后，第三个 handler（处理器）(<code class="literal">catch_all</code>) 示范重新抛出异常。</p>
+<div class="example">
+<a name="ex:exceptions"></a><p class="title"><b>Example 8.1 在 lambda 表达式中抛出和处理异常</b></p>
+<pre class="programlisting">for_each(<br>  a.begin(), a.end(),<br>  try_catch(<br>    bind(foo, _1),                 // foo may throw<br>    catch_exception&lt;foo_exception&gt;(<br>      cout &lt;&lt; constant("Caught foo_exception: ") <br>           &lt;&lt; "foo was called with argument = " &lt;&lt; _1<br>    ),<br>    catch_exception&lt;std::exception&gt;(<br>      cout &lt;&lt; constant("Caught std::exception: ") <br>           &lt;&lt; bind(&amp;std::exception::what, _e),<br>      throw_exception(bind(constructor&lt;bar_exception&gt;(), _1)))<br>    ),      <br>    catch_all(<br>      (cout &lt;&lt; constant("Unknown"), rethrow())<br>    )<br>  )<br>);<br></pre>
+</div>
+</div>
+<div class="section" lang="en">
+<div class="titlepage"><div><div><h3 class="title">
+<a name="lambda.construction_and_destruction"></a>Construction and destruction（构造函数和析构函数）</h3></div></div></div>
+<p>操作符 <code class="literal">new</code> 和 <code class="literal">delete</code>
+能被重载，但它们的返回类型是固定的。特别是，返回类型不能是 lambda 表达式，以防止它们为 lambda
+表达式重载。持有一个构造函数的地址是不可能的，因此构造函数不能在 bind
+表达式中作为目标函数使用。这些对于析构函数也同样成立。为了绕过这些限制，BLL 提供了 <code class="literal">new</code> 和 <code class="literal">delete</code> 的包装类，也提供了构造函数和析构函数的包装类。这些函数的实例是函数对象，它们可以在bind 表达式中作为目标函数使用。例如：</p>
+<pre class="programlisting">int* a[10];<br>for_each(a, a+10, _1 = bind(new_ptr&lt;int&gt;())); <br>for_each(a, a+10, bind(delete_ptr(), _1));<br></pre>
+<p><code class="literal">new_ptr&lt;int&gt;()</code> 表达式被调用时就会创建了一个调用 <code class="literal">new int()</code> 的函数对象，并将它包装在 <code class="literal">bind</code> 中做成一个 lambda 仿函数。用同样的方法，表达式 <code class="literal">delete_ptr()</code> 创建一个在其参数上调用 <code class="literal">delete</code> 的函数对象。注意，<code class="literal">new_ptr&lt;<em class="parameter"><code>T</code></em>&gt;()</code> 同样可以持有参数。它们被直接传送给构造函数调用，并因此而允许调用持有参数的构造函数。</p>
+<p>举一个在 lambda 表达式中调用构造函数的例子，下面的代码从两个容器 <code class="literal">x</code> 和 <code class="literal">y</code> 中读取整数，用这两个整数创建 pairs，并把它们插入到第三个容器中：</p>
+<pre class="programlisting">vector&lt;pair&lt;int, int&gt; &gt; v;<br>transform(x.begin(), x.end(), y.begin(), back_inserter(v),<br>          bind(constructor&lt;pair&lt;int, int&gt; &gt;(), _1, _2));<br></pre>
+<p>
+
+<a href="le_in_details.html#table:constructor_destructor_fos" title="Table8.1.Construction and destruction related function objects.">Table 11.1 “构造函数和析构函数相关函数对象”</a>列出了所有与创建和销毁对象相关的函数对象，展示了被创建的表达式和调用的函数对象，以及对表达式求值的效果。</p>
+<div class="table">
+<a name="table:constructor_destructor_fos"></a><p class="title"><b>Table 11.1 构造函数和析构函数相关函数对象</b></p>
+<table class="table" summary="Construction and destruction related function objects.">
+<colgroup><col><col></colgroup>
+<thead><tr>
+<th>函数对象调用</th>
+<th>被包装表达式</th>
+</tr></thead>
+<tbody>
+<tr>
+<td><code class="literal">constructor&lt;T&gt;()(<em class="parameter"><code>arg_list</code></em>)</code></td>
+<td>T(<em class="parameter"><code>arg_list</code></em>)</td>
+</tr>
+<tr>
+<td><code class="literal">destructor()(a)</code></td>
+<td>
+<code class="literal">a.~A()</code>, where <code class="literal">a</code> is of type <code class="literal">A</code>
+</td>
+</tr>
+<tr>
+<td><code class="literal">destructor()(pa)</code></td>
+<td>
+<code class="literal">pa-&gt;~A()</code>, where <code class="literal">pa</code> is of type <code class="literal">A*</code>
+</td>
+</tr>
+<tr>
+<td><code class="literal">new_ptr&lt;T&gt;()(<em class="parameter"><code>arg_list</code></em>)</code></td>
+<td><code class="literal">new T(<em class="parameter"><code>arg_list</code></em>)</code></td>
+</tr>
+<tr>
+<td><code class="literal">new_array&lt;T&gt;()(sz)</code></td>
+<td><code class="literal">new T[sz]</code></td>
+</tr>
+<tr>
+<td><code class="literal">delete_ptr()(p)</code></td>
+<td><code class="literal">delete p</code></td>
+</tr>
+<tr>
+<td><code class="literal">delete_array()(p)</code></td>
+<td><code class="literal">delete p[]</code></td>
+</tr>
+</tbody>
+</table>
+</div>
+</div>
+<div class="section" lang="en">
+<div class="titlepage"><div><div><h3 class="title">
+<a name="id1247290"></a>Special lambda expressions（特殊 lambda 表达式）</h3></div></div></div>
+<div class="toc"><dl>
+<dt><span class="section"><a href="le_in_details.html#id1247296">Preventing argument substitution（阻止参数置换）</a></span></dt>
+<dt><span class="section"><a href="le_in_details.html#lambda.rvalues_as_actual_arguments">Rvalues as actual arguments to lambda functors（右值作为 lambda 仿函数的实际参数）</a></span></dt>
+</dl></div>
+<div class="section" lang="en">
+<div class="titlepage"><div><div><h4 class="title">
+<a name="id1247296"></a>Preventing argument substitution（阻止参数置换）</h4></div></div></div>
+<div class="toc"><dl>
+<dt><span class="section"><a href="le_in_details.html#lambda.unlambda">Unlambda</a></span></dt>
+<dt><span class="section"><a href="le_in_details.html#id1247516">Protect</a></span></dt>
+</dl></div>
+<p>当一个 lambda 仿函数被调用的时候，缺省行为是在所有子表达式内用实际参数替换占位符。本节描述阻止这种替换和和子表达式求值的工具，并说明这些工具应该在什么时候使用。</p>
+<p>一个 bind 表达式的参数可以是任意的 lambda 表达式，比如，其它的 bind 表达式。例如：</p>
+<pre class="programlisting">int foo(int); int bar(int);<br>...<br>int i;<br>bind(foo, bind(bar, _1)(i);<br></pre>
+<p>最后一行调用了 <code class="literal">foo(bar(i));</code>，注意，bind
+表达式中的第一个参数，也就是目标函数，也不例外，因此也可以是一个 bind 表达式。只不过最里层的 lambda
+仿函数必须返回某些可以当作一个目标函数来用的东西：另一个 lambda 仿函数，函数指针，指向成员函数的指针，等等。例如，下面的代码中，最里层
+lambda 仿函数在两个函数之间进行选择，并返回指向其中一个的指针：</p>
+<pre class="programlisting">int add(int a, int b) { return a+b; }<br>int mul(int a, int b) { return a*b; }<br><br>int(*)(int, int)  add_or_mul(bool x) { <br>  return x ? add : mul; <br>}<br><br>bool condition; int i; int j;<br>...<br>bind(bind(&amp;add_or_mul, _1), _2, _3)(condition, i, j);<br></pre>
+<p>
+
+</p>
+<div class="section" lang="en">
+<div class="titlepage"><div><div><h5 class="title">
+<a name="lambda.unlambda"></a>Unlambda</h5></div></div></div>
+<p>某种嵌套的 bind 表达式可能会在漫不经心中出现，它的目标函数是一个变量，这个变量的类型依赖于一个模板参数。特别是目标函数可以是一个函数模板的形式参数。在这种情况下，程序员可能不知道这个目标函数是否是一个 lambda 仿函数。</p>
+<p>考虑下面的函数模板：</p>
+<pre class="programlisting">template&lt;class F&gt;<br>int nested(const F&amp; f) {<br>  int x;<br>  ...<br>  bind(f, _1)(x);<br>  ...<br>}<br></pre>
+<p>在函数内的某处，形式参数 <code class="literal">f</code> 被用作一个 bind 表达式的目标函数。为了使这个 <code class="literal">bind</code> 调用合法，<code class="literal">f</code> 必须是一个一元函数。假设有下面两个对 <code class="literal">nested</code> 的调用：</p>
+<pre class="programlisting">int foo(int);<br>int bar(int, int);<br>nested(&amp;foo);<br>nested(bind(bar, 1, _1));<br></pre>
+<p>都是带有恰当的参数和返回类型的一元函数，或者函数对象，但是后一个无法正常编译。在后一个调用中，<code class="literal">nested</code> 中的 bind 表达式会变成：</p>
+<pre class="programlisting">bind(bind(bar, 1, _1), _1) <br></pre>
+<p>当用 <code class="literal">x</code> 来调用它时，替换之后我们最终企图调用</p>
+<pre class="programlisting">bar(1, x)(x)<br></pre>
+<p>这是一个错误，对 <code class="literal">bar</code> 的调用返回 int，不是一个一元函数或函数对象。</p>
+<p>在上面的例子中，<code class="literal">nested</code> 函数内的 bind 表达式的意图是将 <code class="literal">f</code> 看做一个普通的函数对象。BLL 提供函数模板 <code class="literal">unlambda</code> 来表达这一点：一个包装在 <code class="literal">unlambda</code> 中的 lambda 仿函数不再是一个 lambda 仿函数，也不再参与参数替换过程。注意，对于所有其它参数类型而言，除了将非 const 对象变成 const 之外，<code class="literal">unlambda</code> 是一个恒等操作。</p>
+<p>使用 <code class="literal">unlambda</code>，<code class="literal">nested</code> 函数写为：</p>
+<pre class="programlisting">template&lt;class F&gt;<br>int nested(const F&amp; f) {<br>  int x;<br>  ...<br>  bind(unlambda(f), _1)(x);<br>  ...<br>}<br></pre>
+<p>
+
+</p>
+</div>
+<div class="section" lang="en">
+<div class="titlepage"><div><div><h5 class="title">
+<a name="id1247516"></a>Protect</h5></div></div></div>
+<p><code class="literal">protect</code> 函数与 unlambda 相似。它也用于阻止参数替换的发生，但是 <code class="literal">unlambda</code> 将一个 lambda 仿函数永久地变成一个普通函数对象，<code class="literal">protect</code>  只是暂时地，对一次求值起作用。例如：</p>
+<pre class="programlisting">int x = 1, y = 10;<br>(_1 + protect(_1 + 2))(x)(y);<br></pre>
+<p>第一个调用用 <code class="literal">x</code> 替换最左边的 <code class="literal">_1</code>，结果成为另一个 lambda 仿函数 <code class="literal">x + (_1 + 2)</code>，最后用 <code class="literal">y</code> 调用它，变成 <code class="literal">x + (y + 2)</code>，因此结果为 13。</p>
+<p>将 <code class="literal">protect</code> 包含在库中的主要动机，在于允许嵌套的 STL 算法调用（<a href="le_in_details.html#lambda.nested_stl_algorithms" title="Nesting STL algorithm invocations">“Nesting STL algorithm invocations” 部分</a>）。</p>
+</div>
+</div>
+<div class="section" lang="en">
+<div class="titlepage"><div><div><h4 class="title">
+<a name="lambda.rvalues_as_actual_arguments"></a>Rvalues as actual arguments to lambda functors（右值作为 lambda 仿函数的实际参数）</h4></div></div></div>
+<p>lambda 仿函数的参数不能是非 const 右值。这是因为一个经过深思熟虑的设计权衡：我们有了这个约束，就不会对实际参数产生副作用。也有方法可以绕过这个限制。我们再看一下 <a href="using_library.html#lambda.actual_arguments_to_lambda_functors" title="About actual arguments to lambda functors">“About actual arguments to lambda functors” 部分</a> 的例子，并列举不同的解决方案：</p>
+<pre class="programlisting">int i = 1; int j = 2; <br>(_1 + _2)(i, j); // ok<br>(_1 + _2)(1, 2); // error (!)<br></pre>
+<p>
+
+</p>
+<div class="orderedlist"><ol type="1">
+<li><p>如果右值是一个类类型，创建这个右值的函数返回值应该被定义为 const。因为一个不幸的语言约束，这个方法不能用于内建类型，因为内建右值不能被 const 修饰。</p></li>
+<li>
+<p>如果那个 lambda 函数调用是可访问的，<code class="literal">make_const</code> 函数可以用来 <span class="emphasis"><em>constify</em></span>（常量化）这个右值。例如：</p>
+<pre class="programlisting">(_1 + _2)(make_const(1), make_const(2)); // ok<br></pre>
+<p>通常 lambda 函数调用的位置是在一个标准算法函数模板内部，无法使用这个解决方案。</p>
+</li>
+<li>
+<p>如果上面的都不可行，可以把 lambda 表达式包装在一个 <code class="literal">const_parameters</code> 函数内。它创建另一种类型的 lambda 仿函数，以 const 引用的方式持有它的参数。例如：</p>
+<pre class="programlisting">const_parameters(_1 + _2)(1, 2); // ok<br></pre>
+<p>注意，<code class="literal">const_parameters</code> 把所有的参数变成 const。因此，在某一个参数是一个非 const 右值，或者另一个参数需要以非 const 引用方式传递的情况下，这个方法不可用。</p>
+</li>
+<li>如果以上方法都不可行，还有一个解决方案，非常不幸的是，这一方案可能会破坏 const 的正确性。这个解决方案使用另一个 lambda 仿函数包装，我们称它为 <code class="literal">break_const</code> 是为了警告用户这个函数有潜在的危险。<code class="literal">break_const</code> 函数创建一个 lambda 仿函数，这个 lambda 仿函数以 const 方式持有它的参数，并在调用原来的被包装的 lambda 仿函数之前强行去掉它的常量性。例如：<p></p>
+<pre class="programlisting">int i; <br>...<br>(_1 += _2)(i, 2);                 // error, 2 is a non-const rvalue<br>const_parameters(_1 += _2)(i, 2); // error, i becomes const<br>break_const(_1 += _2)(i, 2);      // ok, but dangerous<br></pre>
+<p>注意，<code class="literal"> break_const</code> 或 <code class="literal">const_parameters</code> 的结果不是 lambda 仿函数，所以不能用作 lambda 表达式的子表达式。例如：</p>
+<pre class="programlisting">break_const(_1 + _2) + _3; // fails.<br>const_parameters(_1 + _2) + _3; // fails.<br></pre>
+<p>但是，这种代码应该永远不是必要的，因为调用子 lambda 仿函数的方法已经做入到 BLL 中，而且它不会受到非 const 右值问题的影响。</p>
+</li>
+</ol></div>
+<p>
+
+</p>
+</div>
+</div>
+<div class="section" lang="en">
+<div class="titlepage"><div><div><h3 class="title">
+<a name="id1247769"></a>Casts, sizeof and typeid（强制转型，sizeof 和 typeid）</h3></div></div></div>
+<div class="toc"><dl>
+<dt><span class="section"><a href="le_in_details.html#lambda.cast_expressions">Cast expressions（强制转型表达式）</a></span></dt>
+<dt><span class="section"><a href="le_in_details.html#id1247856">Sizeof and typeid（sizeof 和 typeid）</a></span></dt>
+</dl></div>
+<div class="section" lang="en">
+<div class="titlepage"><div><div><h4 class="title">
+<a name="lambda.cast_expressions"></a>
+Cast expressions（强制转型表达式）
+</h4></div></div></div>
+<p>BLL 定义了针对四种强制转型表达式 <code class="literal">static_cast</code>, <code class="literal">dynamic_cast</code>, <code class="literal">const_cast</code> and <code class="literal">reinterpret_cast</code> 的对应物。强制转型的 BLL 版本有 <code class="literal">ll_</code> 前缀。被转到的类型通过一个显式特化的模板参数给出，而唯一的参数是被执行强制转型的表达式。如果这个参数是一个 lambda 表达式，这个 lambda 表达式首先被求值。例如，下面的代码使用 <code class="literal">ll_dynamic_cast</code> 统计容器 <code class="literal">a</code> 中 <code class="literal">derived</code> 实例的个数：</p>
+<pre class="programlisting">class base {};<br>class derived : public base {};<br><br>vector&lt;base*&gt; a;<br>...<br>int count = 0;<br>for_each(a.begin(), a.end(), <br>         if_then(ll_dynamic_cast&lt;derived*&gt;(_1), ++var(count)));<br></pre>
+<p>
+</p>
+</div>
+<div class="section" lang="en">
+<div class="titlepage"><div><div><h4 class="title">
+<a name="id1247856"></a>Sizeof and typeid</h4></div></div></div>
+<p>BLL 中这些表达式的对应物名为 <code class="literal">ll_sizeof</code> 和 <code class="literal">ll_typeid</code>。他们都只持有一个参数，这个参数可以是一个 lambda 表达式。创建的 lambda 仿函数包装 <code class="literal">sizeof</code> 和 <code class="literal">typeid</code> 调用，当调用这个 lambda 仿函数时执行被包装的操作。例如：</p>
+<pre class="programlisting">vector&lt;base*&gt; a; <br>...<br>for_each(a.begin(), a.end(), <br>         cout &lt;&lt; bind(&amp;type_info::name, ll_typeid(*_1)));<br></pre>
+<p>这里 <code class="literal">ll_typeid</code> 创建一个 lambda 仿函数用于对每一个元素调用 <code class="literal">typeid</code>。一个 <code class="literal">typeid</code> 调用的结果是一个 <code class="literal">type_info</code> 类的实例，而那个 bind 表达式创建一个 lambda 表达式用于调用那个类的 <code class="literal">name</code> 成员函数。</p>
+</div>
+</div>
+<div class="section" lang="en">
+<div class="titlepage"><div><div><h3 class="title">
+<a name="lambda.nested_stl_algorithms"></a>Nesting STL algorithm invocations（嵌入 STL 算法调用）</h3></div></div></div>
+<p>BLL 将通常的 STL 算法解释为函数对象类，它们的实例可以被用作 bind 表达式中的目标函数。例如，下面的代码遍历一个二维数组中的元素，并计算它们的和。</p>
+<pre class="programlisting">int a[100][200];<br>int sum = 0;<br><br>std::for_each(a, a + 100, <br>	      bind(ll::for_each(), _1, _1 + 200, protect(sum += _1)));<br></pre>
+<p>STL 算法的 BLL 版本是这样一些类，它们定义了函数调用操作符（或者它的各种重载）用来调用 <code class="literal">std</code>  名字空间中的相应的函数模板。所有这些结构位于子名字空间 <code class="literal">boost::lambda:ll</code> 中。</p>
+<p>注意，没有容易的方法表达一个 lambda 表达式中重载成员函数的调用。这限制了嵌套 STL 算法的用处，例如，<code class="literal">begin</code> 函数在容器模板中有不止一个重载定义。通常，等效于下面伪码的代码是写不出来的：</p>
+<pre class="programlisting">std::for_each(a.begin(), a.end(), <br>	      bind(ll::for_each(), _1.begin(), _1.end(), protect(sum += _1)));<br></pre>
+<p>不过，对于通常的特定情况还是能够提供一些帮助。BLL 定义了两个辅助函数对象类，<code class="literal">call_begin</code> 和 <code class="literal">call_end</code>，分别用于包装一个容器的 <code class="literal">begin</code> 和 <code class="literal">end</code> 的调用，并返回容器的 <code class="literal">const_iterator</code> 类型。使用这些辅助模板，上面的代码可以写成：</p>
+<pre class="programlisting">std::for_each(a.begin(), a.end(), <br>	      bind(ll::for_each(), <br>                   bind(call_begin(), _1), bind(call_end(), _1),<br>                        protect(sum += _1)));<br></pre>
+<p>
+
+</p>
+</div>
+</div>
+<table width="100%"><tbody><tr>
+<td align="left"></td>
+<td align="right"><small>Copyright  1999-2004 Jaakko Jrvi, Gary Powell</small></td>
+</tr></tbody></table>
+<hr>
+<div class="spirit-nav">
+<a accesskey="p" href="using_library.html"><img src="../images/prev.png" alt="Prev"></a><a accesskey="u" href="../lambda.html"><img src="../images/up.png" alt="Up"></a><a accesskey="h" href="../index.html"><img src="../images/home.png" alt="Home"></a><a accesskey="n" href="extending.html"><img src="../images/next.png" alt="Next"></a>
+</div>
+</body></html>

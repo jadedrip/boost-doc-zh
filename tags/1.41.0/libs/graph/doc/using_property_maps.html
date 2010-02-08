@@ -1,0 +1,113 @@
+<!DOCTYPE HTML PUBLIC "-//W3C//DTD HTML 4.01 Transitional//EN">
+<html><head><meta content="text/html; charset=UTF-8" http-equiv="content-type"><!--
+  -- Copyright (c) Jeremy Siek 2000
+  --
+  -- Distributed under the Boost Software License, Version 1.0.
+  -- (See accompanying file LICENSE_1_0.txt or copy at
+  -- http://www.boost.org/LICENSE_1_0.txt)
+  -->
+<title>Boost Graph Library: Using Property Maps</title></head>
+<body alink="#ff0000" bgcolor="#ffffff" link="#0000ee" text="#000000" vlink="#551a8b"> 
+<img src="../../../boost.png" alt="C++ Boost" height="86" width="277"> 
+
+<br clear="">
+
+
+<h1><a name="sec:property-maps"></a>
+Property Maps 属性映射
+</h1>
+
+<p>在图的数学抽象与要解决的问题之间，最主要的联系就是那些关联到图的顶点和边上的属性，如距离、容量、权重、颜色等等。根据不同的数据结构实现，可以有多种方法来把属性关联到图上，但是图算法不应该要去处理这些属性的实现细节。在 <a href="../../property_map/doc/property_map.html">属性映射概念Property
+Map Concepts</a> 一节中所定义的 <i>属性映射property map</i> 提供了一种通用的方法来访问图中的属性。这就是在BGL算法中用于访问属性的接口。</p><h2>Property Map Interface 属性映射接口</h2>
+
+<p>属性映射接口规定，每个被访问的属性都要使用独立的属性映射对象。在以下凳子中，我们将示范一个在Dijkstra最短路径算法内使用的 <tt>relax()</tt> 函数的实现。在这个函数中，我们需要访问一条边的权重属性，以及一个顶点的距离属性。我们将 <tt>relax()</tt> 写成一个模板函数，这样它就可以用于多种不同的情形。该函数的两个参数，权重和距离，都是属性映射对象。通常，BGL算法为函数所需的每个属性显式传递一个属性映射对象。属性映射接口定义了几个函数，我们在这里用到其中两个：<tt>get()</tt> 和 <tt>put()</tt>。函数 <tt>get()</tt>
+接受一个属性映射对象如距离，以及一个<i>key键值</i>对象。在距离属性的例子中，我们以顶点对象 <tt>u</tt> 和 <tt>v</tt> 作为键值。函数 <tt>get()</tt>
+会为该顶点返回属性值。</p><pre>  template &lt;class Edge, class Graph,<br>            class WeightPropertyMap, <br>            class DistancePropertyMap&gt;<br>  bool relax(Edge e, const Graph&amp; g, <br>             WeightPropertyMap weight, <br>             DistancePropertyMap distance)<br>  {<br>    typedef typename graph_traits&lt;Graph&gt;::vertex_descriptor Vertex;<br>    Vertex u = source(e,g), v = target(e,g);<br>    if ( get(distance, u) + get(weight, e) &lt; get(distance, v)) {<br>      put(distance, v, get(distance, u) + get(weight, e));<br>      return true;<br>    } else<br>      return false;<br>  }<br></pre>函数 <tt>get()</tt> 返回属性值的一份拷贝。属性映射接口中还有一个函数 <tt>at()</tt>，它返回属性值的一个引用(如果映射是不可变的则返回常量引用)。
+
+<p>类似于STL中的 <tt>iterator_traits</tt> 类，这里也有一个
+<tt>property_traits</tt> 类可用于推导与某个属性映射类型相关的类型：键类型和值类型，以及属性映射的类别(被用于告知映射是否为可读的、可写的、或均可)。在函数 <tt>relax()</tt>
+中，我们就可以用 <tt>property_traits</tt> 来声明一个距离属性类型的局部变量。</p><pre>  {<br>    typedef typename graph_traits&lt;Graph&gt;::vertex_descriptor Vertex;<br>    Vertex u = source(e,g), v = target(e,g);<br>    typename property_traits&lt;DistancePropertyMap&gt;::value_type<br>      du, dv; // 距离属性类型的局部变量<br>    du = get(distance, u);<br>    dv = get(distance, v);<br>    if (du + get(weight, e) &lt; dv) {<br>      put(distance, v, du + get(weight, e));<br>      return true;<br>    } else<br>      return false;<br>  }<br></pre>
+
+<p>共有两类图属性：内部的和外部的。</p><dl>
+<dt><strong>Interior Properties 内部属性</strong></dt>
+<dd>是指以某种方式保存在图对象"内部"的属性，其属性值对象的生存期与图对象一样。</dd><dt><strong>Exterior Properties 外部属性</strong></dt>
+<dd>是指保存在图对象"外部"的属性，其属性值对象的生存期与图对象无关。这对于那些只是临时需要的属性比较有用，可能只用于某个特定算法执行期间，如在 <tt>breadth_first_search()</tt> 中使用的颜色属性。当对一个BGL算法使用外部属性时，该外部属性的属性映射对象必须作为参数传递给这个算法。</dd>
+</dl>
+
+<h2><a name="sec:interior-properties"></a>
+Interior Properties 内部属性
+</h2>
+
+<p>支持内部属性存储的图类型(如
+<tt>adjacency_list</tt>)通过在 <a href="PropertyGraph.html">PropertyGraph</a> 中定义的接口来提供对其属性映射对象的访问。有一个函数
+<tt>get(Property, g)</tt>
+用于从图中获取属性映射对象。第一个参数是属性类型，指定你要访问的是哪个属性，第二个参数则是图对象。图对象必须在文档中标明它提供了对哪些属性的访问
+(以及相关标签)。属性映射的类型依赖于图的类型以及被映射的属性。我们定义了一个 trait 类以提供一个通用的方法来推导属性映射类型：<tt>property_map</tt>。以下代码示范了你可以如何获得对应于某种图类型的距离和权重属性的属性映射。</p><pre>  property_map&lt;Graph, vertex_distance_t&gt;::type d<br>    = get(vertex_distance, g);<br><br>  property_map&lt;Graph, edge_weight_t&gt;::type w<br>    = get(edge_weight, g);<br></pre>
+
+<p>总的来说，BGL算法要求它所需的所有属性映射必须显式传入。例如，BGL的Dijkstra最短路径算法要求四个属性映射：距离、权重、颜色和顶点ID。
+
+</p><p>通常，这些属性的部分或全部会是图的内部属性，因此你可以用以下方法调用Dijkstra算法(给定图 <tt>g</tt> 和源顶点 <tt>src</tt>)。</p><pre>  dijkstra_shortest_paths(g, src,  <br>    distance_map(get(vertex_distance, g)).<br>    weight_map(get(edge_weight, g)).<br>    color_map(get(vertex_color, g)).<br>    vertex_index_map(get(vertex_index, g)));<br></pre>
+
+<p>因为指定所有属性映射会有些麻烦，所以BGL提供了缺省值，假定有些属性是内部的且可以通过 <tt>get(Property, g)</tt> 来从图中访问，或者如果该属性映射仅在内部使用，则算法将会为它自己由一个数据来创建属性映射，并使用图的顶点索引映射作为数组中的偏移量。下面我们将示范一个对
+<tt>dijkstra_shortest_paths</tt> 算法的调用，对命名参数全部使用缺省值。这个调用与前一个对
+Dijkstra算法的调用是相同的。</p><pre>  dijkstra_shortest_paths(g, src);<br></pre>
+
+<p>下一个问题是：在第一个例子中，内部属性是如何关联到图对象的呢？这取决于你所使用的图类。BGL的 <tt>adjacency_list</tt> 图类使用了一个属性机制(参见 <a href="using_adjacency_list.html#sec:adjacency-list-properties">内部属性Internal
+Properties</a> 一节)，它允许在图的边和顶点中保存任意数量的属性。</p><h2><a name="sec:exterior-properties"></a>
+Exterior Properties 外部属性
+</h2>
+
+<p>在这一节中，我们将讨论两个构造外部属性映射的方法，不过，为一个图创建外部的属性的方法是无限的。
+
+</p><p>第一个方法使用适配器类
+<tt>random_access_iterator_property_map</tt>。这个类封装了一个随机访问迭代器，由它来创建属性映射。这
+个随机访问迭代器必须指向一个属性值区间的始端，且区间的长度必须等于图中的顶点或边(视乎该属性是一个顶点属性映射还是边属性映射)的数量。该适配器还
+必须支持一个ID属性映射，它将会被用于将顶点或边描述符映射至属性值的偏移量(从该随机访问迭代器起算的偏移量)。这个ID属性映射通常会是图的一个内
+部属性。以下例子示范了如何使用 <tt>random_access_iterator_property_map</tt>
+来为容量属性和流量属性创建外部属性映射，这些属性以数组方式保存。这些数组通过边ID来索引。边ID被增加至使用属性的图中，且ID的值在每条边被增加至图中时给定。这个例子的完整代码在 <tt>example/exterior_edge_properties.cpp</tt>。函数
+<tt>print_network()</tt> 打印出这个图的流量和容量值。</p><pre>  typedef adjacency_list&lt;vecS, vecS, bidirectionalS, <br>    no_property, property&lt;edge_index_t, std::size_t&gt; &gt; Graph;<br><br>  const int num_vertices = 9;<br>  Graph G(num_vertices);<br><br>  int capacity_array[] = { 10, 20, 20, 20, 40, 40, 20, 20, 20, 10 };<br>  int flow_array[] = { 8, 12, 12, 12, 12, 12, 16, 16, 16, 8 };<br><br>  // Add edges to the graph, and assign each edge an ID number. 向图中增加边，并为每条边赋予ID数。<br>  add_edge(0, 1, 0, G);<br>  // ...<br><br>  typedef graph_traits&lt;Graph&gt;::edge_descriptor Edge;<br>  typedef property_map&lt;Graph, edge_index_t&gt;::type EdgeID_Map;<br>  EdgeID_Map edge_id = get(edge_index, G);<br><br>  random_access_iterator_property_map<br>    &lt;int*, int, int&amp;, EdgeID_Map&gt; <br>      capacity(capacity_array, edge_id), <br>      flow(flow_array, edge_id);<br><br>  print_network(G, capacity, flow);<br></pre>
+
+<p>第二种方法使用一个指针类型(指向一个属性值数组的指针)作为属性映射。这要求键类型是一个整数，这样它可以被作为距该指针的偏移量来使用。带有模板参数
+<tt>VertexList=vecS</tt> 的 <tt>adjacency_list</tt> 类是以整数作为顶点描述符的(从零至图中的顶点数)，因此它们适合于用作指针属性映射的键类型。如果
+<tt>VertexList</tt> 不是 <tt>vecS</tt>，则顶点描述符不是整数，不可以和指针属性映射一起使用。相反，前面所介绍的
+<tt>random_access_iterator_property_map</tt> 方法则必须使用ID属性。<tt>edge_list</tt> 类也可以用整数来作顶点描述符，这取决于如何定义适配边的迭代器。<tt>example/bellman_ford.cpp</tt> 中的例子所示范的 <tt>edge_list</tt> 就是用指针来作顶点属性映射的。
+
+</p><p>指针可以被用作属性映射的原因是，在头文件 <a href="../../../boost/property_map/property_map.hpp"><tt>boost/property_map/property_map.hpp</tt></a> 中有几个重载的函数和一个特化的
+<tt>property_traits</tt>，它们实现了使用指针的属性映射接口。这些函数的定义列出如下。</p><pre>namespace boost {<br>  template &lt;class T&gt;<br>  struct property_traits&lt;T*&gt; {<br>    typedef T value_type;<br>    typedef ptrdiff_t key_type;<br>    typedef lvalue_property_map_tag category;<br>  };<br><br>  template &lt;class T&gt;<br>  void put(T* pa, std::ptrdiff_t key, const T&amp; value) { pa[key] = value;  }<br><br>  template &lt;class T&gt;<br>  const T&amp; get(const T* pa, std::ptrdiff_t key) { return pa[key]; }<br><br>  template &lt;class T&gt;<br>  const T&amp; at(const T* pa, std::ptrdiff_t key) { return pa[key]; }<br><br>  template &lt;class T&gt;<br>  T&amp; at(T* pa, std::ptrdiff_t key) { return pa[key]; }<br>}<br></pre>
+
+<p>在以下例子中，我们用一个数组来为图中的每一个顶点保存一个城市名，再用一个 <tt>std::vector</tt> 来保存在调用
+<tt>breadth_first_search()</tt> 时要用到的顶点颜色。因为
+<tt>std::vector</tt> (通过调用 <tt>begin()</tt> 获得)的迭代器是一个指针，所以指针属性映射也适用于
+<tt>std::vector::iterator</tt>。该例子的完整代码在 <a href="../example/city_visitor.cpp"><tt>example/city_visitor.cpp</tt></a>。</p><pre>// Definition of city_visitor omitted... 忽略 city_visitor 的定义<br><br>int main(int,char*[])<br>{<br>  enum { SanJose, SanFran, LA, SanDiego, Fresno, LosVegas, Reno,<br>         Sacramento, SaltLake, Pheonix, N };<br><br>  // An array of vertex name properties 顶点的名字属性数组<br>  std::string names[] = { "San Jose", "San Francisco",  "San Jose",<br>                          "San Francisco", "Los Angeles", "San Diego", <br>                          "Fresno", "Los Vegas", "Reno", "Sacramento",<br>                          "Salt Lake City", "Pheonix" };<br><br>  // Specify all the connecting roads between cities. 指定城市间的所有相连道路<br>  typedef std::pair&lt;int,int&gt; E;<br>  E edge_array[] = { E(Sacramento, Reno), ... };<br><br>  // Specify the graph type. 指定图类型<br>  typedef adjacency_list&lt;vecS, vecS, undirectedS&gt; Graph;<br>  // Create the graph object, based on the edges in edge_array. 基于edge_array中的边创建图对象<br>  Graph G(N, edge_array, edge_array + sizeof(edge_array)/sizeof(E));<br><br>  // DFS and BFS need to "color" the vertices. DFS和BFS需要顶点的"颜色"<br>  // Here we use std::vector as exterior property storage. 我们用 std::vector 作为外部属性存储<br>  std::vector&lt;default_color_type&gt; colors(N);<br><br>  cout &lt;&lt; "*** Depth First ***" &lt;&lt; endl;<br>  depth_first_search(G, city_visitor(names), colors.begin());<br>  cout &lt;&lt; endl;<br><br>  // Get the source vertex 取出源顶点<br>  boost::graph_traits&lt;Graph&gt;::vertex_descriptor <br>    s = vertex(SanJose, G);<br><br>  cout &lt;&lt; "*** Breadth First ***" &lt;&lt; endl;<br>  breadth_first_search(G, s, city_visitor(names), colors.begin());<br><br>  return 0;<br>}<br></pre>
+
+<h2><a name="sec:custom-exterior-property-maps"></a>
+Constructing an Exterior Property Map 构造一个外部属性映射
+</h2>
+
+<p>实现你自己的外部属性映射并不困难。你只需要重载你的类想要遵循的
+<a href="property_map.html">属性映射概念</a> 所要求的函数即可。多数情况下，就是重载
+<tt>put()</tt> 和 <tt>get()</tt> 函数并实现
+<tt>operator[]</tt>。另外，你的属性映射类还需要带有针对 <tt>property_traits</tt> 中所定义的所有类型的嵌套 typedefs，或者你可以为你的新属性映射类型创建一个特化的 <tt>property_traits</tt>。
+
+</p><p><tt>random_access_iterator_property_map</tt> 类的实现就是一个关于如何构建外部属性映射的很好的例子。以下我们给出
+<tt>random_access_iterator_property_map</tt> 类的一个简化实现<tt></tt>，名为 <tt>iterator_map</tt>。
+
+</p><p>我们从 <tt>iterator_map</tt> 类本身的定义开始。这个适配器类按被适配的迭代器类型和ID属性映射来模板化。ID属性映射的任务是，将键对象(通常是一个顶点描述符或边描述符)映射至一个整数偏移量。<tt>iterator_map</tt> 类需要三个有关属性映射的 typedefs，分别为：<tt>key_type</tt>, <tt>value_type</tt>, 和 <tt>category</tt>。我们可以用
+<tt>property_traits</tt> 来找出 <tt>IDMap</tt> 的键类型，也可以用 <tt>iterator_traits</tt> 来确定
+<tt>Iterator</tt> 的值类型。我们选用
+<tt>boost::lvalue_property_map_tag</tt> 作为 category，因为我们计划实现 <tt>at()</tt> 函数。</p><pre>  template &lt;class Iterator, class IDMap&gt;<br>  class iterator_map<br>  {<br>  public:<br>    typedef typename boost::property_traits&lt;IDMap&gt;::key_type key_type; <br>    typedef typename std::iterator_traits&lt;Iterator&gt;::value_type value_type;<br>    typedef boost::lvalue_property_map_tag category;<br><br>    iterator_map(Iterator i = Iterator(), <br>                const IDMap&amp; id = IDMap()) <br>      : m_iter(i), m_id(id) { }<br>    Iterator m_iter;<br>    IDMap m_id;<br>  };<br></pre>
+
+<p>接下来，我们实现三个属性映射函数：<tt>get()</tt>,
+<tt>put()</tt>, 和 <tt>at()</tt>。在每个函数中，使用
+<tt>m_id</tt> 属性映射将键对象转换为整数偏移量，然后将此偏移量作为到随机访问迭代器 <tt>m_iter</tt> 的偏移。</p><pre>  template &lt;class Iter, class ID&gt;<br>  typename std::iterator_traits&lt;Iter&gt;::value_type<br>  get(const iterator_map&lt;Iter,ID&gt;&amp; i,<br>      typename boost::property_traits&lt;ID&gt;::key_type key)<br>  {<br>    return i.m_iter[i.m_id[key]];<br>  }<br>  template &lt;class Iter, class ID&gt;<br>  void<br>  put(const iterator_map&lt;Iter,ID&gt;&amp; i,<br>      typename boost::property_traits&lt;ID&gt;::key_type key,<br>      const typename std::iterator_traits&lt;Iter&gt;::value_type&amp; value)<br>  {<br>    i.m_iter[i.m_id[key]] = value;<br>  }<br>  template &lt;class Iter, class ID&gt;<br>  typename std::iterator_traits&lt;Iter&gt;::reference<br>  at(const iterator_map&lt;Iter,ID&gt;&amp; i,<br>      typename boost::property_traits&lt;ID&gt;::key_type key)<br>  {<br>    return i.m_iter[i.m_id[key]];<br>  }<br></pre>
+
+<p>就是这样了。<tt>iterator_map</tt> 类已经完成了，可以象上一节中的
+<tt>random_access_iterator_property_map</tt> 那样使用了。<br>
+</p><hr>
+<table>
+<tbody><tr valign="top">
+<td nowrap="nowrap">Copyright © 2000-2001</td><td>
+<a href="http://www.boost.org/people/jeremy_siek.htm">Jeremy Siek</a>, Indiana University (<a href="mailto:jsiek@osl.iu.edu">jsiek@osl.iu.edu</a>)
+</td></tr></tbody></table>
+
+</body></html>

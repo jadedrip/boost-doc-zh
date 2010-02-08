@@ -1,0 +1,848 @@
+﻿<?xml version="1.0" encoding="UTF-8"?>
+<!DOCTYPE html PUBLIC "-//W3C//DTD XHTML 1.0 Transitional//EN" "http://www.w3.org/TR/xhtml1/DTD/xhtml1-transitional.dtd">
+<html xmlns="http://www.w3.org/1999/xhtml">
+<head>
+<meta name="generator" content=
+"HTML Tidy for Linux/x86 (vers 1st March 2004), see www.w3.org" />
+<meta http-equiv="Content-Type" content=
+"text/html; charset=UTF-8" />
+<link href="ublas.css" type="text/css" />
+<title>uBLAS Overview</title>
+</head>
+<body>
+<h1><img src="../../../../boost.png" align="middle" />
+uBLAS 概览</h1>
+<h2><a name="rationale" id="rationale">原理</h2>
+<p><cite>如果每一种数值处理软件都可以由C++来实现而且没有效率损失，那将是一件非常棒的事情，但是除非找到一个实现这个目的但又不会危及C++类型系统的方法，否则依赖于 Fortran,汇编或体系结构特定的扩展可能是更好的选择 (Bjarne Stroustrup)。</cite></p>
+<p>这个C++类库直接面向基于一些使用矩阵和向量来构造的基本的线性代数及其抽象操作的科学计算。基本的设计目标是：</p>
+<ul type="Disc">
+<li>数学记法(mathematical notation)</li>
+<li>效率</li>
+<li>功能</li>
+<li>兼容性</li>
+</ul>
+<p>另一个目的是评估历为使用这些矩阵和向量类型所产生的抽象惩罚(abstraction penalty)是否是可接受的。</p>
+<h2>参考资源</h2>
+<p>这个库的开发由一系列的类似的库来指导：</p>
+<ul type="Disc">
+<li>由Jack Dongarra等人开发的<a href="http://www.netlib.org/blas/index.html">BLAS</a> 
+ 库。</li>
+<li>由Todd
+Veldhuizen开发的<a href="http://www.oonumerics.org/blitz/">Blitz++</a> 库。</li>
+<li>由Scott
+Haney 等人开发的<a href="http://acts.nersc.gov/pooma/">POOMA</a> 库。</li>
+<li>由Jeremy
+Siek等人开发的<a href="http://www.lsc.nd.edu/research/mtl/">MTL</a> 库。</li>
+</ul>
+<p>BLAS 似乎是基本的线性代数使用最广泛的库，所以它可以被称作de-facto standard。它的接口是面向过程的(procedural)，单独的函数是对一些基本的线性代数运算的抽象。由于它是使用Fortran语言实现以及它所进行的优化，BLAS似乎也是现在最快的库之一。因为我无决定以面向对象的方式来设计和实现我们的类库，所以技术方式上有显著的不同。然而，每个人都可以使用我们的库中的运算符表达所有的BLAS抽象并对效率进行比较。</p>
+<p>Blitz++ 是一个使用C++实现的让人映象深刻的(impressive)库。它的主要设计似乎是面向多维数组以及包括张量(tensor)的相关的运算符。Blitz++库的作者声称由于它的实现技术使用表达式模板(expression template)和模板元编程技术(template metaprogram)，他的库的性能与对应的Fortan代码的性能相当或更好一些。然而我们有一些理由来开发一个我们自己设计和实现的方法。我们不知道是否有人使用Blitz++库来实现传统的线性代数运算。我们同样也假定由于Blitz++库所使用的实现风格(idioms)，即使在今天也需要最高级的C++编译器技术。另一方面，Blitz++库也使用我们相信，使用表达式模板技术(expression
+templates)是将抽象惩罚降低到一个可接受限度的必需的技术方法。</p>
+<p>POOMA 的设计目标似乎是在许多部分对Blitz++库的大量部分进行并行计算。它从偏微分方程和理论物理领域中提取类来扩展Blitz++的概念。这种实现支持并行体系结构(parallel architectures)。</p>
+<p>MTL 是另一个使用C++来支持基本的线性代数运算的类库。我们共同的观点是线性代数库应当提供与BLAS库相应的功能。另一方面，我们认为C++标准库的概念并没有支持所需要的数值计算的概念要求。另一个区别是MTL库当前并没有使用表达式模板技术(expression templates)。这可能导致两个问题中的一个：可能存在表现能力缺失或可能的性能损失。</p>
+<h2>概念</h2>
+<h3>数学记法(Mathematical Notation)</h3>
+<p>数学记法的使用可以简化科学算法的开发。因此一个实现基本的线性代数概念的C++库应当在矩阵和向量类上仔细地重载可选的C++运算符。</p>
+<p>我们决定对下面的原始概念(primitive)使用运算符重载：</p>
+<table border="1" summary="operators">
+<tbody>
+<tr>
+<th align="left">说明</th>
+<th align="left">运算符</th>
+</tr>
+<tr>
+<td>向量和矩阵的索引</td>
+<td><code>vector::operator(size_t i);<br />
+matrix::operator(size_t i, size_t j);</code></td>
+</tr>
+<tr>
+<td>向量和矩阵的赋值</td>
+<td><code>vector::operator = (const vector_expression &amp;);<br />
+vector::operator += (const vector_expression &amp;);<br />
+vector::operator -= (const vector_expression &amp;);<br />
+vector::operator *= (const scalar_expression &amp;);<br />
+matrix::operator = (const matrix_expression &amp;);<br />
+matrix::operator += (const matrix_expression &amp;);<br />
+matrix::operator -= (const matrix_expression &amp;);<br />
+matrix::operator *= (const scalar_expression &amp;);</code></td>
+</tr>
+<tr>
+<td>向量和矩阵上的一元运算</td>
+<td><code>vector_expression operator - (const vector_expression
+&amp;);<br />
+matrix_expression operator - (const matrix_expression
+&amp;);</code></td>
+</tr>
+<tr>
+<td>向量和矩阵上的二元运算</td>
+<td><code>vector_expression operator + (const vector_expression
+&amp;, const vector_expression &amp;);<br />
+vector_expression operator - (const vector_expression &amp;, const
+vector_expression &amp;);<br />
+matrix_expression operator + (const matrix_expression &amp;, const
+matrix_expression &amp;);<br />
+matrix_expression operator - (const matrix_expression &amp;, const
+matrix_expression &amp;);</code></td>
+</tr>
+<tr>
+<td>向量和矩阵与一个标量的乘法</td>
+<td><code>vector_expression operator * (const scalar_expression
+&amp;, const vector_expression &amp;);<br />
+vector_expression operator * (const vector_expression &amp;, const
+scalar_expression &amp;);<br />
+matrix_expression operator * (const scalar_expression &amp;, const
+matrix_expression &amp;);<br />
+matrix_expression operator * (const matrix_expression &amp;, const
+scalar_expression &amp;);</code></td>
+</tr>
+</tbody>
+</table>
+<p>对于下面的原始概念(primitives)我们决定不使用运算符重载：</p>
+<table border="1" summary="functions">
+<tbody>
+<tr>
+<th align="left">说明</th>
+<th align="left">函数</th>
+</tr>
+<tr>
+<td>向量和一个矩阵的左乘(Left multiplicationi)</td>
+<td><code>vector_expression
+prod&lt;</code><code><em>vector_type</em></code> <code>&gt; (const
+matrix_expression &amp;, const vector_expression &amp;);<br />
+vector_expression prod (const matrix_expression &amp;, const
+vector_expression &amp;);</code></td>
+</tr>
+<tr>
+<td>向量和一个矩阵的右乘(Right multiplication)</td>
+<td><code>vector_expression
+prod&lt;</code><code><em>vector_type</em></code> <code>&gt; (const
+vector_expression &amp;, const matrix_expression &amp;);<br />
+vector_expression prod (const vector_expression &amp;, const
+matrix_expression &amp;);<br /></code></td>
+</tr>
+<tr>
+<td>矩阵乘法</td>
+<td><code>matrix_expression
+prod&lt;</code><code><em>matrix_type</em></code> <code>&gt; (const
+matrix_expression &amp;, const matrix_expression &amp;);<br />
+matrix_expression prod (const matrix_expression &amp;, const
+matrix_expression &amp;);</code></td>
+</tr>
+<tr>
+<td>向量的内积( Inner product ) </td>
+<td><code>scalar_expression inner_prod (const vector_expression
+&amp;, const vector_expression &amp;);</code></td>
+</tr>
+<tr>
+<td height="26">向量的外积(Outer product)</td>
+<td><code>matrix_expression outer_prod (const vector_expression
+&amp;, const vector_expression &amp;);</code></td>
+</tr>
+<tr>
+<td>矩阵的转置</td>
+<td><code>matrix_expression trans (const matrix_expression
+&amp;);</code></td>
+</tr>
+</tbody>
+</table>
+<h3>效率</h3>
+<p>为了达到数值计算的效率目标，在用C++来公式化(formulating)抽象时需要克服两个困难，也就是临时变量和虚函数调用。表达式模板(Expression
+template)解决了这两个问题，但是趋向于减缓编译速度。</p>
+<h4>避免临时变量</h4>
+<p>向量和矩阵的抽象方程通常包含大量的一元和二元运算。最简单的计算方法是先计算一个组合运算的结点操作(leaf operation)并存放在一个临时变量中，然后使用另一个临时变量来进行组合运算。这种方法对于较小的向量和矩阵在时间方面开销非常大，对于大的向量和矩阵在空间方面的开销尤其大。解决这个问题的方法是在现代的函数式编译语言中所称作的延迟计算(lazy evaluation)。这种方法的原理是明智地计算一个复杂表达式的元素并将其直接赋给目标结果。</p>
+<p>两个有趣并且很危险的因素导致：</p>
+<h4>别名(Aliases)</h4>
+<p>在向量和矩阵上使用element wise
+evaluation会产生严重的负作用。考虑矩阵和向量的积<em>x = A x</em>。计算<em>A</em><sub><em>1</em></sub><em>x</em> 并赋值给 <em>x</em><sub><em>1</em></sub> 改变了右边( right hand side)，所以计算<em>A</em><sub><em>2</em></sub><em>x</em>
+会返回一个错误的结果。在这种情况下，元素 
+<em>x</em><sub><em>n</em></sub> 在左边和右边都有 <strong>别名(aliases)</strong> 。</p>
+<p>我们解决这个问题的方法是计算等式右边的值并存储到一个临时变量中，然后将这个临时变量赋给等式的左边。为了允许更进一步的优化，对于每一个赋值运算符我们都提供了一个对应的成员运算符以及一个<a href="operations_overview.htm#noalias"> <code>noalias</code> syntax.</a>
+。通常使用这种形式，程序员可以确定等式的左边和右边是相互独立的。因此element wise evaluation和直接对计算结果进行赋值是安全的。</p>
+<h4>复杂度</h4>
+<p>在某些特定的情况下，计算的复杂度可能是大得不可预料。考虑链式矩阵和向量的乘积<em>A (B
+x)</em>。通常计算<em>A (B x)</em> 是二次方复杂度的。<em>B x</em><sub><em>i</em></sub> 的延迟求值(Deferred evaluation)是线性的。因为每个元素<em>B x</em><sub><em>i</em></sub> 依赖于大小都是线性的，一个完全的链式矩阵和向量乘积 <em>A (B x)</em> 的延迟求值(Deferred evaluation)是三次方的。在这种情况下，在这个表达式中我们需要重新引入临时变量。</p>
+<h4>避免虚函数调用</h4>
+<p>延迟表达式求值(Lazy expression evaluation)通常会导向(terms)一个类的继承层次的定义。 这就导致使用动多态(dynamic
+polymorphism )来访问一个向量或矩阵中的单一元素，在时间方面这种开销很大。在多年以前，由 David Vandervoorde
+分别发现了一种技术称作表达式模板(expression templates)。表达式模板(
+Expression templates contain)包含延迟计算( lazy evaluation)并使用静多态(static
+polymorphism )来代替动多态(dynamic
+polymorphism )，也就是编译时多态(compile time polymorphism)。表达式模板技术强烈依赖于著名的 Barton-Nackman
+技巧(trick)，同样也被Jim
+Coplien定义为递归模板。</p>
+<p>表达式模板(Expression templates)构成我们的实现的基础。</p>
+<h4>编译时间</h4>
+<p>表达式模板技术挑战当前的编译器技术同样也是一个知名的事实。使用 Barton-Nackman 技巧我们可以显著地减少表达式模板的使用数量。</p>
+<p>我们同样也决定支持双重的常规实现(dual conventional implementation)
+  (例如，不使用表达式模板) ，使用向量和矩阵的扩展边界和类型检查来支持开发周期(development cycle)。从调试模式转换到发行模式是通常&lt;cassert&gt;中的预编译符号<code>NDEBUG</code> 来控制的。</p>
+<h2><a name="functionality" id="functionality">功能</h2>
+
+<p>每一个支持线性代数的C++库都会相比于长期存在的Fortran 包 BLAS进行度量。现在我们说明如何将BLAS中的函数调用映射到我们的类中。</p>
+
+<p><a href="operations_overview.htm">矩阵和向量运算概览</a>页面对于大多数的向量和矩阵运算给出了一个简短的总结。</p>
+
+<h4>Blas Level 1</h4>
+<table border="1" summary="level 1 blas">
+<tbody>
+<tr>
+<th align="left">BLAS Call</th>
+<th align="left">Mapped Library Expression</th>
+<th align="left">Mathematical Description</th>
+<th align="left">Comment</th>
+</tr>
+<tr>
+<td><code>sasum</code> OR <code>dasum</code></td>
+<td><code>norm_1 (x)</code></td>
+<td><em>sum |x<sub>i</sub>|</em></td>
+<td>计算实数向量的<em>l<sub>1</sub></em> (sum) 基。</td>
+</tr>
+<tr>
+<td><code>scasum</code> OR <code>dzasum</code></td>
+<td><em><code>real (sum (v)) + imag (sum (v))</code></em></td>
+<td><em>sum re(x<sub>i</sub>) + sum im(x<sub>i</sub>)</em></td>
+<td>C计算一个复数向量的元素的和。</td>
+</tr>
+<tr>
+<td><code>_nrm2</code></td>
+<td><code>norm_2 (x)</code></td>
+<td><em>sqrt (sum
+|x</em><sub><em>i</em></sub>|<sup><em>2</em></sup> <em>)</em></td>
+<td>计算一个向量的 <em>l<sub>inf</sub></em> (euclidean) 基。</td>
+</tr>
+<tr>
+<td><code>i_amax</code></td>
+<td><code>norm_inf (x)<br />
+index_norm_inf (x)</code></td>
+<td><em>max |x</em><sub><em>i</em></sub><em>|</em></td>
+<td>计算一个向量的<em>l<sub>2</sub></em> (maximum) 基<br />
+BLAS 计算第一个包含这个值的元素的下标。</td>
+</tr>
+<tr>
+<td><code>_dot<br />
+_dotu<br />
+_dotc</code></td>
+<td><code>inner_prod (x, y)</code>or<code><br />
+inner_prod (conj (x), y)</code></td>
+<td><em>x</em><sup><em>T</em></sup> <em>y</em> or<br />
+<em>x</em><sup><em>H</em></sup> <em>y</em></td>
+<td>计算两个向量的内积。<br />
+BLAS 实现特定的循环展开。</td>
+</tr>
+<tr>
+<td><code>dsdot<br />
+sdsdot</code></td>
+<td><code>a + prec_inner_prod (x, y)</code></td>
+<td><em>a + x</em><sup><em>T</em></sup> <em>y</em></td>
+<td>以double精度计算内积。</td>
+</tr>
+<tr>
+<td><code>_copy</code></td>
+<td><code>x = y<br />
+y.assign (x)</code></td>
+<td><em>x &lt;- y</em></td>
+<td>将一个向量拷贝到另一个向量中。<br />
+BLAS 实现特定的循环展开。</td>
+</tr>
+<tr>
+<td><code>_swap</code></td>
+<td><code>swap (x, y)</code></td>
+<td><em>x &lt;-&gt; y</em></td>
+<td>交换两个向量的内容。<br />
+BLAS 实现特定的循环展开。</td>
+</tr>
+<tr>
+<td><code>_scal<br />
+csscal<br />
+zdscal</code></td>
+<td><code>x *= a</code></td>
+<td><em>x &lt;- a x</em></td>
+<td>扩充一个向量。<br />
+BLAS 实现特定的循环展开。</td>
+</tr>
+<tr>
+<td><code>_axpy</code></td>
+<td><code>y += a * x</code></td>
+<td><em>y &lt;- a x + y</em></td>
+<td>增加一个成比例的向量。<br />
+BLAS 实现特定的循环展开。</td>
+</tr>
+<tr>
+<td><code>_rot<br />
+_rotm<br />
+csrot<br />
+zdrot</code></td>
+<td><code>t.assign (a * x + b * y),<br />
+y.assign (- b * x + a * y),<br />
+x.assign (t)</code></td>
+<td><em>(x, y) &lt;- (a x + b y, -b x + a y)</em></td>
+<td>应用一个平面旋转。</td>
+</tr>
+<tr>
+<td><code>_rotg<br />
+_rotmg</code></td>
+<td>&nbsp;</td>
+<td><em>(a, b) &lt;-<br />
+&nbsp; (? a / sqrt (a</em><sup><em>2</em></sup> +
+<em>b</em><sup><em>2</em></sup><em>),<br />
+&nbsp; &nbsp; ? b / sqrt (a</em><sup><em>2</em></sup> +
+<em>b</em><sup><em>2</em></sup><em>))</em> or<em><br />
+(1, 0) &lt;- (0, 0)</em></td>
+<td>构造一个平面旋转。</td>
+</tr>
+</tbody>
+</table>
+<h4>Blas Level 2</h4>
+<table border="1" summary="level 2 blas">
+<tbody>
+<tr>
+<th align="left">BLAS 调用</th>
+<th align="left">映射为库中的表达式</th>
+<th align="left">数学说明</th>
+<th align="left">注释</th>
+</tr>
+<tr>
+<td><code>_t_mv</code></td>
+<td><code>x = prod (A, x)</code> or<code><br />
+x = prod (trans (A), x)</code> or<code><br />
+x = prod (herm (A), x)</code></td>
+<td><em>x &lt;- A x</em> or<em><br />
+x &lt;- A</em><sup><em>T</em></sup> <em>x</em> or<em><br />
+x &lt;- A</em><sup><em>H</em></sup> <em>x</em></td>
+<td>计算一个矩阵与一个向量的乘积。</td>
+</tr>
+<tr>
+<td><code>_t_sv</code></td>
+<td><code>y = solve (A, x, tag)</code> or<br />
+<code>inplace_solve (A, x, tag)</code> or<br />
+<code>y = solve (trans (A), x, tag)</code> or<br />
+<code>inplace_solve (trans (A), x, tag)</code> or<br />
+<code>y = solve (herm (A), x, tag)</code>or<br />
+<code>inplace_solve (herm (A), x, tag)</code></td>
+<!-- TODO: replace nested sub/sup -->
+<td><em>y &lt;- A</em><sup><em>-1</em></sup> <em>x</em>
+or<em><br />
+x &lt;- A</em><sup><em>-1</em></sup> <em>x</em> or<em><br />
+y &lt;-
+A</em><sup><em>T</em></sup><sup><sup><em>-1</em></sup></sup>
+<em>x</em> or<em><br />
+x &lt;-
+A</em><sup><em>T</em></sup><sup><sup><em>-1</em></sup></sup>
+<em>x</em> or<em><br />
+y &lt;-
+A</em><sup><em>H</em></sup><sup><sup><em>-1</em></sup></sup>
+<em>x</em> or<em><br />
+x &lt;-
+A</em><sup><em>H</em></sup><sup><sup><em>-1</em></sup></sup>
+<em>x</em></td>
+<td>使用三角形式来求解线性方程组，例如，
+<em>A</em> 是三角形的。</td>
+</tr>
+<tr>
+<td><code>_g_mv<br />
+_s_mv<br />
+_h_mv</code></td>
+<td><code>y = a * prod (A, x) + b * y</code> or<code><br />
+y = a * prod (trans (A), x) + b * y</code> or<code><br />
+y = a * prod (herm (A), x) + b * y</code></td>
+<td><em>y &lt;- a A x + b y</em> or<em><br />
+y &lt;- a A</em><sup><em>T</em></sup> <em>x + b y<br />
+y &lt;- a A</em><sup><em>H</em></sup> <em>x + b y</em></td>
+<td>增加一个矩阵与一个向量的scaled product。</td>
+</tr>
+<tr>
+<td><code>_g_r<br />
+_g_ru<br />
+_g_rc</code></td>
+<td><code>A += a * outer_prod (x, y)</code> or<code><br />
+A += a * outer_prod (x, conj (y))</code></td>
+<td><em>A &lt;- a x y</em><sup><em>T</em></sup> <em>+ A</em>
+or<em><br />
+A &lt;- a x y</em><sup><em>H</em></sup> <em>+ A</em></td>
+<td>进行一个秩(rank) <em>1</em> 变换。</td>
+</tr>
+<tr>
+<td><code>_s_r<br />
+_h_r</code></td>
+<td><code>A += a * outer_prod (x, x)</code> or<code><br />
+A += a * outer_prod (x, conj (x))</code></td>
+<td><em>A &lt;- a x x</em><sup><em>T</em></sup> <em>+ A</em>
+or<em><br />
+A &lt;- a x x</em><sup><em>H</em></sup> <em>+ A</em></td>
+<td>P进行一个对称的或埃尔米特秩(rank) <em>1</em> 变换。</td>
+</tr>
+<tr>
+<td><code>_s_r2<br />
+_h_r2</code></td>
+<td><code>A += a * outer_prod (x, y) +<br />
+&nbsp;a * outer_prod (y, x))</code> or<code><br />
+A += a * outer_prod (x, conj (y)) +<br />
+&nbsp;conj (a) * outer_prod (y, conj (x)))</code></td>
+<td><em>A &lt;- a x y</em><sup><em>T</em></sup> <em>+ a y
+x</em><sup><em>T</em></sup> <em>+ A</em> or<em><br />
+A &lt;- a x y</em><sup><em>H</em></sup> <em>+
+a</em><sup><em>-</em></sup> <em>y x</em><sup><em>H</em></sup> <em>+
+A</em></td>
+<td>进行一个对称的或埃尔米特秩(rank) <em>2</em> 变换。</td>
+</tr>
+</tbody>
+</table>
+<h4>Blas Level 3</h4>
+<table border="1" summary="level 3 blas">
+<tbody>
+<tr>
+<th align="left">BLAS 调用</th>
+<th align="left">映射为库中的表达式</th>
+<th align="left">数学说明</th>
+<th align="left">注释</th>
+</tr>
+<tr>
+<td><code>_t_mm</code></td>
+<td><code>B = a * prod (A, B)</code> or<br />
+<code>B = a * prod (trans (A), B)</code> or<br />
+<code>B = a * prod (A, trans (B))</code> or<br />
+<code>B = a * prod (trans (A), trans (B))</code> or<br />
+<code>B = a * prod (herm (A), B)</code> or<br />
+<code>B = a * prod (A, herm (B))</code> or<br />
+<code>B = a * prod (herm (A), trans (B))</code> or<br />
+<code>B = a * prod (trans (A), herm (B))</code> or<br />
+<code>B = a * prod (herm (A), herm (B))</code></td>
+<td><em>B &lt;- a op (A) op (B)</em> with<br />
+&nbsp; <em>op (X) = X</em> or<br />
+&nbsp; <em>op (X) = X</em><sup><em>T</em></sup> or<br />
+&nbsp; <em>op (X) = X</em><sup><em>H</em></sup></td>
+<td>C计算两个矩阵的scaled product。</td>
+</tr>
+<tr>
+<td><code>_t_sm</code></td>
+<td><code>C = solve (A, B, tag)</code> or<br />
+<code>inplace_solve (A, B, tag)</code> or<br />
+<code>C = solve (trans (A), B, tag)</code> or<code><br />
+inplace_solve (trans (A), B, tag)</code> or<code><br />
+C = solve (herm (A), B, tag)</code> or<code><br />
+inplace_solve (herm (A), B, tag)</code></td>
+<td><em>C &lt;- A</em><sup><em>-1</em></sup> <em>B</em>
+or<em><br />
+B &lt;- A</em><sup><em>-1</em></sup> <em>B</em> or<em><br />
+C &lt;-
+A</em><sup><em>T</em></sup><sup><sup><em>-1</em></sup></sup>
+<em>B</em> or<em><br />
+B &lt;- A</em><sup><em>-1</em></sup> <em>B</em> or<em><br />
+C &lt;-
+A</em><sup><em>H</em></sup><sup><sup><em>-1</em></sup></sup>
+<em>B</em> or<em><br />
+B &lt;-
+A</em><sup><em>H</em></sup><sup><sup><em>-1</em></sup></sup>
+<em>B</em></td>
+<td>使用三角形式来求解线性方程组，例如，
+<em>A</em> 是三角形的。</td>
+</tr>
+<tr>
+<td><code>_g_mm<br />
+_s_mm<br />
+_h_mm</code></td>
+<td><code>C = a * prod (A, B) + b * C</code> or<br />
+<code>C = a * prod (trans (A), B) + b * C</code> or<br />
+<code>C = a * prod (A, trans (B)) + b * C</code> or<br />
+<code>C = a * prod (trans (A), trans (B)) + b * C</code> or<br />
+<code>C = a * prod (herm (A), B) + b * C</code> or<br />
+<code>C = a * prod (A, herm (B)) + b * C</code> or<br />
+<code>C = a * prod (herm (A), trans (B)) + b * C</code> or<br />
+<code>C = a * prod (trans (A), herm (B)) + b * C</code> or<br />
+<code>C = a * prod (herm (A), herm (B)) + b * C</code></td>
+<td><em>C &lt;- a op (A) op (B) + b C</em> with<br />
+&nbsp; <em>op (X) = X</em> or<br />
+&nbsp; <em>op (X) = X</em><sup><em>T</em></sup> or<br />
+&nbsp; <em>op (X) = X</em><sup><em>H</em></sup></td>
+<td>增加两个矩阵的scaled product。</td>
+</tr>
+<tr>
+<td><code>_s_rk<br />
+_h_rk</code></td>
+<td><code>B = a * prod (A, trans (A)) + b * B</code> or<br />
+<code>B = a * prod (trans (A), A) + b * B</code> or<br />
+<code>B = a * prod (A, herm (A)) + b * B</code> or<br />
+<code>B = a * prod (herm (A), A) + b * B</code></td>
+<td><em>B &lt;- a A A</em><sup><em>T</em></sup> <em>+ b B</em>
+or<em><br />
+B &lt;- a A</em><sup><em>T</em></sup> <em>A + b B</em> or<br />
+<em>B &lt;- a A A</em><sup><em>H</em></sup> <em>+ b B</em>
+or<em><br />
+B &lt;- a A</em><sup><em>H</em></sup> <em>A + b B</em></td>
+<td>进行一个对称的或埃尔米特秩(rank)<em>k</em>变换。</td>
+</tr>
+<tr>
+<td><code>_s_r2k<br />
+_h_r2k</code></td>
+<td><code>C = a * prod (A, trans (B)) +<br />
+&nbsp;a * prod (B, trans (A)) + b * C</code> or<br />
+<code>C = a * prod (trans (A), B) +<br />
+&nbsp;a * prod (trans (B), A) + b * C</code> or<br />
+<code>C = a * prod (A, herm (B)) +<br />
+&nbsp;conj (a) * prod (B, herm (A)) + b * C</code> or<br />
+<code>C = a * prod (herm (A), B) +<br />
+&nbsp;conj (a) * prod (herm (B), A) + b * C</code></td>
+<td><em>C &lt;- a A B</em><sup><em>T</em></sup> <em>+ a B
+A</em><sup><em>T</em></sup> <em>+ b C</em> or<em><br />
+C &lt;- a A</em><sup><em>T</em></sup> <em>B + a
+B</em><sup><em>T</em></sup> <em>A + b C</em> or<em><br />
+C &lt;- a A B</em><sup><em>H</em></sup> <em>+
+a</em><sup><em>-</em></sup> <em>B A</em><sup><em>H</em></sup> <em>+
+b C</em> or<em><br />
+C &lt;- a A</em><sup><em>H</em></sup> <em>B +
+a</em><sup><em>-</em></sup> <em>B</em><sup><em>H</em></sup> <em>A +
+b C</em></td>
+<td>进行一个对称的或埃尔米特秩(rank) <em>2 k</em>
+变换。</td>
+</tr>
+</tbody>
+</table>
+
+<h2>存储布局(Storage Layout)</h2>
+
+<p>uBLAS 支持许多不同的存储布局(storage layouts)。可以在<a href="types_overview.htm">类型概览</a>中找到详细信息。大多数类似于<code>vector&lt;double&gt;</code> 和 <code>matrix&lt;double&gt;</code> 都默认与C风格的数组相兼容，但是可以设置为包含与
+FORTAN 兼容的数据。</p>
+
+<h2>兼容性</h2>
+<p>出于兼容性的考虑，我们提供了类似于数组的下标索引。对于一些类型 (埃尔米特矩阵，稀疏矩阵等等)，由于会使用临时的代理对象，这会产生很大的开销。 </p>
+<p>uBLAS 使用与 STL兼容的分配器(allocators)来分配容器所需要的存储空间。</p>
+<h2>基准结果(Benchmark Results)</h2>
+<p>下面的表中包含了我们的一个基准中的结果。这个基准比较一个C实现(“C数组”)和一些基于库的实现。 安全的变体(variants)假定使用别名(aliasing)，最快的变体(variants)不使用临时变量并且在功能上等价于C数组实现。除了一般化的向量和矩阵类之外，比较的基准(benchmark)还使用特殊类<code>c_vector</code> 和 <code>c_matrix</code>， 通过泛化来避免每一个过度开销(overhead)。</p>
+<p>基准程序(benchmark program) <strong>bench1</strong> 使用 GCC 4.0 编译并运行在一台 Athlon 64 3000+的机器上。通过运行 <strong>bench1 100</strong>来将时间调整到一个合理的精度。</p>
+<p>首先我们分别注释一个double类型的3维向量和一个double类型的3X3的矩阵。</p>
+<table border="1" summary="1st benchmark">
+<tbody>
+<tr>
+<th align="left">注释</th>
+</tr>
+<tr>
+<td rowspan="3">inner_prod</td>
+<td>C array</td>
+<td align="right">0.61</td>
+<td align="right">782</td>
+<td rowspan="3">少量的抽象惩罚</td>
+</tr>
+<tr>
+<td>c_vector</td>
+<td align="right">0.86</td>
+<td align="right">554</td>
+</tr>
+<tr>
+<td>vector&lt;unbounded_array&gt;</td>
+<td align="right">1.02</td>
+<td align="right">467</td>
+</tr>
+<tr>
+<td rowspan="5">vector + vector</td>
+<td>C array</td>
+<td align="right">0.51</td>
+<td align="right">1122</td>
+<td rowspan="5">抽象惩罚: 因子为 2</td>
+</tr>
+<tr>
+<td>c_vector fast</td>
+<td align="right">1.17</td>
+<td align="right">489</td>
+</tr>
+<tr>
+<td>vector&lt;unbounded_array&gt; fast</td>
+<td align="right">1.32</td>
+<td align="right">433</td>
+</tr>
+<tr>
+<td>c_vector safe</td>
+<td align="right">2.02</td>
+<td align="right">283</td>
+</tr>
+<tr>
+<td>vector&lt;unbounded_array&gt; safe</td>
+<td align="right">6.95</td>
+<td align="right">82</td>
+</tr>
+<tr>
+<td rowspan="5">outer_prod</td>
+<td>C array</td>
+<td align="right">0.59</td>
+<td align="right">872</td>
+<td rowspan="5">少量的抽象惩罚</td>
+</tr>
+<tr>
+<td>c_matrix, c_vector fast</td>
+<td align="right">0.88</td>
+<td align="right">585</td>
+</tr>
+<tr>
+<td>matrix&lt;unbounded_array&gt;, vector&lt;unbounded_array&gt; fast</td>
+<td align="right">0.90</td>
+<td align="right">572</td>
+</tr>
+<tr>
+<td>c_matrix, c_vector safe</td>
+<td align="right">1.66</td>
+<td align="right">310</td>
+</tr>
+<tr>
+<td>matrix&lt;unbounded_array&gt;, vector&lt;unbounded_array&gt; safe</td>
+<td align="right">2.95</td>
+<td align="right">175</td>
+</tr>
+<tr>
+<td rowspan="5">prod (matrix, vector)</td>
+<td>C array</td>
+<td align="right">0.64</td>
+<td align="right">671</td>
+<td rowspan="5">没有明显的抽象惩罚</td>
+</tr>
+<tr>
+<td>c_matrix, c_vector fast</td>
+<td align="right">0.70</td>
+<td align="right">613</td>
+</tr>
+<tr>
+<td>matrix&lt;unbounded_array&gt;, vector&lt;unbounded_array&gt; fast</td>
+<td align="right">0.79</td>
+<td align="right">543</td>
+</tr>
+<tr>
+<td>c_matrix, c_vector safe</td>
+<td align="right">0.95</td>
+<td align="right">452</td>
+</tr>
+<tr>
+<td>matrix&lt;unbounded_array&gt;, vector&lt;unbounded_array&gt; safe</td>
+<td align="right">2.61</td>
+<td align="right">164</td>
+</tr>
+<tr>
+<td rowspan="5">matrix + matrix</td>
+<td>C array</td>
+<td align="right">0.75</td>
+<td align="right">686</td>
+<td rowspan="5">没有明显的抽象惩罚</td>
+</tr>
+<tr>
+<td>c_matrix fast</td>
+<td align="right">0.99</td>
+<td align="right">520</td>
+</tr>
+<tr>
+<td>matrix&lt;unbounded_array&gt; fast</td>
+<td align="right">1.29</td>
+<td align="right">399</td>
+</tr>
+<tr>
+<td>c_matrix safe</td>
+<td align="right">1.7</td>
+<td align="right">303</td>
+</tr>
+<tr>
+<td>matrix&lt;unbounded_array&gt; safe</td>
+<td align="right">3.14</td>
+<td align="right">164</td>
+</tr>
+<tr>
+<td rowspan="5">prod (matrix, matrix)</td>
+<td>C array</td>
+<td align="right">0.94</td>
+<td align="right">457</td>
+<td rowspan="5">没有明显的抽象惩罚</td>
+</tr>
+<tr>
+<td>c_matrix fast</td>
+<td align="right">1.17</td>
+<td align="right">367</td>
+</tr>
+<tr>
+<td>matrix&lt;unbounded_array&gt; fast</td>
+<td align="right">1.34</td>
+<td align="right">320</td>
+</tr>
+<tr>
+<td>c_matrix safe</td>
+<td align="right">1.56</td>
+<td align="right">275</td>
+</tr>
+<tr>
+<td>matrix&lt;unbounded_array&gt; safe</td>
+<td align="right">2.06</td>
+<td align="right">208</td>
+</tr>
+</tbody>
+</table>
+<p>对于较小的向量和矩阵我们发现了一个25％(two fold )的性能损失：首先对于使用类而产生的抽象惩罚，然后是使用泛化的向量和矩阵类所产生的较小的性能损失。 w.r.t. 差别假定也是显著的。</p>
+<p>接下来，我们分别注释一个double类型的100维向量和一个double类型的100X100的矩阵。</p>
+<table border="1" summary="2nd benchmark">
+<tbody>
+<tr>
+<th align="left">运算</th>
+<th align="left">实现</th>
+<th align="left">用时 [s]</th>
+<th align="left">MFLOP/s</th>
+<th align="left">注释 </th>
+</tr>
+<tr>
+<td rowspan="3">inner_prod</td>
+<td>C array</td>
+<td align="right">0.64</td>
+<td align="right">889</td>
+<td rowspan="3">没有明显的抽象惩罚</td>
+</tr>
+<tr>
+<td>c_vector</td>
+<td align="right">0.66</td>
+<td align="right">862</td>
+</tr>
+<tr>
+<td>vector&lt;unbounded_array&gt;</td>
+<td align="right">0.66</td>
+<td align="right">862</td>
+</tr>
+<tr>
+<td rowspan="5">vector + vector</td>
+<td>C array</td>
+<td align="right">0.64</td>
+<td align="right">894</td>
+<td rowspan="5">没有明显的抽象惩罚</td>
+</tr>
+<tr>
+<td>c_vector fast</td>
+<td align="right">0.66</td>
+<td align="right">867</td>
+</tr>
+<tr>
+<td>vector&lt;unbounded_array&gt; fast</td>
+<td align="right">0.66</td>
+<td align="right">867</td>
+</tr>
+<tr>
+<td>c_vector safe</td>
+<td align="right">1.14</td>
+<td align="right">501</td>
+</tr>
+<tr>
+<td>vector&lt;unbounded_array&gt; safe</td>
+<td align="right">1.23</td>
+<td align="right">465</td>
+</tr>
+<tr>
+<td rowspan="5">outer_prod</td>
+<td>C array</td>
+<td align="right">0.50</td>
+<td align="right">1144</td>
+<td rowspan="5">没有明显的抽象惩罚</td>
+</tr>
+<tr>
+<td>c_matrix, c_vector fast</td>
+<td align="right">0.71</td>
+<td align="right">806</td>
+</tr>
+<tr>
+<td>matrix&lt;unbounded_array&gt;, vector&lt;unbounded_array&gt; fast</td>
+<td align="right">0.57</td>
+<td align="right">1004</td>
+</tr>
+<tr>
+<td>c_matrix, c_vector safe</td>
+<td align="right">1.91</td>
+<td align="right">300</td>
+</tr>
+<tr>
+<td>matrix&lt;unbounded_array&gt;, vector&lt;unbounded_array&gt; safe</td>
+<td align="right">0.89</td>
+<td align="right">643</td>
+</tr>
+<tr>
+<td rowspan="5">prod (matrix, vector)</td>
+<td>C array</td>
+<td align="right">0.65</td>
+<td align="right">876</td>
+<td rowspan="5">没有明显的抽象惩罚</td>
+</tr>
+<tr>
+<td>c_matrix, c_vector fast</td>
+<td align="right">0.65</td>
+<td align="right">876</td>
+</tr>
+<tr>
+<td>matrix&lt;unbounded_array&gt;, vector&lt;unbounded_array&gt;
+fast</td>
+<td align="right">0.66</td>
+<td align="right">863</td>
+</tr>
+<tr>
+<td>c_matrix, c_vector safe</td>
+<td align="right">0.66</td>
+<td align="right">863</td>
+</tr>
+<tr>
+<td>matrix&lt;unbounded_array&gt;, vector&lt;unbounded_array&gt;
+safe</td>
+<td align="right">0.66</td>
+<td align="right">863</td>
+</tr>
+<tr>
+<td rowspan="5">matrix + matrix</td>
+<td>C array</td>
+<td align="right">0.96</td>
+<td align="right">596</td>
+<td rowspan="5">没有明显的抽象惩罚</td>
+</tr>
+<tr>
+<td>c_matrix fast</td>
+<td align="right">1.21</td>
+<td align="right">473</td>
+</tr>
+<tr>
+<td>matrix&lt;unbounded_array&gt; fast</td>
+<td align="right">1.00</td>
+<td align="right">572</td>
+</tr>
+<tr>
+<td>c_matrix safe</td>
+<td align="right">2.44</td>
+<td align="right">235</td>
+</tr>
+<tr>
+<td>matrix&lt;unbounded_array&gt; safe</td>
+<td align="right">1.30</td>
+<td align="right">440</td>
+</tr>
+<tr>
+<td rowspan="5">prod (matrix, matrix)</td>
+<td>C array</td>
+<td align="right">0.70</td>
+<td align="right">813</td>
+<td rowspan="5">没有明显的抽象惩罚</td>
+</tr>
+<tr>
+<td>c_matrix fast</td>
+<td align="right">0.73</td>
+<td align="right">780</td>
+</tr>
+<tr>
+<td>matrix&lt;unbounded_array&gt; fast</td>
+<td align="right">0.76</td>
+<td align="right">749</td>
+</tr>
+<tr>
+<td>c_matrix safe</td>
+<td align="right">0.75</td>
+<td align="right">759</td>
+</tr>
+<tr>
+<td>matrix&lt;unbounded_array&gt; safe</td>
+<td align="right">0.76</td>
+<td align="right">749</td>
+</tr>
+</tbody>
+</table>
+<p>对于较大的向量和矩阵，使用类的一笛膜的抽象惩罚似乎在降低，但是使用泛化的向量和矩阵而产生的微量的性能损失似乎仍然存在。 w.r.t. 差别假定也是可见的(visible)。</p>
+<hr />
+<p>Copyright (&copy;) 2000-2002 Joerg Walter, Mathias Koch<br />
+   Use, modification and distribution are subject to the
+   Boost Software License, Version 1.0.
+   (See accompanying file LICENSE_1_0.txt
+   or copy at <a href="http://www.boost.org/LICENSE_1_0.txt">
+      http://www.boost.org/LICENSE_1_0.txt
+   </a>).
+</p>
+</body>
+</html>

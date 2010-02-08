@@ -1,0 +1,372 @@
+<!DOCTYPE HTML PUBLIC "-//W3C//DTD HTML 4.01 Transitional//EN">
+<html><head><meta content="text/html; charset=UTF-8" http-equiv="content-type"><!--
+  -- Copyright (c) Jeremy Siek, Lie-Quan Lee, and Andrew Lumsdaine 2000
+  --
+  -- Distributed under the Boost Software License, Version 1.0.
+  -- (See accompanying file LICENSE_1_0.txt or copy at
+  -- http://www.boost.org/LICENSE_1_0.txt)
+  -->
+
+
+
+  
+  
+  <title>The Boost Graph Library</title></head>
+<body alink="#ff0000" bgcolor="#ffffff" link="#0000ee" text="#000000" vlink="#551a8b">
+
+
+ 
+<img src="../../../boost.png" alt="C++ Boost" height="86" width="277"> 
+
+<br clear="">
+
+
+
+
+<h1>The Boost Graph Library (BGL)
+<a href="http://www.awprofessional.com/title/0201729148">
+<img src="bgl-cover.jpg" alt="BGL Book" align="right"></a>
+</h1>
+
+
+
+
+<p>在计算机科学中，图是一些用来解决各种问题的数学抽象概念。所以，这些抽象的概念一定可以用计算机程序表示。一个标准化的用来遍历图的通用接口，对
+于图的算法和数据结构来说是相当重要的。Boost图库中专门有一些用来访问图数据结构的通用接口，它们隐藏了繁杂的内部实现。这是一套"开放"的接口，一些
+用其它图库实现的接口也能够使用BGL中的通用算法，而且这套接口也能使用BGL中其它算法。BGL提供了一些遵守这套接口的通用类，但是不要以为这是"唯
+一"的图类；BGL中当然还有一些能够更好地解决特定问题的类。我们相信BGL最大的贡献就是规范化了这套接口。
+</p>
+
+
+<p>与STL[<a href="bibliography.html#austern99:_gener_progr_stl">2</a>]相类似，BGL中的接口和组件也是泛型的。接下来的几节，我们将回顾一下范型编程在STL中扮演的角色，以及比较一下我们如何把泛型编程应用到图的环境中。&nbsp;
+
+</p>
+
+
+<p>
+当然，如果你已经对范型编程很熟悉了，那么请跳到<a href="table_of_contents.html">目录</a>继续阅读下面章节。
+
+</p>
+
+
+<p>
+BGL的源代码是随着Boost一起发布的，到这<a href="http://sourceforge.net/project/showfiles.php?group_id=7586">下载</a>。
+
+</p>
+
+
+<h2>如何编译BGL<br>
+
+
+</h2>
+
+
+
+<p><span style="font-weight: bold;">不需要！</span>Boost图库仅仅是一些头文件，所以不需要编译。唯一的例外是： <a href="read_graphviz.html">GraphViz 输入分析器</a>。</p>
+
+
+在编译的时候，<span style="font-weight: bold;">别忘了开启编译优化选项</span>。比如，在Ms Visual C++中选择“Release”模式；在GCC中使用-o2或者-o3标志。
+<h2>STL中的泛型<br>
+
+
+</h2>
+
+
+
+
+
+
+
+<p>STL中用三种方法来实现泛型化</p>
+
+
+<h3>算法/数据结构互通性<br>
+
+
+</h3>
+
+
+
+
+
+
+
+<p>首先，每一个算法都是用数据结构无关的方法写出的，允许一个单独的函数模版处理多种不同的容器类。迭代器的概念是实现算法和数据结构解耦的关键因
+素。
+这个方法最明显的效果就是缩小了STL的代码尺寸，使其从O(M*N)变成了O(M+N)，其中M是算法个数，N是容器个数。试想，如果有20个算法、5
+个数据结构，采用泛型编程与不采用的区别是：由写100个函数变成写25个函数！随着算法和数据结构数量的增加这个差距会越来越大。</p>
+
+
+<h3>通过函数对象扩展<br>
+
+
+</h3>
+
+
+STL泛型化的第二种方法是算法和容器可扩展。用户能够通过函数对象改写和定制STL。这样的灵活性使STL成为解决现实问题的有力工具。每一个编程问题对应它自己的一组实体和被规范化的接口。函数对象提供了一种机制，它能够扩展STL以处理特定领域的问题。
+<h3>元素类型参数化<br>
+
+
+</h3>
+
+
+STL泛型化的第三种方法是参数化容器的元素类型。虽然也很重要，但这种方法在STL泛型化中可能是最不"被感兴趣"的方法。泛型编程中经常简写参数化列表，例如：std::list&lt;T&gt;。以上仅仅是泛型编程的冰山一角。
+<h2>Boost图库中的泛型
+</h2>
+
+
+
+
+
+
+
+<p>与STL一样，BGL中也有3种泛型方法</p>
+
+
+<h3>算法/数据结构的互操作性<br>
+</h3>
+
+
+
+
+<p>第一种，BGL中的图算法被写成了一种把具体数据结构细节抽象出来的接口。与STL相同，BGL也是用迭代器(iterator)来定义遍历相关数
+据结构的接口。有3种完全不同的遍历模式：遍历图中所有的顶点，遍历图中所有的边，以及沿相邻结构进行遍历（从一个顶点到它的每一相邻顶点）。每一种遍历方式
+需要一种迭代器。<br>
+</p>
+
+
+<p>这种泛型接口能够使模板函数（例如：&nbsp;<a href="./breadth_first_search.html"><tt>breadth_first_search()</tt></a>
+函数）接受各种图数据结构，从链表表示的图到数组表示的图都可以。在图领域这种灵活性是相当重要的。图数据结构经常为了某些特殊需求而进行定制。传统上，如果
+程序员想要复用一个算法，他们一定要把自己的数据结构转换/拷贝成图库所规定的数据结构才行。比如LEDA，GTL，Stanford
+GraphBase就是这种情况；特别是用Fortran写成的图算法更需要这种转换。这种转换严重地限制了图算法的复用性。
+</p>
+
+
+
+
+
+<p>相比之下，定制的图数据结构能够被BGL中的泛型算法统一对待，BGL使用一种叫做外部适配（external adaptation）（参考<span style="text-decoration: underline;"> </span><a href="./leda_conversion.html">如何把已有的图转换到BGL中</a>一
+节）的方法来实现该技术。外部适配封装了一个新的接口，得使数据结构不用进行拷贝，也不用把数据置于适配对象内部。BGL相关接口使这种转换变得很容易。举例来
+说，在BGL中，我们已为使经用各种图数据结构（比如：LEDA图，Stanford
+GraphBase图，甚是还有Fortran风格的数组）建立了相应的接口代码。</p>
+
+
+<h3>用遍历器（vistitor）进行扩展</h3>
+
+
+
+
+
+
+
+<p>第二种，BGL中的图算法是可扩展的。BGL引入了遍历器（visitor）的概念，遍历器就是一个有多个方法的功能实体。在图算法中，经常会有几
+个关键的“事件点”使用户插入一些操作。在每个“事件点”，遍历器对象会有不同的方法被调用。
+“事件点”以及对应的遍历器方法都依赖于相应的算法。遍历器经常包括的方法有：start_vertex(), discover_vertex(), examine_edge(), tree_edge(), 以及finish_vertex().</p>
+
+
+<h3>点、边属性的多重参数化</h3>
+
+
+
+
+<p>BGL中的第三种泛型方法与STL容器中的元素类型参数化相似，虽然这点对于图来说有些复杂。我们需要给图的边、点赋予相关含义（属性）。另外，有
+时候需要给各个点、边赋予多重属性；这意味这需要多重参数化。STL的
+std::list&lt;T&gt;类有一个参数T作为它的元素类型。类似地，BGL中的图类也有模板参数作为边、点的属性。一个属性详细说明了该属性的
+参数化类型，并且分配了标识该属性的标签。标签用来区分边或点的多重属性。附着到特定的点或边的属性能够通过属性映射（property
+map）获得。每一个属性有一个单独的属性映射。
+
+</p>
+
+
+
+
+
+<p>传统的图库和图数据结构在图属性的参数化方面做得不是很好。这也是图数据结构一定要针对应用进行定制的主要原因之一。BGL中的属性参数化能够使BGL中的图类更适于复用。</p>
+
+
+<h2>算法</h2>
+
+
+
+
+
+
+
+<p>BGL中的算法由一组核心算法模型（用泛型算法实现）和一组较大的图算法组成。核心算法模型是：</p>
+
+
+<ul>
+
+
+
+  <li>广度优先搜索
+  </li>
+
+
+
+  <li>深度优先搜索
+  </li>
+
+
+
+  <li>均匀开销搜索
+  </li>
+
+
+
+</ul>
+图算法模型本身并不进行任何有意义的计算，它们只是用于构建图算法的积木。当前，BGL中的图算法包括有：
+<ul>
+
+
+
+  <li>Dijkstra最短路径</li>
+
+
+
+  <li>Bellman-Ford最短路径</li>
+
+
+
+  <li>Johnson任意两点间最短路径</li>
+
+
+
+  <li>Kruskal最小生成树</li>
+
+
+
+  <li>Prim最小生成树</li>
+
+
+
+  <li>连通分支</li>
+
+
+
+  <li>强连通分支</li>
+
+
+
+  <li>动态连通分支（使用不相交集合）</li>
+
+
+
+  <li>拓扑排序</li>
+
+
+
+  <li>转置</li>
+
+
+
+  <li>逆Cuthill Mckee排序</li>
+
+
+
+  <li>Smallest Last Vertex Ordering</li>
+
+
+
+  <li>顺序顶点染色</li>
+
+
+
+</ul>
+
+
+
+
+
+
+
+<h2>数据结构</h2>
+
+
+
+
+
+
+
+<p>BGL当前提供2个图类和一个边列表适配器：</p>
+
+
+<ul>
+
+
+
+  <li><a href="adjacency_list.html"><tt>adjacency_list</tt></a></li>
+
+
+
+  <li><a href="adjacency_matrix.html"><tt>adjacency_matrix</tt></a></li>
+
+
+
+  <li><a href="edge_list.html"><tt>edge_list</tt></a></li>
+
+
+
+</ul>
+
+
+
+
+<p>adjacency_list类好比图类中的“瑞士军刀”。它高度参数化，以致于能够为各种情况优化，例如：有向图还是无向图，允许还是不允许平行边，仅出边能有效访问还是出入边都可以，是否以空间为代价进行快速顶点插入或移出，等等。
+
+</p>
+
+
+
+
+
+<p>adjacency_matrix类把边存储在一个|V|x|V|的矩阵中（其中，|V|表示顶点个数）。矩阵元素表示图中的边。邻接矩阵尤其适合表示稠密图（dense graphs），比如,有<i>|V|<sup>2</sup></i>条边的图。<br><br>
+edge_list类是一个能接受任何边迭代器的适配器，实现了一个<a href="./EdgeListGraph.html">边列表图(Edge List Graph</a>)。<br>
+
+
+
+</p>
+
+
+<hr>
+<table>
+
+
+
+  <tbody>
+
+
+    <tr valign="top">
+
+
+
+      <td nowrap="nowrap">Copyright © 2000-2001</td>
+
+
+      <td>
+      <a href="../../../people/jeremy_siek.htm">Jeremy Siek</a>,
+Indiana University (<a href="mailto:jsiek@osl.iu.edu">jsiek@osl.iu.edu</a>)<br>
+
+
+
+      <a href="../../../people/liequan_lee.htm">Lie-Quan Lee</a>, Indiana University (<a href="mailto:llee@cs.indiana.edu">llee@cs.indiana.edu</a>)<br>
+
+
+
+      <a href="http://www.osl.iu.edu/%7Elums">Andrew Lumsdaine</a>,
+Indiana University (<a href="mailto:lums@osl.iu.edu">lums@osl.iu.edu</a>)
+      </td>
+
+
+    </tr>
+
+
+  
+  
+  </tbody>
+</table>
+
+
+
+
+</body></html>

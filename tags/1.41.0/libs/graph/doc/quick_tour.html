@@ -1,0 +1,757 @@
+<!DOCTYPE HTML PUBLIC "-//W3C//DTD HTML 4.01 Transitional//EN">
+<html><head>
+
+  
+  <meta content="text/html;charset=UTF-8" http-equiv="Content-Type"><!--
+  -- Copyright (c) Jeremy Siek 2000
+  --
+  -- Distributed under the Boost Software License, Version 1.0.
+  -- (See accompanying file LICENSE_1_0.txt or copy at
+  -- http://www.boost.org/LICENSE_1_0.txt)
+  -->
+
+
+
+
+
+
+
+  
+  
+  
+  
+  
+  
+  
+  
+  
+  
+  
+  <title>Quick Tour of Boost Graph Library</title><meta name="GENERATOR" content="Microsoft FrontPage 4.0">
+
+
+
+
+
+
+  
+  
+  
+  
+  
+  <meta name="ProgId" content="FrontPage.Editor.Document"></head>
+<body alink="#ff0000" bgcolor="#ffffff" link="#0000ee" text="#000000" vlink="#551a8b">
+
+
+
+
+
+
+
+<img src="../../../boost.png" alt="C++ Boost" height="86" width="277"><br clear="">
+
+
+
+
+
+
+<h1>Boost图库快速指南<br>
+
+
+
+
+
+</h1>
+
+
+
+
+
+
+
+
+<p>图数据结构和算法在某些方面比容器更加复杂。STL中使用的抽象迭代器不能完全适用于图算法中的各种遍历方法。因此，我们专门有一个抽象接口给图使用，该接口就像基本容器中的迭代器（迭代器仍然占有很重要的角色）。为此，<a href="#fig:analogy">图1</a>对BGL和STL做了比较。<br>
+
+
+
+&nbsp;</p>
+
+
+
+
+
+
+<div align="center">
+  <a name="fig:analogy"></a><a name="752"></a>
+  
+<table>
+
+
+
+
+
+
+    <caption valign="bottom"><strong>图1：BGL和STL比较</strong></caption>
+    <tbody>
+
+
+
+
+
+    <tr>
+
+
+
+
+
+
+      <td><img src="figs/analogy.gif" height="335" width="518"></td>
+
+
+
+
+
+
+    </tr>
+
+
+
+
+
+
+  
+  
+  
+  
+  
+  
+  </tbody>
+</table>
+
+
+
+
+
+
+</div>
+
+
+
+
+
+
+<p>&nbsp;</p>
+
+
+图的抽象表示是由一组顶点（或称：节点）和一组连接顶点的边（或称：弧）组成的。&nbsp;<a href="#fig:quick-start">图2</a>
+表示的是一个由5个顶点（标号：0－4）和11条边组成的有向图。从一个顶点出去的边叫做该顶点的出边。边{(0,1),(0,2),(0,3),
+(0,4)}全都是顶点0的出边。进入一点的边叫做该点的入边。边{(0,4),(2,4),(3,4)}全都是顶点4的入边。
+<p>&nbsp;</p>
+
+
+
+
+
+
+<div align="center">
+  <a name="fig:quick-start"></a>
+  
+<table>
+
+
+
+
+
+
+    <caption valign="bottom"><strong>图2：一个有向图例子</strong></caption>
+    <tbody>
+
+
+
+
+
+    <tr>
+
+
+
+
+
+
+      <td><img src="figs/quick_start.gif" height="124" width="103"></td>
+
+
+
+
+
+
+    </tr>
+
+
+
+
+
+
+  
+  
+  
+  
+  
+  
+  </tbody>
+</table>
+
+
+
+
+
+
+</div>
+
+
+
+
+
+
+<p>&nbsp;</p>
+
+
+
+
+
+
+
+
+
+
+
+
+<p>在接下去的部分中，我们将会用BGL来构建这个例子，并且用多种方法去操作它。这个例子的全部代码在&nbsp;<a href="../example/quick_tour.cpp"><tt>examples/quick_tour.cpp</tt></a>文件中。接下去的每部分将会讨论该例子文件中的程序片段。程序的输出内容我们也会列出来。&nbsp;
+</p>
+
+
+
+
+
+<h2>构造一个图</h2>
+
+
+
+
+
+
+<p>在该例中我们将使用BGL的&nbsp;<a href="adjacency_list.html"><tt>adjacency_list</tt></a>
+类来示范一下BGL接口的主要思想。adjacency_list
+类给传统的“邻接列表”数据结构提供了一个泛型版本。adjacency_list
+是一个带有六个参数的模板类，在该例中我们只使用前三个参数，其余三个参数都用默认值。前两个模板参数（vecS，vecS）分别表示每个顶点出边集合的数据
+结构和图中顶点集合的数据结构（关于不同数据结构间的折中方案，请参考：<a href="using_adjacency_list.html#sec:choosing-graph-type">边列表和顶点列表的选择</a>一节）。第三个参数：bidirectionalS，它表示一个既有出边也有入边的有向图。第三个参数的另一个可选值是：directedS，它表示选择一个仅有出边的有向图；undirectedS 则表示一个无向图。
+</p>
+
+
+
+
+
+<p>一旦我们确定了图的类型，我们就能够创建&nbsp;<a href="#fig:quick-start">图2</a> 表示的图了，首先声明一个图对象，然后用<a href="MutableGraph.html">MutableGraph</a>接口（它是adjacency_list实现的）中的<a href="MutableGraph.html#sec:add-edge"><tt>add_edge()</tt></a>
+函数来添加图中的边。在这个例子中，我们使用一对 edge_array 数组仅仅是为了能够简单直接地创建边。&nbsp;
+</p>
+
+
+
+
+
+<pre>  #include &lt;iostream&gt;                  // for std::cout<br>  #include &lt;utility&gt;                   // for std::pair<br>  #include &lt;algorithm&gt;                 // for std::for_each<br>  #include &lt;boost/graph/graph_traits.hpp&gt;<br>  #include &lt;boost/graph/adjacency_list.hpp&gt;<br>  #include &lt;boost/graph/dijkstra_shortest_paths.hpp&gt;<br><br>  using namespace boost;<br>  <br>  int main(int,char*[])<br>  {<br>    // typedef图类型<br>    typedef adjacency_list&lt;vecS, vecS, bidirectionalS&gt; Graph;<br><br>    // 便于标记各顶点<br>    enum { A, B, C, D, E, N };<br>    const int num_vertices = N;<br>    const char* name = "ABCDE";<br><br>    // 表示图中的边<br>    typedef std::pair&lt;int, int&gt; Edge;<br>    Edge edge_array[] = <br>    { Edge(A,B), Edge(A,D), Edge(C,A), Edge(D,C),<br>      Edge(C,E), Edge(B,D), Edge(D,E) };<br>    const int num_edges = sizeof(edge_array)/sizeof(edge_array[0]);<br><br>    // 声明一个图对象<br>    Graph g(num_vertices);<br><br>    // 给图对象增加边<br>    for (int i = 0; i &lt; num_edges; ++i)<br>      add_edge(edge_array[i].first, edge_array[i].second, g);<br>    ...<br>    return 0;<br>  }<br></pre>
+
+
+
+
+
+
+<p>我们可以使用&nbsp;<a href="adjacency_list.html#sec:iterator-constructor">edge iterator
+constructor 边迭代器构造函数</a> 来替代 add_edge() 函数，该函数比add_edge()函数更有效率。指向 edge_array&nbsp;的指针可以被看作是迭代器，所以我们可以用该数组中的头元素和尾元素来创建一个迭代器。
+</p>
+
+
+
+
+
+<pre>    Graph g(edge_array, edge_array + sizeof(edge_array) / sizeof(Edge), num_vertices);<br></pre>
+
+
+
+
+
+
+<p>除了在创建图的时候就指定固定顶点个数的方法以外，也可以用以 add_vertex() 函数和 remove_vertex() 函数来增加、删除顶点的方法来代替，这两个函数都是&nbsp;<a href="MutableGraph.html">MutableGraph</a> 接口中的。
+</p>
+
+
+
+
+
+<h2>存取顶点集</h2>
+
+
+
+
+
+
+<p>现在我们已经建立了一个图，我们可是通过相关的图接口使用各种方法来访问图中的数据。首先，我们可以使用 <a href="VertexListGraph.html">VertexListGraph</a>接口中的<a href="VertexListGraph.html#sec:vertices"><tt>vertices()</tt></a>函
+数来访问图中各顶点。该函数返回一个顶点迭代器对(std::pair of vertex
+iterators)(第一个iterator指向顶点的开始元素，第二个迭代器指向最后元素的下一位置)，通过一个顶点迭代器来间接引用一个顶点对象。
+顶点迭代器的类型在graph_traits类中给出。注意：不同的图类跟不同的顶点迭代器相关联，这就是需要graph_traits类的原因。给定正
+确的图类型，<a href="graph_traits.html"><tt>graph_traits</tt></a>类就能给出正确的vertex_iterator类型。</p>
+
+
+
+
+
+
+
+<p>下面的例子打印出图中每个顶点的序号。所有顶点和边的属性，包括序号在内，全都通过属性映射（<a href="property_map.html"><tt>property_map</tt></a>）对象来访问。property_map类被用于得到具体的属性（比如：vertex_index_t，它是BGL预定义的一个属性）或者通过调用具体函数得到实际的属性映射对象。&nbsp;
+</p>
+
+
+
+
+
+<pre>  // ...<br>  int main(int,char*[])<br>  {<br>    // ...<br><br>    // 得到顶点索引的属性映射<br>    typedef property_map&lt;Graph, vertex_index_t&gt;::type IndexMap;<br>    IndexMap index = get(vertex_index, g);<br><br>    std::cout &lt;&lt; "vertices(g) = ";<br>    typedef graph_traits&lt;Graph&gt;::vertex_iterator vertex_iter;<br>    std::pair&lt;vertex_iter, vertex_iter&gt; vp;<br>    for (vp = vertices(g); vp.first != vp.second; ++vp.first)<br>      std::cout &lt;&lt; index[*vp.first] &lt;&lt;  " ";<br>    std::cout &lt;&lt; std::endl;<br>    // ...<br>    return 0;<br>  }<br></pre>
+
+
+
+
+
+
+输出是：
+<pre>  vertices(g) = 0 1 2 3 4<br></pre>
+
+
+
+
+
+
+<p>&nbsp;
+</p>
+
+
+
+
+
+<h2>访问边集合<br>
+
+</h2>
+
+
+
+
+
+
+
+
+
+
+
+
+<p>图中的边集合能够通过EdgeListGraph接口的<a href="EdgeListGraph.html#sec:edges"><tt>edges()</tt></a>函数访问。与vertices()函数类似，该函数也返回一个迭代器对，不过这次返回的是边迭代器(edge iterators)，通过边迭代器对象能够访问到边对象。source()函数和target()函数返回链接一条边的首、尾顶点。这次我们用<a href="../../tuple/doc/tuple_users_guide.html#tiers"><tt>tie()</tt></a>辅助函数来替换std::pair迭代器对，这个函数把std::pair中的两部分拆分到了两个变量当中去，本例中是ei和ei_end。这种方法比创建std::pair更简单，所以在BGL中我们经常使用这种方法。&nbsp;
+</p>
+
+
+
+
+
+<pre>  // ...<br>  int main(int,char*[])<br>  {<br>    // ...<br>    std::cout &lt;&lt; "edges(g) = ";<br>    graph_traits&lt;Graph&gt;::edge_iterator ei, ei_end;<br>    for (tie(ei, ei_end) = edges(g); ei != ei_end; ++ei)<br>        std::cout &lt;&lt; "(" &lt;&lt; index[source(*ei, g)] <br>                  &lt;&lt; "," &lt;&lt; index[target(*ei, g)] &lt;&lt; ") ";<br>    std::cout &lt;&lt; std::endl;<br>    // ...<br>    return 0;<br>  }<br></pre>
+
+
+
+
+
+
+输出是：
+<pre>  edges(g) = (0,1) (0,3) (2,0) (3,2) (2,4) (1,3) (3,4)<br></pre>
+
+
+
+
+
+
+<p>&nbsp;
+</p>
+
+
+
+
+
+<h2>邻接结构<br>
+
+</h2>
+
+在接下去的几个例子中，我们将从特定顶点的视角来探究图的邻接结构。我们将着眼于研究顶点的入边、出边和他的邻接顶点。我们将封装一个“exercise
+vertex”函数以得到上面这些数据结构，该函数接受图中顶点作为参数。为了示范BGL和STL的互操作性，我们使用STL中的
+for_each() 函数对顶点进行迭代并调用“exercise vertex”函数。&nbsp;
+
+
+
+
+
+
+<pre>  //...<br>  int main(int,char*[])<br>  {<br>    //...<br>    std::for_each(vertices(g).first, vertices(g).second,<br>                  exercise_vertex&lt;Graph&gt;(g));<br>    return 0;<br>  }<br></pre>
+
+<span style="font-family: monospace;">我们使用仿函数－－exercise_vertex来替代一般的函数，因
+为我们存取顶点信息的时候需要图对象，使用仿函数能够让我们在执行std::for_each()期间一直保持一个对图对象的引用。并且，我们将这个仿函数按图类型进行模板化，这
+样就能够对不同的图类复用代码。下面是exercise_vertex仿函数的开始部分：</span>&nbsp;
+
+
+
+
+<pre>  template &lt;class Graph&gt; struct exercise_vertex {<br>    exercise_vertex(Graph&amp; g_) : g(g_) {}<br>    //...<br>    Graph&amp; g;<br>  };<br></pre>
+
+
+
+
+
+
+<p>&nbsp;
+</p>
+
+
+
+
+
+<h3>顶点描述符<br>
+
+</h3>
+
+<span style="font-family: monospace;">为了写仿函数的“operator()”函数，
+我们首先需要知道图中顶点的类型。顶点类型将作为“operator()”的参数。为了准确性，我们不去处理实际的顶点对象，而是
+处理顶点描述符(vertex
+descriptors)。一些图的表示法（比如：邻接列表）并不保存实际的图对象，而有些则会保存（比如：链接指针图）。这些区别被隐藏在顶点描述符对
+象的"黑盒"之下。顶点描述符是由各个图类型提供的，它被用于通过一些函数来访问相关图的信息，比如通过图的out_edges()函数、
+in_edges()函数、
+adjacent_vertices()函数以及属性映射函数，后面的章节会有详细描述。顶点描述符类型是通过graph_traits类来得到的。关键
+字－－“
+typename”是必须的，因为域操作符左边的类型是依赖于模板参数（图类型）的。下面定义我们的仿函数的应用方法：</span>&nbsp;
+
+
+
+
+
+
+<pre>  template &lt;class Graph&gt; struct exercise_vertex {<br>    //...<br>    typedef typename graph_traits&lt;Graph&gt;<br>      ::vertex_descriptor Vertex;<br><br>    void operator()(const Vertex&amp; v) const<br>    {<br>      //...<br>    }<br>    //...<br>  };<br></pre>
+
+
+
+
+
+
+<p>&nbsp;
+</p>
+
+
+
+
+
+<h3>出边、入边和边描述符<br>
+</h3>
+
+
+
+
+
+
+
+
+
+
+
+
+<p>通过<a href="IncidenceGraph.html">IncidenceGraph</a>接口的out_edges()函数能够访问一个顶点的出边。<a href="IncidenceGraph.html#sec:out-edges"><tt>out_edges()</tt></a>函
+数有2个参数：第一个参数是该出边所对应的顶点，第二个参数是边所在的图对象。这个函数提供一个迭代器对，这个迭代器对可用于访问该顶点的所有出边(与
+vertices()函数返回一个迭代器对相类似)。这个迭代器叫做“出边迭代器”(out-edge
+iterators)，解引用一个迭代器可以得到对应的边描述符(edge
+descriptor)对象。一个边描述符起到的作用和顶点描述符相类似，它是一个由图提供的"黑盒"。以下代码片断对 vertex <tt>v</tt> 的每条出边打印"源-目标"对。
+&nbsp;
+</p>
+
+
+
+
+
+<pre>  template &lt;class Graph&gt; struct exercise_vertex {<br>    //...<br>    void operator()(const Vertex&amp; v) const<br>    {<br>      typedef graph_traits&lt;Graph&gt; GraphTraits;<br>      typename property_map&lt;Graph, vertex_index_t&gt;::type <br>        index = get(vertex_index, g);<br><br>      std::cout &lt;&lt; "out-edges: ";<br>      typename GraphTraits::out_edge_iterator out_i, out_end;<br>      typename GraphTraits::edge_descriptor e;<br>      for (tie(out_i, out_end) = out_edges(v, g); <br>           out_i != out_end; ++out_i) {<br>        e = *out_i;<br>        Vertex src = source(e, g), targ = target(e, g);<br>        std::cout &lt;&lt; "(" &lt;&lt; index[src] &lt;&lt; "," <br>                  &lt;&lt; index[targ] &lt;&lt; ") ";<br>      }<br>      std::cout &lt;&lt; std::endl;<br>      //...<br>    }<br>    //...<br>  };<br></pre>对于顶点0，输出为:
+<pre>  out-edges: (0,1) (0,2) (0,3) (0,4)<br></pre>
+
+
+
+
+
+
+
+<p><a href="BidirectionalGraph.html">BidirectionalGraph</a>接口的<a href="BidirectionalGraph.html#sec:in-edges"><tt>in_edges()</tt></a>函数通过入边迭代器访问一个顶点所有的入边。in_edges()函数仅当bidirectionalS作为adjacency_list的<tt>Directed</tt>模板参数的时候才有效。相对于单向图，双向图占用更多的空间。&nbsp;
+</p>
+
+
+
+
+
+<pre>  template &lt;class Graph&gt; struct exercise_vertex {<br>    //...<br>    void operator()(const Vertex&amp; v) const<br>    {<br>      //...<br>      std::cout &lt;&lt; "in-edges: ";<br>      typedef typename graph_traits&lt;Graph&gt; GraphTraits;<br>      typename GraphTraits::in_edge_iterator in_i, in_end;<br>      for (tie(in_i, in_end) = in_edges(v,g); <br>           in_i != in_end; ++in_i) {<br>        e = *in_i;<br>        Vertex src = source(e, g), targ = target(e, g);<br>        std::cout &lt;&lt; "(" &lt;&lt; index[src] &lt;&lt; "," &lt;&lt; index[targ] &lt;&lt; ") ";<br>      }<br>      std::cout &lt;&lt; std::endl;<br>      //...<br>    }<br>    //...<br>  };<br></pre>
+
+
+
+
+
+
+顶点0的输出:
+<pre>  in-edges: (2,0) (3,0) (4,0)<br></pre>
+
+
+
+
+
+
+<p>&nbsp;
+</p>
+
+
+
+
+
+<h3>相邻顶点</h3>
+
+
+
+
+
+
+<p>给定一个顶点的出边，该边的目标顶点就是源顶点的相邻顶点。有时候，一个算法不关心图中的边而是仅需关心图中顶点。因此，图接口中提供了<a href="AdjacencyGraph.html">AdjacencyGraph</a>接口，该接口中的 <a href="AdjacencyGraph.html#sec:adjacent-vertices"><tt>adjacent_vertices()</tt></a>函数能够直接访问顶点的相邻顶点。这个函数返回一个邻接迭代器对，通过间接引用邻接迭代器能够得到邻接顶点的顶点描述符。&nbsp;
+</p>
+
+
+
+
+
+<pre>  template &lt;class Graph&gt; struct exercise_vertex {<br>    //...<br>    void operator()(Vertex v) const<br>    {<br>      //...<br>      std::cout &lt;&lt; "adjacent vertices: ";<br>      typename graph_traits&lt;Graph&gt;::adjacency_iterator ai;<br>      typename graph_traits&lt;Graph&gt;::adjacency_iterator ai_end;<br>      for (tie(ai, ai_end) = adjacent_vertices(v, g);<br>           ai != ai_end; ++ai)<br>        std::cout &lt;&lt; index[*ai] &lt;&lt;  " ";<br>      std::cout &lt;&lt; std::endl;<br>    }<br>    //...<br>  };<br></pre>
+顶点4的输出是:
+<pre>  adjacent vertices: 0 1<br></pre>
+
+
+
+
+
+
+<p>&nbsp;
+</p>
+
+
+
+
+
+<h2>给你的图增添一些色彩<br>
+</h2>
+
+
+
+
+
+
+<p>BBGL试图尽可能灵活地提供图的相关附属属性。一个属性，比如边的权重，可能需要贯穿图对象的整个生命周期，因此图对象就需要管理该属性的存储。
+另一方面，顶点颜色属性有可能仅在一个单独的算法中被用到，那么最好是把该属性和图对象分开存储。前一种属性被称作内部存储属性，而第二种属性被称作外部
+存储属性。BGL提供统一的机制来访问这两种属性，该机制叫作：属性映射(property map)，内部的算法实现是property
+map接口，该接口在<a href="property_map.html">Property Map Concepts属性映射概念</a>一章中介绍。此外，<a href="PropertyGraph.html">PropertyGraph</a>概念定义了一个接口，该接口用于对一个内部存储属性获得属性映射对象。</p>
+<p>BGL的adjacency_list类允许用户通过图类的模板参数指定内部存储属性。具体的实现在<a href="using_adjacency_list.html#sec:adjacency-list-properties">Internal
+Properties内部属性</a>一
+节中讲解。有多种方法能够创建外部存储属性，但是这些方法最终都是传递给图算法一个模板参数而已。一个直观的存储属性的办法是，根据点或边的索引创建一个索
+引数组。在<tt>VertexList</tt>模板参数指定为vecS的adjacency_list类中，顶点被自动赋予索引值，顶点索引能够通过属性映射得到vertex_index_t
+值。边不会自动赋予索引值。然而属性机制可以被用来把索引绑定到需要把索引作为外部存储属性的边上。</p>
+<p>在以下例子中，我们使用<a href="dijkstra_shortest_paths.html"><tt>dijkstra_shortest_paths()</tt></a>函数建立一个图。这个例子的完整的源代码在<a href="../example/dijkstra-example.cpp"><tt>examples/dijkstra-example.cpp</tt></a>文件中。Dijkstra算法计算从一点到图中每个其它顶点的最短路径。</p>
+Dijkstra算法需要给边添加一个权重属性，并且给顶点添加一个距离属性。这里，我们把权重作为内部属性，把距离作为外部属性。我们使用属性类来表示
+权重属性，并且规定权重的类型为整型(int)，使用edge_weight_t作为属性标记(它是BGL预定义的一个属性标记)。然后，权重属性作为
+adjacency_list的模版参数使用。<br>
+
+
+
+
+
+
+<p>TlistS和vecS是adjacency_list内部数据结构的类型(参考：<a href="using_adjacency_list.html#sec:choosing-graph-type">Choosing
+the <tt>Edgelist</tt> and <tt>VertexList 选择边列表和顶点列表</tt></a>)。directedS类型规定了该图必须是一个有向图(与无向图相对)。下面的代码详细说明了图类型以及它的初始化部分。边和权重以迭代器(一个被当作<a href="http://www.sgi.com/tech/stl/RandomAccessIterator.html">RandomAccessIterator</a>的指针)的形式传入图的构造函数。&nbsp;
+</p>
+
+
+
+
+
+<pre>  typedef adjacency_list&lt;listS, vecS, directedS, <br>                         no_property, property&lt;edge_weight_t, int&gt; &gt; Graph;<br>  typedef graph_traits&lt;Graph&gt;::vertex_descriptor Vertex;<br>  typedef std::pair&lt;int,int&gt; E;<br><br>  const int num_nodes = 5;<br>  E edges[] = { E(0,2), <br>                E(1,1), E(1,3), E(1,4),<br>                E(2,1), E(2,3), <br>                E(3,4),<br>                E(4,0), E(4,1) };<br>  int weights[] = { 1, 2, 1, 2, 7, 3, 1, 1, 1};<br><br>  Graph G(edges + sizeof(edges) / sizeof(E), weights, num_nodes);<br></pre>
+我们使用std::vector来存储距离这个外部属性。BGL处理随机迭代器像处理属性映射一样，所以我们仅需传递distance
+vector的开始迭代器到Dijkstra算法既可。继续我们上面的例子，下面的代码展示的是创建一个distance
+vector，以及调用Dijkstra算法(隐式地使用了内部属性－－权重)，然后输出结果。<br>
+<pre>  // vector为了给distance属性排序  <br>  std::vector&lt;int&gt; d(num_vertices(G));<br><br>  // 得到第一个顶点<br>  Vertex s = *(vertices(G).first);<br>  // 调用Dijkstra算法<br>  dijkstra_shortest_paths(G, s, distance_map(&amp;d[0]));<br><br>  std::cout &lt;&lt; "distances from start vertex:" &lt;&lt; std::endl;<br>  graph_traits&lt;Graph&gt;::vertex_iterator vi;<br>  for(vi = vertices(G).first; vi != vertices(G).second; ++vi)<br>    std::cout &lt;&lt; "distance(" &lt;&lt; index(*vi) &lt;&lt; ") = " <br>              &lt;&lt; d[*vi] &lt;&lt; std::endl;<br>  std::cout &lt;&lt; std::endl;<br></pre>
+输出是:
+<pre>  distances from start vertex:<br>  distance(0) = 0<br>  distance(1) = 6<br>  distance(2) = 1<br>  distance(3) = 4<br>  distance(4) = 5<br></pre>
+
+
+
+
+
+
+<p>&nbsp;
+</p>
+
+
+
+
+
+<h2>用遍历器扩展图算法<br>
+</h2>
+多数情况下，一个库提供的算法能够满足你的大多数应用，但不是全部。例如，上一节我们使用Dijkstra算法计算到每个顶点的最短路径，但是我们也许想记下最短路径的树。一种方法是记录下最短路径数中每一个节点的前驱(父节点)。
+<p>最好是不要重写Dijkstra算法，仅仅增加记录前驱节点的代码即可<a href="quick_tour.html#1">[1]</a>。在STL中，这种扩展能力通过仿函数来提供，它是一个每个算法的可选参数。在BGL中扮演相同角色的是遍历器(Visitor)。
+</p>
+
+
+
+
+
+<p>遍历器类似于仿函数，但是不同于仿函数只有一个"应用"方法，遍历器有多个"应用"方法。它的每个方法都会在算法内部预先定义好的点被调用。遍历器中的方法在<a href="visitor_concepts.html">Visitor Concepts遍历器概念</a>一
+节中详细讲解。BGL为一般任务提供了一系列遍历器，其中包括记录前驱节点的遍历器。希望用户能够使用遍历器来扩展BGL。在这
+里，我们将会快速的看一遍历器r的实现方法，以及记录前驱节点的遍历器的使用。因为我们使用&nbsp;<a href="dijkstra_shortest_paths.html">dijkstra_shortest_paths()</a>算法，所以我们必须创建一个<a href="DijkstraVisitor.html">Dijkstra遍历器</a>。</p>
+<p>record_predecessors&nbsp;遍历器的功能被分为两个部分。我们使用<a href="../../property_map/doc/property_map.html">property map</a>来存储和访问前驱节点属性。然后，predecessor&nbsp;遍历器仅负责记录前驱节点。为了实现这些，我们创建模板类record_predecessors。以后就可以调用该遍历器的方法了，因为我们继承自<a href="dijkstra_visitor.html"><tt>dijkstra_visitor</tt></a>类，所以这个类没有提供其它方法。predecessor_recorder的构造函数将接受一个属性映射对象并且把它保存到数据成员。&nbsp;
+</p>
+
+
+
+
+
+<pre>  template &lt;class PredecessorMap&gt;<br>  class record_predecessors : public dijkstra_visitor&lt;&gt;<br>  {<br>  public:<br>    record_predecessors(PredecessorMap p)<br>      : m_predecessor(p) { }<br><br>    template &lt;class Edge, class Graph&gt;<br>    void edge_relaxed(Edge e, Graph&amp; g) {<br>      // 把源顶点设置成目标顶点的父节点   <br>      put(m_predecessor, target(e, g), source(e, g));<br>    }<br>  protected:<br>    PredecessorMap m_predecessor;<br>  };<br></pre>
+记录前驱节点非常简单。当Dijkstra算法走到一条边(意味着把它放入最短路径树中)的时候，我们把源点作为目标顶点的前驱节点记录下来。然后如果这
+条边再被访问，那么前驱属性将会被新的前驱节点改写。我们使用put()函数把属性影射关联到记录的前驱节点。visitor的edge_filter告
+诉算法何时调用explore()方法。我们仅仅想通知在最短路径树中的边，所以规定使用tree_edge_tag标记。<br>
+<br>
+作为最后一点，我们创建一个辅助函数来使创建predecessor visitors更简单一些。所有的BGL visitor都有一个与之类似的辅助函数。
+
+
+
+
+
+
+<pre>  template &lt;class PredecessorMap&gt;<br>  record_predecessors&lt;PredecessorMap&gt;<br>  make_predecessor_recorder(PredecessorMap p) {<br>    return record_predecessors&lt;PredecessorMap&gt;(p);<br>  }<br></pre>
+
+
+
+
+
+
+<p>我们准备在Dijkstra算法中使用record_predecessors了。幸运的是，BGL中的Dijkstra算法已经配备了一个
+visitor句柄，所以我们只需要传入新的visitor即可。在这个例子中我们只需要使用一个visitor，但是BGL中一个算法经常配备多个
+visitor句柄(参考<a href="visitor_concepts.html">Visitor Concepts</a>一节)。&nbsp;
+</p>
+
+
+
+
+
+<pre>  using std::vector;<br>  using std::cout;<br>  using std::endl;<br>  vector&lt;Vertex&gt; p(num_vertices(G), graph_traits&lt;G&gt;::null_vertex()); //the predecessor array<br>  dijkstra_shortest_paths(G, s, distance_map(&amp;d[0]). <br>                          visitor(make_predecessor_recorder(&amp;p[0])));<br><br>  cout &lt;&lt; "parents in the tree of shortest paths:" &lt;&lt; endl;<br>  for(vi = vertices(G).first; vi != vertices(G).second; ++vi) {<br>    cout &lt;&lt; "parent(" &lt;&lt; *vi;<br>    if (p[*vi] == graph_traits&lt;G&gt;::null_vertex())<br>      cout &lt;&lt; ") = no parent" &lt;&lt; endl; <br>    else <br>      cout &lt;&lt; ") = " &lt;&lt; p[*vi] &lt;&lt; endl;<br>  }<br></pre>输出为：
+<pre>  parents in the tree of shortest paths:<br>  parent(0) = no parent<br>  parent(1) = 4<br>  parent(2) = 0<br>  parent(3) = 2<br>  parent(4) = 3<br></pre>
+
+
+
+
+
+
+
+<br>
+
+
+
+
+
+
+
+<h3>注意：</h3>
+
+
+
+
+
+
+
+<a name="1">[1]</a> 虽然predecessor visitor提供了一个好例子，但是predeceddor遍历器已经不需要了，因为新版的Dijkstra算法为记录前驱节点包含了一个命名参数。<br>
+
+
+
+
+
+
+<hr>
+<table>
+
+
+
+
+
+
+  <tbody>
+
+
+
+
+
+    <tr valign="top">
+
+
+
+
+
+
+    <td nowrap="nowrap">Copyright © 2000</td>
+
+
+
+
+
+
+    <td><a href="../../../people/jeremy_siek.htm">Jeremy Siek</a>,
+      Indiana University (<a href="mailto:jsiek@osl.iu.edu">jsiek@osl.iu.edu</a>)</td>
+
+
+
+
+
+
+  </tr>
+
+
+
+
+
+
+  
+  
+  
+  
+  
+  </tbody>
+</table>
+
+
+
+
+
+
+
+<!--  LocalWords:  STL BGL cpp vecS bidirectionalS directedS undirectedS hpp vp
+ -->
+<!--  LocalWords:  iostream namespace int const num sizeof map ID's gif typedef
+ -->
+<!--  LocalWords:  iter ei interoperability struct typename GraphTraits src ai
+ -->
+<!--  LocalWords:  targ PropertyGraph  Properties property iterator iterators
+ -->
+<!--  LocalWords:  VertexList dijkstra listS Edgelist RandomAccessIterator cout
+ -->
+<!--  LocalWords:  weightp  adjacency tradeoffs undirected MutableGraph indices
+ -->
+<!--  LocalWords:  VertexListGraph Dereferencing IndexMap EdgeListGraph functor
+ -->
+<!--  LocalWords:  functor's IncidenceGraph dereferencing BidirectionalGraph
+ -->
+<!--  LocalWords:  AdjacencyGraph Dijkstra's extensibility functors BGL's endl
+ -->
+<!--  LocalWords:  DijkstraVisitor PredecessorMap siek htm Univ Notre
+ -->
+</body></html>

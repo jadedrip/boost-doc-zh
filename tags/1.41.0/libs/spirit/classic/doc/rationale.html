@@ -1,0 +1,172 @@
+<!DOCTYPE HTML PUBLIC "-//W3C//DTD HTML 4.01 Transitional//EN">
+<html><head>
+
+<title>Rationale</title><meta http-equiv="Content-Type" content="text/html; charset=UTF-8">
+<link rel="stylesheet" href="theme/style.css" type="text/css"></head>
+<body>
+<table background="theme/bkd2.gif" border="0" cellspacing="2" width="100%">
+  <tbody><tr> 
+    <td width="10"> 
+    </td>
+    <td width="85%"> <font face="Verdana, Arial, Helvetica, sans-serif" size="6"><b>Rationale 基本原理</b></font></td>
+    <td width="112"><a href="http://spirit.sf.net"><img src="theme/spirit.gif" align="right" border="0" height="48" width="112"></a></td>
+  </tr>
+</tbody></table>
+<br>
+<table border="0">
+  <tbody><tr>
+    <td width="10"></td>
+    <td width="30"><a href="../index.html"><img src="theme/u_arr.gif" border="0"></a></td>
+    <td width="30"><a href="faq.html"><img src="theme/l_arr.gif" border="0"></a></td>
+    <td width="30"><a href="acknowledgments.html"><img src="theme/r_arr.gif" border="0"></a></td>
+   </tr>
+</tbody></table>
+<p><img src="theme/lens.gif" height="16" width="15"> <strong>Virtual functions: 
+  From static to dynamic C++ &nbsp;虚拟函数：从静态到动态的C++</strong></p>
+<p>Rules straddle the border between static and dynamic C++. In effect, a rule 
+  transforms compile-time polymorphism (using templates) into run-time polymorphism 
+  (using virtual functions). This is necessary due to C++'s inability to automatically 
+  declare a variable of a type deduced from an arbitrarily complex expression 
+  in the right-hand side (rhs) of an assignment. Basically, we want to do something 
+  like:<br>规
+则跨越了静态与动态C++的边界。实际上，规则将编译期的多态(使用模板实现)转换为运行期的多态(使用虚拟函数实现)。这是必要的，因为C++无法自动
+声明由一个赋值操作的右操作数(rhs)中某个任意复杂的表达式所推导出来的某种类型的一个变量。基本上，我们想做的事情就象：</p>
+<pre><code><font color="#000000">    <span class="identifier">T </span><span class="identifier">rule </span><span class="special">= </span><span class="identifier">an_arbitrarily_complex_expression</span><span class="special">;</span></font></code></pre>
+<p>without having to know or care about the resulting type of the right-hand side 
+  (rhs) of the assignment expression. Apart from this, we also need a facility 
+  to forward declare an unknown type:<br>而不必知道或关心赋值表达式右侧(rhs)的结果类型。此外，我们还需要一种方法来前向声明一个未知的类型：</p>
+<pre><code><font color="#000000"><span class="special">    </span><span class="identifier">T </span><span class="identifier">rule</span><span class="special">;<br>    </span><span class="special">...<br>    </span><span class="identifier">rule </span><span class="special">= </span><span class="identifier">a </span><span class="special">| </span><span class="identifier">b</span><span class="special">;</span></font></code></pre>
+<p>These limitations lead us to this implementation of rules. This comes at the 
+  expense of the overhead of a virtual function call, once through each invocation 
+  of a rule.<br>这些限制使我们有了这种规则的实现。其代价是规则的每次调用都有一次虚拟函数调用的开销。</p>
+<p><img src="theme/lens.gif" height="16" width="15"> <strong>Multiple declaration 多次声明 
+  </strong> </p>
+<p>Some BNF variants allow multiple declarations of a <tt>rule</tt>. The declarations 
+  are taken as alternatives. Example:<br>有些BNF变体允许一个 <tt>rule</tt> 的多次声明。这些声明的结果是多选。例如：</p>
+<pre>   <span class="identifier"><code>r </code></span><code><span class="special">= </span><span class="identifier">a</span><span class="special">;    </span><span class="identifier">
+   r </span><span class="special">= </span><span class="identifier">b</span><span class="special">;</span></code></pre>
+<p> is equivalent to:<br>相当于： </p>
+<pre>   <span class="identifier"><code>r </code></span><code><span class="special">= </span><span class="identifier">a </span><span class="special">| </span><span class="identifier">b</span><span class="special">;</span></code></pre>
+<p>Spirit v1.3 allowed this behavior. However, the current version of Spirit <b>no 
+  longer</b> allows this because experience shows that this behavior leads to 
+  unwanted gotchas (for instance, it does not allow rules to be held in containers). 
+  In the current release of Spirit, a second assignment to a rule will simply 
+  redefine it. The old definition is destructed. This follows more closely C++ 
+  semantics and is more in line with what the user expects the rule to behave.<br>Spirit v1.3 允许此种行为。但是，当前版本的Spirit<b>不再</b>允许此种行为，因为经验显示，该行为会导致不必要的陷阱(例如，它不允许将规则保存于容器之中)。在当前的Spirit版本中，对规则的第二次赋值只会重新定义它。旧的定义被析构。这更接近于C++的语义，并与用户所期望的规则行为更为一致。</p>
+<p><img src="theme/lens.gif" height="16" width="15"> <b>Sequencing Syntax 表示顺序的语法</b><br>
+  <br>
+  The comma operator as in a, b seems to be a better candidate, syntax-wise. But 
+  then the problem is with its precedence. It has the lowest precedence in C/C++, 
+  which makes it virtually useless.&nbsp;<br>逗号操作符如 a, b 似乎是一种更好的选择，语法更明晰。但问题是它的优先级。在C/C++中它的优先级最低，这使得它变得毫无用处。<br>
+  <br>
+  Bjarne Stroustrup, in his article <a href="references.html#generalized_overloading">"Generalizing 
+  Overloading for C++2000"</a> talks about overloading whitespace. Such a 
+  feature would allow juxtapositioning of parser objects exactly as we do in (E)BNF 
+  (e.g. a b | c instead of a &gt;&gt; b | c). Unfortunately, the article was dated 
+  April 1, 1998. Oh well.<br>Bjarne Stroustrup在它的文章 <a href="references.html#generalized_overloading">"Generalizing 
+  Overloading for C++2000"</a> 中讨论了重载的空白。这种特性将允许分析器对象的juxtapositioning正如我们在(E)BNF 
+ 所做的一样(如以 a b | c 替代 a &gt;&gt; b | c)。不幸的是，文章的日期是1998年4月1日。哦。</p>
+<p><img src="theme/lens.gif" height="16" width="15"> <b>Forward iterators 前向迭代器</b><br>
+  <br>
+  In general, the scanner expects at least a standard conforming forward iterator. 
+  Forward iterators are needed for backtracking where the iterator needs to be 
+  saved and restored later. Generally speaking, Spirit is a backtracking parser. 
+  The implication of this is that at some point, the iterator position will have 
+  to be saved to allow the parser to backtrack to a previous point. Thus, for 
+  backtracking to work, the framework requires at least a forward iterator.<br>一
+般来说，扫描器至少需要一个符合标准的前向迭代器。前向迭代器是回溯所需的，因为迭代器需要被保存且稍后恢复。通常来说，Spirit是一个回溯分析器。
+其含义是，在某些时候，迭代器的位置必须被保存以允许分析器回溯至以前的点。因此，为了可以回溯，本框架至少要求一个前向迭代器。<br>
+  <br>
+  Some parsers might require more specialized iterators (bi-directional or even 
+  random access). Perhaps in the future, deterministic parsers when added to the 
+  framework, will perform no backtracking and will need just a single token lookahead, 
+  hence will require input iterators only.<br>有些分析器可能要求更为特殊的迭代器(双向的甚至是随机访问的)。也许在将来，确定性的分析器被增加到本框架中时，将不再执行回溯，只需要前瞻一个记号，这时只需要输入迭代器即可。</p>
+<p><img src="theme/lens.gif" height="16" width="15"><b> Why are subrules important? 为什么子规则是重要的？</b><br>
+  <br>
+  Subrules open up the oportunity to do aggressive meta programming as well because 
+  they do not rely on virtual functions. The virtual function is the meta-programmer's 
+  hell. Not only does it slow down the program due to the virtual function indirect 
+  call, it is also an opaque wall where no metaprogram can get past. It kills 
+  all meta-information beyond the virtual function call. Worse, the virtual function 
+  cannot be templated. Which means that its arguments have to be tied to a actual 
+  types. Many problems stem from this limitation.&nbsp;<br>子
+规则提供了元编程的机会，因为它们不依赖于虚拟函数。虚拟函数是元编程者的地狱。它不仅因为虚拟函数的间接调用降低了程序的速度，它还是一堵不透明的墙，
+元编程无法穿过它。它在虚拟函数调用之前去掉了所有元信息。更糟的是，虚拟函数不能被模板化。这意味着它的参数必须绑定至实际的类型。许多问题正是源于这
+个限制。<br></p><p>
+  While Spirit is a currently classified as a non-deterministic recursive-descent 
+  parser, Doug Gregor first noted that other parsing techniques apart from top-down 
+  recursive descent may be applied. For instance, apart from non-deterministic 
+  recursive descent, deterministic LL(1) and LR(1) can theoretically be implemented 
+  using the same expression template front end. Spirit rules use virtual functions 
+  to encode the RHS parser expression in an opaque abstract parser type. While 
+  it serves its purpose well, the rule's virtual functions are the stumbling blocks 
+  to more advanced metaprogramming. Subrules are free from virtual functions.<br>虽
+然目前Spirit被分类为非确定性的递归下降分析器，但Doug
+Gregor首先注意到，除了自顶而下的递归下降法以外的其它分析技术也是可以适用的。例如，除了非确定性的递归下降法，确定性的 LL(1) 和
+LR(1)
+理论上也可以被实现为使用相同的表达式模板前端。Spirit的规则使用了虚拟函数来将RHS分析器表达式编码为一个不透明的抽象分析器类型。虽然它很好
+地达到其目的，但是规则所用的虚拟函数是进一步使用元编程的绊脚石。子规则则不受虚拟函数的限制。</p>
+<p><img src="theme/lens.gif" height="16" width="15"><b> <a name="exhaustive_rd"></a>Exhaustive 
+  backtracking and greedy RD 穷举回溯和贪心RD</b></p>
+<p>Spirit doesn't do exhaustive backtracking like regular expressions are expected 
+  to. For example:<br>Spirit并不象正则表达式所期望的那样进行穷举回溯。例如：</p>
+<pre>    <span class="special">*</span>chlit_p<span class="special">(</span><span class="quotes">'a'</span><span class="special">) &gt;&gt;</span> chlit_p<span class="special">(</span><span class="quotes">'a'</span><span class="special">);</span></pre>
+<p>will always fail to match because Spirit's Kleene star does not back off when 
+  the rest of the rule fails to match.<br>总是匹配失败，因为当规则的其余部分匹配失败时，Spirit的克林星不会回退。 </p>
+<p>Actually, there's a solution to this greedy RD problem. Such a scheme is discussed 
+  in section 6.6.2 of <a href="http://www.cs.vu.nl/%7Edick/PTAPG.html">Parsing Techniques: A Practical 
+  Guide</a>. The trick involves passing a <em>tail</em> parser (in addition to 
+  the scanner) to each parser. The start parser will then simply be: <tt>start 
+  &gt;&gt; end_p;</tt> (end_p is the start's tail).<br>实际上，这个贪心RD的问题有一个解决方法。该机制在 <a href="http://www.cs.vu.nl/%7Edick/PTAPG.html">Parsing Techniques: A Practical 
+  Guide</a> 的第6.6.2节中讨论。该诀窍包含了传递一个 <em>tail</em> 分析器(除了扫描器以外)给每一个分析器。然后起始分析器只需写成：<tt>start 
+  &gt;&gt; end_p;</tt> (end_p 是 start 的 tail)。 </p>
+<p>Spirit is greedy --using straight forward, naive RD. It is certainly possible 
+  to implement the fully backtracking scheme presented above, but there will be 
+  also certainly be a performance hit. The scheme will always try to match all 
+  possible parser paths (full parser hierarchy traversal) until it reaches a point 
+  of certainty, that the whole thing matches or fails to match.<br>Spirit是贪心的--使用简单、自然的RD。当然，它可以实现以上所说的全回溯机制，但是显然这也是一个性能上的挑战。该机制总是尝试匹配所有可能的分析器路径(完全的分析器层次遍历)，直至到达某个可以确定完全匹配或匹配失败的点。 </p>
+<table align="center" border="0" width="80%">
+  <tbody><tr> 
+    <td class="note_box"><p><img src="theme/note.gif" height="16" width="16"><b>Backtracking 
+        and Greedy RD 回溯与贪心RD </b><br>
+        <br>
+        Spirit is quite consistent and intuitive about when it backtracks and 
+        to where, although it may not be obvious to those coming from different 
+        backgrounds. In general, any (sub)parser will, given the same input, always 
+        match the same portion of the input (or fail to match the input at all). 
+        This means that Spirit is inherently greedy. Spirit will only backtrack 
+        when a (sub)parser fails to match the input, and it will always backtrack 
+        to the next choice point upward (not backward) in the parser structure. 
+        In other words abb|ab will match "ab", as will a(bb|b), but 
+        (ab|a)b won't because the (ab|a) subparser will always match the 'b' after 
+        the 'a' if it is available.</p><p>Spirit
+对于何时回溯以及回溯至何处是相当连贯和直观的，虽然对于来自不同的背景它可能不是很明显。通常，任何(子)分析器，给定相同的输入，总是匹配相同的部分
+输入(或者根本就匹配失败)。这意味着Spirit本身就是贪心的。Spirit仅当一个(子)分析器匹配输入失败时才进行回溯，而且它总是回溯至分析器
+结构中向上的(不是向后)下一个选择点。换句话说，abb|ab 将匹配 "ab"，a(bb|b) 也一样，但 (ab|a)b
+则非如此，因为子分析器 (ab|a) 只要可能就总是在 'a' 之后匹配一个 'b'。</p>
+      <p>--Rainer Deyke</p>
+      </td>
+  </tr>
+</tbody></table>
+<p>There's a strong preference on "simplicity with all the knobs when you 
+  need them" approach, right now. On the other hand, the flexibility of Spirit 
+  makes it possible to have different optional schemes available. It might be 
+  possible to implement an exhaustive backtracking RD scheme as an optional feature 
+  in the future.<br>对于"需要时就使用所有旋钮"这一方法，现在有一种强烈的偏好。另一方面，Spirit的灵活性令它可以有不同的可选机制。将来它也许可以实现一个穷举回溯的RD机制作为可选的特性。 </p>
+<table border="0">
+  <tbody><tr> 
+    <td width="10"></td>
+    <td width="30"><a href="../index.html"><img src="theme/u_arr.gif" border="0"></a></td>
+    <td width="30"><a href="faq.html"><img src="theme/l_arr.gif" border="0"></a></td>
+    <td width="30"><a href="acknowledgments.html"><img src="theme/r_arr.gif" border="0"></a></td>
+  </tr>
+</tbody></table>
+<br>
+<hr size="1">
+<p class="copyright">Copyright © 1998-2003 Joel de Guzman<br>
+  <br>
+  <font size="2">Use, modification and distribution is subject to the Boost Software
+    License, Version 1.0. (See accompanying file LICENSE_1_0.txt or copy at
+    http://www.boost.org/LICENSE_1_0.txt)</font></p>
+<p class="copyright">&nbsp;</p>
+</body></html>

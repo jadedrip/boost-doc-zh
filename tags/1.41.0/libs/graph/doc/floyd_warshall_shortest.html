@@ -1,0 +1,121 @@
+<!DOCTYPE HTML PUBLIC "-//W3C//DTD HTML 4.01 Transitional//EN">
+<html><head><meta content="text/html; charset=UTF-8" http-equiv="content-type"><!--
+     Copyright (c) 2002 Rensselaer Polytechnic Institute
+    
+     Distributed under the Boost Software License, Version 1.0.
+     (See accompanying file LICENSE_1_0.txt or copy at
+     http://www.boost.org/LICENSE_1_0.txt)
+  -->
+<title>Floyd-Warshall All Pairs Shortest Paths</title></head>
+<body alink="#ff0000" bgcolor="#ffffff" link="#0000ee" text="#000000" vlink="#551a8b"> 
+<img src="../../../boost.png" alt="C++ Boost" height="86" width="277"> 
+
+<br clear="">
+
+<h1><a name="sec:floyd-warshall">
+<tt>floyd_warshall_all_pairs_shortest_paths</tt>
+</a></h1>
+
+<pre><a name="sec:floyd-warshall"><em>// 命名参数版本</em>
+template &lt;class VertexListGraph, class DistanceMatrix,
+    class P, class T, class R&gt;
+bool floyd_warshall_initialized_all_pairs_shortest_paths(
+    const VertexListGraph&amp; g, DistanceMatrix&amp; d,
+    const bgl_named_params&lt;P, T, R&gt;&amp; params)
+
+template &lt;class VertexAndEdgeListGraph, class DistanceMatrix,
+    class P, class T, class R&gt;
+bool floyd_warshall_all_pairs_shortest_paths(
+    const VertexAndEdgeListGraph&amp; g, DistanceMatrix&amp; d,
+    const bgl_named_params&lt;P, T, R&gt;&amp; params)
+
+<em>// 位置参数版本</em>
+\begin{verbatim}
+template &lt;typename VertexListGraph, typename DistanceMatrix,
+    typename BinaryPredicate, typename BinaryFunction,
+    typename Infinity, typename Zero&gt;
+bool floyd_warshall_initialized_all_pairs_shortest_paths(
+    const VertexListGraph&amp; g, DistanceMatrix&amp; d,
+    const BinaryPredicate&amp; compare, const BinaryFunction&amp; combine,
+    const Infinity&amp; inf, const Zero&amp; zero)
+
+template &lt;typename VertexAndEdgeListGraph, typename DistanceMatrix,
+    typename WeightMap, typename BinaryPredicate,
+    typename BinaryFunction, typename Infinity, typename Zero&gt;
+bool floyd_warshall_all_pairs_shortest_paths(
+    const VertexAndEdgeListGraph&amp; g, DistanceMatrix&amp; d,
+    const WeightMap&amp; w, const BinaryPredicate&amp; compare,
+    const BinaryFunction&amp; combine,
+    const Infinity&amp; inf, const Zero&amp; zero)</a></pre>
+
+<p>
+<a name="sec:floyd-warshall">这些算法找出图中每对顶点间的最短距离。如果图中存在负权回路，则该算法返回 false，否则返回 true。每对顶点间的最短距离被保存在距离矩阵 <code>d</code> 中。这两个算法的差别在于，距离矩阵是否被假定已初始化，如下文对 OUT 参数描述中的讨论。
+
+</a></p><p><a name="sec:floyd-warshall">该算法应被用于对稠密图计算每对顶点间的最短路径。对于稀疏图，请用 </a><a href="johnson_all_pairs_shortest.html"><code>johnson_all_pairs_shortest_paths</code></a>。 
+
+</p><h3>Where Defined 定义于</h3>
+
+<p>
+<a href="../../../boost/graph/floyd_warshall_shortest.hpp"><tt>boost/graph/floyd_warshall_shortest.hpp</tt></a>
+
+</p><h3>Parameters 参数</h3>
+IN: <code>Graph&amp; g</code>
+<blockquote>一个有向图或无向图。调用&nbsp;<code>floyd_warshall_initialized_all_pairs_shortest_paths</code> 时，该图必须符合 <a href="VertexListGraph.html">点列表图Vertex List Graph</a>，调用
+<code>floyd_warshall_all_pairs_shortest_paths</code> 时须符合 <a href="VertexAndEdgeListGraph.html">点边列表图Vertex And Edge List Graph</a>。<br>
+</blockquote>
+
+OUT: <code>DistanceMatrix&amp; d</code>
+<blockquote>图中每对顶点
+<code>u</code>,<code>v</code><i></i> 的最短路径长度被保存在 <tt>D[u][v]</tt>。DistanceMatrix 必须为类型 <code>{M, I, V}</code>，其中 <code>I</code> 为类型
+<code>vertex_descriptor</code> 而 <code>V</code> 为 <code>weight_map</code> 的类型。这个类型集必须符合
+<a href="BasicMatrix.html">基础矩阵BasicMatrix</a>，但不要求在常量时间内运行，且必须是可变的。该矩阵在被传递给函数
+<code>floyd_warshall_initialized_all_pairs_shortest_paths</code> 时，必须是已正确初始化的。如果是使用函数 <code>floyd_warshall_all_pairs_shortest_paths</code>，则将会为用户初始化该矩阵。
+</blockquote>
+
+<h3>Named Parameters 命名参数</h3>
+
+IN: <code>weight_map(WeightMap w)</code>
+<blockquote>图中每条边的权重或长度。类型 <tt>WeightMap</tt> 必须符合
+  <a href="../../property_map/doc/ReadablePropertyMap.html">可读属性映射</a>。图的边描述符类型必须可用作这个权重映射的键类型。该映射的 <code>value_type</code> 必须是
+<code>DistanceMatrix</code> 类型，且必须要么是传给该函数的图的一部分，要么作为一个参数传入。<br>
+  <b>缺省值：</b><tt>get(edge_weight, g)</tt><code></code>
+</blockquote>
+
+IN: <code>distance_compare(CompareFunction cmp)</code>
+<blockquote>该函数用于比较距离，以决定哪个顶点更接近于源顶点。类型 <tt>CompareFunction</tt> 必须为二元谓词。其参数类型要与&nbsp;<tt>WeightMap</tt> 属性映射的值类型相匹配。<br>
+
+  <b>缺省值：</b><tt>std::less&lt;WM&gt;</tt> 其中 <span style="font-family: monospace;">WM </span><tt>= typename
+  property_traits&lt;</tt><tt>WeightMap</tt><tt>&gt;::value_type</tt><code></code>
+</blockquote>
+
+IN: <code>distance_combine(CombineFunction cmb)</code>
+<blockquote>该函数用于将距离相加，以计算一条路径的距离。类型 <tt>CombineFunction</tt> 必须为二元谓词<a href="http://www.sgi.com/tech/stl/BinaryFunction.html"></a>。其参数类型要与&nbsp;<tt>WeightMap</tt> 属性映射的值类型相匹配。<br>
+
+<b>缺省值：</b><code>boost::closed_plus&lt;WM&gt;</code> 其中 <code>WM = typename property_traits&lt;WeightMap&gt;::value_type</code>
+</blockquote>
+
+IN: <code>distance_inf(WM inf)</code>
+<blockquote>
+  <span style="font-family: monospace;">该值被用于在算法开始之前对各个顶点的距离进行初始化，也用于表示之间没有路径的两个顶点间的距离。它应该大于任何可能的有效路径长度。参数</span>类型必须与&nbsp;<tt>WeigthMap</tt> 的值类型相匹配。<br>
+
+<b>缺省值：</b><code>std::numeric_limits&lt;WM&gt;::max()</code> 其中 <code>WM = typename property_traits&lt;WeightMap&gt;::value_type</code>
+</blockquote>
+
+IN: <code>distance_zero(WM zero)</code>
+<blockquote>该值用于表示一个顶点与其自身的距离，并用于判断某个值是否为负。<span style="font-family: monospace;">参数</span>类型必须与&nbsp;<tt>WeigthMap</tt> 的值类型相匹配。<br>
+<b>缺省值：</b><code>0</code>
+</blockquote>
+
+<h3>Complexity 复杂度</h3>时间复杂度为 <i>O(V<sup>3</sup>)</i>.
+
+<br>
+<hr>
+<table>
+<tbody><tr valign="top">
+<td nowrap="nowrap">Copyright © 2002-2004</td><td>
+  Lauren Foutz, Rensselaer Polytechnic Institute</td>
+  </tr><tr valign="top"><td></td>
+  <td>Scott Hill, Rensselaer Polytechnic Institute
+</td></tr></tbody></table>
+
+</body></html>

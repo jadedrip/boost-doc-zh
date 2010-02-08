@@ -1,0 +1,62 @@
+<!DOCTYPE HTML PUBLIC "-//W3C//DTD HTML 4.01 Transitional//EN">
+<html><head><meta content="text/html; charset=UTF-8" http-equiv="content-type"><!--
+  -- Copyright (c) Jeremy Siek, Lie-Quan Lee, and Andrew Lumsdaine 2000
+  --
+  -- Distributed under the Boost Software License, Version 1.0.
+  -- (See accompanying file LICENSE_1_0.txt or copy at
+  -- http://www.boost.org/LICENSE_1_0.txt)
+  -->
+<title>Boost Graph Library: Constructing Graph Algorithms</title></head>
+<body alink="#ff0000" bgcolor="#ffffff" link="#0000ee" text="#000000" vlink="#551a8b"> 
+<img src="../../../boost.png" alt="C++ Boost" height="86" width="277"> 
+
+<br clear="">
+
+<h1>Constructing graph algorithms with BGL 用BGL构建图算法</h1>
+
+<p>BGL的<i>主要</i>目标不是提供一个漂亮的图类，也不是提供一套全面的可复用的图算法(虽然这些也是目标之一)。BGL的主要目标是鼓励其
+它人写出可复用的图算法。我们所指的可复用是最大程度的可复用。泛型编程是令算法最大程度可复用的一种方法，本节我们将讨论如何将泛型编程应用于图算法的
+构造。
+</p><p>为了示范泛型编程的过程，我们将一步步地构造一个图着色算法。图的着色问题(或者更具体地说，顶点着色问题)是指，对图 <i>G</i> 中的每个顶点标识一种颜色，使得没有两个相邻的顶点被标以相同的颜色，且只使用最小数量的颜色。一般来说，图着色问题是NP-完全的，因此不可能在合理的时间内找到最优解。但是，有许多算法可以使用启发式方法找到接近最小数量的颜色。
+
+</p><p>我们在这里介绍的具体算法是基于线性时间的<tt>SEQ子程序的，该子程序用于稀疏 </tt>Jacobian 和 Hessian 矩阵[<a href="bibliography.html#curtis74:_jacob">9</a>,<a href="bibliography.html#coleman84:_estim_jacob">7</a>,<a href="bibliography.html#coleman85:_algor">6</a>]
+的估算。该算法根据由输入顺序所确定的次序遍历图中所有顶点。对于每个顶点，该算法标记其相邻顶点的颜色，然后选择最小的未标记颜色作为当前顶点的颜色。
+如果所有颜色都已被标记，则创建一种新颜色。如果一种颜色的标记号等于当前顶点号，则认为该颜色是已被标记的。这样可以减少麻烦，不必重设每个顶点的标
+记。该算法的效率高度依赖于输入顶点的顺序。有多种顺序算法，包括
+<i>最大优先</i>[<a href="bibliography.html#welsch67">31</a>],
+<i>最小最后</i>[<a href="bibliography.html#matula72:_graph_theory_computing">29</a>], 和
+<i>关联度</i>[<a href="bibliography.html#brelaz79:_new">32</a>] 算法，它们可以改进这个着色算法的效率。
+
+</p><p>在构造一个泛型的图算法时，首先要做的决定是，实现该算法需要哪些图操作，以及这些操作映射到哪些图概念。在这个算法中，我们需要遍历所有顶点，以初始化顶点的颜色。我们还需要访问邻接顶点。因此，我们选择了 <a href="./VertexListGraph.html">VertexListGraph</a> 概念，因为它是包含这些操作的最小概念。图的类型将在该算法的模板函数中参数化。我们不将图的类型局限于某个特定的图类，如 BGL <a href="./adjacency_list.html"><tt>adjacency_list</tt></a>，因为这样会大大局限了算法的可重用性(正如当前多数算法所写的那样)。我们对于图的类型，只限制了它必须符合 <a href="./VertexListGraph.html">VertexListGraph</a>。这样才可以在算法中使用所需的图操作，此外，我们的明确要求是通过
+<tt>function_requires()</tt> 这样的概念检查来施加的(关于概念检查的详细说明，参见 <a href="../../concept_check/concept_check.htm">概念检查Concept
+Checking</a> 章节)。
+
+</p><p>下一步我们需要考虑，在算法中要使用哪些顶点属性或边属性。在这个例子中，唯一的属性是顶点颜色。指定访问顶点颜色的最灵活方式是，使用属性映射接口。这使得该算法的用户能够决定他们想如何保存该属性。因为我们既要读出也要写入颜色，所以我们给出 <a href="../../property_map/doc/ReadWritePropertyMap.html">ReadWritePropertyMap</a> 的要求。这个颜色映射的
+<tt>key_type</tt> 必须是来自于图的
+<tt>vertex_descriptor</tt>，而 <tt>value_type</tt>
+则必须是某种整数。我们还指定
+<tt>order</tt> 参数的接口是一个属性映射，在这个例子中是 <a href="../../property_map/doc/ReadablePropertyMap.html">ReadablePropertyMap</a>。对于
+order，其 <tt>key_type</tt> 是一个整数偏移量，而
+<tt>value_type</tt> 是一个 <tt>vertex_descriptor</tt>。同样，我们用概念检查来施加这些要求。该算法的返回值是我们对该图进行着色所需要的颜色数量，因此函数的返回类型是图的
+<tt>vertices_size_type</tt>。以下代码用一个模板函数、概念检查和一些
+typedef 来给出我们的图算法的接口。实现是简单明了的，前面没有讨论到的唯一步骤是颜色初始化步骤，我们将所有顶点的颜色设为"未着色"。
+
+</p><pre>namespace boost {<br>  template &lt;class VertexListGraph, class Order, class Color&gt;<br>  typename graph_traits&lt;VertexListGraph&gt;::vertices_size_type<br>  sequential_vertex_color_ting(const VertexListGraph&amp; G, <br>    Order order, Color color)<br>  {<br>    typedef graph_traits&lt;VertexListGraph&gt; GraphTraits;<br>    typedef typename GraphTraits::vertex_descriptor vertex_descriptor;<br>    typedef typename GraphTraits::vertices_size_type size_type;<br>    typedef typename property_traits&lt;Color&gt;::value_type ColorType;<br>    typedef typename property_traits&lt;Order&gt;::value_type OrderType;<br><br>    function_requires&lt; VertexListGraphConcept&lt;VertexListGraph&gt; &gt;();<br>    function_requires&lt; ReadWritePropertyMapConcept&lt;Color, vertex_descriptor&gt; &gt;();<br>    function_requires&lt; IntegerConcept&lt;ColorType&gt; &gt;();<br>    function_requires&lt; size_type, ReadablePropertyMapConcept&lt;Order&gt; &gt;();<br>    typedef typename same_type&lt;OrderType, vertex_descriptor&gt;::type req_same;<br>    <br>    size_type max_color = 0;<br>    const size_type V = num_vertices(G);<br>    std::vector&lt;size_type&gt; <br>      mark(V, numeric_limits_max(max_color));<br>    <br>    typename GraphTraits::vertex_iterator v, vend;<br>    for (tie(v, vend) = vertices(G); v != vend; ++v)<br>      color[*v] = V - 1; // 表示 "未着色"<br>    <br>    for (size_type i = 0; i &lt; V; i++) {<br>      vertex_descriptor current = order[i];<br><br>      // 标记邻接顶点的所有颜色<br>      typename GraphTraits::adjacency_iterator ai, aend;<br>      for (tie(ai, aend) = adjacent_vertices(current, G); ai != aend; ++ai)<br>        mark[color[*ai]] = i; <br><br>      // 找出邻接顶点未使用的最小颜色<br>      size_type smallest_color = 0;<br>      while (smallest_color &lt; max_color &amp;&amp; mark[smallest_color] == i) <br>        ++smallest_color;<br><br>      // 如果所有颜色都被用，则递增颜色数量<br>      if (smallest_color == max_color)<br>        ++max_color;<br><br>      color[current] = smallest_color;<br>    }<br>    return max_color;<br>  }<br>} // namespace boost<br></pre>
+
+<p>
+
+
+
+<br>
+</p><hr>
+<table>
+<tbody><tr valign="top">
+<td nowrap="nowrap">Copyright © 2000-2001</td><td>
+<a href="http://www.boost.org/people/jeremy_siek.htm">Jeremy Siek</a>,
+Indiana University (<a href="mailto:jsiek@osl.iu.edu">jsiek@osl.iu.edu</a>)<br>
+<a href="http://www.boost.org/people/liequan_lee.htm">Lie-Quan Lee</a>, Indiana University (<a href="mailto:llee@cs.indiana.edu">llee@cs.indiana.edu</a>)<br>
+<a href="http://www.osl.iu.edu/%7Elums">Andrew Lumsdaine</a>,
+Indiana University (<a href="mailto:lums@osl.iu.edu">lums@osl.iu.edu</a>)
+</td></tr></tbody></table>
+
+</body></html>

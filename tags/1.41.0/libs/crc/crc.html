@@ -1,0 +1,800 @@
+<!DOCTYPE HTML PUBLIC "-//W3C//DTD HTML 3.2//EN">
+<html><head>
+
+
+  
+  <meta http-equiv="Content-Type" content="text/html; charset=UTF-8">
+
+
+  
+  <title>Boost CRC Library Documentation</title></head>
+
+<body alink="red" bgcolor="white" link="blue" text="black" vlink="purple">
+
+
+
+<h1><img src="../../boost.png" alt="boost.png (6897 bytes)" align="middle" height="86" width="277">头文件 <cite>&lt;<a href="../../boost/crc.hpp">boost/crc.hpp</a>&gt;</cite></h1>
+
+
+
+<p>头文件 <cite>&lt;<a href="../../boost/crc.hpp">boost/crc.hpp</a>&gt;</cite> 提供了两个位于 boost 名称空间（namespace）中的两个类模板。这些模板定义了一些对象，使用它们可以计算给定数据流的 CRC 
+——循环冗余码（校验）。这个头文件还提供了一步（一次调用）就可以计算出 CRC 的函数模板。</p>
+
+
+
+<h2><a name="contents">目录</a></h2>
+
+
+
+<ol>
+
+  <li><a title="目录" href="#contents">目录</a> 
+  </li>
+
+  <li><a title="头文件大纲" href="#header">头文件大纲</a> 
+  </li>
+
+  <li><a title="Ra基本原理" href="#rationale">基本原理</a> 
+  </li>
+
+  <li><a title="背景知识" href="#background">背景知识</a> 
+    
+    <ul>
+
+      <li><a title="CRC 参数" href="#parameters">CRC 参数</a> </li>
+
+    
+    </ul>
+
+
+  </li>
+
+  <li><a title="理论 CRC 机" href="#crc_basic">理论 CRC 机</a> 
+  </li>
+
+  <li><a title="优化的 CRC 机" href="#crc_optimal">优化的 CRC 机</a> 
+  </li>
+
+  <li><a title="CRC 机使用方式" href="#usage">CRC 机使用方式</a> 
+  </li>
+
+  <li><a title="CRC 函数" href="#crc_func">CRC 函数</a> 
+  </li>
+
+  <li><a title="Augmented-CRC 函数" href="#a_crc_func">扩张-CRC 函数</a><br>
+
+
+  </li>
+
+  <li><a title="预定义的 CRC 例子" href="#crc_ex">预定义的 CRC 例子</a> 
+  </li>
+
+  <li><a title="参考资料" href="#references">参考资料</a> 
+  </li>
+
+  <li><a title="荣誉" href="#credits">荣誉</a> 
+    
+    <ul>
+
+      <li><a title="贡献者" href="#contributors">贡献者</a> 
+      </li>
+
+      <li><a title="鸣谢" href="#acknowledgements">鸣谢</a> 
+      </li>
+
+      <li><a title="历史" href="#history">历史</a> </li>
+
+    
+    </ul>
+
+  </li>
+
+</ol>
+
+
+
+<h2><a name="header">头文件大纲<br>
+
+</a></h2>
+
+
+
+<blockquote>
+  
+  <pre>#include &lt;boost/integer.hpp&gt;  <i>// for boost::uint_t</i>
+#include &lt;cstddef&gt;            <i>// for std::size_t</i>
+
+namespace boost
+{
+
+template &lt; std::size_t Bits &gt;
+    class crc_basic;
+
+template &lt; std::size_t Bits, <em>impl_def</em> TruncPoly = 0u,<br>           <em>impl_def</em> InitRem = 0u,<br>           <em>impl_def</em> FinalXor = 0u, bool ReflectIn = false,<br>           bool ReflectRem = false &gt;<br>    class crc_optimal;<br><br>template &lt; std::size_t Bits, <em>impl_def</em> TruncPoly,<br>           <em>impl_def</em> InitRem, <em>impl_def</em> FinalXor,<br>           bool ReflectIn, bool ReflectRem &gt;<br>    typename uint_t&lt;Bits&gt;::fast  crc( void const *buffer,<br>     std::size_t byte_count );<br><br>template &lt; std::size_t Bits, <em>impl_def</em> TruncPoly &gt;<br>    typename uint_t&lt;Bits&gt;::fast  augmented_crc( void const *buffer,<br>     std::size_t byte_count,<br>     typename uint_t&lt;Bits&gt;::fast initial_remainder );<br><br>template &lt; std::size_t Bits, <em>impl_def</em> TruncPoly &gt;<br>    typename uint_t&lt;Bits&gt;::fast  augmented_crc( void const *buffer,<br>     std::size_t byte_count );<br><br>typedef crc_optimal&lt;16, 0x8005, 0, 0, true, true&gt;         crc_16_type;<br>typedef crc_optimal&lt;16, 0x1021, 0xFFFF, 0, false, false&gt;  crc_ccitt_type;<br>typedef crc_optimal&lt;16, 0x8408, 0, 0, true, true&gt;         crc_xmodem_type;<br><br>typedef crc_optimal&lt;32, 0x04C11DB7, 0xFFFFFFFF, 0xFFFFFFFF, true, true&gt;<br>  crc_32_type;<br><br>}<br></pre>
+
+</blockquote>
+
+
+
+<p>实现相关的类型 impl_def 代表“可以表示至少 Bits 个位，且可以最快地进行运算的内建无符号整数类型”。</p>
+
+
+
+<h2><a name="rationale"></a>基本原理</h2>
+
+
+
+<p>常用的特别是在电子通讯中使用的错误检测机制是为数据附加校验和。数据发送者在发送数据时，把数据的检验和一并发送出去，这个检验和是对数据流的按
+位（bit）运算得出的。接收者收到数据后使用同样的运算取得检验和。如果发现两个检验和不匹配，就可以认为数据在传输过程中发生了错误。有时候（概率很
+小）会发生仅仅检验和出错而导致实际上正确的数据被拒绝的情况。也有可能出现数据中有差错但是检验和不变从而隐藏了错误的情况。CRC
+是一种常用的为硬件接口和编码格式提供错误检测的检验和类型。</p>
+
+
+
+<h2><a name="background">背景知识</a></h2>
+
+
+
+<p>CRC 
+是通过计算一个以2为模的多项式除法的余数来实现的。作为被除数的是一个冗长的多项式，首先消息前面（earlier）的位（bits）被当作是多项式的最高次系数，然后这个消息被当作是多项式的（二次）系数。一个完整的 
+CRC 算法中还牵涉到另外一个用作除数的多项式 。除法运算过程中对系数采用以2为模（modulo-2）规则（不进位），运算得出的商被乎略而余数就是检验和。</p>
+
+
+
+<p>完整的资料参看&nbsp;<cite><a href="http://www.ross.net/crc/crcpaper.html">A
+Painless Guide to CRC Error Detection Algorithms</a></cite>。这里有一个更清晰的解释： <a href="http://www.netrino.com/Connecting/2000-01/">Easier Said Than
+Done</a>&nbsp;.</p>
+
+
+
+<h3><a name="parameters">CRC 参数</a></h3>
+
+
+
+<dl>
+
+
+	<dt>被截短的多项式<br>
+
+
+  </dt>
+
+</dl>
+
+<p style="margin-left: 40px;">除数多项式比检验和（余数）大一个位（bit）。这个最高位恒为1，所以在描述特定的 CRC 
+类型时它是被乎略的，从而使得除数和检验和可以使用同一个数据类型来表示。</p>
+
+<dl>
+
+  <dt>余数的初始值<br>
+
+
+  </dt>
+
+</dl>
+
+<div style="margin-left: 40px;">在运算过程中 CRC 余数随着对数据的逐位处理而变化。余数的初始值通常是0，但是有些 CRCs 
+使用其他值来避免“盲点”。所谓的“盲点”是指一个共同（common）的消息位序列不改变特定的中间余数值。</div>
+
+<dl>
+
+  <dt>最后一步 XOR 操作<br>
+
+
+  </dt>
+
+</dl>
+
+<div style="margin-left: 40px;">CRC 余数在返回给用户之前，可以通过位异或（bitwise 
+exclusive-or）操作与一个特定的值进行合并。这个特定的值一般是0，也就是说余数被原封不动地返回给用户。另一个常用的值是“全1”值（译者注：即这个值的所有二进制位都是1的），即返回中间余数的二进制补数（bitwise 
+complement）。</div>
+
+<dl>
+
+  <dt>输入反射<br>
+
+
+  </dt>
+
+</dl>
+
+<div style="margin-left: 40px;">消息的各个位通常以字节为单位提供给 CRC 运算，字节的最高几位被当作是被除数的高位。一些 
+CRCs 会在进行 CRC 运算之前“反射”各个位（相对于字节的正中间进行“反射”，比如，字节的第一位和最后一位互换，以此类推）</div>
+
+<dl>
+
+  <dt>输出（余数）反射<br>
+
+
+  </dt>
+
+</dl>
+
+<div style="margin-left: 40px;">有些 CRCs 会返回中间余数的“反射”（在进行最终 XOR 
+操作<i>之前</i>进行）而非余数本身。</div>
+
+<h2><a name="crc_basic"></a>理论 CRC 机</h2>
+
+
+
+<blockquote>
+  
+  <pre>template &lt; std::size_t Bits &gt;<br>class boost::crc_basic<br>{<br>public:<br>    // Type<br>    typedef <em>implementation_defined</em>  value_type;<br><br>    // Constant reflecting template parameter<br>    static  std::size_t const  bit_count = Bits;<br><br>    // Constructor<br>    explicit  crc_basic( value_type truncated_polynominal,<br>               value_type initial_remainder = 0, value_type final_xor_value = 0,<br>               bool reflect_input = false, bool reflect_remainder = false );<br><br>    // Internal Operations<br>    value_type  get_truncated_polynominal() const;<br>    value_type  get_initial_remainder() const;<br>    value_type  get_final_xor_value() const;<br>    bool        get_reflect_input() const;<br>    bool        get_reflect_remainder() const;<br><br>    value_type  get_interim_remainder() const;<br>    void        reset( value_type new_rem );<br>    void        reset();<br><br>    // External Operations<br>    void  process_bit( bool bit );<br>    void  process_bits( unsigned char bits, std::size_t bit_count );<br>    void  process_byte( unsigned char byte );<br>    void  process_block( void const *bytes_begin, void const *bytes_end );<br>    void  process_bytes( void const *buffer, std::size_t byte_count );<br><br>    value_type  checksum() const;<br><br>};<br></pre>
+
+</blockquote>
+
+
+
+<p>value_type是一个最小 <code>Bits</code> 位大小的内建数字类型。这个类型应该是 
+<code>boost::uint_t&lt;Bits&gt;::least，具体细节参看</code> <a href="../integer/integer.htm">documentation for integer type
+selection</a>.</p>
+
+
+
+<p>这个算法慢，因为它完全按照理论逐位进行运算。它没有经过优化。大部分的 CRC 参数都是在运行时以构造函数参数的形式提供，所以这个算法也浪费空间。</p>
+
+
+
+<h2><a name="crc_optimal"></a>优化的 CRC 机</h2>
+
+
+
+<blockquote>
+  
+  <pre>template &lt; std::size_t Bits, <em>impl_def</em> TruncPoly,<br>           <em>impl_def</em> InitRem, <em>impl_def</em> FinalXor,<br>           bool ReflectIn, bool ReflectRem &gt;<br>class boost::crc_optimal<br>{<br>public:<br>    // Type<br>    typedef <em>implementation_defined</em>  value_type;<br><br>    // Constants reflecting template parameters<br>    static  std::size_t const  bit_count = Bits;<br>    static  value_type const   truncated_polynominal = TruncPoly;<br>    static  value_type const   initial_remainder = InitRem;<br>    static  value_type const   final_xor_value = FinalXor;<br>    static  bool const         reflect_input = ReflectIn;<br>    static  bool const         reflect_remainder = ReflectRem;<br><br>    // Constructor<br>    explicit  crc_optimal( value_type init_rem = InitRem );<br><br>    // Internal Operations<br>    value_type  get_truncated_polynominal() const;<br>    value_type  get_initial_remainder() const;<br>    value_type  get_final_xor_value() const;<br>    bool        get_reflect_input() const;<br>    bool        get_reflect_remainder() const;<br><br>    value_type  get_interim_remainder() const;<br>    void        reset( value_type new_rem = InitRem );<br><br>    // External Operations<br>    void  process_byte( unsigned char byte );<br>    void  process_block( void const *bytes_begin, void const *bytes_end );<br>    void  process_bytes( void const *buffer, std::size_t byte_count );<br><br>    value_type  checksum() const;<br><br>    // Operators<br>    void        operator ()( unsigned char byte );<br>    value_type  operator ()() const;<br><br>};<br></pre>
+
+</blockquote>
+
+
+
+<p>value_type 是可以被最快速操纵的少<code> Bits</code> 位大小内建数字类型。这个类型应该是 
+<code>boost::uint_t&lt;Bits&gt;::fast。具体细节参看</code> <a href="../integer/integer.htm">integer type selection
+documentation</a>。模板参数 <code>TruncPoly</code>， <code>InitRem</code> 和 <code>FinalXor</code> 
+也是这个类型。</p>
+
+
+
+<p>这个算法为了达到实用的目标使用了尽可能多的优化所以运算速度快。所有的 CRC 
+参数都在编译期以模板参数的形式提供。它在参数传递时使用整个字节（byte）而非单个位（bit）为单位。在使用某个特定种类（位数、除数多项式和输入反射状态）的第一个对象时，这个算法会预先计算出一张中间 
+CRC 值到字节值的对应表（以供后来创建的同类型的对象直接查询，以提高运算速度）。</p>
+
+
+
+<h2><a name="usage"></a>用法</h2>
+
+
+
+<p>这两个类模板在 CRC 参数如何提供方面使用不同的策略。它们都使用 CRC 中的位数作为第一个模板参数。理论 CRC 机类模板只有这一个模板参数，所有其他的 
+CRC 参数都是通过构造函数输入的，而在优化的 CRC 机类模板中所有的 CRC 参数都从模板参数中获得，并且它的实例对象通常都是默认构造。在运行时，CRC 
+参数可以通过调用如下方法来查看：<code>et_truncated_polynominal、</code> 
+<code>get_initial_remainder</code>、<code>get_final_xor_value</code>、<code>get_reflect_input</code> 
+和 <code>get_reflect_remainder。快速 CRC 机也为它的 CRC 参数提供了编译期常量。</code></p>
+
+
+
+<p><code>get_interim_remainder 方法返回 CRC 余数的初始状态值。它代表未反射过的最后一次除法运算的余数。保存中间余数</code> 
+、其他 CRC 参数和字节流的当前处理位置就可以“冻结” 一个CRC 运算过程。使用旧 CRC 机的大部分参数来构造一个新的 CRC 
+机并使用“冻结”的余数作为新 CRC 机的中间余数，就可以“解冻”这个过程，并正常进行后继运算了。快速 CRC 
+机为此目的实现了一个只接收一个参数（中间余数）的特殊的构造函数（取代了 CRC 余数的初始值）。</p>
+
+
+
+
+
+<p><code>reset</code> 方法使用给定的值来重置 CRC 
+余数的初始状态。如果没有提供值，初始余数被赋值为对象创建时指定的余数初始值。余数必须是未经反射过的。当一个 CRC 计算过程结束后，调用 
+<code>reset</code>方法可以重用这个对象进行下一个新的计算过程。</p>
+
+
+
+<p>构造完成之后，两个 CRC 机已同样的方式运作。提取当前 CRC 值和给 CRC 机提供新数据是在不同的操作中完成的。下表列出了这些操作。<br>
+
+</p>
+
+
+
+<table border="1" cellpadding="5">
+
+
+	<caption>正规 CRC 操作</caption><caption>正规 CRC 操作</caption><caption>正规 CRC 操作正规 CRC 操作</caption><caption>正规 CRC 操作</caption>
+	<tbody>
+
+    <tr>
+
+
+		<th>操作</th>
+
+
+		<th>描述</th>
+
+
+	</tr>
+
+
+	<tr>
+
+
+		<td><code>void process_bit( bool bit );</code></td>
+
+
+		<td>把一个位（bit）作为数据传递给 CRC 机，更新中间 CRC。只在慢速 CRC 机中定义。</td>
+
+
+	</tr>
+
+
+	<tr>
+
+
+		<td><code>void process_bits( unsigned char bits, std::size_t
+			bit_count );</code></td>
+
+
+		<td>对 <var>bits </var>中最低的 <var>bit_count</var> 个位（从最重要的位算起）应用 <code>process_bit。如果 
+      </code><var>bit_count</var><code> 超过了每个字节的位数，结果未定义。只在慢速 CRC 
+机中定义。<var></var></code></td>
+
+
+	</tr>
+
+
+	<tr>
+
+
+		<td><code>void process_byte( unsigned char byte );</code></td>
+
+
+		<td>对 <var>byte</var> 中的所有位应用 
+      <code>process_bit</code>。如果不需要反射，这些位以从最重要到最不重要的顺序依次提供；否则以相反的顺序提供。<br>
+
+      </td>
+
+
+	</tr>
+
+
+	<tr>
+
+
+		<td><code>void process_block( void const *bytes_begin, void
+			const *bytes_end );</code></td>
+
+
+		<td>对给定的从 <i>bytes_begin</i> 开始，到 <i>bytes_end</i> 结束的内存块应用 
+      <code>process_byte。各个字节依上述顺序处理。</code></td>
+
+
+	</tr>
+
+
+	<tr>
+
+
+		<td><code>void  process_bytes( void const *buffer, std::size_t
+			byte_count );</code></td>
+
+
+		<td>对给定的从 <i>buffer</i> 开始的长度为 <var>byte_count</var> 字节的内存块应用 
+      <code>process_byte</code>。各个字节依升序处理。</td>
+
+
+	</tr>
+
+
+	<tr>
+
+
+		<td><code>value_type checksum() const;</code></td>
+
+
+		<td>返回到目前为止所有传递过去的数据的 CRC 检验和，这个值可能经过了余数反射和异或运算。</td>
+
+
+	</tr>
+
+
+	<tr>
+
+
+		<td><code>void  operator ()( unsigned char byte );</code></td>
+
+
+		<td>调用 <code>process_byte</code>。有了这个方法，就可以把 CRC 机对象当作一个（有状态的）函数对象来使用。只在快速 CRC 机中定义。</td>
+
+
+	</tr>
+
+
+	<tr>
+
+
+		<td><code>value_type  operator ()() const;</code></td>
+
+
+		<td>调用 <code>checksum</code>。有了这个这个方法，就可以把 CRC 机对象当作一个发生器（generator）函数对象来使用。只在快速 CRC 
+机中定义。</td>
+
+
+	</tr>
+
+
+  
+  </tbody>
+</table>
+
+
+
+<p>你可以像这样来使用：</p>
+
+
+
+<blockquote>
+  
+  <pre>#include &lt;boost/crc.hpp&gt;      <i>// for boost::crc_basic, boost::crc_optimal</i>
+#include &lt;boost/cstdint.hpp&gt;  <i>// for boost::uint16_t</i>
+
+#include &lt;algorithm&gt;  <i>// for std::for_each</i>
+#include &lt;cassert&gt;    <i>// for assert</i>
+#include &lt;cstddef&gt;    <i>// for std::size_t</i>
+#include &lt;iostream&gt;   <i>// for std::cout</i>
+#include &lt;ostream&gt;    <i>// for std::endl</i>
+
+
+// Main function
+int
+main ()
+{
+    // This is "123456789" in ASCII
+    unsigned char const  data[] = { 0x31, 0x32, 0x33, 0x34, 0x35, 0x36, 0x37,
+     0x38, 0x39 };
+    std::size_t const    data_len = sizeof( data ) / sizeof( data[0] );
+
+    // The expected CRC for the given data
+    boost::uint16_t const  expected = 0x29B1;
+
+    // Simulate CRC-CCITT
+    boost::crc_basic&lt;16&gt;  crc_ccitt1( 0x1021, 0xFFFF, 0, false, false );
+    crc_ccitt1.process_bytes( data, data_len );
+    assert( crc_ccitt1.checksum() == expected );
+
+    // Repeat with the optimal version (assuming a 16-bit type exists)
+    boost::crc_optimal&lt;16, 0x1021, 0xFFFF, 0, false, false&gt;  crc_ccitt2;
+    crc_ccitt2 = std::for_each( data, data + data_len, crc_ccitt2 );
+    assert( crc_ccitt2() == expected );
+
+    std::cout &lt;&lt; "All tests passed." &lt;&lt; std::endl;
+    return 0;
+}
+  </pre>
+
+</blockquote>
+
+
+
+<h2><a name="crc_func">CRC&nbsp;函数</a></h2>
+
+
+
+<blockquote>
+  
+  <pre>template &lt; std::size_t Bits, <em>impl_def</em> TruncPoly,<br> <em>impl_def</em> InitRem, <em>impl_def</em> FinalXor,<br> bool ReflectIn, bool ReflectRem &gt;<br>typename boost::uint_t&lt;Bits&gt;::fast<br>boost::crc( void const *buffer, std::size_t byte_count );<br></pre>
+
+</blockquote>
+
+
+
+<p><code>boost::crc 函数模板可以计算一个给定的数据块的 CRC 值。这个数据块从地址 </code><var>buffer</var> 
+<code>开始，长度为 </code><var>byte_count</var> <code>字节。CRC 参数通过模板参数传递，和优化的 CRC 机</code> (<a href="#crc_optimal">看这里</a>)等同。实际上优化的 CRC 机就是用来实现这个函数的。</p>
+
+
+
+<h2><a name="a_crc_func"></a>扩张-CRC 函数</h2>
+
+
+
+<blockquote>
+  
+  <pre>template &lt; std::size_t Bits, <em>impl_def</em> TruncPoly &gt;<br>typename boost::uint_t&lt;Bits&gt;::fast<br>boost::augmented_crc( void const *buffer, std::size_t byte_count,<br> typename boost::uint_t&lt;Bits&gt;::fast initial_remainder );<br><br>template &lt; std::size_t Bits, <em>impl_def</em> TruncPoly &gt;<br>typename boost::uint_t&lt;Bits&gt;::fast<br>boost::augmented_crc( void const *buffer, std::size_t byte_count );<br></pre>
+
+</blockquote>
+
+
+
+<p>所有其他 CRC 计算函数或类模板在工作时都假定直接从消息中的第一个位开始运算。这两个 <code>boost::augmented_crc 
+</code>函数模板不同，它们会把一个新的消息位移进（shift into）余数寄存器，同时把余数寄存器的最高位移出（shift 
+out），而其他的函数或类模板是通过位异或运算把当前消息位合并到一个独立余数的最高位上的。这个新的计算方式意味着在实际的消息位被处理之前，初始余数值的各个位已经被处理过了。这样导致的结果是必须在传递实际的消息位给 
+CRC 机之后再传递足够多个（余数寄存器的大小）0 才能提取处真正的 CRC 值。</p>
+
+
+
+<p>这两个版本的函数的模板参数都是 CRC 的大小（Bits）和截短的多项式（TruncPoly）。带两个参数的版本以 0 作为 
+<var>initial_remainder </var>调用带三个参数的版本。两个版本都是对从地址 <var>buffer</var> 开始，长度为 
+<var>byte_count </var>的数据进行运算。</p>
+
+
+
+<p>这些函数在 CRC 数据直接跟在消息数据之后的情况下有用。首先，设置 CRC 所在的几个字节为 0。然后对“扩张后的（augmented）”消息（附加了 CRC 
+的消息数据）使用 <code>augmented_crc</code> 并把结果赋值给 
+CRC。在接收方校验收到的数据时，要么对“未扩张的（unaugmented）”消息使用 
+<code>augmented_crc（当然，使用和发送时一样的参数）并检查结果是否和 CRC 相等；要么对“扩张的”</code>消息使用 
+<code>augmented_crc</code> 并检查结果是否为 0。注意，CRC 必须保存在最重要的字节里（大尾）。</p>
+
+
+
+<p>CRC 数据中的中断可以这样处理：<code>把前一个数据块的</code> <code>augmented_crc</code> 
+<code>结果作为</code> <var>initial_remainder</var> 来对下一个数据块调用<code> 
+augmented_crc。记住，实际的 CRC 只能在提供“扩张的”</code><code>数据之后才能确定。原因是这个方法在其最底层使用已 2 
+为模的多项式除法，且最终 XOR 和反射都不能使用。</code></p>
+
+
+
+<p>注意，对于相同的 CRC 系统，augmented 方法的初始余数值和 unaugmented 方法的不一样。有个常见的例外是 0；如果 
+augmented-CRC 算法使用 0 作为初始余数，对应的 unaugmented-CRC 算法也将使用 0 作为初始余数。给定一个 
+augmented-CRC 算法的初始余数，处理没有任何消息数据的 0 值 CRC 数据所得到的结果和 unaugmented-CRC 
+算法的初始余数是相等的。比如：</p>
+
+
+
+<blockquote>
+  
+  <pre>#include &lt;boost/crc.hpp&gt;      <i>// for boost::crc_basic, boost::augmented_crc</i>
+#include &lt;boost/cstdint.hpp&gt;  <i>// for boost::uint16_t</i>
+
+#include &lt;cassert&gt;    <i>// for assert</i>
+#include &lt;iostream&gt;   <i>// for std::cout</i>
+#include &lt;ostream&gt;    <i>// for std::endl</i>
+
+
+// Main function
+int
+main ()
+{
+    using boost::uint16_t;
+    using boost::augmented_crc;
+
+    uint16_t        data[6] = { 2, 4, 31, 67, 98, 0 };
+    uint16_t const  init_rem = 0x123;
+
+    uint16_t  crc1 = augmented_crc&lt;16, 0x8005&gt;( data, sizeof(data), init_rem );
+
+    uint16_t const  zero = 0;
+    uint16_t const  new_init_rem = augmented_crc&lt;16, 0x8005&gt;( &amp;zero, sizeof(zero) );
+
+    boost::crc_basic&lt;16&gt;  crc2( 0x8005, new_init_rem );
+    crc2.process_block( data, &amp;data[5] );  // don't include CRC
+    assert( crc2.checksum() == crc1 );
+
+    std::cout &lt;&lt; "All tests passed." &lt;&lt; std::endl;
+    return 0;
+}
+  </pre>
+
+</blockquote>
+
+
+
+<h2><a name="crc_ex"></a>预定义的 CRC 例子</h2>
+
+
+
+<p>这里有四种 CRC 类型，代表了一些常用的 CRC 算法。比如，<code>boost::crc_32_type 可以用来实现 PKZip 
+标准。注意，从一般意义上讲，这个库注重的是 CRC 的实现而非“良好的” CRC 参数的选择。</code></p>
+
+
+
+<table border="1" cellpadding="5">
+
+
+	<caption>常用 CRCs</caption>
+	<tbody>
+
+    <tr>
+
+
+		<th>算法</th>
+
+
+		<th>示例协议</th>
+
+
+	</tr>
+
+
+	<tr>
+
+
+		<td><code>crc_16_type</code></td>
+
+
+		<td>BISYNCH, ARC</td>
+
+
+	</tr>
+
+
+	<tr>
+
+
+		<td><code>crc_ccitt_type</code></td>
+
+
+		<td>designated by CCITT (Comité Consultatif International
+		    Télégraphique et Téléphonique)</td>
+
+
+	</tr>
+
+
+	<tr>
+
+
+		<td><code>crc_xmodem_type</code></td>
+
+
+		<td>XMODEM</td>
+
+
+	</tr>
+
+
+	<tr>
+
+
+		<td><code>crc_32_type</code></td>
+
+
+		<td>PKZip, AUTODIN II, Ethernet, FDDI</td>
+
+
+	</tr>
+
+
+  
+  </tbody>
+</table>
+
+
+
+<hr>
+
+<h2><a name="references"></a>参考资料</h2>
+
+
+
+<ul>
+
+
+	<li>CRC 头文件本身: <cite><a href="../../boost/crc.hpp">crc.hpp</a></cite>
+	</li>
+
+  <li>测试代码:&nbsp;<cite><a href="test/crc_test.cpp">crc_test.cpp</a></cite>
+	</li>
+
+  <li>示例代码: <cite><a href="crc_example.cpp">crc_example.cpp</a></cite>
+  </li>
+
+</ul>
+
+
+
+<h2><a name="credits">Credits 荣誉</a></h2>
+
+
+
+<h3><a name="contributors">Contributors 贡献者</a></h3>
+
+
+
+<dl>
+
+
+	<dt>Michael Barr (<a href="mailto:mbarr@netrino.com">mbarr@netrino.com</a>)
+	</dt>
+
+  <dd>Wrote <a href="http://www.netrino.com/Connecting/2000-01/">Easier Said
+		Than Done</a>, a less-confusing guide to implementing CRC
+		algorithms.  (Originally published as "Slow and Steady
+		Never Lost the Race" in the January 2000 issue of <cite><a href="http://www.embedded.com/">Embedded Systems
+		Programming</a></cite>, pages 37–46.)
+
+	</dd>
+
+  <dt>Daryle Walker
+	</dt>
+
+  <dd>Started the library and contributed the theoretical and optimal
+		CRC computation class templates and the CRC computing function
+		template.  Contributed <cite><a href="test/crc_test.cpp">crc_test.cpp</a></cite> and <cite><a href="crc_example.cpp">crc_example.cpp</a></cite>.
+
+	</dd>
+
+  <dt>Ross N. Williams
+	</dt>
+
+  <dd>Wrote <cite><a href="http://www.ross.net/crc/crcpaper.html">A
+		Painless Guide to CRC Error Detection Algorithms</a></cite>, a
+		definitive source of CRC information.
+  </dd>
+
+</dl>
+
+
+
+<h3><a name="acknowledgements">Acknowledgements 鸣谢</a></h3>
+
+
+
+<p>For giving advice on compiler/C++ compliance, implementation,
+interface, algorithms, and bug reports:</p>
+
+
+
+<ul>
+
+
+	<li>Darin Adler</li>
+
+
+	<li>Beman Dawes</li>
+
+
+	<li>Doug Gregor</li>
+
+
+	<li>John Maddock</li>
+
+
+	<li>Joe Mariadassou</li>
+
+
+	<li>Jens Maurer</li>
+
+
+	<li>Vladimir Prus</li>
+
+
+	<li>Joel Young</li>
+
+
+</ul>
+
+
+
+<h3><a name="history">History 历史</a></h3>
+
+
+
+<dl>
+
+
+	<dt>15 Jun 2003, Daryle Walker
+	</dt>
+
+  <dd>加入例程
+
+	</dd>
+
+  <dt>14 May 2001, Daryle Walker
+	</dt>
+
+  <dd>初始版本
+  </dd>
+
+</dl>
+
+
+
+<hr>
+
+<p>Revised: 15 June 2003</p>
+
+
+
+<p>Copyright 2001, 2003 Daryle Walker.  Use, modification, and distribution
+are subject to the Boost Software License, Version 1.0.  (See accompanying
+file <a href="../../LICENSE_1_0.txt">LICENSE_1_0.txt</a> or a copy at
+&lt;<a href="http://www.boost.org/LICENSE_1_0.txt">http://www.boost.org/LICENSE_1_0.txt</a>&gt;.)</p>
+
+
+
+</body></html>

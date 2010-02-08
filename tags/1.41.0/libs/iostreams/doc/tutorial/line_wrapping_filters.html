@@ -1,0 +1,304 @@
+<!DOCTYPE HTML PUBLIC "-//W3C//DTD HTML 4.01 Transitional//EN">
+<html>
+<head>
+
+
+  
+  
+  <meta content="text/html; charset=UTF-8" http-equiv="content-type">
+
+
+
+    
+    
+  
+  
+  
+  
+  <title>Tutorial</title>
+  <link rel="stylesheet" href="../../../../boost.css">
+
+
+
+    
+  
+  
+  <link rel="stylesheet" href="../theme/iostreams.css">
+</head>
+
+
+<body>
+
+
+
+
+<!-- Begin Banner -->
+
+    
+<h1 class="title">指南</h1>
+
+
+
+    
+<hr class="banner">
+
+<!-- End Banner -->
+
+<!-- Begin Nav -->
+
+<div class="nav">
+    <a href="shell_comments_filters.html"><img src="../../../../doc/html/images/prev.png" border="0" height="19" width="19"></a>
+    <a href="tutorial.html"><img src="../../../../doc/html/images/up.png" border="0" height="19" width="19"></a>
+    <a href="tab_expanding_filters.html"><img src="../../../../doc/html/images/next.png" border="0" height="19" width="19"></a>
+</div>
+
+
+
+
+<!-- End Nav -->
+
+
+<a name="line_wrapping"></a>
+<h2>2.2.4. 自动换行过滤器</h2>
+
+
+
+
+<p>假设你要编写一个过滤器，对文本行进行换行处理，以确保没有超出指定最大长度的行存在。简单起见，我们不考虑在单词间换行或插入连字符。基本的算法
+如下：每次检查一个字符，照常转发，并跟踪当前列数。当遇到换行符时，转发并重置列计数。当列计数到达最大值时，在当前字符之前插入一个换行符，并重置列
+计数。
+</p>
+
+
+
+
+<p>以下三节中，我们将该算法实现为 <a href="../classes/stdio_filter.html"><code>stdio_filter</code></a>, <a href="../concepts/input_filter.html">输入过滤器</a> 和 <a href="../concepts/output_filter.html">输出过滤器</a>。源代码请见头文件 <a href="../../example/line_wrapping_filter.hpp"><code>&lt;libs/iostreams/example/line_wrapping_filter.hpp&gt;</code></a>. 该例子来自 James Kanze 的 <code>LineWrappingInserter.hh</code> (<span style="font-style: italic;">见</span><i></i> <a class="bib_ref" href="../bibliography.html#kanze">[Kanze]</a>).
+</p>
+
+
+
+
+<a name="line_wrapping_stdio_filter"></a>
+<h4><code>line_wrapping_stdio_filter</code></h4>
+
+
+
+
+<p>你可以将自动换行过滤器实现为 <a href="../classes/stdio_filter.html"><code>stdio_filter</code></a>，如下：</p>
+
+
+
+
+<pre class="broken_ie"><span class="preprocessor">#include</span> <span class="literal">&lt;cstdio&gt;</span>    <span class="comment">// EOF</span>
+<span class="preprocessor">#include</span> <span class="literal">&lt;iostream&gt;</span>  <span class="comment">// cin, cout</span>
+<span class="preprocessor">#include</span> <a class="header" href="../../../../boost/iostreams/filter/stdio.hpp"><span class="literal">&lt;boost/iostreams/filter/stdio.hpp&gt;</span></a>
+
+<span class="keyword">namespace</span> boost { <span class="keyword">namespace</span> iostreams { <span class="keyword">namespace</span> example {<br><br><span class="keyword">class</span> line_wrapping_stdio_filter : <span class="keyword"><span class="keyword"><span class="keyword">public</span></span></span> stdio_filter {<br><span class="keyword">public</span>:<br>    explicit line_wrapping_stdio_filter(<span class="keyword"><span class="keyword">int</span></span> line_length = <span class="numeric_literal">80</span>)<br>        : line_length_(line_length), col_no_(<span class="numeric_literal">0</span>) <br>        { }<br><span class="keyword">private</span>:<br>    <span class="keyword">void</span> do_filter();<br>    <span class="keyword">void</span> do_close();<br>    <span class="keyword">void</span> put_char(<span class="keyword"><span class="keyword">int</span></span> c);<br>    <span class="keyword"><span class="keyword">int</span></span>  line_length_;<br>    <span class="keyword"><span class="keyword">int</span></span>  col_no_;<br>};<br><br>} } } <span class="comment">// End namespace boost::iostreams:example</span></pre>
+
+
+
+
+<p>首先来看看助手函数 <code>put_char</code> 的定义：</p>
+
+
+
+
+<pre class="broken_ie">    <span class="keyword">void</span> put_char(<span class="keyword"><span class="keyword">int</span></span> c)<br>    {<br>        std::cout.put(c);<br>        <span class="keyword">if</span> (c != <span class="literal">'\n'</span>)<br>            ++col_no_;<br>        <span class="keyword">else</span>
+            col_no_ = <span class="numeric_literal">0</span>;<br>    }</pre>
+
+
+
+
+
+<p>该函数将给定字符写出以 <code>std::cout</code> 并递增列计数，当遇到换行符时将列计数置0。使用 <code>put_char</code>, 你可以实现虚拟函数 <code>do_filter</code> 如下：</p>
+
+
+
+
+<pre class="broken_ie">    <span class="keyword">void</span> do_filter() <br>    {<br>        <span class="keyword"><span class="keyword">int</span></span> c;<br>        <span class="keyword">while</span> ((c = std::cin.get()) != <span class="numeric_literal">EOF</span>) {<br>            <span class="keyword">if</span> (c != <span class="literal">'\n'</span> &amp;&amp; col_no_ &gt;= line_length_)<br>                put_char(<span class="literal">'\n'</span>);<br>            put_char(c);<br>        }<br>    }</pre>
+
+
+
+
+<p><code>while</code> 循环从 <code>std::cin</code> 读入字符并写出到 <code>std::cout</code>, 在需要时插入额外的换行符，以防止列计数超过 <code>line_length_</code>.
+
+</p>
+
+
+<p>最后，成员函数 <code>do_close</code> 覆盖了 <code>stdio_filter</code> 中定义的私有虚拟函数。</p>
+
+
+
+
+<pre class="broken_ie">    <span class="keyword">void</span> do_close() { col_no_ = <span class="numeric_literal">0</span>; }</pre>
+
+
+
+
+<p>它的作用是在流关闭时重置过滤器的状态。</p>
+
+
+
+
+<a name="line_wrapping_input_filter"></a>
+<h4><code>line_wrapping_input_filter</code></h4>
+
+
+
+
+<p>你可以将自动换行过滤器实现为 <a href="../concepts/input_filter.html">InputFilter输入过滤器</a>，如下：</p>
+
+
+
+
+<pre class="broken_ie"><span class="preprocessor">#include</span> <a class="header" href="../../../../boost/iostreams/char_traits.hpp"><span class="literal">&lt;boost/iostreams/char_traits.hpp&gt;</span></a> <span class="comment">// EOF, WOULD_BLOCK</span>
+<span class="preprocessor">#include</span> <a class="header" href="../../../../boost/iostreams/concepts.hpp"><span class="literal">&lt;boost/iostreams/concepts.hpp&gt;</span></a>    <span class="comment">// input_filter</span>
+<span class="preprocessor">#include</span> <a class="header" href="../../../../boost/iostreams/operations.hpp"><span class="literal">&lt;boost/iostreams/operations.hpp&gt;</span></a>  <span class="comment">// get</span>
+
+<span class="keyword">namespace</span> boost { <span class="keyword">namespace</span> iostreams { <span class="keyword">namespace</span> example {<br><br><span class="keyword">class</span> line_wrapping_input_filter : <span class="keyword"><span class="keyword"><span class="keyword">public</span></span></span> input_filter {<br><span class="keyword">public</span>:<br>    explicit line_wrapping_input_filter(<span class="keyword"><span class="keyword">int</span></span> line_length = 80)<br>        : line_length_(line_length), col_no_(0), has_next_(<span class="keyword">false</span>)<br>        { }<br><br>    <span class="keyword">template</span>&lt;<span class="keyword">typename</span> Source&gt;<br>    <span class="keyword"><span class="keyword">int</span></span> get(Source&amp; src);<br><br>    <span class="keyword">template</span>&lt;<span class="keyword">typename</span> Sink&gt;<br>    <span class="keyword">void</span> close(Sink&amp;);<br><span class="keyword">private</span>:<br>    <span class="keyword"><span class="keyword">int</span></span> get_char(<span class="keyword"><span class="keyword">int</span></span> c);<br>    <span class="keyword"><span class="keyword">int</span></span>  line_length_;<br>    <span class="keyword"><span class="keyword">int</span></span>  col_no_;<br>    <span class="keyword"><span class="keyword">int</span></span>  next_;<br>    <span class="keyword"><span class="keyword">int</span></span>  has_next_;<br>};<br><br>} } } <span class="comment">// End namespace boost::iostreams:example</span></pre>
+
+
+
+
+<p>首先看一下助手函数 <code>get_char</code>:</p>
+
+
+
+
+<pre class="broken_ie">    <span class="keyword"><span class="keyword">int</span></span> get_char(<span class="keyword"><span class="keyword">int</span></span> c)<br>    {<br>        <span class="keyword">if</span> (c != <span class="literal">'\n'</span>)<br>            ++col_no_;<br>        <span class="keyword">else</span>
+            col_no_ = 0;
+        <span class="keyword">return</span> c;<br>    }</pre>
+
+
+
+
+<p>该函数依据字符 <code>c</code> 更新列计数，然后返回 <code>c</code>. 使用 <code>get_char</code>, 你可以实现 <code>get</code> 如下：</p>
+
+
+
+
+<pre class="broken_ie">    <span class="keyword">template</span>&lt;<span class="keyword">typename</span> Source&gt;<br>    <span class="keyword"><span class="keyword">int</span></span> get(Source&amp; src) <br>    {<br>        <span class="keyword">if</span> (has_next_) {<br>            has_next_ = <span class="keyword">false</span>;<br>            <span class="keyword">return</span> get_char(next_);<br>        }<br><br>        <span class="keyword"><span class="keyword">int</span></span> c;<br>        <span class="keyword">if</span> ((c = iostreams::get(src)) == <span class="numeric_literal">EOF</span> || c == WOULD_BLOCK)<br>            <span class="keyword">return</span> c;<br><br>        <span class="keyword">if</span> (c != <span class="literal">'\n'</span> &amp;&amp; col_no_ &gt;= line_length_) {<br>            next_ = c;<br>            has_next_ = <span class="keyword">true</span>;<br>            <span class="keyword">return</span> get_char(<span class="literal">'\n'</span>);<br>        }<br><br>        <span class="keyword">return</span> get_char(c);<br>    }</pre>
+
+
+
+
+<p>一个非 <a href="../concepts/multi_character.html">MultiCharacterFilter多字符过滤器</a> 的 <a href="../concepts/input_filter.html">InputFilter输入过滤器</a> 只能每次返回一个字符。因此，如果你想在一个从 <code>src</code> 读入的字符 <code>c</code> 前插入换行符，你必须保存 <code>c</code> 并在下一次调用 <code>get</code> 时写出。成员变量 <code>next_</code> 用于保存这个字符，成员变量 <code>has_next_</code> 用于跟踪是否有这样一个字符被保存。
+</p>
+
+
+
+
+<p><code>get</code> 的实现首先检查是否有这样的一个字符被保存，如果有则返回它。否则，它尝试从 <code>src</code> 读入一个字符。如果没有字符可读入，则返回特殊值 <code>EOF</code> 或 <code>WOULD_BLOCK</code>.
+否则，它检查是否需要插入换行符。如果要，则只在当前字符并返回一个换行符。否则返回当前字符。
+</p>
+
+
+
+
+<p>最后，成员函数 <code>close</code> 用于重置过滤器的状态：</p>
+
+
+
+
+<pre class="broken_ie">    <span class="keyword">template</span>&lt;<span class="keyword">typename</span> Sink&gt;<br>    <span class="keyword">void</span> close(Sink&amp;) <br>    { <br>        col_no_ = 0; <br>        has_next_ = <span class="keyword">false</span>; <br>    }</pre>
+
+
+
+
+<a name="line_wrapping_output_filter"></a>
+<h4><code>line_wrapping_output_filter</code></h4>
+
+
+
+
+<p>你可以将自动换行过滤器实现为 <a href="../concepts/output_filter.html">OutputFilter输出过滤器</a>，如下：</p>
+
+
+
+
+<pre class="broken_ie"><span class="preprocessor">#include</span> <a class="header" href="../../../../boost/iostreams/concepts.hpp"><span class="literal">&lt;boost/iostreams/concepts.hpp&gt;</span></a>    <span class="comment">// output_filter</span>
+<span class="preprocessor">#include</span> <a class="header" href="../../../../boost/iostreams/operations.hpp"><span class="literal">&lt;boost/iostreams/operations.hpp&gt;</span></a>  <span class="comment">// put</span>
+
+<span class="keyword">namespace</span> boost { <span class="keyword">namespace</span> iostreams { <span class="keyword">namespace</span> example {<br><br><span class="keyword">class</span> line_wrapping_output_filter : <span class="keyword"><span class="keyword"><span class="keyword">public</span></span></span> output_filter {<br><span class="keyword">public</span>:<br>    explicit line_wrapping_output_filter(<span class="keyword"><span class="keyword">int</span></span> line_length = 80)<br>        : line_length_(line_length), col_no_(0) <br>        { }<br><br>    <span class="keyword">template</span>&lt;<span class="keyword">typename</span> Sink&gt;<br>    <span class="keyword"><span class="keyword">bool</span></span> put(Sink&amp; dest, <span class="keyword"><span class="keyword">int</span></span> c);<br><br>    <span class="keyword">template</span>&lt;<span class="keyword">typename</span> Sink&gt;<br>    <span class="keyword">void</span> close(Sink&amp;);<br><span class="keyword">private</span>:<br>    <span class="keyword">template</span>&lt;<span class="keyword">typename</span> Sink&gt;<br>    <span class="keyword"><span class="keyword">bool</span></span> put_char(Sink&amp; dest, <span class="keyword"><span class="keyword">int</span></span> c);<br>    <span class="keyword"><span class="keyword">int</span></span>  line_length_;<br>    <span class="keyword"><span class="keyword">int</span></span>  col_no_;<br>};<br><br>} } } <span class="comment">// End namespace boost::iostreams:example</span></pre>
+
+
+
+
+<p>首先看一下助手函数&nbsp;<code>put_char</code>:</p>
+
+
+
+
+<pre class="broken_ie">    <span class="keyword">template</span>&lt;<span class="keyword">typename</span> Sink&gt;<br>    <span class="keyword"><span class="keyword">bool</span></span> put_char(Sink&amp; dest, <span class="keyword"><span class="keyword">int</span></span> c)<br>    {<br>        <span class="keyword">if</span> (!iostreams::put(dest, c))<br>            <span class="keyword">return</span> <span class="keyword">false</span>;<br>        <span class="keyword">if</span> (c != <span class="literal">'\n'</span>)<br>            ++col_no_;<br>        <span class="keyword">else</span>
+            col_no_ = 0;
+        <span class="keyword">return</span> <span class="keyword">true</span>;<br>    }</pre>
+
+
+
+
+<p>该函数试图将字符 <code>c</code> 写出到给定的 <a href="../concepts/sink.html">Sink接收器</a> 并在成功后更新列计数。使用 <code>put_char</code>, 你可以实现 <code>put</code> 如下：</p>
+
+
+
+
+<pre class="broken_ie">    <span class="keyword">template</span>&lt;<span class="keyword">typename</span> Sink&gt;<br>    <span class="keyword"><span class="keyword">bool</span></span> put(Sink&amp; dest, <span class="keyword"><span class="keyword">int</span></span> c)<br>    {<br>        <span class="keyword">if</span> (c != <span class="literal">'\n'</span> &amp;&amp; col_no_ &gt;= line_length_ &amp;&amp; !put_char(dest, <span class="literal">'\n'</span>))<br>            <span class="keyword">return</span> <span class="keyword">false</span>;<br>        <span class="keyword">return</span> put_char(dest, c);<br>    }</pre>
+
+
+
+
+<p>该函数首先检查给定的字符以及列计数，看看是否需要插入换行符。如果要，则尝试通过 <code>put_char</code> 写一个换行符，并在写出失败时返回 false. 否则，尝试通过 <code>put_char</code> 写出给定的字符。注意，如果换行符写出成功而给定字符写出失败，列计数也已经更新以反映换行符的写出，下一次尝试写出字符时不会导致再次插入换行符。
+</p>
+
+
+
+
+<p>最后，成员函数 <code>close</code> 重置过滤器的状态：</p>
+
+
+
+
+<pre class="broken_ie">    <span class="keyword">template</span>&lt;<span class="keyword">typename</span> Sink&gt;<br>    <span class="keyword">void</span> close(Sink&amp;) { col_no_ = 0; }</pre>
+
+
+
+
+<!-- Begin Nav -->
+
+<div class="nav">
+    <a href="shell_comments_filters.html"><img src="../../../../doc/html/images/prev.png" border="0" height="19" width="19"></a>
+    <a href="tutorial.html"><img src="../../../../doc/html/images/up.png" border="0" height="19" width="19"></a>
+    <a href="tab_expanding_filters.html"><img src="../../../../doc/html/images/next.png" border="0" height="19" width="19"></a>
+</div>
+
+
+
+
+<!-- End Nav -->
+
+<!-- Begin Footer -->
+
+<hr>
+
+<p class="copyright">Revised
+<!--webbot bot="Timestamp" S-Type="EDITED" S-Format="%d %B, %Y" startspan -->
+20 May, 2004
+<!--webbot bot="Timestamp" endspan i-checksum="38504" -->
+</p>
+
+
+
+
+<p class="copyright">&copy; Copyright <a href="http://www.kangaroologic.com" target="_top">Jonathan Turkanis</a>, 2004</p>
+
+
+
+<p class="copyright"> 
+    Use, modification, and distribution are subject to the Boost Software License, Version 2.0. (See accompanying file <a href="../../../../LICENSE_1_0.txt">LICENSE_1_0.txt</a> or copy at <a href="http://www.boost.org/LICENSE_1_0.txt">http://www.boost.org/LICENSE_1_0.txt</a>)
+</p>
+
+
+
+<!-- End Footer -->
+
+</body>
+</html>

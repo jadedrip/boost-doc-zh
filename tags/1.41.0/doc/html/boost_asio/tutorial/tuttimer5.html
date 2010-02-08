@@ -1,0 +1,179 @@
+<html>
+<head>
+<meta http-equiv="Content-Type" content="text/html; charset=UTF-8">
+<title>Timer.5 - Synchronising handlers in multithreaded programs</title>
+<link rel="stylesheet" href="../../boostbook.css" type="text/css">
+<meta name="generator" content="DocBook XSL Stylesheets V1.74.3">
+<link rel="home" href="../../boost_asio.html" title="Boost.Asio">
+<link rel="up" href="../tutorial.html" title="Tutorial">
+<link rel="prev" href="tuttimer4/src.html" title="Source listing for Timer.4">
+<link rel="next" href="tuttimer5/src.html" title="Source listing for Timer.5">
+</head>
+<body bgcolor="white" text="black" link="#0000FF" vlink="#840084" alink="#0000FF">
+<table cellpadding="2" width="100%"><tr>
+<td valign="top"><img alt="Boost C++ Libraries" width="277" height="86" src="../../../../boost.png"></td>
+<td align="center"><a href="../../../../index.html">Home</a></td>
+<td align="center"><a href="../../../../libs/libraries.htm">Libraries</a></td>
+<td align="center"><a href="http://www.boost.org/users/people.html">People</a></td>
+<td align="center"><a href="http://www.boost.org/users/faq.html">FAQ</a></td>
+<td align="center"><a href="../../../../more/index.htm">More</a></td>
+</tr></table>
+<hr>
+<div class="spirit-nav">
+<a accesskey="p" href="tuttimer4/src.html"><img src="../../../../doc/html/images/prev.png" alt="Prev"></a><a accesskey="u" href="../tutorial.html"><img src="../../../../doc/html/images/up.png" alt="Up"></a><a accesskey="h" href="../../boost_asio.html"><img src="../../../../doc/html/images/home.png" alt="Home"></a><a accesskey="n" href="tuttimer5/src.html"><img src="../../../../doc/html/images/next.png" alt="Next"></a>
+</div>
+<div class="section" lang="en">
+<div class="titlepage"><div><div><h3 class="title">
+<a name="boost_asio.tutorial.tuttimer5"></a><a class="link" href="tuttimer5.html" title="Timer.5 - Synchronising handlers in multithreaded programs"> Timer.5 - 多线程同步回调</a>
+</h3></div></div></div>
+<p>
+        本示例程序示范了使用boost::asio::strand 类来创建多线程程序中的同步回调句柄。
+      </p>
+<p>
+        前四个例程只是在单线程下使用<a class="link" href="../reference/io_service/run.html" title="io_service::run">io_service::run()</a>
+        函数来避免处理函同步。
+         如你所见，Asio库保证回调句柄仅能被当前正在调用
+        <a class="link" href="../reference/io_service/run.html" title="io_service::run">io_service::run()</a>.
+        函数的线程调用。
+         因此，在单线程中调用<a class="link" href="../reference/io_service/run.html" title="io_service::run">io_service::run()</a>
+        能确保回调句柄不被并发运行。
+      </p>
+<p>
+        单线程通常是使用Asio开发应用程序最好的方式。下面是Asio在程序中的局限性，尤其是服务器方面，包括：
+      </p>
+<div class="itemizedlist"><ul type="disc">
+<li>
+          操作需要较长时间处理才能完成时弱响应。
+        </li>
+<li>
+         在大规模的多处理机系统中表现不佳。
+        </li>
+</ul></div>
+<p>
+        如果你发现自己陷入这些局限时，一个可供选择的方法是创建一个每个线程都调用<a class="link" href="../reference/io_service/run.html" title="io_service::run">io_service::run()</a>
+        的线程池。
+        不过，因为这允许并发操作，当访问一个共享、非线程安全的资源时，我们需要一个同步方式。
+      </p>
+<pre class="programlisting"><span class="preprocessor">#include</span> <span class="special">&lt;</span><span class="identifier">iostream</span><span class="special">&gt;</span>
+<span class="preprocessor">#include</span> <span class="special">&lt;</span><span class="identifier">boost</span><span class="special">/</span><span class="identifier">asio</span><span class="special">.</span><span class="identifier">hpp</span><span class="special">&gt;</span>
+<span class="preprocessor">#include</span> <span class="special">&lt;</span><span class="identifier">boost</span><span class="special">/</span><span class="identifier">thread</span><span class="special">.</span><span class="identifier">hpp</span><span class="special">&gt;</span>
+<span class="preprocessor">#include</span> <span class="special">&lt;</span><span class="identifier">boost</span><span class="special">/</span><span class="identifier">bind</span><span class="special">.</span><span class="identifier">hpp</span><span class="special">&gt;</span>
+<span class="preprocessor">#include</span> <span class="special">&lt;</span><span class="identifier">boost</span><span class="special">/</span><span class="identifier">date_time</span><span class="special">/</span><span class="identifier">posix_time</span><span class="special">/</span><span class="identifier">posix_time</span><span class="special">.</span><span class="identifier">hpp</span><span class="special">&gt;</span>
+</pre>
+<p>
+        让我们从定义一个名为<code class="computeroutput"><span class="identifier">printer</span></code>的类开始，这与前一个示例中的类很相似。这个类是上一个例子的扩展，这里我们使用两个并行的定时器。
+      </p>
+<pre class="programlisting"><span class="keyword">class</span> <span class="identifier">printer</span>
+<span class="special">{</span>
+<span class="keyword">public</span><span class="special">:</span>
+</pre>
+<p>
+        除了初始化一对boost::asio::deadline_timer 成员变量外，构造函数还初始化一个boost::asio::strand类型<code class="computeroutput"><span class="identifier">strand_</span></code>
+        成员变量。
+      </p>
+<p>
+        boost::asio::strand 对象保证：对于通过它来分派执行的众操作中，只有一个操作执行完成之后才允许进入下一个操作。
+        这种保证与多少个线程调用<a class="link" href="../reference/io_service/run.html" title="io_service::run">io_service::run()</a>
+        无关。当然，如果不是通过一个boost::asio::strand对象分派，
+        或者通过其它不同的boost::asio::strand对象分派，这些操作仍旧可能是并发的。
+      </p>
+<pre class="programlisting">  <span class="identifier">printer</span><span class="special">(</span><span class="identifier">boost</span><span class="special">::</span><span class="identifier">asio</span><span class="special">::</span><span class="identifier">io_service</span><span class="special">&amp;</span> <span class="identifier">io</span><span class="special">)</span>
+    <span class="special">:</span> <span class="identifier">strand_</span><span class="special">(</span><span class="identifier">io</span><span class="special">),</span>
+      <span class="identifier">timer1_</span><span class="special">(</span><span class="identifier">io</span><span class="special">,</span> <span class="identifier">boost</span><span class="special">::</span><span class="identifier">posix_time</span><span class="special">::</span><span class="identifier">seconds</span><span class="special">(</span><span class="number">1</span><span class="special">)),</span>
+      <span class="identifier">timer2_</span><span class="special">(</span><span class="identifier">io</span><span class="special">,</span> <span class="identifier">boost</span><span class="special">::</span><span class="identifier">posix_time</span><span class="special">::</span><span class="identifier">seconds</span><span class="special">(</span><span class="number">1</span><span class="special">)),</span>
+      <span class="identifier">count_</span><span class="special">(</span><span class="number">0</span><span class="special">)</span>
+  <span class="special">{</span>
+</pre>
+<p>
+        当开始同步操作时，每一个回调句柄都使用boost::asio::strand对象进行“包装”。<a class="link" href="../reference/io_service__strand/wrap.html" title="io_service::strand::wrap">strand::wrap()</a>
+        函数返回一个新的通过boost::asio::strand对象自动分派的内部句柄。
+         通过同一boost::asio::strand对象对句柄进行“ 包装”，我们可以保证操作不会并发执行。
+      </p>
+<pre class="programlisting">    <span class="identifier">timer1_</span><span class="special">.</span><span class="identifier">async_wait</span><span class="special">(</span><span class="identifier">strand_</span><span class="special">.</span><span class="identifier">wrap</span><span class="special">(</span><span class="identifier">boost</span><span class="special">::</span><span class="identifier">bind</span><span class="special">(&amp;</span><span class="identifier">printer</span><span class="special">::</span><span class="identifier">print1</span><span class="special">,</span> <span class="keyword">this</span><span class="special">)));</span>
+    <span class="identifier">timer2_</span><span class="special">.</span><span class="identifier">async_wait</span><span class="special">(</span><span class="identifier">strand_</span><span class="special">.</span><span class="identifier">wrap</span><span class="special">(</span><span class="identifier">boost</span><span class="special">::</span><span class="identifier">bind</span><span class="special">(&amp;</span><span class="identifier">printer</span><span class="special">::</span><span class="identifier">print2</span><span class="special">,</span> <span class="keyword">this</span><span class="special">)));</span>
+  <span class="special">}</span>
+
+  <span class="special">~</span><span class="identifier">printer</span><span class="special">()</span>
+  <span class="special">{</span>
+    <span class="identifier">std</span><span class="special">::</span><span class="identifier">cout</span> <span class="special">&lt;&lt;</span> <span class="string">"Final count is "</span> <span class="special">&lt;&lt;</span> <span class="identifier">count_</span> <span class="special">&lt;&lt;</span> <span class="string">"\n"</span><span class="special">;</span>
+  <span class="special">}</span>
+</pre>
+<p>
+        在一个多线程程序中，当访问同一共享资源时，异步操作必须是同步的。在本例中，<code class="computeroutput"><span class="identifier">print1</span></code>
+        和<code class="computeroutput"><span class="identifier">print2</span></code>)函数使用的共享资源<code class="computeroutput"><span class="identifier">std</span><span class="special">::</span><span class="identifier">cout</span></code>
+        和<code class="computeroutput"><span class="identifier">count_</span></code>数据成员。
+      </p>
+<pre class="programlisting">  <span class="keyword">void</span> <span class="identifier">print1</span><span class="special">()</span>
+  <span class="special">{</span>
+    <span class="keyword">if</span> <span class="special">(</span><span class="identifier">count_</span> <span class="special">&lt;</span> <span class="number">10</span><span class="special">)</span>
+    <span class="special">{</span>
+      <span class="identifier">std</span><span class="special">::</span><span class="identifier">cout</span> <span class="special">&lt;&lt;</span> <span class="string">"Timer 1: "</span> <span class="special">&lt;&lt;</span> <span class="identifier">count_</span> <span class="special">&lt;&lt;</span> <span class="string">"\n"</span><span class="special">;</span>
+      <span class="special">++</span><span class="identifier">count_</span><span class="special">;</span>
+
+      <span class="identifier">timer1_</span><span class="special">.</span><span class="identifier">expires_at</span><span class="special">(</span><span class="identifier">timer1_</span><span class="special">.</span><span class="identifier">expires_at</span><span class="special">()</span> <span class="special">+</span> <span class="identifier">boost</span><span class="special">::</span><span class="identifier">posix_time</span><span class="special">::</span><span class="identifier">seconds</span><span class="special">(</span><span class="number">1</span><span class="special">));</span>
+      <span class="identifier">timer1_</span><span class="special">.</span><span class="identifier">async_wait</span><span class="special">(</span><span class="identifier">strand_</span><span class="special">.</span><span class="identifier">wrap</span><span class="special">(</span><span class="identifier">boost</span><span class="special">::</span><span class="identifier">bind</span><span class="special">(&amp;</span><span class="identifier">printer</span><span class="special">::</span><span class="identifier">print1</span><span class="special">,</span> <span class="keyword">this</span><span class="special">)));</span>
+    <span class="special">}</span>
+  <span class="special">}</span>
+
+  <span class="keyword">void</span> <span class="identifier">print2</span><span class="special">()</span>
+  <span class="special">{</span>
+    <span class="keyword">if</span> <span class="special">(</span><span class="identifier">count_</span> <span class="special">&lt;</span> <span class="number">10</span><span class="special">)</span>
+    <span class="special">{</span>
+      <span class="identifier">std</span><span class="special">::</span><span class="identifier">cout</span> <span class="special">&lt;&lt;</span> <span class="string">"Timer 2: "</span> <span class="special">&lt;&lt;</span> <span class="identifier">count_</span> <span class="special">&lt;&lt;</span> <span class="string">"\n"</span><span class="special">;</span>
+      <span class="special">++</span><span class="identifier">count_</span><span class="special">;</span>
+
+      <span class="identifier">timer2_</span><span class="special">.</span><span class="identifier">expires_at</span><span class="special">(</span><span class="identifier">timer2_</span><span class="special">.</span><span class="identifier">expires_at</span><span class="special">()</span> <span class="special">+</span> <span class="identifier">boost</span><span class="special">::</span><span class="identifier">posix_time</span><span class="special">::</span><span class="identifier">seconds</span><span class="special">(</span><span class="number">1</span><span class="special">));</span>
+      <span class="identifier">timer2_</span><span class="special">.</span><span class="identifier">async_wait</span><span class="special">(</span><span class="identifier">strand_</span><span class="special">.</span><span class="identifier">wrap</span><span class="special">(</span><span class="identifier">boost</span><span class="special">::</span><span class="identifier">bind</span><span class="special">(&amp;</span><span class="identifier">printer</span><span class="special">::</span><span class="identifier">print2</span><span class="special">,</span> <span class="keyword">this</span><span class="special">)));</span>
+    <span class="special">}</span>
+  <span class="special">}</span>
+
+<span class="keyword">private</span><span class="special">:</span>
+  <span class="identifier">boost</span><span class="special">::</span><span class="identifier">asio</span><span class="special">::</span><span class="identifier">strand</span> <span class="identifier">strand_</span><span class="special">;</span>
+  <span class="identifier">boost</span><span class="special">::</span><span class="identifier">asio</span><span class="special">::</span><span class="identifier">deadline_timer</span> <span class="identifier">timer1_</span><span class="special">;</span>
+  <span class="identifier">boost</span><span class="special">::</span><span class="identifier">asio</span><span class="special">::</span><span class="identifier">deadline_timer</span> <span class="identifier">timer2_</span><span class="special">;</span>
+  <span class="keyword">int</span> <span class="identifier">count_</span><span class="special">;</span>
+<span class="special">};</span>
+</pre>
+<p>
+        <code class="computeroutput"><span class="identifier">main</span></code>函数中，
+        <a class="link" href="../reference/io_service/run.html" title="io_service::run">io_service::run()</a>
+        现在被两个线程调用：主线程和一个附加线程。这一切依赖于boost::thread对象来完成。
+      </p>
+<p>
+        正如它被一个单线程调用一样，<a class="link" href="../reference/io_service/run.html" title="io_service::run">io_service::run()</a>的并发调用会一直持续到无任何“工作”可做。后台线程直到所有异步操作都完成后才会退出。
+      </p>
+<pre class="programlisting"><span class="keyword">int</span> <span class="identifier">main</span><span class="special">()</span>
+<span class="special">{</span>
+  <span class="identifier">boost</span><span class="special">::</span><span class="identifier">asio</span><span class="special">::</span><span class="identifier">io_service</span> <span class="identifier">io</span><span class="special">;</span>
+  <span class="identifier">printer</span> <span class="identifier">p</span><span class="special">(</span><span class="identifier">io</span><span class="special">);</span>
+  <span class="identifier">boost</span><span class="special">::</span><span class="identifier">thread</span> <span class="identifier">t</span><span class="special">(</span><span class="identifier">boost</span><span class="special">::</span><span class="identifier">bind</span><span class="special">(&amp;</span><span class="identifier">boost</span><span class="special">::</span><span class="identifier">asio</span><span class="special">::</span><span class="identifier">io_service</span><span class="special">::</span><span class="identifier">run</span><span class="special">,</span> <span class="special">&amp;</span><span class="identifier">io</span><span class="special">));</span>
+  <span class="identifier">io</span><span class="special">.</span><span class="identifier">run</span><span class="special">();</span>
+  <span class="identifier">t</span><span class="special">.</span><span class="identifier">join</span><span class="special">();</span>
+
+  <span class="keyword">return</span> <span class="number">0</span><span class="special">;</span>
+<span class="special">}</span>
+</pre>
+<p>
+        查看<a class="link" href="tuttimer5/src.html" title="Source listing for Timer.5">本例全部源代码</a>
+      </p>
+<p>
+        返回<a class="link" href="../tutorial.html" title="Tutorial">指南</a>
+      </p>
+<p>
+        前一例: <a class="link" href="tuttimer4.html" title="Timer.4 - Using a member function as a handler">Timer.4 - 成员函数作为回调函数</a>
+      </p>
+</div>
+<table xmlns:rev="http://www.cs.rpi.edu/~gregod/boost/tools/doc/revision" width="100%"><tr>
+<td align="left"></td>
+<td align="right"><div class="copyright-footer">Copyright © 2003 - 2008 Christopher M. Kohlhoff<p>
+        Distributed under the Boost Software License, Version 1.0. (See accompanying
+        file LICENSE_1_0.txt or copy at <a href="http://www.boost.org/LICENSE_1_0.txt" target="_top">http://www.boost.org/LICENSE_1_0.txt</a>)
+      </p>
+</div></td>
+</tr></table>
+<hr>
+<div class="spirit-nav">
+<a accesskey="p" href="tuttimer4/src.html"><img src="../../../../doc/html/images/prev.png" alt="Prev"></a><a accesskey="u" href="../tutorial.html"><img src="../../../../doc/html/images/up.png" alt="Up"></a><a accesskey="h" href="../../boost_asio.html"><img src="../../../../doc/html/images/home.png" alt="Home"></a><a accesskey="n" href="tuttimer5/src.html"><img src="../../../../doc/html/images/next.png" alt="Next"></a>
+</div>
+</body>
+</html>

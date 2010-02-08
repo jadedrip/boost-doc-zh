@@ -1,0 +1,214 @@
+<!DOCTYPE HTML PUBLIC "-//W3C//DTD HTML 4.01 Transitional//EN">
+<html><head>
+<meta http-equiv="Content-Type" content="text/html; charset=UTF-8"><title>value_initialized</title></head>
+<body style="color: rgb(0, 0, 0); background-color: rgb(255, 255, 255);" link="#0000ff" vlink="#800080">
+<h2><img src="../../boost.png" height="86" width="276"> 头文件 &lt;<a href="../../boost/utility/value_init.hpp">boost/utility/value_init.hpp</a>&gt;
+</h2>
+<h2>目录</h2>
+<dl>
+<dt><a href="#rationale">原理</a></dt>
+<dt><a href="#intro">简介</a></dt>
+<dt><a href="#details">细节</a> </dt>
+</dl>
+<dl>
+</dl>
+<ul>
+<li><a href="#valueinit">value-initialization</a></li>
+<li><a href="#valueinitsyn">value-initialization
+的语法</a></li>
+<li><a href="#compiler_issues">编译器问题</a> </li>
+</ul>
+<dl class="page-index">
+<dt><a href="#types">类型和对象</a></dt>
+</dl>
+<ul>
+<li><a href="#val_init"><code>模板类
+value_initialized&lt;T&gt;</code></a></li>
+<li><a href="#initialized_value"><code>initialized_value</code></a></li>
+</ul>
+<a href="#acknowledgements">鸣谢</a><br>
+<br>
+<hr>
+<h2><a name="rationale"></a>原理</h2>
+<p>在C++中，以泛型的方式构造和初始化对象是困难的。问题在于初始化时有几种不同的规则。取决于对象的类型，一个新构造的对象的值可以
+被零初始化(逻辑0)、缺省构造(使用缺省构造函数)，或者不确定。在编写泛型代码时，问题必须被解决。模板 <code>value_initialized</code>
+提供了一个解决方案，以一致的语法来对标量、联合以及类类型进行值的初始化。此外，<code>value_initialized</code>
+为各种编译器对于值初始化所存在的问题提供了变通方法。此外，还提供了一个常量对象 <code>initialized_value</code>，
+以避免在从 <code>value_initialized&lt;T&gt;</code>
+对象中取出值的时候重复类型名。 </p>
+<h2><a name="intro"></a>简介
+</h2>
+<p>在C++中有多种方法来初始化一个变量。以下所有声明都<span style="font-style: italic;">可
+以</span>将一个局部变量初始化为它的缺省值： </p>
+<pre> T1 var1;<br> T2 var2 = 0;<br> T3 var3 = {};<br> T4 var4 = T4();<br></pre>
+不幸的是，这些声明是否对变量进行了正确的初始化，非常依赖于变量的类型。第一个声明对于任意 <a href="http://www.sgi.com/tech/stl/DefaultConstructible.html">可
+缺省构造</a>
+的类型均有效(通过定义)。但是，它并不总是会进行初始化！如果该变量是一个类的实例，且该类的作者提供了适当的缺省构造函数，就会正确地初始化该变量。
+另一方面，如果变量的类型为算术类型如 <code>int</code>, <code>float</code>,
+或 <code>char</code>，则 <code>var1</code> 的值是<em>不
+确定的</em>。<code></code>算术类型的变量当然可以通过第二个声明 <code>T2
+var2 = 0</code>
+正确地进行初始化。不过这种初始化形式通过不能用于类类型(除非被特别编写为支持这种初始化方式)。第三种形式，<code>T3
+var3 = {}</code>
+用于初始化一个聚合类型，典型例子如"C风格"的结构或"C风格"的数组。不过，这种语法又不能用于具有显式声明的构造函数的类(但是请留意即将到来的C
+++语言的变化，由 Bjarne Stroustrup 等提出[<a href="#references">1</a>]!)。
+第四种形式是几种形式中最为通用的，它可以用于初始化算术类型、类类型、聚合类型、指针及其它类型。声明 <code>T4 var4
+= T4()</code>, 可以解读如下：首先以 <code>T4()</code>
+创建一个临时对象。该对象是 <a href="#valueinit">value-initialized</a>
+的。接着该临时对象被复制给命名变量，<code>var4</code>.
+然后临时对象被销毁。虽然复制和析构操作都很可能被优化掉，但是C++仍然要求类型 <code>T4</code> 是 <a href="CopyConstructible.html">可复制构造的</a>。(因此 <code>T4</code>
+需要<span style="font-style: italic;">既是</span><em></em>
+可缺省构造的 <em>也是</em>
+可复制构造的)。一个类有可能不是可复制构造的，例如它可能具有私有且未定义的复制构造函数，或者它可能派生自 <a href="utility.htm#Class_noncopyable">boost::noncopyable</a>.
+Scott Meyers [<a href="#references">2</a>]
+解释了为什么一个类会如此定义。
+<p>第四种形式 <code>T4 var4 = T4()</code>
+有一个不太明显的缺点：它会遭到各种 <a href="#compiler_issues">编译器问题</a>，
+在某些编译器的特定情形下会导致变量未初始化。 </p>
+<p>模板 <a href="#val_init"><code>value_initialized</code></a>
+提供了一个通用的方法来初始化一个对象，如 <code>T4 var4 = T4()</code>,
+但不要求其类型为可复制构造。而且它还为具有值初始化问题的编译器提供了变通方法！它可以获得任意类型的一个已初始化变量；它<span style="font-style: italic;">仅</span>要求类型为可缺省构造。类型 <code>T</code>
+的一个正确的 <em>值已初始化</em> 对象声明如下：<code></code> </p>
+<pre> value_initialized&lt;T&gt; var;</pre>
+<p>常量对象 <a href="#initialized_value"><code>initialized_value</code></a>
+允许按以下方式对一个变量进行值初始化：</p>
+<p>&nbsp; T var = initialized_value ; </p>
+这种初始化的形式语义上等价于 <code>T4 var4 = T4()</code>,
+但在应对前述的编译器问题时更为健壮。
+<h2><a name="details"></a>细节</h2>
+<p>C++标准[<a href="#references">3</a>]中包含了零初始化和缺
+省初始化的定义。 简单地说，零初始化是指对象被赋予初始值 0 (转换为该类型)，缺省初始化则是指对 POD [<a href="#references">4</a>]
+类型进行零初始化，而对类类型则用对应的缺省构造函数进行初始化。声明中可以包含初始化器，其中指定对象的初始值。初始化器可以只是一个 '()',
+这表示该对象被缺省初始化(见下文)。但是，如果声明中没有初始化器，而且它是一个非常量、非静态的<code></code>
+POD类型，那么初始值就是不确定的：<cite>(精确定义请见 §8.5)</cite></p>
+<pre>int x ; // 无初始化器，x 的值不确定。<br>std::string s ; // 无初始化器，s 被缺省构造。<br>int y = int() ; <br>// y 使用复制初始化，临时变量使用空括号作为初始化器，所以是缺省构造的。<br>// 缺省构造的 POD 类型是零初始化的，因此 y == 0.<br>void foo ( std::string ) ;<br>foo ( std::string() ) ; <br>// 临时字符串是缺省构造的，正如初始化器 () 所表示的 </pre>
+<h3><a name="valueinit">value-initialization</a></h3>
+<p>第一份 <a href="http://anubis.dkuug.dk/JTC1/SC22/WG21/docs/cwg_defects.html">Technical
+Corrigendum for the C++ Standard</a> (TC1), 该草案在2001年9月公开发布，提出了 <a href="http://anubis.dkuug.dk/JTC1/SC22/WG21/docs/cwg_defects.html#178">Core
+Issue 178</a> (当然还有其它很多问题)。</p>
+<p>该问题引入了"值初始化"<code></code>的新概念(它也修正了零初始化的说法)。简单地说，值初
+始化类似于缺省初始化，除了在有些情况
+下，非静态数据成员和基类子对象也可以进行值初始化。区别在于一个进行值初始化的对象，其数据成员或基类子对象不具有(至少不太可能具有)
+不确定的值；而不是象缺省构造的对象那样。(正式描述请见 Core Issue 178)</p>
+<p>为了对一个对象指定值初始化，我们需要使用空初始化器：().</p>
+<p>和以前一样，不带初始化器的声明表示缺省初始化，带有非空初始化器的声明则表示复制(=xxx)或直接(xxx)初始化。 </p>
+<pre>template&lt;class T&gt; void eat(T);<br>int x ; // 不确定的初始值<br>std::string s; // 缺省初始化<br>eat ( int() ) ; // 值初始化<br>eat ( std::string() ) ; // 值初始化</pre>
+<h4><a name="valueinitsyn">value-initialization</a>
+的语法</h4>
+<p>值初始化以 () 指定。但是空括号不允许作为初始化器的语法，因为它会被当作一个不带参数的函数声明： </p>
+<pre>int x() ; // 声明一个函数 int(*)()<br>int y ( int() ) ; // 声明一个函数 int(*)( int(*)() )</pre>
+<p>因此，空的 () 必须被放在其它初始化上下文中。</p>
+<p>另一个方法是使用复制初始化语法：</p>
+<pre>int x = int() ;</pre>
+<p>这种方法对于 POD 类型是可以的。但是对于非-POD
+的类类型，复制初始化会查找合适的构造函数，结果可能是复制构造函数(系统也会查找合适的转换函数，不过在这个上下文中不适用)。对于任意的未知类型，使
+用这一语法可能无法达到想要的值初始化的效果，因为我们不知道从一个缺省构造的对象进行复制是否可以得到与缺省构造的对象完全一样的结果，而且编译器被允
+许(在某些情况下)，但不是被要求，将复制操作优化掉。</p>
+<p>一种可能的通用解决方法是使用非静态数据成员的值初始化：</p>
+<pre>template&lt;class T&gt; <br>struct W <br>{<br> // 'data' 的值初始化<br> W() : data() {}<br> T data ;<br>} ;<br>W&lt;int&gt; w ;<br>// 对于任何类型，w.data 都是值初始化的</pre>
+<p><code>这正是 value_initialized&lt;T&gt;
+模板类所提供的解决方法。不幸的是，这种方法要遭到各种编译器问题。</code></p>
+<h4><a name="compiler_issues">编译器问题</a> </h4>
+各种编译还不能完全地实现值初始化。因此当一个对象进行 <em>值初始化</em>&nbsp;(根据C++标准)
+时，它实际上<span style="font-style: italic;">可能</span>会由于这
+些编译器的问题而保持为未初始化！很难对这些问题有一个综合的描述，因为它们取决于你所使用的编译器、版本号，以及你要进行值初始化的对象类型。编译器通
+常可以正确支持内建类型的值初始化。但是用户自定义类型的对象以及<span style="font-style: italic;">某
+些特定情况的聚合类型</span>在进行值初始化时，可能会完全保持为未初始化。
+<p>我们已经在 Microsoft, Sun, Borland, 和 GNU
+的编译器上遇到了有关值初始化的问题。以下是这些问题的缺陷报告：
+<table summary="Compiler bug reports regarding value-initialization" border="0" cellpadding="7" cellspacing="1">
+<tbody>
+<tr>
+<td><a href="https://connect.microsoft.com/VisualStudio/feedback/ViewFeedback.aspx?FeedbackID=100744">Microsoft
+Feedback ID 100744 - Value-initialization in new-expression</a> <br>
+由&nbsp;Pavel Kuznetsov (MetaCommunications Engineering) 报告,
+2005-07-28 <br>
+<a href="http://gcc.gnu.org/bugzilla/show_bug.cgi?id=30111">GCC
+Bug 30111 - Value-initialization of POD base class doesn't initialize
+members</a> <br>
+由 Jonathan Wakely 报告, 2006-12-07 <br>
+<a href="http://gcc.gnu.org/bugzilla/show_bug.cgi?id=33916">GCC
+Bug 33916 - Default constructor fails to initialize array members</a>
+<br>
+由&nbsp;Michael Elizabeth Chastain 报告, 2007-10-26 <br>
+<a href="http://qc.codegear.com/wc/qcmain.aspx?d=51854">Borland
+Report 51854 - Value-initialization: POD struct should be
+zero-initialized</a> <br>
+由 Niels Dekker (LKEB, Leiden University Medical Center) 报告, 2007-09-11 <br>
+</td>
+</tr>
+</tbody>
+</table>
+</p>
+<p>新版本的 <code>value_initialized</code> (Boost
+版本1.35或以上)提供了这些问题的变通方法：<code>value_initialized</code>
+将在构造所含对象之前清除它的内部数据。 </p>
+<h2><a name="types"></a>类型和对象</h2>
+<h2><a name="val_init"><code>模板类
+value_initialized&lt;T&gt;</code></a></h2>
+<pre>namespace boost {<br>template&lt;class T&gt;<br>class value_initialized<br>{<br>  public :<br>    value_initialized() : x() {}<br>    operator T const &amp;() const { return x ; }<br>    operator T&amp;() { return x ; }<br>    T const &amp;data() const { return x ; }<br>    T&amp; data() { return x ; }<br>    void swap( value_initialized&lt;T&gt;&amp; );<br><br>  private :<br>    <i>unspecified</i> x ;<br>} ;<br><br>template&lt;class T&gt;<br>T const&amp; get ( value_initialized&lt;T&gt; const&amp; x )<br>{<br>  return x.data() ;<br>}<br><br>template&lt;class T&gt;<br>T&amp; get ( value_initialized&lt;T&gt;&amp; x )<br>{<br>  return x.data() ;<br>}<br><br>} // namespace boost<br></pre>
+<p>该模板类的一个对象是一个可以转换为 'T&amp;' 的 <code>T</code>-包
+装，当该包装类被缺省构造时，被包装的对象(类型为 T 的数据成员<code></code>)可以保证是 <a href="#valueinit">值初始化</a> 的： </p>
+<pre>int zero = 0 ;<br>value_initialized&lt;int&gt; x ;<br>assert ( x == zero ) ;<br><br>std::string def ;<br>value_initialized&lt; std::string &gt; y ;<br>assert ( y == def ) ;<br></pre>
+<p>这个包装器的目的是，为标量、联合和类类型(POD
+和非-POD)的值初始化提供一致的语法，为不同的值初始化提供正确的语法(请见 <a href="#valueinitsyn">value-initialization
+的语法</a>)。</p>
+<p>被包装的对象可以通过转换操作符 <code>T&amp;</code>, 成员函数 <code>data()</code>,
+或非成员函数 <code>get()</code> 进行访问： </p>
+<pre>void watch(int);<br>value_initialized&lt;int&gt; x;<br><br>watch(x) ; // 使用 operator T&amp; <br>watch(x.data());<br>watch( get(x) ) // 使用函数 get() </pre>
+<p>常量和非常量的对象都可以被包装。非常量的对象可以通过包装器直接修改，常量对象则不可以：</p>
+<p>如果 <code>T</code> 是一个可交换(<em>Swappable</em>)的类型，则 
+<code>value_initialized&lt;T&gt;</code> 也是可交换的，调用其
+<code>swap</code> 成员函数相当于调用
+<code>boost::swap</code>.</p><pre>value_initialized&lt;int&gt; x ; <br>static_cast&lt;int&amp;&gt;(x) = 1 ; // OK<br>get(x) = 1 ; // OK<br><br>value_initialized&lt;int const&gt; y ; <br>static_cast&lt;int&amp;&gt;(y) = 1 ; // ERROR: 不能转为 int&amp;<br>static_cast&lt;int const&amp;&gt;(y) = 1 ; // ERROR: 不能修改常量值<br>get(y) = 1 ; // ERROR: 不能修改常量值</pre>
+<h3>警告：</h3><p>Boost 1.40.0及以前的版本中的 <code>value_initialized</code> 实现允许<i>非常量</i>地从一个常量包装访问被包装的对象，用转型操作符或 <code>data()</code> 成员函数都可以。例如：</p>
+<pre>value_initialized&lt;int&gt; const x_c ;<br>int&amp; xr = x_c ; // OK, 可以转换为 int&amp; 即使 x_c 本身是 const 的。<br>xr = 2 ; </pre>
+<p>这种不正常行为的原因是，有些常用的编译器不接受以下代码：</p>
+<pre>struct X<br>{<br> operator int&amp;() ;<br> operator int const&amp;() const ; <br>};<br>X x ;<br>(x == 1 ) ; // ERROR HERE!</pre>
+<p>当前版本的 <code>value_initialized</code> 不再有这种不正常的行为。因为当前的编译器已广泛支持常量和非常量的转型操作符的重载，所以我们决定修正这个问题。所以当前的版本支持逻辑常量性的想法。</p><h3>提议的标准：非成员函数 get() 惯用法</h3>
+<p>可以通过一个常量的包装器修改非常量的被包装对象这一异常行为(以前的 <code>value_initialized</code> 版本支持这种行为)是可以避免的，只要确保总是通过 get() 来访问被包装对象：</p>
+<pre>value_initialized&lt;int&gt; x ;<br>get(x) = 1 ; // OK<br><br>value_initialized&lt;int const&gt; cx ;<br>get(x) = 1 ; // ERROR: 不能修改常量对象<br><br>value_initialized&lt;int&gt; const x_c ;<br>get(x_c) = 1 ; // ERROR: 不能修改常量对象<br><br>value_initialized&lt;int const&gt; const cx_c ;<br>get(cx_c) = 1 ; // ERROR: 不能修改常量对象<br></pre>
+<h2><a name="initialized_value"><code>initialized_value</code></a></h2>
+<pre>namespace boost {<br>class initialized_value_t<br>{<br> public :<br> template &lt;class T&gt; operator T() const ;<br>};<br><br>initialized_value_t const initialized_value = {} ;<br><br>} // namespace boost<br></pre>
+<code>initialized_value</code>
+提供了一个方便的方法来获得一个初始值：它的转换操作符为任意可复制构造类型提供一个适当的
+<em>value-initialized</em> 对象。假设你需要有一个类型 <code>T</code>
+的已初始化变量。你可以这样做：
+<pre> T var = T();<br></pre>
+但是正如前所述，这种形式会遇到某些编译器问题。模板 <code>value_initialized</code>
+提供了一种变通的方法：
+<pre> T var = get( value_initialized&lt;T&gt;() );<br></pre>
+不幸的是，两种形式都重复了类型名，虽然这里的类型名很短(<code>T</code>)，但是当然也有可能象 <code>Namespace::Template&lt;Arg&gt;::Type</code>
+这样长。这时，你可以如下使用 <code>initialized_value</code> 来替代：
+<pre> T var = initialized_value ;<br></pre>
+<h3><a name="references">参考</a></h3>
+[1] Bjarne Stroustrup, Gabriel Dos Reis, and J. Stephen Adamczyk wrote
+various papers, proposing to extend the support for brace-enclosed <em>initializer
+lists</em> in the next version of C++. This would allow a
+variable <code>var</code> of any DefaultConstructible type
+<code>T</code> to be <em>value-initialized</em>
+by doing <code>T var = {}</code>. The papers are listed at
+Bjarne's web page, <a href="http://www.research.att.com/%7Ebs/WG21.html">My C++
+Standards committee papers</a> <br>
+[2] Scott Meyers, Effective C++, Third Edition, item 6, <em>Explicitly
+disallow the use of compiler-generated functions you do not want</em>,
+<a href="http://www.aristeia.com/books.html">Scott Meyers:
+Books and CDs</a> <br>
+[3] The C++ Standard, Second edition (2003), ISO/IEC 14882:2003 <br>
+[4] POD stands for "Plain Old Data"&nbsp;
+<h3><a name="acknowledgements"></a>鸣谢</h3>
+value_initialized was developed by Fernando Cacciola, with help and
+suggestions from David Abrahams and Darin Adler.<br>
+Special thanks to Björn Karlsson who carefully edited and completed
+this documentation.
+<p>value_initialized was reimplemented by Fernando Cacciola and
+Niels Dekker for Boost release version 1.35 (2008), offering a
+workaround to various compiler issues. </p>
+<p>initialized_value was written by Niels Dekker, and added to
+Boost release version 1.36 (2008). </p>
+<p>Developed by <a href="mailto:fernando_cacciola@hotmail.com">Fernando
+Cacciola</a>, the latest version of this file can be found at <a href="http://www.boost.org/">www.boost.org</a>. </p>
+<hr>Revised 03 October 2009
+<p>© Copyright Fernando Cacciola, 2002, 2009.</p>
+<p>Distributed under the Boost Software License, Version 1.0. See <a href="http://www.boost.org/LICENSE_1_0.txt">www.boost.org/LICENSE_1_0.txt</a></p>
+</body></html>

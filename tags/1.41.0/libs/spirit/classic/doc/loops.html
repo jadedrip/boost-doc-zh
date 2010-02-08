@@ -1,0 +1,165 @@
+<!DOCTYPE HTML PUBLIC "-//W3C//DTD HTML 4.01 Transitional//EN">
+<html><head>
+
+<title>Loops</title><meta http-equiv="Content-Type" content="text/html; charset=UTF-8">
+<link rel="stylesheet" href="theme/style.css" type="text/css"></head>
+<body>
+<table background="theme/bkd2.gif" border="0" cellspacing="2" width="100%">
+  <tbody><tr> 
+    <td width="10"> 
+    </td>
+    <td width="85%"> 
+      <font face="Verdana, Arial, Helvetica, sans-serif" size="6"><b> Loops 循环</b></font>
+    </td>
+    <td width="112"><a href="http://spirit.sf.net"><img src="theme/spirit.gif" align="right" border="0" height="48" width="112"></a></td>
+  </tr>
+</tbody></table>
+<br>
+<table border="0">
+  <tbody><tr>
+    <td width="10"></td>
+    <td width="30"><a href="../index.html"><img src="theme/u_arr.gif" border="0"></a></td>
+    <td width="30"><a href="escape_char_parser.html"><img src="theme/l_arr.gif" border="0"></a></td>
+    <td width="30"><a href="character_sets.html"><img src="theme/r_arr.gif" border="0"></a></td>
+   </tr>
+</tbody></table>
+<p>So far we have introduced a couple of EBNF operators that deal with looping. 
+  We have the <tt>+</tt> positive operator, which matches the preceding symbol 
+  one (1) or more times, as well as the Kleene star <tt>*</tt> which matches the 
+  preceding symbol zero (0) or more times.<br>到目前为止我们已经介绍了一些针对循环的EBNF操作符。我们有 <tt>+</tt> 加号，匹配（1）到任意多次，我们也有克林星 <tt>*</tt>，匹配零到任意多次。</p>
+<p>Taking this further, we may want to have a generalized loop operator. To some 
+  this may seem to be a case of overkill. Yet there are grammars that are impractical 
+  and cumbersome, if not impossible, for the basic EBNF iteration syntax to specify. 
+  Examples:<br>更进一步，我们可能想要一个通用的循环操作符。某些人可能认为这是得不偿失的。但如果不悖离EBNF基本规范，某些语法可能会显得不切实际而笨拙。例子：</p>
+<blockquote>
+  <p><img src="theme/bullet.gif" height="12" width="12"> A file name may have 
+    a maximum of 255 characters only.<br>一个最大长度是255的文件名。<br>
+    <img src="theme/bullet.gif" height="12" width="12"> A specific bitmap file 
+    format has exactly 4096 RGB color information. <br>一种固定包含有4096 RGB点信息的特定位图格式。<br>
+    <img src="theme/bullet.gif" height="12" width="12"> A 32 bit binary string 
+    (1..32 1s or 0s).<br>一个32位二进制串（1..32 个1或0）。</p>
+</blockquote>
+<p>Other than the Kleene star <tt>*</tt>, the Positive closure <tt>+</tt>, and 
+  the optional <tt>!</tt>, a more flexible mechanism for looping is provided for 
+  by the framework.&nbsp;<br>除了克林星 <tt>*</tt>、加号 <tt>+</tt> 和可选的 <tt>!</tt>，框架还提供了更有弹性的循环机制：
+</p>
+<table align="center" border="0" width="80%">
+  <tbody><tr> 
+    <td colspan="2" class="table_title">Loop Constructs 循环结构</td>
+  </tr>
+  <tr> 
+    <td class="table_cells" width="26%"><b>repeat_p (n) [p]</b></td>
+    <td class="table_cells" width="74%">Repeat <b>p</b> exactly <b>n</b> times<br>重复执行<strong>n</strong>次<strong>p</strong></td>
+  </tr>
+  <tr> 
+    <td class="table_cells" width="26%"><b>repeat_p (n1, n2) [p]</b></td>
+    <td class="table_cells" width="74%">Repeat <b>p</b> at least <b>n1</b> times 
+      and at most <b>n2</b> times<br>重复执行<strong>p</strong>至少<strong>n1</strong>至多<strong>n2</strong>次</td>
+  </tr>
+  <tr> 
+    <td class="table_cells" width="26%"><b>repeat_p (n, more) [p] </b></td>
+    <td class="table_cells" width="74%">Repeat <b>p</b> at least <b>n</b> times, 
+      continuing until <b>p</b> fails or the input is consumed<br>重复执行<strong>p</strong>至少<strong>n</strong>次，并一直持续到<strong>p</strong>不匹配或者输入被完全耗尽。</td>
+  </tr>
+</tbody></table>
+<p>Using the <tt>repeat_p</tt> parser, we can now write our examples above:<br>使用 <tt>repeat_p</tt>&nbsp;分析器，现在我们可以把上面的例子写成：</p>
+<p>A file name with a maximum of 255 characters:<br>一个最大有255个字符的文件名：
+</p>
+<pre>    <span class="identifier">valid_fname_chars </span><span class="special">= </span><span class="comment">/*..*/</span><span class="special">;<br>    </span><span class="identifier">filename </span><span class="special">= </span><span class="identifier">repeat_p</span><span class="special">(</span><span class="number">1</span><span class="special">, </span><span class="number">255</span><span class="special">)[</span><span class="identifier">valid_fname_chars</span><span class="special">];</span></pre>
+<p>A specific bitmap file format which has exactly 4096 RGB color information:<br>一种包含4096 RBG点的文件格式：<span class="special"></span></p>
+<pre>    <span class="identifier">uint_parser</span><span class="special">&lt;</span><span class="keyword">unsigned</span><span class="special">, </span><span class="number">16</span><span class="special">, </span><span class="number">6</span><span class="special">, </span><span class="number">6</span><span class="special">&gt; </span><span class="identifier">rgb_p</span><span class="special">;<br>    </span><span class="identifier">bitmap </span><span class="special">= </span><span class="identifier">repeat_p</span><span class="special">(</span><span class="number">4096</span><span class="special">)[</span><span class="identifier">rgb_p</span><span class="special">];</span></pre>
+<p>As for the 32 bit binary string (1..32 1s or 0s), of course we could have easily 
+  used the <tt>bin_p</tt> numeric parser instead. For the sake of demonstration 
+  however:<br>虽然针对32位的二进制串（1...32个1或0），我们可以轻松地使用 <tt>bin_p</tt>&nbsp;数值分析器，但出于示范的目的：<span class="special"></span></p>
+<pre>    <span class="identifier">bin</span><span class="number">32</span> <span class="special">= </span><span class="identifier">lexeme_d</span><span class="special">[</span><span class="identifier">repeat_p</span><span class="special">(</span>1, <span class="number">32</span><span class="special">)[</span><span class="identifier">ch_p</span><span class="special">(</span><span class="literal">'1'</span><span class="special">) </span><span class="special">| </span><span class="literal">'0'</span><span class="special">]];</span></pre>
+<table align="center" border="0" width="80%">
+  <tbody><tr> 
+    <td class="note_box"><img src="theme/note.gif" height="16" width="16"> Loop 
+      parsers are run-time <a href="parametric_parsers.html">parametric</a>.<br><img src="theme/note.gif" height="16" width="16"> 循环分析器可以在运行时<a href="parametric_parsers.html">参数化</a>。</td>
+  </tr>
+</tbody></table>
+<p>The Loop parsers can be dynamic. Consider the parsing of a binary file of Pascal-style 
+  length prefixed string, where the first byte determines the length of the incoming 
+  string. Here's a sample input:<br>循环分析器可以是动态的。考虑分析一个Pascal风格的字符串的二进制文件，第一个字节表明了接下来的字符串的长度。这里是输入样本：</p><blockquote> 
+  <table border="0" cellpadding="0" cellspacing="0" width="363">
+    <tbody><tr> 
+      <td class="dk_grey_bkd"> 
+        <table border="0" cellpadding="2" cellspacing="2" width="100%">
+          <tbody><tr> 
+            <td class="white_bkd" width="8%"> 
+              <div align="center">11</div>
+            </td>
+            <td class="white_bkd" width="8%"> 
+              <div align="center">h</div>
+            </td>
+            <td class="white_bkd" width="8%"> 
+              <div align="center">e</div>
+            </td>
+            <td class="white_bkd" width="8%"> 
+              <div align="center">l</div>
+            </td>
+            <td class="white_bkd" width="8%"> 
+              <div align="center">l</div>
+            </td>
+            <td class="white_bkd" width="8%"> 
+              <div align="center">o</div>
+            </td>
+            <td class="white_bkd" width="8%"> 
+              <div align="center"> _</div>
+            </td>
+            <td class="white_bkd" width="8%"> 
+              <div align="center">w</div>
+            </td>
+            <td class="white_bkd" width="8%"> 
+              <div align="center">o</div>
+            </td>
+            <td class="white_bkd" width="8%"> 
+              <div align="center">r</div>
+            </td>
+            <td class="white_bkd" width="8%"> 
+              <div align="center">l</div>
+            </td>
+            <td class="white_bkd" width="8%"> 
+              <div align="center">d</div>
+            </td>
+          </tr>
+        </tbody></table>
+      </td>
+    </tr>
+  </tbody></table>
+  
+</blockquote>
+<p>This trivial example cannot be practically defined in traditional EBNF. Although 
+  some EBNF syntax allow more powerful repetition constructs other than the Kleene 
+  star, we are still limited to parsing fixed strings. The nature of EBNF forces 
+  the repetition factor to be a constant. On the other hand, Spirit allows the 
+  repetition factor to be variable at run time. We could write a grammar that 
+  accepts the input string above:<br>这个微不足道的例子实际上不能用传统的EBNF定义。虽然某些EBNF语法允许比克林星更强大的循环构造，我们仍然只能分析定长串。EBNF的习性要求循环的因数是一个常量。而在另一边，Spirit允许循环因数是一个运行时变量。我们可以写出能接受上面的字符串的语法：</p>
+<pre><span class="identifier">    </span><span class="keyword">int </span><span class="identifier">c</span><span class="special">;<br>    </span><span class="identifier">r </span><span class="special">= </span><span class="identifier">anychar_p</span><span class="special">[</span><span class="identifier">assign_a</span><span class="special">(</span><span class="identifier">c</span><span class="special">)] </span><span class="special">&gt;&gt; </span><span class="identifier">repeat_p</span><span class="special">(</span><span class="identifier">boost</span><span class="special">::</span><span class="identifier">ref</span><span class="special">(</span><span class="identifier">c</span><span class="special">))[</span><span class="identifier">anychar_p</span><span class="special">];</span></pre>
+<p>The expression<br>表达式</p>
+<pre>    <span class="identifier">anychar_p</span><span class="special">[</span><span class="identifier">assign_a</span><span class="special">(</span><span class="identifier">c</span><span class="special">)]</span></pre>
+<p>extracts the first character from the input and puts it in <tt>c</tt>. What 
+  is interesting is that in addition to constants, we can also use variables as 
+  parameters to <tt>repeat_p</tt>, as demonstrated in<br>从输入中抽取第一个字符并且赋值给 <tt>c</tt>。有趣的是除了常量，我们也可以把变量作为<span style="font-family: Courier New;"> </span><tt>repeat_p</tt><span style="font-family: Courier New;">&nbsp;</span>的参数，正如下面所示范的：</p>
+<pre>    <span class="identifier">repeat_p</span><span class="special">(</span><span class="identifier">boost</span><span class="special">::</span><span class="identifier">ref</span><span class="special">(</span><span class="identifier">c</span><span class="special">)</span><span class="special">)</span><span class="special">[</span><span class="identifier">anychar_p</span><span class="special">]</span></pre>
+<p>Notice that <tt>boost::ref</tt> is used to reference the integer <tt>c</tt>. 
+  This usage of <tt>repeat_p</tt> makes the parser defer the evaluation of the 
+  repetition factor until it is actually needed. Continuing our example, since 
+  the value 11 is already extracted from the input, <tt>repeat_p</tt> is is now 
+  expected to loop exactly 11 times.<br>注意 <tt>boost::ref</tt>&nbsp;被用来引用整数c。这种用法使得 <tt>repeat_p</tt>&nbsp;把循环因数的推演推迟到了真正需要时。继续我们的例子，由于值11已经被从输入中抽取， <tt>repeat_p</tt>&nbsp;现在知道该循环11次了。</p>
+<table border="0">
+  <tbody><tr> 
+    <td width="10"></td>
+    <td width="30"><a href="../index.html"><img src="theme/u_arr.gif" border="0"></a></td>
+    <td width="30"><a href="escape_char_parser.html"><img src="theme/l_arr.gif" border="0"></a></td>
+    <td width="30"><a href="character_sets.html"><img src="theme/r_arr.gif" border="0"></a></td>
+  </tr>
+</tbody></table>
+<br>
+<hr size="1">
+<p class="copyright">Copyright © 1998-2003 Joel de Guzman<br>
+  <br>
+  <font size="2">Use, modification and distribution is subject to the Boost Software
+    License, Version 1.0. (See accompanying file LICENSE_1_0.txt or copy at
+    http://www.boost.org/LICENSE_1_0.txt) </font> </p>
+</body></html>

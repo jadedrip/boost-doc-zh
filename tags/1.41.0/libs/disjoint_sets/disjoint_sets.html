@@ -1,0 +1,209 @@
+<!DOCTYPE html PUBLIC "-//W3C//DTD HTML 4.01 Transitional//EN">
+<html><head>
+  <meta http-equiv="Content-Language" content="en-us">
+  <meta http-equiv="Content-Type" content="text/html; charset=UTF-8">
+
+  <title>Boost Disjoint Sets</title></head>
+<body alink="#ff0000" bgcolor="#ffffff" link="#0000ee" text="#000000" vlink="#551a8b">
+  <img src="../../boost.png" alt="C++ Boost" height="86" width="277"><br clear="none">
+
+  <h1><a name="sec:disjoint-sets" id="sec:disjoint-sets"></a> Disjoint
+  Sets 不相交集合</h1>
+  <pre>disjoint_sets&lt;Rank, Parent, FindCompress&gt;<br></pre>
+
+  <p>这个类提供带有 <i>按秩合并</i> 以及 <i>路径压缩</i> 的不相交集合操作。不相交集合数据结构维护不相交集合的一个聚集 <i>S = {S<sub>1</sub>, S<sub>2</sub>, ...,
+  S<sub>k</sub>}</i>。每个集合通过一个 <i>代表representative</i> 来标识，该代表是集合中的某个成员。集合通过有根树来表示，该有限树被编码至 <tt>Parent</tt>
+  属性映射。两个启发式策略："按秩合并" 和 "路径压缩" 用于加快操作的速度[<a href="./bibliography.html#tarjan83:_data_struct_network_algo">1</a>, <a href="./bibliography.html#clr90">2</a>]。</p>
+
+  <h3>Where Defined 定义于</h3><a href="../../boost/pending/disjoint_sets.hpp"><tt>boost/disjoint_sets.hpp</tt></a>
+
+  <h3>Template Parameters 模板参数</h3>
+
+  <table summary="" border="1">
+    <tbody><tr>
+      <td><tt>Rank</tt></td>
+
+      <td>必须符合 <a href="../property_map/doc/ReadWritePropertyMap.html">读写属性映射</a>，具有整数值类型以及与集合的元素类型相同的键类型。</td>
+    </tr>
+
+    <tr>
+      <td><tt>Parent</tt></td>
+
+      <td>必须符合 <a href="../property_map/doc/ReadWritePropertyMap.html">读写属性映射</a>，键类型和值类型均与集合的元素类型相同。</td>
+    </tr>
+
+    <tr>
+      <td><tt>FindCompress</tt></td>
+
+      <td>应为 查找代表 和 路径压缩 函数对象之一。</td>
+    </tr>
+  </tbody></table>
+
+  <h3>Example 示例</h3>
+
+  <p><tt>disjoint_sets</tt> 的一个典型使用模式可见于 <a href="../graph/doc/kruskal_min_spanning_tree.html"><tt>kruskal_minimum_spanning_tree()</tt></a>
+  算法。在此例子中，我们调用 <tt>link()</tt> 而不是
+  <tt>union_set()</tt>，因为 <tt>u</tt> 和 <tt>v</tt> 是从 <tt>find_set()</tt> 得到的，因此它们已是所属集合的代表。</p>
+  <pre>  ...<br>  disjoint_sets&lt;Rank, Parent, FindCompress&gt; dsets(rank, p);<br>  <br>  for (ui  = vertices(G).first; ui != vertices(G).second; ++ui)<br>    dsets.make_set(*ui);<br>  ...<br>  while ( !Q.empty() ) {<br>    e = Q.front();<br>    Q.pop();<br>    u = dsets.find_set(source(e));<br>    v = dsets.find_set(target(e));<br>    if ( u != v ) {<br>      *out++ = e;<br>      dsets.link(u, v);<br>    }<br>  }<br></pre>
+
+  <h3>Members 成员</h3>
+
+  <table summary="" border="1">
+    <tbody><tr>
+      <th>成员</th>
+
+      <th>说明</th>
+    </tr>
+
+    <tr>
+      <td><tt>disjoint_sets(Rank r, Parent p)</tt></td>
+
+      <td>构造函数。</td>
+    </tr>
+
+    <tr>
+      <td><tt>disjoint_sets(const disjoint_sets&amp; x)</tt></td>
+
+      <td>复制构造函数。</td>
+    </tr>
+
+    <tr>
+      <td><tt>template &lt;class Element&gt;<br>
+      void make_set(Element x)</tt></td>
+
+      <td>构造一个单件集合，包含 Element <tt>x</tt>.</td>
+    </tr>
+
+    <tr>
+      <td><tt>template &lt;class Element&gt;<br>
+      void link(Element x, Element y)</tt></td>
+
+      <td>合并由元素 <tt>x</tt> 和 <tt>y</tt> 所代表的两个集合。</td>
+    </tr>
+
+    <tr>
+      <td><tt>template &lt;class Element&gt;<br>
+      void union_set(Element x, Element y)</tt></td>
+
+      <td>合并包含元素 <tt>x</tt> 和 <tt>y</tt>  的两个集合。等价于
+      <tt>link(find_set(x),find_set(y))</tt>.</td>
+    </tr>
+
+    <tr>
+      <td><tt>template &lt;class Element&gt;<br>
+      Element find_set(Element x)</tt></td>
+
+      <td>返回包含元素
+      <tt>x</tt> 的集体的代表。</td>
+    </tr>
+
+    <tr>
+      <td><tt>template &lt;class ElementIterator&gt;<br>
+      std::size_t count_sets(ElementIterator first, ElementIterator
+      last)</tt></td>
+
+      <td>返回不相交集合的数量。</td>
+    </tr>
+
+    <tr>
+      <td><tt>template &lt;class ElementIterator&gt;<br>
+      void compress_sets(ElementIterator first, ElementIterator
+      last)</tt></td>
+
+      <td>将父节点树压平，使得每个元素的父节点为其代表。</td>
+    </tr>
+  </tbody></table>
+
+  <h3>Complexity 复杂度</h3>
+
+  <p>时间复杂度为 <i>O(m alpha(m,n))</i>，其中 <i>alpha</i> 为逆 Ackermann 函数，<i>m</i> 为不相交集合操作(<tt>make_set()</tt>, <tt>find_set()</tt>, 和 <tt>link()</tt>)的数量，<i>n</i> 为元素数量。函数 <i>alpha</i> 增长非常缓慢，比 <i>log</i> 函数要慢得多。</p>
+
+  <h3>See Also 参见</h3><a href="../graph/doc/incremental_components.html"><tt>incremental_connected_components()</tt></a>
+  <hr>
+  <pre>disjoint_sets_with_storage&lt;ID,InverseID,FindCompress&gt;<br></pre>
+
+  <p>该类管理内部的 rank 和 parent 属性的存储。存储是用数组的，以元素ID为索引，因此需要有 <tt>ID</tt> 和 <tt>InverseID</tt> 仿函数。rank 和 parent 属性在构造时进行初始化，每个元素属于其自身的一个集合(因此对于 <a href="../graph/doc/incremental_components.html#sec:initialize-incremental-components">
+  <tt>initialize_incremental_components()</tt></a> 函数不需要初始化该类的对象)。在计算一个不提供顶点属性存储的 <tt>edge_list</tt> 图的(动态)连通分支时，这个类尤其有用。</p>
+
+  <h3>Template Parameters 模板参数</h3>
+
+  <table summary="" border="1">
+    <tbody><tr>
+      <th>参数</th>
+
+      <th>说明</th>
+
+      <th>缺省值</th>
+    </tr>
+
+    <tr>
+      <td><tt>ID</tt></td>
+
+      <td>必须符合 <a href="../property_map/doc/ReadablePropertyMap.html">可读属性映射</a>，将元素映射至 0 到 N 的整数，N为集合中的元素总数。</td>
+
+      <td><tt>boost::identity_property_map</tt></td>
+    </tr>
+
+    <tr>
+      <td><tt>InverseID</tt></td>
+
+      <td>必须符合 <a href="../property_map/doc/ReadablePropertyMap.html">可读属性映射</a>，将整数映射至元素。</td>
+
+      <td><tt>boost::identity_property_map</tt></td>
+    </tr>
+
+    <tr>
+      <td><tt>FindCompress</tt></td>
+
+      <td>应为 查找代表 和 路径压缩 函数对象之一。</td>
+
+      <td><tt>representative_with_full_path_compression</tt></td>
+    </tr>
+  </tbody></table>
+
+  <h3>Members 成员</h3>
+
+  <p>该类带有 <tt>disjoint_sets</tt> 的所有成员，以及以下成员。</p>
+  <pre>disjoint_sets_with_storage(size_type n = 0,<br>                           ID id = ID(),<br>                           InverseID inv = InverseID())<br></pre>构造函数。
+  <pre>template &lt;class ElementIterator&gt;<br>void disjoint_sets_with_storage::<br>  normalize_sets(ElementIterator first, ElementIterator last)<br></pre>对代表进行重排，令每个集合的代表均为最小ID的元素。<br>后验条件：<tt>v &gt;= parent[v]</tt><br>先验条件：不相交集合结构必须是已压缩的。<br>
+  <hr>
+
+  <h2><a name="sec:representative-with-path-halving" id="sec:representative-with-path-halving"></a></h2>
+  <pre>representative_with_path_halving&lt;Parent&gt;<br></pre>
+
+  <p>这是一个仿函数，查找与元素 <tt>x</tt> 同一分支的代表顶点。在树中遍历时，该仿函数还会使用路径减半技术来缩短树的高度。</p>
+  <pre>Element operator()(Parent p, Element x)<br></pre>
+  <hr>
+
+  <h2><a name="sec:representative-with-full-path-compression" id="sec:representative-with-full-path-compression"></a><br></h2>
+  <pre>representative_with_full_path_compression&lt;Parent&gt;<br></pre>
+
+  <p>这是一个仿函数，查找元素 <tt>x</tt> 所属集合的代表。</p>
+  <pre>Element operator()(Parent p, Element x)<br></pre>
+
+  <p><br></p>
+  <hr>
+
+  <p><a href="http://validator.w3.org/check?uri=referer"><img src="http://www.w3.org/Icons/valid-html401" alt="Valid HTML 4.01 Transitional" border="0" height="31" width="88"></a></p>
+
+  <p>Revised 
+  <!--webbot bot="Timestamp" s-type="EDITED" s-format="%d %B, %Y" startspan -->01
+  December, 2006<!--webbot bot="Timestamp" endspan i-checksum="38508" --></p>
+
+  <table summary="">
+    <tbody><tr valign="top">
+      <td nowrap="nowrap"><i>Copyright © 2000</i></td>
+
+      <td><i><a href="http://www.boost.org/people/jeremy_siek.htm">Jeremy Siek</a>, Univ.of
+      Notre Dame (<a href="mailto:jsiek@lsc.nd.edu">jsiek@lsc.nd.edu</a>)<br>
+      <a href="http://www.boost.org/people/liequan_lee.htm">Lie-Quan Lee</a>,
+      Univ.of Notre Dame (<a href="mailto:llee1@lsc.nd.edu">llee1@lsc.nd.edu</a>)<br>
+      <a href="http://www.lsc.nd.edu/%7Elums">Andrew Lumsdaine</a>, Univ.of
+      Notre Dame (<a href="mailto:lums@lsc.nd.edu">lums@lsc.nd.edu</a>)</i></td>
+    </tr>
+  </tbody></table>
+
+  <p><i>Distributed under the Boost Software License, Version 1.0. (See
+  accompanying file <a href="../../LICENSE_1_0.txt">LICENSE_1_0.txt</a> or
+  copy at <a href="http://www.boost.org/LICENSE_1_0.txt">http://www.boost.org/LICENSE_1_0.txt</a>)</i></p>
+</body></html>
