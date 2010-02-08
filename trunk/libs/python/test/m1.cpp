@@ -32,9 +32,8 @@ struct NoddyObject : PyObject
 };
 
 PyTypeObject NoddyType = {
-    PyObject_HEAD_INIT(NULL)
-    0,
-    "Noddy",
+    PyVarObject_HEAD_INIT(NULL, 0)
+    const_cast<char*>("Noddy"),
     sizeof(NoddyObject),
     0,
     dealloc,    /* tp_dealloc */
@@ -104,9 +103,8 @@ struct extract_simple_object
 };
 
 PyTypeObject SimpleType = {
-    PyObject_HEAD_INIT(NULL)
-    0,
-    "Simple",
+    PyVarObject_HEAD_INIT(NULL, 0)
+    const_cast<char*>("Simple"),
     sizeof(SimpleObject),
     0,
     dealloc,    /* tp_dealloc */
@@ -159,7 +157,7 @@ PyTypeObject SimpleType = {
 PyObject* new_simple()
 {
     SimpleObject* simple = PyObject_New(SimpleObject, &SimpleType);
-    simple->x.s = "hello, world";
+    simple->x.s = const_cast<char*>("hello, world");
     return (PyObject*)simple;
 }
 

@@ -27,8 +27,8 @@ namespace boost_python_test {
     private:
       std::string country;
     public:
-      world(const std::string& country) {
-        this->country = country;
+      world(const std::string& _country) {
+        this->country = _country;
       }
       std::string greet() const { return "Hello from " + country + "!"; }
       std::string get_country() const { return country; }
@@ -40,8 +40,7 @@ namespace boost_python_test {
     boost::python::tuple
     getinitargs(const world& w)
     {
-        using namespace boost::python;
-        return make_tuple(w.get_country());
+        return boost::python::make_tuple(w.get_country());
     }
   };
 
