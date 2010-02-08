@@ -59,7 +59,13 @@ void eval_test()
 void exec_test()
 {
   // Register the module with the interpreter
-  if (PyImport_AppendInittab("embedded_hello", initembedded_hello) == -1)
+  if (PyImport_AppendInittab(const_cast<char*>("embedded_hello"),
+#if PY_VERSION_HEX >= 0x03000000 
+			     PyInit_embedded_hello 
+#else 
+			     initembedded_hello 
+#endif 
+			     ) == -1) 
     throw std::runtime_error("Failed to add embedded_hello to the interpreter's "
                  "builtin modules");
   // Retrieve the main module
@@ -105,49 +111,76 @@ void exec_test_error()
 {
   // Execute a statement that raises a python exception.
   python::dict global;
-  python::object result = python::exec("print unknown \n", global, global);
+  python::object result = python::exec("print(unknown) \n", global, global);
 }
 
-int main(int argc, char **argv)
+void exercise_embedding_html()
 {
-  BOOST_TEST(argc == 2);
-  std::string script = argv[1];
-  // Initialize the interpreter
-  Py_Initialize();
+    using namespace boost::python;
+    /* code from: libs/python/doc/tutorial/doc/tutorial.qbk
+       (generates libs/python/doc/tutorial/doc/html/python/embedding.html)
+     */
+    object main_module = import("__main__");
+    object main_namespace = main_module.attr("__dict__");
 
-  if (python::handle_exception(eval_test) ||
-      python::handle_exception(exec_test) ||
-      python::handle_exception(boost::bind(exec_file_test, script)))
+    object ignored = exec("hello = file('hello.txt', 'w')\n"
+                          "hello.write('Hello world!')\n"
+                          "hello.close()",
+                          main_namespace);
+}
+
+void check_pyerr(bool pyerr_expected=false)
+{
+  if (PyErr_Occurred())
   {
-    if (PyErr_Occurred())
-    {
+    if (!pyerr_expected) {
       BOOST_ERROR("Python Error detected");
       PyErr_Print();
     }
-    else
-    {
-        BOOST_ERROR("A C++ exception was thrown  for which "
-                    "there was no exception handler registered.");
-    }
-  }
-  
-  if (python::handle_exception(exec_test_error))
-  {
-    if (PyErr_Occurred())
-    {
-      PyErr_Print();
-    }
-    else
-    {
-        BOOST_ERROR("A C++ exception was thrown  for which "
-                    "there was no exception handler registered.");
+    else {
+      PyErr_Clear();
     }
   }
   else
   {
-      BOOST_ERROR("Python exception expected, but not seen.");
+    BOOST_ERROR("A C++ exception was thrown  for which "
+                "there was no exception handler registered.");
+  }
+}
+
+int main(int argc, char **argv)
+{
+  BOOST_TEST(argc == 2 || argc == 3);
+  std::string script = argv[1];
+  // Initialize the interpreter
+  Py_Initialize();
+
+  if (python::handle_exception(eval_test)) {
+    check_pyerr();
+  }
+  else if(python::handle_exception(exec_test)) {
+    check_pyerr();
+  }
+  else if (python::handle_exception(boost::bind(exec_file_test, script))) {
+    check_pyerr();
   }
   
+  if (python::handle_exception(exec_test_error))
+  {
+    check_pyerr(/*pyerr_expected*/ true);
+  }
+  else
+  {
+    BOOST_ERROR("Python exception expected, but not seen.");
+  }
+
+  if (argc > 2) {
+    // The main purpose is to test compilation. Since this test generates
+    // a file and I (rwgk) am uncertain about the side-effects, run it only
+    // if explicitly requested.
+    exercise_embedding_html();
+  }
+
   // Boost.Python doesn't support Py_Finalize yet.
   // Py_Finalize();
   return boost::report_errors();
