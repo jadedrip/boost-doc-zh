@@ -5,7 +5,7 @@
  * accompanying file LICENSE_1_0.txt or copy at
  * http://www.boost.org/LICENSE_1_0.txt)
  *
- * $Id: random_device.cpp 24096 2004-07-27 03:43:34Z dgregor $
+ * $Id: random_device.cpp 52492 2009-04-19 14:55:57Z steven_watanabe $
  *
  */
 
@@ -22,7 +22,7 @@ const boost::random_device::result_type boost::random_device::max_value;
 #endif
 
 
-#ifdef __linux__
+#if defined(__linux__) || defined (__FreeBSD__)
 
 // the default is the unlimited capacity device, using some secure hash
 // try "/dev/random" for blocking when the entropy pool has drained
@@ -90,7 +90,7 @@ private:
   int fd;
 };
 
-#endif // __linux__
+#endif // __linux__ || __FreeBSD__
 
 
 boost::random_device::random_device(const std::string& token)

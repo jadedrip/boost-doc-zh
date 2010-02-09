@@ -1,10 +1,6 @@
 <!DOCTYPE html PUBLIC "-//W3C//DTD HTML 4.01 Transitional//EN">
 <html><head>
-<meta http-equiv="Content-Type" content="text/html; charset=utf-8"><title>Boost 随机数库：生成器</title>
-
-</head>
-
-
+<meta http-equiv="Content-Type" content="text/html; charset=utf-8"><title>Boost 随机数库：生成器</title></head>
 <body style="color: rgb(0, 0, 0); background-color: rgb(255, 255, 255);">
 <h1>随机数库：生成器</h1>
 <ul>
@@ -226,9 +222,11 @@ m。生成器的参数是 x(0), a, c, m。模板参数 <code>IntType</code>
 <h3>成员</h3>
 <pre>explicit linear_congruential(IntType x0 = 1)<br></pre>
 <p><strong>效果：</strong>构造一 <code>linear_congruential</code>
-生成器，令其 x(0) := <code>x0</code>。</p>
+生成器，以 <code>x0</code> 作为种子。</p>
 <pre>void seed(IntType x0)<br></pre>
-<p><strong>效果：</strong>令生成器当前的 x(n) 值为 <code>x0</code>。</p>
+<p><strong>效果：</strong>如果 <code>c</code> mod <code>m</code> 为零且 <code>x0</code> mod 
+<code>m</code> 为零，则将生成器的当前值改为1。否则，改为 <code>x0</code> mod <code>m</code>。如果 <code>c</code> 
+为零，则在区间 [1,m) 中的不同种子将使生成器处于不同状态。如果 <code>c</code> 非零，则区间为 [0,m)。</p>
 <h3><a name="minstd_rand" id="minstd_rand">专门化</a></h3>
 <p>专门化 <code>minstd_rand0</code> 来自以下资料：</p>
 <blockquote> A pseudo-random number generator for the System/360,
@@ -266,7 +264,7 @@ Vol. 31, No. 10, October 1988, pp. 1192-1201 </blockquote>
 <h2><a name="additive_combine" id="additive_combine"><code>random::additive_combine</code>类
 模板</a></h2>
 <h3>概览</h3>
-<pre>#include &lt;<a href="../../boost/random/additive_combine.hpp">boost/random/additive_combine.hpp</a>&gt;<br><br>template&lt;class MLCG1, class MLCG2, typename MLCG1::result_type val&gt;<br>class random::additive_combine<br>{<br>public:<br> typedef MLCG1 first_base;<br> typedef MLCG2 second_base;<br> typedef typename MLCG1::result_type result_type;<br> static const bool has_fixed_range = true;<br> static const result_type min_value = 1;<br> static const result_type max_value = MLCG1::max_value-1;<br> additive_combine();<br> additive_combine(typename MLCG1::result_type seed1, <br> typename MLCG2::result_type seed2);<br> result_type operator()();<br> bool validation(result_type x) const;<br>};<br><br>typedef random::additive_combine&lt;<br> random::linear_congruential&lt;int32_t, 40014, 0, 2147483563, 0&gt;,<br> random::linear_congruential&lt;int32_t, 40692, 0, 2147483399, 0&gt;,<br> /* unknown */ 0&gt; ecuyer1988;<br><br></pre>
+<pre>template&lt;class MLCG1, class MLCG2, typename MLCG1::result_type val&gt;<br>class random::additive_combine<br>{<br>public:<br>  typedef MLCG1 first_base;<br>  typedef MLCG2 second_base;<br>  typedef typename MLCG1::result_type result_type;<br>  static const bool has_fixed_range = true;<br>  static const result_type min_value = 1;<br>  static const result_type max_value = MLCG1::max_value-1;<br>  additive_combine();<br>  additive_combine(typename MLCG1::result_type seed);<br>  additive_combine(typename MLCG1::result_type seed1, <br>                   typename MLCG2::result_type seed2);<br>  void seed();<br>  void seed(typename MLCG1::result_type seed);<br>  void seed(typename MLCG1::result_type seed1, <br>            typename MLCG2::result_type seed2);<br>  result_type operator()();<br>  bool validation(result_type x) const;<br>};<br><br>typedef random::additive_combine&lt;<br>    random::linear_congruential&lt;int32_t, 40014, 0, 2147483563, 0&gt;,<br>    random::linear_congruential&lt;int32_t, 40692, 0, 2147483399, 0&gt;,<br>  /* unknown */ 0&gt; ecuyer1988;<br><br></pre>
 <h3>描述</h3>
 <p><code>additive_combine</code> 类模板的实例是 <a href="random-concepts.html#pseudo-rng">伪随机数生成器</a>
 的模型。它把两个倍增线性同余生成器 (即 c = 0 的生成器) 组合起来。以下资料给出了其描述：</p>
@@ -281,11 +279,16 @@ Generators", Pierre L'Ecuyer, Communications of the ACM, Vol. 31, No.
 <h3>成员</h3>
 <pre>additive_combine()<br></pre>
 <p><strong>效果：</strong>用两个基础生成器的默认构造函数来构造一 <code>additive_combine</code>
-生成器。</p>
+生成器。</p><pre>additive_combine(typename MLCG1::result_type seed)<br></pre>
+<p><strong>效果：</strong>构造一个 <code>additive_combine</code> 
+生成器，用&nbsp;<code>seed</code> 作为两个基础生成器的构造函数参数。</p>
 <pre>additive_combine(typename MLCG1::result_type seed1, <br> typename MLCG2::result_type seed2)<br></pre>
 <p><strong>效果：</strong>以 <code>seed1</code>
 和 <code>seed2</code> 分别为两基础构造函数的参数来构造一 <code>additive_combine</code>
-生成器。</p>
+生成器。</p><pre>void seed()<br></pre>
+<p><strong>效果：</strong>用两个基础生成器的缺省种子来 Seed 一个 <code>additive_combine</code> 生成器。</p><pre>void seed(typename MLCG1::result_type seed)<br></pre>
+<p><strong>效果：</strong>用 <code>seed</code> 作为两个基础生成器的种子来 Seed 一个 <code>additive_combine</code> 生成器。</p><pre>void seed(typename MLCG1::result_type seed1, <br>          typename MLCG2::result_type seed2)<br></pre>
+<p><strong>效果：</strong>用 <code>seed1</code> and <code>seed2</code> 分别作为第一个和第二个基础生成器的种子来 Seed 一个 <code>additive_combine</code> 生成器。</p>
 <h3><a name="ecuyer1988" id="ecuyer1988">专门化</a></h3>
 <p>专门化 <code>ecuyer1988</code> 在上面的资料中给出。</p>
 <h2><a name="shuffle_output" id="shuffle_output"><code>random::shuffle_output</code>
@@ -434,7 +437,7 @@ KBytes。</p>
 <p><strong>效果：</strong>调用 <code>seed(331u)</code>。</p>
 <pre>void seed(uint32_t value)<br></pre>
 <p><strong>效果：</strong>用 <code>value</code>
-作参数构造一 <code>minstd_rand0</code>，并用它作参数调用 <code>seed</code>。</p>
+作参数构造一 <code>minstd_rand0</code>，并用它作参数调用 <code>seed</code>。区间 [1, 2147483647) 中的不同种子将生成不同状态的生成器。其它种子则等同于该区间中的某个种子。详情请见 <a href="#linear_congruential">linear_congruential</a>。</p>
 <pre>template&lt;class Generator&gt; void seed(Generator &amp; gen)<br></pre>
 <p><strong>效果：</strong>令 <code>lagged_fibonacci</code>_01
 的状态为对 <code>uniform_01&lt;gen, FloatType&gt;</code>
