@@ -329,13 +329,13 @@ class runner:
     def command_test_run(self):
         self.import_utils()
         if self.pjl_toolset != 'python':
-            test_cmd = '%s -d2 --dump-tests %s "--build-dir=%s" >>"%s" 2>&1' % (
+            test_cmd = '%s -d2 preserve-test-targets=off --dump-tests %s "--build-dir=%s" >>"%s" 2>&1' % (
                 self.bjam_cmd( self.toolsets ),
                 self.bjam_options,
                 self.regression_results,
                 self.regression_log )
         else:
-            test_cmd = '%s -d1 --dump-tests --verbose-test %s "--build-dir=%s" "--out-xml=%s"' % (
+            test_cmd = '%s -d1 preserve-test-targets=off --dump-tests --verbose-test %s "--build-dir=%s" "--out-xml=%s"' % (
                 self.bjam_cmd( self.toolsets ),
                 self.bjam_options,
                 self.regression_results,
@@ -534,8 +534,8 @@ class runner:
             raise
 
     def command_show_revision(self):
-        modified = '$Date: 2008-12-15 07:16:41 -0500 (Mon, 15 Dec 2008) $'
-        revision = '$Revision: 50275 $'
+        modified = '$Date: 2010-01-13 13:03:18 -0500 (Wed, 13 Jan 2010) $'
+        revision = '$Revision: 58983 $'
 
         import re
         re_keyword_value = re.compile( r'^\$\w+:\s+(.*)\s+\$$' )
