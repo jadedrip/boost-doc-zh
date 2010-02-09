@@ -38,7 +38,7 @@ int get_posix_compile_options(boost::regex_constants::syntax_option_type opts)
    {
    case regbase::perl:
       result = (opts & regbase::no_perl_ex) ? REG_EXTENDED : REG_PERL;
-      if(opts & (regbase::no_bk_refs|regbase::no_mod_m|regbase::mod_x|regbase::mod_s|regbase::no_mod_s|regbase::no_escape_in_lists))
+      if(opts & (regbase::no_bk_refs|regbase::no_mod_m|regbase::mod_x|regbase::mod_s|regbase::no_mod_s|regbase::no_escape_in_lists|regbase::no_empty_expressions))
          return -1;
       break;
    case regbase::basic:
@@ -107,7 +107,7 @@ void test_deprecated(const char&, const test_regex_search_tag&)
       int i = 0;
       while(results[2*i] != -2)
       {
-         if(max_subs > i)
+         if((int)max_subs > i)
          {
             if(results[2*i] != matches[i].rm_so)
             {
@@ -137,7 +137,7 @@ void test_deprecated(const char&, const test_regex_search_tag&)
    if(test_info<char>::syntax_options() & ~boost::regex::icase)
       return;
    try{
-      boost::RegEx e(expression, test_info<char>::syntax_options() & boost::regex::icase);
+      boost::RegEx e(expression, (test_info<char>::syntax_options() & boost::regex::icase) != 0);
       if(e.error_code())
       {
          BOOST_REGEX_TEST_ERROR("Expression did not compile when it should have done, error code = " << e.error_code(), char);
@@ -231,7 +231,7 @@ void test_deprecated(const wchar_t&, const test_regex_search_tag&)
       int i = 0;
       while(results[2*i] != -2)
       {
-         if(max_subs > i)
+         if((int)max_subs > i)
          {
             if(results[2*i] != matches[i].rm_so)
             {
@@ -303,7 +303,7 @@ void test_deprecated(const char&, const test_invalid_regex_tag&)
       return;
    bool have_catch = false;
    try{
-      boost::RegEx e(expression, test_info<char>::syntax_options() & boost::regex::icase);
+      boost::RegEx e(expression, (test_info<char>::syntax_options() & boost::regex::icase) != 0);
       if(e.error_code())
          have_catch = true;
    }
