@@ -1,12 +1,12 @@
 /////////1/////////2/////////3/////////4/////////5/////////6/////////7/////////8
 // test_diamond.cpp
 
-// (C) Copyright 2002 Vladimir Prus. 
+// (C) Copyright 2002-2009 Vladimir Prus and Robert Ramey. 
 // Use, modification and distribution is subject to the Boost Software
 // License, Version 1.0. (See accompanying file LICENSE_1_0.txt or copy at
 // http://www.boost.org/LICENSE_1_0.txt)
 
-// test of serialization library for diamond intheritence situations
+// test of serialization library for diamond inheritence situations
 
 #include <cstddef> // NULL
 #include <fstream>
@@ -45,7 +45,8 @@ public:
     void save(Archive &ar, const unsigned int /* file_version */) const
     {
         std::cout << "Saving base\n";
-        ar << BOOST_SERIALIZATION_NVP(i) << BOOST_SERIALIZATION_NVP(m);
+        ar << BOOST_SERIALIZATION_NVP(i);
+        ar << BOOST_SERIALIZATION_NVP(m);
         ++save_count;
     }
 
@@ -53,7 +54,8 @@ public:
     void load(Archive & ar, const unsigned int /* file_version */)
     {
         std::cout << "Restoring base\n";
-        ar >> BOOST_SERIALIZATION_NVP(i) >> BOOST_SERIALIZATION_NVP(m);
+        ar >> BOOST_SERIALIZATION_NVP(i);
+        ar >> BOOST_SERIALIZATION_NVP(m);
         ++load_count;
     }
 
@@ -63,7 +65,7 @@ public:
     {
         return i == another.i && m == another.m;
     }
-    // make virtual to evade gcc quirk
+    // make polymorphic by marking at least one function virtual
     virtual ~base() {};
 private:
     int i;

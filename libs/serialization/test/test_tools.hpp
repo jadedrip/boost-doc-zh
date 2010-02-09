@@ -17,6 +17,7 @@
 //  See http://www.boost.org for updates, documentation, and revision history.
 
 #include <cstdio> // remove, tmpnam
+#include <cstddef> // size_t
 #ifndef BOOST_NO_EXCEPTION_STD_NAMESPACE
     #include <exception>
 #endif
@@ -29,7 +30,7 @@
 // Substitute a primitive implementation here.
 namespace boost {
 namespace archive {
-    char * tmpnam(char * buffer){
+    const char * tmpnam(char * buffer){
         static char ibuffer [512];
         if(NULL == buffer)
             buffer = ibuffer;
@@ -72,9 +73,9 @@ namespace std{
 
 namespace boost {
 namespace archive {
-    char * test_filename(char * dir = NULL, char *fname = NULL){
+    const char * test_filename(const char * dir = NULL, char *fname = NULL){
         static char ibuffer [512];
-        int i;
+        std::size_t i;
         ibuffer[0] = '\0';
         if(NULL == dir){
             dir = boost::archive::tmpdir();
@@ -94,8 +95,8 @@ namespace archive {
         }
         return ibuffer;
     }
-    char * tmpnam(char * buffer){
-        char * name = test_filename(NULL, NULL);
+    const char * tmpnam(char * buffer){
+        const char * name = test_filename(NULL, NULL);
         if(NULL != buffer){
             STRCPY(buffer, name);
         }
