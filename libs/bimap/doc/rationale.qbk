@@ -12,7 +12,7 @@ http://www.boost.org/LICENSE_1_0.txt)
 
 [/ QuickBook Document version 1.4 ]
 
-[section Rationale]
+[section:rationale Rationale 原理]
 
 This section assumes that you have read all other sections, the most of
 important of which being ['tutorial], ['std::set theory] and the ['reference],
@@ -23,18 +23,24 @@ be a lot easier to read this rationale. The following section is little
 more than a rationale. This library was coded in the context of the
 Google SoC 2006 and the student and mentor were in different continents.
 A great deal of email flowed between Joaquin and Matias. The juiciest
-parts of the conversations where extracted and rearranged here.
+parts of the conversations where extracted and rearranged here.\n
+到了本节，我们假定你已经读过其它各节了，其中最重要的的是 ['指南], ['std::set 理论] 和 ['参考] 这几部分，而且你也已经测试过本库。
+我们做了很大努力，使得本库的接口尽可能直观和干净。如果你明白，而且也希望本库的接口是这样的，那么阅读本节原理会容易得多。
+以下章节所讲的会比原理更多一点。本库是在 Google SoC 2006 的环境下编码的，其中的学生和导师来自不同的地区。
+Joaquin 和 Matias 之间交换了大量邮件。其中最有趣的交谈将会在这里提及和重新排列。
 
 [note To browse the code, you can use the [@doxydoc/index.html ['Bimap Complete Reference]], a
-doxygen-powered document targeted at developers.
+doxygen-powered document targeted at developers.\n
+要浏览代码，你可以使用 [@doxydoc/index.html ['Bimap 完整参考]]，它是一个面向开发者的 doxygen 文档。
 ]
 
-[section General Design]
+[section:general_design General Design 概要设计]
 
 The initial explanation includes few features. This section aims to
 describe the general design of the library and excludes details of those
 features that are of lesser importance; these features will be
-introduced later.
+introduced later.\n
+最初的想法包括少数几个特性。本节的目的是描述本库的概要设计，不包含那些较不太重要的特性的细节；那些特性将在稍后介绍。
 
 The design of the library is divided into two parts. The first is the
 construction of a [^relation] class. This will be the object stored and
@@ -42,9 +48,13 @@ managed by the [^multi_index_container] core. The idea is to make this
 class as easy as possible to use, while making it efficient in terms of
 memory and access time. This is a cornerstone in the design of
 [*Boost.Bimap] and, as you will see in this rationale, the rest of the
-design follows easily.
+design follows easily.\n
+本库的设计被分为两部分。第一部分是构造一个 [^relation] 类。它是由 [^multi_index_container] 来保存和管理的对象。
+这一想法使得这个类尽可能易用，同时在内存和访问时间上也保证了高效。
+这是 [*Boost.Bimap] 的设计的基础，而且你将会看到，剩下的设计就很容易了。
 
-The following interface is necessary for the [^relation] class:
+The following interface is necessary for the [^relation] class:\n
+以下接口对于 [^relation] 类是必需的：
 
     typedef -unspecified- TA; typedef -unspecified- TB;
 
@@ -87,32 +97,46 @@ order to be useful, it had to achieve zero overhead over the wrapped
 [*Boost.MultiIndex] container. Finally, there is another constraint that
 can be relaxed: conformance to C++ standards, but this is quite
 unacceptable. Let us now suppose that we have coded this class, and it
-conforms to what was required.
+conforms to what was required.\n
+虽然看起来很简单，不过很快会看到，这是本库中最难写的代码。如果我们放松一些效率上的约束，确实会容易得多。
+例如，如果我们允许一个关系的大小比它各组件的大小之和大一点，这是很普通的。同样，如果访问时间不重要，也会简单得多。
+但是，关于 [*Boost.Bimap]，我们所作的首要决策是，为了其可用性，与其所包装的 [*Boost.MultiIndex] 容器，它必须没有任何多加的消耗。
+最后，有另一个约束可以放松：与C++标准的一致性，不过这也是很不可接受的。现在让我们假设，我们已经写出了这个类，而且它完全符合以上要求。
 
 The second part is based on this [^relation] class. We can now view the
 data in any of three ways: `pair<A,B>`, `relation<A,B>` and `pair<B,A>`.
 Suppose that our bimap supports only one-to-one relations. (Other
 relation types are considered additional features in this design.)
 The proposed interface is very simple, and it is based heavily on the
-concepts of the STL. Given a `bimap<A,B> bm`:
+concepts of the STL. Given a `bimap<A,B> bm`:\n
+第二部分基于这个 [^relation] 类。我们现在可以用三种方式来察看其中的数据：`pair<A,B>`, `relation<A,B>` 和 `pair<B,A>`。
+假设我们的 bimap 只支持一对一关系(其它关系类型在本设计中被当作额外的特性)。
+那么，建议的接口非常简单，它几乎完全基于STL中的同类概念。给定一个 `bimap<A,B> bm`：
 
-# `bm.left` is signature-compatible with a `std::map<A,B>`
-# `bm.right` is signature-compatible with a `std::map<B,A>`
-# `bm` is signature-compatible with a `std::set<relation<A,B> >`
+# `bm.left` is signature-compatible with a `std::map<A,B>`\n
+  `bm.left` 签名兼容于 `std::map<A,B>` 
+# `bm.right` is signature-compatible with a `std::map<B,A>`\n
+  `bm.right` 签名兼容于 `std::map<B,A>` 
+# `bm` is signature-compatible with a `std::set<relation<A,B> >`\n
+  `bm` 签名兼容于 `std::set<relation<A,B> >` 
 
 __SIMPLE_BIMAP__
 
 This interface is easily learned by users who have a STL background, as
-well as being simple and powerful. This is the general design.
+well as being simple and powerful. This is the general design.\n
+这个接口对于有STL背景的用户来说很容易学习，既简单又强大。这就是本库的概要设计。
 
-[heading Relation Implementation]
+[heading Relation Implementation  Relation的实现]
 
-This section explains the details of the actual [^relation] class implementation.
+This section explains the details of the actual [^relation] class implementation.\n
+本节解释实际的 [^relation] 类的实现细节。
 
 The first thing that we can imagine is the use of an [^union]. Regrettably,
 the current C++ standard only allows unions of POD types. For the views,
 we can try a wrapper around a `relation<A,B>` that has two references
-named first and second that bind to `A` and `B`, or to `B` and `A`.
+named first and second that bind to `A` and `B`, or to `B` and `A`.\n
+我们能想到的第一件事是用一个 [^union]。遗憾的是，当前的C++标准只允许POD类型的联合。从这一点出发，
+我们可以尝试一个 `relation<A,B>` 的包装，其中有两个名为 first 和 second 的引用，分别绑定到 `A` 和 `B`，或 `B` 和 `A`。
 
     relation<TA,TB> r;
 
@@ -124,17 +148,23 @@ references are initialized at every access and using of `pba.first` will
 be slower in most compilers than using `r.left` directly . There is
 another hidden drawback of using this scheme: it is not
 iterator-friendly, since the map views iterators must be degraded to
-['Read Write] instead of ['LValue]. This will be explained later.
+['Read Write] instead of ['LValue]. This will be explained later.\n
+这样来编写 relation 类的代码倒是不难，不过在每次访问时都要初始化这两个引用，在绝大多数编译器中，
+使用 `pba.first` 比直接使用 `r.left` 要慢。使用这一机制还有另一个隐藏的缺点：
+它不太好进行迭代，因为映射视图迭代器必须退化为['读写的]而不是['左值的]。这一点我们稍后再解释。
 
 At first, this seems to be the best we can do with the current C++
 standard. However there is a solution to this problem that does not
 conform very well to C++ standards but does achieve zero overhead in
 terms of access time and memory, and additionally allows the view
-iterators to be upgraded to ['LValue] again.
+iterators to be upgraded to ['LValue] again.\n
+起先，这看起来是在当前的C++标准中我们可以做到的最佳方法。不过，这个问题还有一个解决方法，
+它不太符合C++标准，但可以不增加实现访问时间和内存消耗，并且可以使得视图迭代重新升级为['左值的]。
 
 In order to use this, the compiler must conform to a
 layout-compatibility clause that is not currently in the standard but is
-very natural. The additional clause imposes that if we have two classes:
+very natural. The additional clause imposes that if we have two classes:\n
+为了使用它，编译器必须符合"布局兼容条款"，目前它还不是标准，但它是很自然的。这个条款要求，如果我们有两个类：
 
     struct class_a_b
     {
@@ -153,7 +183,9 @@ then the storage layout of [^class_a_b] is equal to the storage layout of
 standards-compliant C++ compiler, welcome to the club. It is the natural
 way to implement it from the point of view of the compiler's vendor and
 is very useful for the developer. Maybe it will be included in the
-standard some day. Every current compiler conforms to this.
+standard some day. Every current compiler conforms to this.\n
+那么，[^class_a_b] 的存储布局等于 [^class_b_a] 的存储布局。如果你对一个符合标准的C++编译器并不保证这一点感到惊讶，欢迎加入本俱乐部。
+从编译器厂商的角度出发，实现这一点是很自然的，而且对于开发者也很有用。也许某一天它会被纳入标准。当前各个编译器都满足这一点。
 
 If we are able to count on this, then we can implement an idiom called
 [^mutant]. The idea is to provide a secure wrapper around [^reinterpret_cast].
@@ -164,13 +196,19 @@ compile time that the requested view is declared in the mutant views list.
 We implement a class name `structured_pair` that is signature-compatible
 with a `std::pair`, while the storage layout is configured with a third
 template parameter. Two instances of this template class will provide
-the views of the relation.
+the views of the relation.\n
+如果你能够依靠这一点，那么我们可以实现一个名为 ['mutant] 的惯用法。这个方法是在 [^reinterpret_cast] 外围提供一个安全的包装。
+一个类可以声明它可以用哪些不同的存储兼容的视图类来察看。然后我们用普通函数 [^mutate<view>(mutant)] 来获得视图。
+`mutate` 函数在编译期检查所请示的视图是否在 mutant 视图列表的声明之中。我们实现一个名为 `structured_pair` 的类，
+它签名兼容于 `std::pair`，而存储布局则由第三个模板参数来配置。这个模板类的两个实例就提供了关系视图。
 
 The thing is that if we want to be standards-compliant, we cannot use
 this approach. It is very annoying not to be able to use something that
 we know will work with every compiler and that is far better than
 alternatives. So -- and this is an important decision -- we have to find
-a way to use it and still make the library standards-compliant.
+a way to use it and still make the library standards-compliant.\n
+问题是，如果我们要符合标准的话，就不能使用这一方法。我们知道这个方法在各个编译器上都可行，而且比其它方法都好，
+却不能使用它，这是很讨厌的。所以 -- 这是一个重要的决定 -- 我们必须找到一个方法来使用它，并且依然符合标准。
 
 The idea is very simple. We code both approaches: the
 const_reference_pair-based and the mutant-based, and use the mutant
@@ -179,16 +217,20 @@ clause. If the compiler really messes things up, we degrade the
 performance of the bimap a little. The only drawback here is that, while
 the mutant approach allows to make ['LValue] iterators, we have to degrade
 them to ['Read Write] in both cases, because we require that the same code
-be compilable by any standards-compliant compiler.
+be compilable by any standards-compliant compiler.\n
+想法很简单。我们按两个方法编码：基于 const_reference_pair 和基于 mutant，如果编译器符合我们新的布局兼容条款就使用 mutant 方法。
+如果编译器确实不支持，我们就把 bimap 的性能降低一点点。这里唯一的缺点是，虽然 mutant 方法可以得到['左值]迭代器，
+但是我们不得不在两种方法中都将它退化为['读写]迭代器，因为我们要求相同的代码要兼容于任何符合标准的编译器。
 
 [note
 Testing this approach in all the supported compilers indicated that the
 mutant idiom was always supported. The strictly compliant version was
-removed from the code because it was never used.
+removed from the code because it was never used.\n
+在所有支持的编译器上测试了这一方法，结果表明 mutant 惯用法全被支持。严格符合标准的版本被从代码中删掉了，因为它不会被使用到。
 ]
 
 
-[heading Bimap Implementation]
+[heading Bimap Implementation  Bimap的实现]
 
 The core of bimap will be obviously a `multi_index_container`. The basic
 idea to tackle the implementation of the bimap class is to use
@@ -207,40 +249,59 @@ iterators instead of the originals. For example, if you have a
 `std::set<int>` using `set_adaptor` and [^iterator_adaptor]. The combined use
 of this two tools is very powerful. A [^container_adaptor] can take classes
 that do not fulfil all the requirements of the adapted container. The
-new container must define these missing functions.
+new container must define these missing functions.\n
+bimap 的核心显然是一个 `multi_index_container`。实现 bimap 类的基本想法是，
+使用 [^iterator_adaptor] 将 Boost.MultiIndex 的迭代器转换为 `std::map` 和 `std::set` 的行为。
+`map_view` 和 `set_view` 可以直接使用这个新的迭代器和核心容器各索引外围的一个包装器来实现。
+但是，这里有一个隐藏的惯用法，一旦完成编码，将对本库的其它部分和 Boost.MRU 库有很大帮助。
+沿着 `iterator_adaptor` 的思路，Boost.Bimap 的视图使用了 [^container_adaptor] 来实现。
+有几个模板类(如 `map_adaptor` 和 `set_adaptor`)，它们接受一个与 `std::map` 签名兼容的类和新的迭代器，
+并对容器进行适配，使之使用这个新迭代器代替原来的。例如，如果你有一个 `std::set<int*>`，
+你可以用 `set_adaptor` 和 [^iterator_adaptor] 构建另一个容器，使之行为与 `std::set<int>` 一样。
+这两个工具的组合使用是非常强大的。[^container_adaptor] 也可以接受未能满足可适配容器所有要求的类。
+新的容器必须对那些缺失的函数提供定义。
 
 [endsect]
 
-[section Additional Features]
+[section:additional_features Additional Features 其它特性]
 
-[heading N-1, N-N, hashed maps]
+[heading N-1, N-N, hashed maps  N-1, N-N, 散列映射]
 
 This is a very interesting point of the design. The framework introduced
 in ['std::set theory] permits the management of the different constraints
 with a very simple and conceptual approach. It is easy both to remember
 and to learn. The idea here is to allow the user to specify the collection type
 of each key directly. In order to implement this feature, we have to
-solve two problems:
+solve two problems:\n
+这是一个很有趣的设计点。在 ['std::set 理论] 中引用的框架允许以一个非常简单和直观的方法管理不同的约束。
+它很容易记住和学习。这里的想法是，允许用户直接指定每个键的组合类型。为了实现这一特性，我们必须解决两个问题：
 
 * The index types of the `multi_index_container` core now depends on
-the collection type used for each key.
+the collection type used for each key.\n
+  `multi_index_container` 核心的索引类型现在依赖于每个键所使用的组合类型。
 * The map views now change their semantics according to the collection type
-chosen.
+chosen.\n
+  映射视图的语义现在根据所选择的组合类型而有所改变。
 
 Boost.Bimap relies heavily on Boost.MPL to implement all of the
 metaprogramming necessary to make this framework work. By default, if
-the user does not specify the kind of the set, a `std::set` type is used.
+the user does not specify the kind of the set, a `std::set` type is used.\n
+Boost.Bimap 严重依赖于 Boost.MPL，以实现本框架所需的所有元编程。
+缺省地，如果用户没有指定 set 的种类，则使用 `std::set` 类型。
 
 __BIMAP_STRUCTURES__
 
-[heading Collection type of relation constraints]
+[heading Collection type of relation constraints 关系组合类型的约束]
 
 The constraints of the bimap set view are another very important
 feature. In general, Boost.Bimap users will base the set view type on
 one of the two collection types of their keys. It may be useful however to give
 this set other constraints or simply to order it differently. By
 default, Boost.Bimap bases the collection type of relations on the left collection
-type, but the user may choose between:
+type, but the user may choose between:\n
+bimap 集合视图的约束是另一个非常重要的特性。通常，Boost.Bimap 的用户将集合视图类型基于键的两个组合类型之一。
+不过，有时也需要对这一集合给予其它约束或简化，以使之不同。缺省地，Boost.Bimap 将关系组合类型基于左组合类型，
+但用户可以选择以下之一：
 
 * left_based
 * right_based
@@ -254,7 +315,9 @@ type, but the user may choose between:
 In the first two cases, there are only two indices in the
 `multi_index_core`, and for this reason, these are the preferred options.
 The implementation uses further metaprogramming to define a new index if
-necessary.
+necessary.\n
+在前两个选择中，在 `multi_index_core` 中只有两个索引，因此这是首选的方式。
+如果有必要，实现会用元编程来定义新的索引。
 
 [/
 [heading Hooking Data]
@@ -266,7 +329,7 @@ bimap so that it is not necessary to maintain another map. The
 implementation is based heavily on metaprogramming.
 ]
 
-[heading Tagged]
+[heading Tagged 标签]
 
 The idea of using tags instead of the [^member_at::side] idiom is very
 appealing since code that uses it is more readable. The only cost is
@@ -277,44 +340,58 @@ good since an user can start tagging even before completing the coding
 of the algorithm, and the untagged code continues to work. The
 development becomes a little more complicated when user-defined tags are
 included, but there are many handy metafunctions defined in the [^tagged]
-idiom that help to keep things simple enough.
+idiom that help to keep things simple enough.\n
+使用标准的方法来代替 [^member_at::side] 惯用法是很吸引人的，因为这样的代码更易读。唯一的代价是编译时间。
+['boost/bimap/tagged] 是一个非侵入式标签惯用法的实现。[^relation] 类是以这样一种方式来构建的，即使用户使用了标签，
+[^member_at::side] 惯用法也可以继续使用。这是好事，因为用户甚至可以对之前已完成的算法代码进行标签，且未标签的代码也可以继续使用。
+当包含了用户自定义标签时，开发会变得有一点复杂，但是在 [^tagged] 惯用法中定义了很多方便的元函数，帮助将事情保持在足够简单。
 
 __TAGGED__
 
 [endsect]
 
-[section Code]
+[section:code Code 代码]
 
-You can browse the code using the [@doxydoc/index.html [*Boost.Bimap doxygen docs]].
+You can browse the code using the [@doxydoc/index.html [*Boost.Bimap doxygen docs]].\n
+你可以用 [@doxydoc/index.html [*Boost.Bimap doxygen文档]] 浏览代码。
 
 The code follows the [@http://www.boost.org/more/lib_guide.htm Boost Library Requirement and Guidelines] as
-closely as possible.
+closely as possible.\n
+代码尽可能接近于 [@http://www.boost.org/more/lib_guide.htm Boost库的要求和指导]。
 
-[table folders in boost/bimap
-[[name][what is inside?]]
-[[/                     ][user level header files             ]]
-[[tagged/               ][tagged idiom                        ]]
-[[relation/             ][the bimap data                      ]]
-[[container_adaptor/    ][easy way of adapting containers     ]]
-[[views/                ][bimap views                         ]]
-[[property_map/         ][support for property map concept    ]]
+[table folders in boost/bimap  boost/bimap中的文件夹
+[[name 名字][what is inside? 里面有什么？]]
+[[`/`                   ][user level header files             \n
+用户级头文件]]
+[[tagged/               ][tagged idiom                        \n
+标签惯用法]]
+[[relation/             ][the bimap data                      \n
+bimap 的数据]]
+[[container_adaptor/    ][easy way of adapting containers     \n
+适配容器的简单方法]]
+[[views/                ][bimap views                         \n
+bimap 的视图]]
+[[property_map/         ][support for property map concept    \n
+对属性映射概念的支持]]
 ]
 
-[table folders in each folder
-[[name][what is inside?]]
-[[          ][class definitions]]
-[[support/  ][optional metafunctions and free functions]]
-[[detail/   ][things not intended for the user's eyes]]
+[table folders in each folder  在各个文件夹中的文件夹
+[[name 名字][what is inside? 里面有什么？]]
+[[          ][class definitions\n类定义]]
+[[support/  ][optional metafunctions and free functions\n可选的元函数和普通函数]]
+[[detail/   ][things not intended for the user's eyes\n不打算给用户看的东西]]
 ]
 
 [endsect]
 
-[section The student and the mentor]
+[section:the_student_and_the_mentor The student and the mentor 学生与导师]
 
 [tip It is a good idea to read the original
-[@http://h1.ripway.com/mcape/boost/libs/misc/ Boost.Misc SoC proposal] first.]
+[@http://h1.ripway.com/mcape/boost/libs/misc/ Boost.Misc SoC proposal] first.\n
+请先阅读原有的 [@http://h1.ripway.com/mcape/boost/libs/misc/ Boost.Misc SoC 建议书]。]
 
-[:[^- The discussion starts with Joaquin trying to strip out the "misc" name out of the library -]]
+[:[^- The discussion starts with Joaquin trying to strip out the "misc" name out of the library -]\n
+[^- 这一讨论从 Joaquin 试图剥去本库的 "misc" 名字开始 -]]
 
 __JOAQUIN_PHOTO__
 
@@ -329,7 +406,12 @@ What about dropping the misc principle and working on each container as a
 separate library, then? You'd have boost::bimap, boost::mru, etc, and no common
 intro to them. This also opens up the possibility to add other containers to
 the suite which aren't based on B.MI. What's your stance on this? Do you see a
-value in keeping miscs conceptually together?
+value in keeping miscs conceptually together?\n
+思考一下这个问题，MISC容器的统一原则也许是具有误导性的：当然所有 miscs 在其内部使用了多索引，
+但是这在外部接口中并不会反映出来(因为它应该如此，OTOH)。所以，从用户的角度来看，miscs 是完全异构的东西。
+此外，在你的建议中没有任何全局的机制为所有 miscs 共用。如果放开这个 misc 原则，将每个容器作为一个单独的库，又如何？
+你就有了 boost::bimap, boost::mru, 等等，它们没有共同的说明。这也开放了一个可能性，添加其它容器到这个不是基于 B.MI 的套件中。
+你对此有何立场？你认为值得一起保持 miscs 概念吗？
 ]]
 
 __MATIAS_PHOTO__
@@ -349,7 +431,14 @@ two families in the same project because although from the outside they are
 completely unrelated, the work I will have to do in order to build the libraries 
 will be consistent and what I will learn coding the bimap family will be used 
 when I start to code the mru family. When the mru family is in place, I will 
-surely have learnt other things to improve the bimap group.
+surely have learnt other things to improve the bimap group.\n
+作为原来的提案，只有两个容器 (bimap 和 mru set)，它们均基于 B.MI, 将它们组合在一起是很显然的。
+当我编写 SoC 建议时，我经历了类似的感觉，两个类族开始增长。正如你所说，唯一的共同点是它们的内部实现。
+我想了一个更为通用的框架，以合并这两个类族(以及其它内部相关的类)，最终想出一个主意：Boost.MultiIndex! 
+因此，我认为试图统一这两个类族并不是一个好主意，我投票赞同去除 boost::misc::bimap 和 boost::misc::mru 的 misc 部分。
+无论如何，对于我们 SoC 应用来说，将这两个类族放在同一个项目中是OK的，因为毕竟从外面看它们是完全无关的，
+为了构建这些库，我必须要做的工作就是一致性，我从 bimap 类族的编码中学到的，在我编写 mru 类族时也会有用。
+当 mru 类族写好后，我也确定会学到其它东西以改进 bimap 类族。
 ]]
 [:['
 On the other hand, I think it will be useful for the general user to
@@ -360,14 +449,20 @@ containers. For now, a link to boost::bimap and other one to boost::mru
 will suffice. If you think about the title of such a document,
 you will probably come up with something like: Common Multi Index
 Specialized Containers, and we are back to our misc proposal.
-So, to order some ideas:
+So, to order some ideas:\n
+另一方面，我认为普通用户至少有一些文档链接到 B.MI 文档是有帮助的，这些文档列举了最常见的用例(例如一个 bimap 和一个 mru set )，
+并指出在哪里可以找到这些容器的干净实现。现在，有一个到 boost::bimap 的链接和另一个到 boost::mru 的链接就足够了。
+如果你要为这个文档想一个标题，你可以用这样的名字：通用多索引专用容器，我们又回到了我们的 misc 建议。所以，有以下想法：
 ]]
 [:['- A new family of containers that can be accessed by both key will
-be created. (boost::bimap)]]
+be created. (boost::bimap)\n
+- 一个新的，可以通过两个键来访问的容器族被创建。(boost::bimap)]]
 [:['- A new family of time aware containers will see the light.
-(boost::mru)]]
+(boost::mru)\n
+- 一个新的时间感知的容器族将问世。(boost::mru)]]
 [:['- A page can be added to B.MI documentation, titled misc that links
-this new libraries.]]
+this new libraries.\n
+- 向 B.MI 文档中增加一页，标题为 misc，链接到新的库。]]
 [:['
 This is a clearer framework for the user. They can use a mru container
 without hearing about Boost.MultiIndex at all.
@@ -379,17 +474,26 @@ without compromising the more general boost framework.
 The word "misc" it is going to disappear from the code and
 the documentation of bimap and mru. From now on the only use for it will be to
 identify our SoC project. I am thinking in a name for the bimap library.
-What about Boost.BidirectionalMap? Ideas?
+What about Boost.BidirectionalMap? Ideas?\n
+对于用户来说，这是一个更为清晰的框架。他们可以使用 mru 容器而无须知道 Boost.MultiIndex。
+而且 B.MI 的用户则得到一些他们常用的容器，这些容器已经在其它库中实现了STL友好的接口。
+正如你所指出的，这样更可扩展，因为它向 bimap 和 mru 类族的其它库打开了大门，而不仅是 Boost.MultiIndex，
+同时也没有损害更为通用的 boost 框架。单词 "misc" 正从代码和 bimap 及 mru 的文档中消失。
+从现在起，它的唯一用处就是确定我们的 SoC 项目。我正在考虑为 bimap 库起一个名字。
+叫 Boost.BidirectionalMap 如何？有没有其它想法？
 ]]
 
 [*Joaquin]
 [:['
 Yes, Boost.Bimap. In my opinion, bimap is a well known name
 in the Boost and even in the C++ community. It sounds and is short. Why not to
-vindicate yourself as the owner of this name?
+vindicate yourself as the owner of this name?\n
+是的，叫 Boost.Bimap 吧。我认为，bimap 是一个在 Boost 甚至在 C++ 社区中人所共知的名字。
+它很响亮，也较短。作为这个名字的所有者，你为什么维护自身呢？
 ]]
 
-[^- Then after a week of work -]
+[^- Then after a week of work -\n
+- 在一周的工作后 -]
 
 [*Matias]
 [:['
@@ -397,18 +501,22 @@ Now that Boost.Bimap is getting some shape, I see that as
 you have told me, we must offer a "one_to_many_map" and a "multi_bimap"
 as part of the library. The framework I am actually working allowed to
 construct this kind of bidirectional maps and it is easy to understand from
-the user side.
+the user side.\n
+现在 Boost.Bimap 已经有点成形了，我看到了你所说的，我们必须提供一个 "一对多映射" 和一个 "multi_bimap" 作为本库的一部分。
+我所使用的框架其实是允许构建这种双向映射的，而且从用户侧来说也很容易理解。
 ]]
 
 [*Joaquin]
 [:['
-OK, I am glad we agree on this point.
+OK, I am glad we agree on this point.\n
+好的，我很高兴我们都同意这一点。
 ]]
 
 [*Matias]
 [:['
 With respect to the symmetry of the key access names, I have to
-agree that there is not much a difference between the following ones:
+agree that there is not much a difference between the following ones:\n
+关于键访问名的对称性，我必须同意以下几个并没有太大的区别：
 ]]
 [:['- to - from]]
 [:['- to - b]]
@@ -416,13 +524,15 @@ agree that there is not much a difference between the following ones:
 [:['- left - right]]
 [:['
 In my opinion it is a matter of taste, but left/right sounds more symmetrical than
-the others.
+the others.\n
+我认为这只是一个品味的问题，但好象 left/right 比其它几个更为对称。
 ]]
 
 [*Joaquin]
 [:['
 I like very much the left/right notation, it is very simple to
-remember and it is a lot more symmetrical than to/from.
+remember and it is a lot more symmetrical than to/from.\n
+我喜欢 left/right 的记法，它很容易被记住，而且比 to/from 更为对称。
 ]]
 
 [*Matias]
@@ -433,22 +543,28 @@ that B.MI is a lot more coherent and easy to use that I had imagined. This
 makes me think again in the problem. In the design that I am coding now, bimap
 *is-a* multi_index_container specializes with a data type very comfortable
 called bipair, that can be seen like any of the two maps that integrates it
-using map views. This scheme has great benefits for users:
+using map views. This scheme has great benefits for users:\n
+首先，我的想法是为了易用性隐藏 B.MI 的核心，让它直观上更象 STL。不过，我也意识到 B.MI 比我想象的更为一致和易用。
+这使得我再次考虑了这个问题。在我现在所编码的设计中，bimap 是一个以某个数据类型特化的 multi_index_container，
+该数据类型适合叫作 bipair，可以看出，它由任意两个映射使用映射视图集成而得。这种机制对于用户有很大好处：
 ]]
 [:['
 - If the user already knows B.MI, he can take advantage of the tools that
 it provides and that are not present in the STL containers. In addition, in some
-cases the use to indices to see the data can be very useful.
+cases the use to indices to see the data can be very useful.\n
+- 如果用户已经知道 B.MI，他可以利用所提供的在 STL 容器中所没有的工具。另外，在某些情形下使用索引察看数据是很有用的。
 ]]
 [:['
 - If the user does not know anything about B.MI but have an STL framework,
 the learning curve is reduced to understand the bimap instantiation and how a
-is obtained the desired map view.
+is obtained the desired map view.\n
+- 如果用户不了解 B.MI 但是有一个 STL 框架，那么学习曲线可以降低为了解 bimap 实例以及如何得到想要的映射视图。
 ]]
 [:['
 Another very important benefit holds: All the algorithms done for
 B.MI continues to work with Boost.Bimap and if B.MI continues growing, bimap
-grow automatically.
+grow automatically.\n
+另一个非常重要的好处是：所有对于 B.MI 可用的算法同样可用于 Boost.Bimap，如果 B.MI 继续发展，bimap 可以自动跟随。
 ]]
 
 [*Joaquin]
@@ -464,36 +580,46 @@ implicitly due to the same characteristics of the implementation, is
 of course heavier to maintain, but it gives a degree of freedom to change
 the guts of your software if you need to. Do not take this like a frontal
 objection, but I think that it is quite important design decision, not only
-in the context of bimap but in general.
+in the context of bimap but in general.\n
+嗯... 这是一个有趣的设计决策，但是我有保留意见。基本上你是决定暴露 bimap 的实现；
+如你所说，它有好处，不过也有不小的坏处：一旦*你将这个实现记录到文档中*，就不能再修改它了。
+这相当于与 B.MI 结合而没有机会再分开了。另一种可能性是隐藏具体的实现，复制并记录所提供的功能，
+相同的实现特性当然是增加了维护量，但是在你需要时它可以给你一个修改软件的自由度。
+不要将这个意见视为正面的反对，但我认为它是一个很重要的设计决策，不仅是在 bimap 中，而且是通用的。
 ]]
 
 [*Matias]
 [:['
 You are quite right here. I think we have to choose the hardest
 path and hide the B.MI core from the user. I am sending you the first draft of
-bimap along with some documentation.
+bimap along with some documentation.\n
+这里你是对的。我想我们必须选择最艰难的道路，向用户隐藏 B.MI 核心。我正将 bimap 的第一稿以及一些文档发给你。
 ]]
 
 [^- This completes the second week, the documentation was basically the first
-section of this rationale -]
+section of this rationale -\n
+- 第二周结束后，文档基本上就是本原理的第一节 -]
 
 [*Joaquin]
 [:['
 I must confess that I am beginning to like what I see.
 I am mathematical by vocation, and when I see symmetry in a formulation
-I believe that it is in the right track.
+I believe that it is in the right track.\n
+我必须承认，我开始喜欢所看到的东西了。我天生就是数学的，当我看到公式中的对称性时，我相信这就是正确的道路。
 ]]
 
 [*Matias]
 [:['
-We are two mathematicians by vocation then.
+We are two mathematicians by vocation then.\n
+那么我们俩天生都是数学的。
 ]]
 
 [*Joaquin]
 [:['
 I think that the part of std::set theory is very clear.
 To me, it turns out to me somewhat strange to consider the rank of a map
-(values X) like a std::set, but of course the formulation is consistent.
+(values X) like a std::set, but of course the formulation is consistent.\n
+我认为 std::set 理论的部分很清楚了。对我来说，将一个映射(值 X)的评级当成 std::set 来考虑，有点奇怪，但是当然公式是一致的。
 ]]
 
 [*Matias]
@@ -504,36 +630,49 @@ contrains on the data, and I believe that if somebody reads the code and
 sees the bimap instantiation he is not going to have problems understanding
 it. Perhaps it is easier to understand it if we use your notation:
 ordered_nonunique, unordered_unique, but this goes against our STL facade.
-In my opinion the user that comes from STL must have to learn as less as possible.
+In my opinion the user that comes from STL must have to learn as less as possible.\n
+我非常喜欢它，开始它可能有点古怪，但现在我已经习惯了，它很容易在代码上表达我对于数据的约束，
+而且我相信，如果别人来读这些代码和看到 bimap 的实例，他的理解应该不会有问题。
+如果我们使用你的记号：ordered_nonunique, unordered_unique, 也许更易于理解，但是它违背了我们的 STL 外观。
+在我认为，来自于 STL 的用户必须尽可能少地需要学习。
 ]]
 
 [*Joaquin]
 [:['
 Considering a relation like a `struct {left, right}`
 is clean and clear. If I understand it well, one relation has views of type
-`pair{first, second}`, is this correct? 
+`pair{first, second}`, is this correct? \n
+想象一下，一个象 `struct {left, right}` 这样的关系是干净和清晰的。
+如果我的理解是它不错，那么一个关系具有类型 `pair{first, second}` 的视图，是否正确？
 ]]
 
 [*Matias]
 [:['
 Yes, I believe that the left/right notation to express symmetry
-is great. I believe that to people is going to love it.
+is great. I believe that to people is going to love it.\n
+是的，我相信 left/right 记号所表达的对称性是伟大的。我相信人们会爱上它的。
 ]]
 
 [*Joaquin]
 [:['
-OK, perfect. I likes this very much:
+OK, perfect. I likes this very much:\n
+好的，漂亮。我很喜欢它们：
 ]]
-[:['- bm.left is compatible with std::map<A,B>]]
-[:['- bm.right is compatible with std::map<B,A>]]
-[:['- bm is compatible with std::set<relation<A,B>>]]
+[:['- bm.left is compatible with std::map<A,B>\n
+- bm.left 兼容于 std::map<A,B>]]
+[:['- bm.right is compatible with std::map<B,A>\n
+- bm.right 兼容于 std::map<B,A>]]
+[:['- bm is compatible with std::set<relation<A,B>>\n
+- bm 兼容于 std::set<relation<A,B>>]]
 [:['
-It is elegant and symmetric. I feel good vibrations here.
+It is elegant and symmetric. I feel good vibrations here.\n
+这既优雅又对称。这里我感到了震动。
 ]]
 
 [*Matias]
 [:['
-Great!
+Great!\n
+强!
 ]]
 
 [*Joaquin]
@@ -542,20 +681,27 @@ Moving on, the support for N-1, N-N, and hashed index is very easy
 to grasp, and it fits well in framework.
 However I do not finish to understand very well the "set<relation> constraints" section.
 Will you came up with some examples of which is the meaning of the different
-cases that you enumerate?
+cases that you enumerate?\n
+继续前进，对 N-1, N-N, 和散列索引的支持很容易理解，它们也适合于这个框架。
+不过我还不是很理解 "set<relation> 的约束" 一节。你可以给出一些例子来说明你所列举的不同情形的意义吗？
 ]]
 
 [*Matias - ]
 [:['
-Yes, I mean:
+Yes, I mean:\n
+好的，我的意思是：
 ]]
-[:['- based on the left]]
-[:['- based on the right]]
+[:['- based on the left\n
+- 基于左侧]]
+[:['- based on the right\n
+- 基于右侧]]
 [:['
 The bimap core must be based on some index of multi index. If the index
 of the left is of the type hash, then in fact the main view is going
 to be an unordered_set< relation<A,B> >. Perhaps this is not what the user
-prefers and he wants to base its main view on the right index.
+prefers and he wants to base its main view on the right index.\n
+bimap 核心必须基于多个索引中的某些索引。如果左侧的索引类型是散列的，那么事实上主视图就应该是一个 unordered_set< relation<A,B> >。
+可能这不是用户想要的，他可能想将主视图基于右侧索引。
 ]]
 [:['- set_of_relation ]]
 [:['- multiset_of_relation ]]
@@ -564,13 +710,15 @@ prefers and he wants to base its main view on the right index.
 [:['
 However, if both of them are hash indexes, the user may want the main view
 to be ordered. As we have a B.MI core this is very easy to support, we just have
-to add another index to it.
+to add another index to it.\n
+不过，如果左右两侧都是散列索引，而用户可能希望主视图是有序的。因为我们有一个 B.MI 核心，所以这很容易支持，我们要做的只是增加一个索引。
 ]]
 
 [*Joaquin]
 [:['
 I understand it now. OK, I do not know if we have to include this
-in the first version, is going to be a functionality avalanche!
+in the first version, is going to be a functionality avalanche!\n
+现在我明白了。好的，我不清楚如果我们必须将它包含在第一个版本中，是否功能太多。
 ]]
 
 [*Matias]
@@ -578,7 +726,8 @@ in the first version, is going to be a functionality avalanche!
 The user is not affected by the addition of this functionality,
 because by default it will be based on the left index that is a very natural
 behaviour. I do not think that this is functionality bloat, but I agree with
-you that it is a functionality avalanche. 
+you that it is a functionality avalanche. \n
+用户不会感觉到增加的功能，因为缺省情况是基于左索引的，这是非常自然的行为。我不认为这是功能膨胀，但是我同意它是一个功能雪崩。
 ]]
 
 [*Joaquin]
@@ -589,21 +738,27 @@ of unique type, then the main view cannot be of type multiset_of_relation.
 To the inverse one, if the main view is of type set_of_relation the left and
 the right index cannot be of type multi_set. All this subject of the unicity
 constrictions and the resulting interactions between indexes is one of the subtle
-subjects of B.MI. 
+subjects of B.MI. \n
+在左、右集合类型和可能的主视图集合类型之间是有约束的。例如，如果某个索引类型是唯一的，那么主视图的类型就不能是 multiset_of_relation。
+相反，如果主视图的类型是 set_of_relation，那么左索引和右索引的类型就不能是 multi_set。
+所有这些单一性约束和由此产生的索引间的相互作用，正是 B.MI 的微妙之处。
 ]]
 
 [*Matias]
 [:['
 This can be checked at compile time and informed as an error
-in compile time. 
+in compile time. \n
+这可以在编译期被检验出来，并产生一个编译期错误。
 ]]
 
 [*Joaquin]
 [:['
-It can be interesting.
+It can be interesting.\n
+这很有趣。
 ]]
 
-[^- And right when everything seems to be perfect... - ]
+[^- And right when everything seems to be perfect... - \n
+- 接着一切似乎都是完美的... - ]
 
 [*Joaquin]
 [:['
@@ -616,7 +771,12 @@ undefined behavior. I am with you in which that in the 100% of the cases
 this scheme will really work, but the standard is the standard. If you can
 look the layout-compatibility subject in it (http://www.kuzbass.ru/docs/isocpp/).
 As you see, sometimes the standard is cruel. Although mutant seems a lost case,
-please do not hurry to eliminate it. We will see what can be done for it.
+please do not hurry to eliminate it. We will see what can be done for it.\n
+关于 mutant 我有一些坏消息，它是一个很好的设计和可管理的类，不幸的是，C++ 并不保证任何情形下的布局兼容。
+例如，C++ 标准不保证 `struct{T1 a; T2 b;}` 和 `struct{T1 b; T2 a;}` 是布局兼容的，因此 reinterpret_cast 技巧是未定义的行为。
+虽然我同意你所说的在100%的情况下这一方式都是正确的，但是标准就是标准。
+如果你可以看一下这里(http://www.kuzbass.ru/docsisocpp)关于布局兼容的文章。你会看到，有时候标准是残酷的。
+虽然 mutant 看起来没有机会，但请不要急于消除它。让我们看看有什么可以为它做的。
 ]]
 
 [*Matias]
@@ -625,7 +785,10 @@ I read the standard, and you were right about it. Mutant was an implementation
 detail. It is a pity because I am sure that it will work perfect in any compiler.
 Perhaps the standard becomes more strict some day and mutant returns to life...
 We can then try a wrapper around a relation<A,B> that have two references named
-first and second that bind to A and B, or B and A.
+first and second that bind to A and B, or B and A.\n
+我阅读了标准，你是对的。Mutant 是一个实现细节。太可惜了，我确认在任何编译器上它都是可以使用的。
+也许某天标准会变得更严格，mutant 会重返我们的生活... 我们可以尝试在 relation<A,B> 的外围加一层包装，
+有两个名为 first 和 second 的引用，分别绑定到 A 和 B，或 B 和 A。
 ]]
 ``
 relation<TA,TB> r;
@@ -636,7 +799,9 @@ const_reference_pair<B,A> pbb(r);
 It is not difficult to code the relation class in this way but two references
 are initialized with every access and the use of `pba.first` will be slower
 than `r.left` in most compilers. It is very difficult to optimize this kind of
-references.
+references.\n
+用这种方法不难写出 relation 类的代码，但是每次访问都要初始化这两个引用，而且在多数编译器中，
+使用 `pba.first` 会比 `r.left` 慢。这种引用很难优化。
 ]]
 
 [*Joaquin]
@@ -645,7 +810,10 @@ This workaround is not possible, due to technical problems with
 the expected behavior of the iterators. If the iterators of bm.left are of
 bidirectional type, then standard stated that it have to return an object of type
 const value_type& when dereferenced. You will have to return a const_reference_pair
-created in the flight, making it impossible to return a reference.
+created in the flight, making it impossible to return a reference.\n
+这种变通方法不可行，因为迭代器的期望行为会有技术问题。如果 bm.left 的迭代器是双向的，
+那么标准声明它在提领时必须返回一个类型为 const value_type& 的对象。
+你将不得不返回一个就地创建的 const_reference_pair，返回引用是不可能的。
 ]]
 
 [*Matias]
@@ -654,14 +822,17 @@ I understand... I have workaround for that also but surely
 the standard will attack me again! We must manage to create the class relation
 that responds as we want, the rest of the code will flow from this point.
 This clear separation between the relation class and the rest of the library,
-is going to help to us to separate the problems and to attack them better.
+is going to help to us to separate the problems and to attack them better.\n
+我明白... 我已经想过其它变通方法，但是标准再次与我为难！我们必须设法创建我们想要的 relation 类，剩余的代码将由此产生。
+relation 类与库的其余部分间的明确划分，有助于我们将问题区分开来，更好地解决。
 ]]
 
 [*Joaquin]
 [:['
 What workaround? It already pricks my curiosity,I have dedicated
 a long time to the subject and I do not find any solution except that we
-allow the relation class to occupy more memory.
+allow the relation class to occupy more memory.\n
+有什么替代方法？它已经引起我的好奇心了，我为此已经专门花了很长时间，还没找到任何解决方法，除非我们允许 relation 类占用更多内存。
 ]]
 
 [*Matias]
@@ -674,7 +845,11 @@ Basically the problem that we are dealing is solved if we based our iterators on
 this proposal. The present standard forces that the bidirectional iterators also
 are of the type input and output. Using the new concepts there is no inconvenient
 in making our iterators "Readable Writable Swappable Bidirectional Traversal".
-Therefore the const_reference_pair returns to be valid.
+Therefore the const_reference_pair returns to be valid.\n
+如果我们想这个库真的可用，就必须实现 relation<A,B> 的大小和 pair<A,B> 一样。我在准备写一个变通方法时意识到它也无法工作。
+请看这里： http://www.boost.org/libs/iterator/doc/new-iter-concepts.html 基本上我们要处理的这个问题已经解决了，
+如果我们按这个建议来设计迭代器。当前的标准强制要求双向迭代器也是输入和输出的。
+使用这个新的概念就可以将我们的迭代器构建为"可读可写可交换可双向遍历的"。因此 const_reference_pair 的返回是有效的。
 ]]
 
 [*Joaquin]
@@ -682,14 +857,16 @@ Therefore the const_reference_pair returns to be valid.
 It is correct in the sense that you simply say that
 your iterators are less powerful than those of the std::map. It is
 not that it is wrong, simply that instead of fixing the problem, you
-confess it. 
+confess it. \n
+感觉上是正确的，你只是说你的迭代器比 std::map 的稍弱一点。这并不等于是错的，只是解决问题的替代方法，你承认。
 ]]
 
 [*Matias]
 [:['
 OK, but in our particular case; What are the benefits
 of offering a LValue iterator against a Read Write iterator?
-It does not seem to me that it is less powerful in this case. 
+It does not seem to me that it is less powerful in this case. \n
+OK, 但只是在我们的特定情况下；提供一个左值迭代器而不是读写迭代器有什么好处？在我看来，这种情形下并没什么用。
 ]]
 
 [*Joaquin]
@@ -700,62 +877,79 @@ fails or stores a transitory direction in p. Is this important in the real life?
 I do not know. How frequently you store the direction of the elements of a map?
 Perhaps it is not very frequent, since the logical thing is to store the
 iterators instead of the directions of the elements.
-Let us review our options:
+Let us review our options:\n
+读写迭代器的主要问题是这样的：`value_type * p=&(*it);` 失败或在 p 中保存一个短暂的方向。在现实生活中这是否重要？
+我不知道。你会经常保存一个映射的元素方向吗？也许不会，因为合乎逻辑的是保存迭代器而不是元素的方向。我们来审查一下我们的选择：
 ]]
 [:['
 1. We used mutant knowing that is not standard, but of course it is
-supported in the 100% of the cases.
+supported in the 100% of the cases.\n
+1. 我们使用了 mutant 但知道它不标准，当然在100%情况下它是被支持的。
 ]]
 [:['
-2. We used const_reference_pair and we declared the iterators not LValue.
+2. We used const_reference_pair and we declared the iterators not LValue.\n
+2. 我们使用 const_reference_pair 且将迭代器声明为非左值。
 ]]
 [:['
 3. We found some trick that still we do not know. I have thus been playing
-with unions and things, without much luck.
+with unions and things, without much luck.\n
+3. 我们寻找一些还不知道的技巧。我已经试过 union 什么的，但不够运气。
 ]]
 [:['
 4. We leverage the restriction that views have to support the first, second
-notation. If we made this decision, there are several possibilities:
+notation. If we made this decision, there are several possibilities:\n
+4. 我们放大这一约束，要求视图必须支持 first, second 记号。如果我们作出这一决定，就有以下几个可能性：
 ]]
 [:['
 ''' '''a. The left map has standard semantics first/second while the right map
-has the inverse semantics.
+has the inverse semantics.\n
+a. 左映射具有标准语义的 first/second 而右映射则具有相反的语义。
 ]]
 [:['
 ''' '''b. Instead of first and second we provide first() and second(), with
-which the problem is trivial.
+which the problem is trivial.\n
+b. 我们提供 first() 和 second() 来代替 first 和 second，这没什么问题。
 ]]
 [:['
 ''' '''c. The map view do not support first/second but left/right as the
-father relation
+father relation\n
+c. 映射视图不支持 first/second 但以 left/right 作为父关系。
 ]]
 [:['
-5. We solve the problem using more memory than sizeof(pair<A,B>).
+5. We solve the problem using more memory than sizeof(pair<A,B>).\n
+5. 我们使用多于 sizeof(pair<A,B>) 的内存来解决这一问题。
 ]]
 [:['
-In any case, I would say that the only really unacceptable option is the last one.
+In any case, I would say that the only really unacceptable option is the last one.\n
+在任何情况下，我要说唯一不可接受的选择是最后一个。
 ]]
 
 [*Matias]
 [:['
-Lets see.
+Lets see.\n
+我们来看看：
 ]]
 [:['
-1. I want the "standard compliant" label in the library.
+1. I want the "standard compliant" label in the library.\n
+1. 我希望在库中有 "符合标准" 的标记。
 ]]
 [:['
 2. This is the natural choice, but knowing that there is another option
-that always works and it is more efficient is awful.
+that always works and it is more efficient is awful.\n
+2. 这是一个自然的选择，但是知道有另一个选择可以使用而且更为高效，这是可怕的。
 ]]
 [:['
 3. I have also tried to play with unions, the problem is that the union members
-must be POD types.
+must be POD types.\n
+3. 我也试过使用 union，问题是 union 的成员必须是 POD 类型。
 ]]
 [:['
-4. This option implies a big lost to the library.
+4. This option implies a big lost to the library.\n
+4. 这个选择意味着本库有巨大损失。
 ]]
 [:['
-5. Totally agree.
+5. Totally agree.\n
+5. 完全同意。
 ]]
 [:['
 I want to add another option to this list. Using metaprogramming,
@@ -769,11 +963,17 @@ not supported. This scheme would adjust perfectly to the present standard
 since we are not supposing anything. The only drawback here is that although
 the mutant approach allows to make LValue iterators we have to degrade they
 to Read Write in both cases, because we want that the same code can be
-compiled in any standard compliant compiler.
+compiled in any standard compliant compiler.\n
+我想在这个列表中增加一个选择。通过使用元编程，relation 类可以检查编译器是否支持 mutant 惯用法。
+如果它支持，则使用它，可以用零代价得到左值迭代器。如果不支持则使用 const_reference_pair ，可以用最小的代价得到读写迭代器。
+这可能存在争议，但是 mutant 所提供的好处是非常明显的，事实是我不相信会有任何一个真实的编译器不支持它。
+这一方式完全符合当前的标准，我们没有假设任何前提。唯一的缺点是，虽然 mutant 方法允许左值迭代器，
+但是我们必须在两种情形下都将它退化为读写迭代器，因为我们希望相同的代码可以在任何符合标准的编译器上通过编译。
 ]]
 
 
-[^- Hopefully we find our way out of the problem -]
+[^- Hopefully we find our way out of the problem -\n
+- 我们有希望找到解决问题的方法 -]
 
 [*Joaquin]
 [:['
@@ -781,7 +981,9 @@ Changing the subject, I believe that the general concept of hooking data
 is good, but I do not like the way you implement it. It has to be easy
 to migrate to B.MI to anticipate the case in that Boost.Bimap becomes insufficient.
 It is more natural for a B.MI user that the data is accessed without the indirection
-of `.data`. I do not know how this can be articulated in your framework.
+of `.data`. I do not know how this can be articulated in your framework.\n
+换个话题，我相信挂载数据的想法是好的，但我不喜欢你实现的方法。它必须易于迁移到 B.MI 以防 Boost.Bimap 不够用的情形。
+对于一个 B.MI 用户来说，更自然的方法是不要用 .data 来间接访问数据。我不知道在你的框架中如何能够实现。
 ]]
 
 [*Matias]
@@ -789,7 +991,9 @@ of `.data`. I do not know how this can be articulated in your framework.
 I have a technical problem to implement the data_hook in this way.
 If the standard would let us use the mutant idiom directly, I can implement it
 using multiple inheritance. But as we must use const_reference_pair too, It becomes
-impossible for me to support it. We have three options here:
+impossible for me to support it. We have three options here:\n
+以这种方法实现 data_hook，我有一个技术问题。如果标准可以让我们直接使用 mutant 惯用法，我可以用多重继承来实现它。
+但是因为我们还要用 const_reference_pair ，这就不可能支持它了。我们有三个选择：
 ]]
 [:['
 1) relation { left, right, data } and pair_view { first, second, data }
@@ -797,50 +1001,61 @@ impossible for me to support it. We have three options here:
 [:['
 - This is more intuitive within the bimap framework, since it does not
 mix the data with the index, as a table in a data base does, but gives more importance to
-the index.
+the index.\n
+- 这在 bimap 框架中更为直观，因为它没有把数据和索引混起来，就象数据库中的表那样，不过对索引给予了更多重要性。
 ]]
 [:['
 - It is not necessary that the user puts the mutable keyword in each member of
-the data class.
+the data class.\n
+- 用户不需要把 mutable 关键字放在数据类的每个成员前。
 ]]
 [:['
 - This moves away just a little bit from B.MI because the model
-of it is similar to a table, but it continues to exist a clear path of migration.
+of it is similar to a table, but it continues to exist a clear path of migration.\n
+- 这与 B.MI 之间只是一点点距离，因为它的模型类似于表格，不过它存在一个清晰的迁移路径。
 ]]
 [:['
 2) relation { left,right, d1,d2... dn } and pair_view { first, second, data }
 ]]
 [:['
-- The path to B.MI is the one you have proposed.
+- The path to B.MI is the one you have proposed.\n
+- 到 B.MI 的迁移正是你所提议的。
 ]]
 [:['
 - It is very asymmetric. It is necessary to explain that the views are
-handled different that the relation.
+handled different that the relation.\n
+- 它非常不对称。它需要解释，关系的视图处理方法不同。
 ]]
 [:['
-- The user must place the mutable keyboards in the data class.
+- The user must place the mutable keyboards in the data class.\n
+- 用户必须将 mutable 关键字放在数据类中。
 ]]
 [:['
 3) Only relation { left,right, d1,d2... dn }
 ]]
 [:['
-- Simple migration path to B.MI.
+- Simple migration path to B.MI.\n
+- 迁移到 B.MI 很简单。
 ]]
 [:['
-- You are not able to access the hooked data from the views.
+- You are not able to access the hooked data from the views.\n
+- 你不能够从视图访问挂载的数据。
 ]]
 [:['
-My vote goes to the first proposal.
+My vote goes to the first proposal.\n
+我投票给第一个建议。
 ]]
 
 
 [*Joaquin]
 [:['
 Yes, the first option is the one that less surprises hold to the user.
-I also vote for 1. 
+I also vote for 1. \n
+是的，第一个选择最不会令用户惊讶。我也投票给 1.
 ]]
 
-[^- The third week was over -]
+[^- The third week was over -\n
+- 第三周结束 - ]
 
 [*Matias]
 [:['
@@ -852,26 +1067,34 @@ the map_view is going to keep a reference instead of a pointer.
 To me, the map_view always must be viewing something. In the case of the iterators
 being able to create them empty, makes them easy to use in contexts that require
 constructors by default, like being the value_type of a container, but I do not
-believe that this is the case of map_view.
+believe that this is the case of map_view.\n
+还有一个问题要解决。我需要知道是否有必要创建一个没有关联的 map_view。如果需要，则有两个选择：
+要么其行为象一个空的容器，要么在试图使用它时抛出一个异常或断言。如果不需要，则 map_view 将持有一个引用而不是指针。
+对我来说，map_view 应该总能察看到某些东西。在一些情形下，迭代器可以创建空的容器，还有为了容易使用，
+也要求缺省构造函数，就象一个容器的 value_type 那样，但是我不认为这种情形适合于 map_view.
 ]]
 
 [*Joaquin]
 [:['
 How would an empty map_view be useful? My intuition is like yours,
 map_view would have to be always associate to something. If we wished to obtain
-the semantics "is associated or not" we can use a pointer to a map_view. 
+the semantics "is associated or not" we can use a pointer to a map_view. \n
+一个空的 map_view 可以怎么使用？我的意见和你一样，map_view 应该必须关联到某些东西上。
+如果我们希望得到 "是否关联" 的语义，我们可以使用指向 map_view 的指针。
 ]]
 
 [*Matias]
 [:['
 OK, then you agree to that map_views stores a reference instead
-of a pointer?
+of a pointer?\n
+OK, 那么你同意在 map_views 中保存一个引用而不是指针了？
 ]]
 
 [*Joaquin]
 [:['
 It depends on the semantics you want to give to map_views, and in
-concrete to the copy of map_views.
+concrete to the copy of map_views.\n
+这取决于你想给 map_views 的语义，以及复制 map_views 的语义。
 ]]
 ``
 map_view x=...;
@@ -879,30 +1102,38 @@ map_view y=...;
 x=y;
 ``
 [:['
-What is supposed to do this last line?
+What is supposed to do this last line?\n
+最后一行应该做些什么呢？
 ]]
 [:['
-1. Rebinding of x, that is to say, x points at the same container that y.
+1. Rebinding of x, that is to say, x points at the same container that y.\n
+1. 重新绑定 x，即是说，x 指向与 y 同一个容器。
 ]]
 [:['
-2. Copy of the underlying container.
+2. Copy of the underlying container.\n
+2. 复制底层的容器。
 ]]
 [:['
 If you want to implement 1, you cannot use references internally.
-If you want to implement 2, it is almost the same to use a reference or a pointer.
+If you want to implement 2, it is almost the same to use a reference or a pointer.\n
+如果你想实现 1，那么你不能在内部使用引用。如果你想实现 2，则使用引用或指针都一样。
 ]]
 
 [*Matias]
 [:['
 If I want that they behave exactly as std::maps then I must go for 2.
 But if I think they as "views" of something, I like 1. The question is complicated.
-I add another option:
+I add another option:\n
+如果我想它们的行为和 std::maps 一样，则我必须取用 2。但如果我将它们看作某物的 "视图"，我更喜欢 1。
+这个问题是复杂的。我再加一个选择：
 ]]
 [:['
-3. Error: operator= is declare as private in boost::bimap::map_view std_container
+3. Error: operator= is declare as private in boost::bimap::map_view std_container\n
+3. 错误：在 boost::bimap::map_view std_container 中将 operator= 声明为私有。
 ]]
 [:['
-Also What happens with `std_container = view;`? and with `view = std_container;`?
+Also What happens with `std_container = view;`? and with `view = std_container;`?\n
+还有，对于 `std_container = view;` 和 `view = std_container;` 又如何呢？
 ]]
 
 [endsect]
