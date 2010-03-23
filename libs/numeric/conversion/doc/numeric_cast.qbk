@@ -8,22 +8,29 @@
     http://www.boost.org/LICENSE_1_0.txt)
 ]
 
-[section  Improved numeric_cast<>]
+[section:improved_numeric_cast__  Improved numeric_cast<> 改进的numeric_cast<>]
 
-[section Introduction]
+[section:introduction Introduction 简介]
 
 The lack of preservation of range makes conversions between numeric types
 error prone. This is true for both implicit conversions and explicit
 conversions (through `static_cast`).
 [link boost_numericconversion.improved_numeric_cast__.numeric_cast `numeric_cast`]
 detects loss of range when a numeric type is converted, and throws an
-exception if the range cannot be preserved.
+exception if the range cannot be preserved.\n
+由于缺乏对范围的保护，所以数字类型间的转换很容易出错。这对于隐式转换和显式转换(通过 `static_cast`) 都是一样的。
+[link boost_numericconversion.improved_numeric_cast__.numeric_cast `numeric_cast`] 
+可以在转换一个数字类型时检查范围的损失，如果范围不能被保持就抛出一个异常。
 
-There are several situations where conversions are unsafe:
+There are several situations where conversions are unsafe:\n
+当转换是不安全的时候，有以下几各种情况：
 
-* Conversions from an integral type with a wider range than the target integral type.
-* Conversions from unsigned to signed (and vice versa) integral types.
-* Conversions from floating point types to integral types.
+* Conversions from an integral type with a wider range than the target integral type.\n
+  从一个比目标类型范围更宽的整型类型进行转换。
+* Conversions from unsigned to signed (and vice versa) integral types.\n
+  从无符号整型到有符号整型(以及相反方向)的转换。
+* Conversions from floating point types to integral types.\n
+  从浮点类型到整型类型的转换。
 
 The C++ Standard does not specify the behavior when a numeric type is
 assigned a value that cannot be represented by the type, except for unsigned
@@ -32,13 +39,19 @@ integral types \[3.9.1.4\], which must obey the laws of arithmetic modulo 2n
 greater than the largest value that can be represented). The fact that the
 behavior for overflow is undefined for all conversions (except the
 aforementioned unsigned to unsigned) makes any code that may produce
-positive or negative overflows exposed to portability issues.
+positive or negative overflows exposed to portability issues.\n
+C+ +标准没有规定当一个数字类型被赋予一个该类型不能表示的值时的行为，除了无符号整数类型以外\[3.9.1.4\]，
+后者必须遵守模2n算术的法则(这意味着结果会将大于可表示的最大值的数进行取模降值)。
+事实上，对于所有转换(除了上述的无符号至无符号的转换)，溢出的行为是未定义的，
+这使得任何可能产生正或负的溢出的代码都存在可移植性的问题。
 
 `numeric_cast` adheres to the rules for implicit conversions mandated by
 the C++ Standard, such as truncating floating point types when converting
 to integral types. The implementation must guarantee that for a conversion
 to a type that can hold all possible values of the source type, there will
-be no runtime overhead.
+be no runtime overhead.\n
+`numeric_cast` 遵守C++标准所制定的隐式转换规则，例如将浮点类型转换为整型类型时进行截断。
+其实现必须保证对于到一个类型的转换，可以保持源类型的所有可能值，且没有运行期开销。
 
 [endsect]
 
@@ -57,13 +70,17 @@ thrown (see
 [link numeric_conversion_bad_numeric_cast bad_numeric_cast],
 [link numeric_conversion_negative_overflow negative_overflow] and
 [link numeric_conversion_possitive_overflow positive_overflow]
-).
+).\n
+`numeric_cast` 返回一个类型为 Source 的值转换为类型为 Target 的值的结果。
+如果检测到超出范围，将抛出一个异常(请见 [link numeric_conversion_bad_numeric_cast bad_numeric_cast],
+[link numeric_conversion_negative_overflow negative_overflow] 和 [link numeric_conversion_possitive_overflow positive_overflow]). 
 
 [endsect]
 
-[section Examples]
+[section:examples Examples 例子]
 
-The following example performs some typical conversions between numeric types:
+The following example performs some typical conversions between numeric types:\n
+以下例子执行了一些数字类型间的典型转换：
 
 #include <boost/numeric/conversion/cast.hpp>
 #include <iostream>
@@ -79,7 +96,7 @@ The following example performs some typical conversions between numeric types:
         try
         {
             int i=42;
-            short s=numeric_cast<short>(i); // This conversion succeeds (is in range)
+            short s=numeric_cast<short>(i); // This conversion succeeds (is in range) 转换成功(在范围内)
         }
         catch(negative_overflow& e) {
             std::cout << e.what();
@@ -93,6 +110,7 @@ The following example performs some typical conversions between numeric types:
             float f=-42.1234;
 
             // This will cause a boost::numeric::negative_overflow exception to be thrown
+            // 这将引发一个 boost::numeric::negative_overflow 异常被抛出
             unsigned int i=numeric_cast<unsigned int>(f);
         }
         catch(bad_numeric_cast& e) {
@@ -108,6 +126,9 @@ The following example performs some typical conversions between numeric types:
             // This will cause a boost::numeric::positive_overflow exception to be thrown
             // NOTE: *operations* on unsigned integral types cannot cause overflow
             // but *conversions* to a signed type ARE range checked by numeric_cast.
+            // 这将引发一个 boost::numeric::positive_overflow 异常被抛出
+            // 注：在无符号整数类型上的*operations*不会引起溢出，
+            // 但是在有符号类型上的*operations*则要由 numeric_cast 进行范围检查
 
             unsigned char c=numeric_cast<unsigned char>(l);
         }
