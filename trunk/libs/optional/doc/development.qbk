@@ -8,9 +8,9 @@
     http://www.boost.org/LICENSE_1_0.txt)
 ]
 
-[section Development]
+[section:development Development 发展]
 
-[section The models]
+[section:the_models The models 模型]
 
 In C++, we can ['declare] an object (a variable) of type `T`, and we can give this
 variable an ['initial value] (through an ['initializer]. (c.f. 8.5)).
@@ -29,7 +29,16 @@ has conceptually no value at all and this situation can be tested at runtime. It
 is formally ['undefined behavior] to try to access the value of an uninitialized
 optional. An uninitialized optional can be assigned a value, in which case its initialization state changes to initialized. Furthermore, given the formal
 treatment of initialization states in optional objects, it is even possible to
-reset an optional to ['uninitialized].
+reset an optional to ['uninitialized].\n
+在C++中，我们可以['声明]类型 `T` 的一个对象(变量)，并且我们可以给这个对象一个['初始值](通过['初始化](参考 8.5))。
+当一个声明中包含非空的初始化(即给出一个初始值)，就称这个对象已被初始化。
+如果一个声明使用了空的初始化(即未给出初始值)，而且也没缺省值可用于初始化，则称该对象是[*未初始化的]。
+它的真实值是存在的，但具有一个['不确定的初始值](参考 8.5.9)。
+`optional<T>` 的目的是规范初始化(或无初始化)的概念，让程序可以检测一个对象是否已初始化，
+并规定访问一个未初始化对象的值是未定义的行为。即，如果一个变量被声明为 `optional<T>` 而未给定初始值，则该变量就是['正式的]未初始化。
+一个正式的未初始化的 optional 对象是没有值的，并且可以在运行期对此状态进行测试。
+尝试访问一个未初始化的 optional 被正式规定为['未定义行为]。一个未初始化的 optional 可以被赋予一个值，这时它的初始化状态就会变为已初始化。
+此外，还给出处理 optional 对象的初始化状态的方法，甚至可以将一个 optional 重新置为['未初始化]。
 
 In C++ there is no formal notion of uninitialized objects, which means that
 objects always have an initial value even if indeterminate.
@@ -45,59 +54,90 @@ often called ['variants]. A variant has a ['current type], which in our case is 
 Using the __BOOST_VARIANT__ library, this model can be implemented in terms of `boost::variant<T,nil_t>`.
 There is precedent for a discriminated union as a model for an optional value:
 the __HASKELL__ [*Maybe] built-in type constructor. Thus, a discriminated union
-`T+nil_t` serves as a conceptual foundation.
+`T+nil_t` serves as a conceptual foundation.\n
+在C++里没有未初始化对象的正式概念，即是说对象总是带有初始值的，即使是不确定的值。
+正如前面所讨论的，这样有一个缺点，因为你需要用额外的信息来告知一个对象是不是已经被有效地初始化了。
+一种以前常用的典型方法是使用特殊值：`EOF`, `npos`, -1, 等等... 这相当于增加一个特殊值到给定类型的可取值的集合中。
+由 `T` 加上某个 ['nil_t] — `nil_t` 是某个无状态的POD -- 组成的超集在现代语言中可以被模仿为由 T 和 nil_t 组成的一个[*可识别联合]。
+可识别联合通常称为 ['variants]. 一个 variant 具有 ['当前类型]，在我们的例子中就是 `T` 或者 `nil_t`.
+使用 __BOOST_VARIANT__ 库，以上模型可以用 `boost::variant<T,nil_t>` 来实现。
+用可识别联合来模仿一个 optional 值是有先例的：__HASKELL__ 的 [*Maybe] 内建类型构造器。
+所以，可识别联合 `T+nil_t` 可以作为一个概念上的基础。
 
 A `variant<T,nil_t>` follows naturally from the traditional idiom of extending
 the range of possible values adding an additional sentinel value with the
 special meaning of ['Nothing].  However, this additional ['Nothing] value is largely
 irrelevant for our purpose since our goal is to formalize the notion of
 uninitialized objects and, while a special extended value can be used to convey
-that meaning, it is not strictly necessary in order to do so.
+that meaning, it is not strictly necessary in order to do so.\n
+`variant<T,nil_t>` 自然而然地可用于扩展可取值的传统惯用法，它增加一个"哨兵"值用于表示['空值]。
+不过，这个新增的['空值]与我们意图大不相关，因为我们的目标是规范化未初始化对象的概念，
+虽然一个特殊的扩展值可以用于表达这个意思，但是它并不是严格必要的。
 
 The observation made in the last paragraph about the irrelevant nature of the
 additional `nil_t` with respect to [_purpose] of `optional<T>` suggests an 
-alternative model: a ['container] that either has a value of `T` or nothing.
+alternative model: a ['container] that either has a value of `T` or nothing.\n
+最近的研究表明，额外的 `nil_t` 对于 `optional<T>` 的 [_目的] 是无关的，我们建议另一种模型：一个['容器]，它具有 `T` 的值，或者为空。
 
 As of this writing I don't know of any precedence for a variable-size
 fixed-capacity (of 1) stack-based container model for optional values, yet I
 believe this is the consequence of the lack of practical implementations of
-such a container rather than an inherent shortcoming of the container model.
+such a container rather than an inherent shortcoming of the container model.\n
+在写这篇文档之时，我还不知道有任何一个大小可变、容量固定(为1)、基于栈的 optional 值的容器模型的先例，
+但是我相信这只是因为还没有这样一个容器的实际实现，而不是这样一个容器模型的固有缺点。
 
 In any event, both the discriminated-union or the single-element container
 models serve as a conceptual ground for a class representing optional—i.e.
 possibly uninitialized—objects.
 For instance, these models show the ['exact] semantics required for a wrapper
-of optional values:
+of optional values:\n
+无论如何，可识别联合或单元素容器模型均可作为表示 optional 类 — 即可能未初始化的 — 对象的基础。
+例如，这些模型表现出了一个 optional 值包装器所需的['准确]语义：
 
-Discriminated-union:
+Discriminated-union:\n
+可识别联合：
 
-* [*deep-copy] semantics: copies of the variant implies copies of the value.
+* [*deep-copy] semantics: copies of the variant implies copies of the value.\n
+  [*深复制] 语义：variant 的拷贝即为值的拷贝。
 * [*deep-relational] semantics: comparisons between variants matches both
-current types and values
-* If the variant's current type is `T`, it is modeling an ['initialized] optional.
+current types and values\n
+  [*深比较] 语义：比较两个 variants 要同时匹配类型和值。
+* If the variant's current type is `T`, it is modeling an ['initialized] optional.\n
+  如果 variant 的当前类型为 `T`, 它就代表['已初始化的] optional. 
 * If the variant's current type is not `T`, it is modeling an ['uninitialized]
-optional.
+optional.\n
+  如果 variant 的当前类型不是 `T`, 它就代表['未初始化的] optional. 
 * Testing if the variant's current type is `T` models testing if the optional
-is initialized
+is initialized\n
+  测试 variant 的当前类型是否为 `T` 即测试 optional 是否已初始化。
 * Trying to extract a `T` from a variant when its current type is not `T`, models
-the undefined behavior of trying to access the value of an uninitialized optional
+the undefined behavior of trying to access the value of an uninitialized optional\n
+  试图从一个 variant 取出 `T` 而它的当前类型不是 `T` 时，正好符合了访问一个未初始化 optional 值的未定义行为。
 
-Single-element container:
+Single-element container:\n
+单元素容器：
 
-* [*deep-copy] semantics: copies of the container implies copies of the value.
+* [*deep-copy] semantics: copies of the container implies copies of the value.\n
+  [*深复制] 语义：container 的拷贝即为值的拷贝。
 * [*deep-relational] semantics: comparisons between containers compare container
-size and if match, contained value
+size and if match, contained value\n
+  [*深比较] 语义：比较两个 containers 要先比较容器的大小，如果匹配再比较容器中的值。
 * If the container is not empty (contains an object of type `T`), it is modeling
-an ['initialized] optional.
-* If the container is empty, it is modeling an ['uninitialized] optional.
+an ['initialized] optional.\n
+  如果 container 非空(包含一个类型为 `T` 的对象)，它就代表['已初始化的] optional.
+* If the container is empty, it is modeling an ['uninitialized] optional.\n
+  如果 container 为空，它就代表['未初始化的] optional.
 * Testing if the container is empty models testing if the optional is
-initialized
+initialized\n
+  测试 container 是否为空即测试 optional 是否已初始化。
 * Trying to extract a `T` from an empty container models the undefined behavior
-of trying to access the value of an uninitialized optional
+of trying to access the value of an uninitialized optional\n
+  试图从一个空的 container 取出 `T`，正好符合了访问一个未初始化 optional 值的未定义行为。
+
 
 [endsect]
 
-[section The semantics]
+[section:the_semantics The semantics 语义]
 
 Objects of type `optional<T>` are intended to be used in places where objects of
 type `T` would but which might be uninitialized. Hence, `optional<T>`'s purpose is
@@ -110,40 +150,60 @@ can't do that in C++, so we need to compose the desired semantics using a
 different mechanism.
 Doing it the other way around, that is, making `optional<T>` a ['subtype] of `T`
 is not only conceptually wrong but also impractical: it is not allowed to
-derive from a non-class type, such as a built-in type.
+derive from a non-class type, such as a built-in type.\n
+类型 `optional<T>` 的对象的设计意图是，用在那些使用可能未被初始化的类型 `T` 的对象的地方。
+因此，`optional<T>` 的意图是对增加可能的未初始化状态进行规范化。
+从这一任务的观点出发，`optional<T>` 可以具有与 `T` 相同的操作语义，再加上与特殊状态相对应的额外语义。
+同样，`optional<T>` 可被视为 `T` 的一个 ['超类型]. 当然，我们不能在C++中这样做，所以我们需要用一种不同的机制来得到想要的语义。
+使用其它方法实现它，如让 `optional<T>` 作为 `T` 的 ['子类]，不仅是概念上的错误，而且也是不实际的：
+因为不允许从非类类型派生，如从内建类型派生。
 
-We can draw from the purpose of `optional<T>` the required basic semantics:
+We can draw from the purpose of `optional<T>` the required basic semantics:\n
+我们可以从 `optional<T>` 的目的描画出所需的基本语义：
 
 * [*Default Construction:] To introduce a formally uninitialized wrapped
-object.
+object.\n
+  [*缺省构造：]引入一个正式的未初始化包装对象。
 * [*Direct Value Construction via copy:] To introduce a formally initialized
-wrapped object whose value is obtained as a copy of some object.
-* [*Deep Copy Construction:] To obtain a new yet equivalent wrapped object.
+wrapped object whose value is obtained as a copy of some object.\n
+  [*通过复制进行直接的值构造：]引入一个正式的已初始化包装对象，其值来自于某个对象的拷贝。
+* [*Deep Copy Construction:] To obtain a new yet equivalent wrapped object.\n
+  [*深复制构造：]获得一个新的、等价的包装对象。
 * [*Direct Value Assignment (upon initialized):] To assign a value to the
-wrapped object.
+wrapped object.\n
+  [*直接的值赋值(到已初始化的对象)：]将一个值赋值到包装对象。
 * [*Direct Value Assignment (upon uninitialized):] To initialize the wrapped
-object with a value obtained as a copy of some object.
+object with a value obtained as a copy of some object.\n
+  [*直接的值赋值(到未初始化的对象)：]从某个对象的拷贝取得值，初始化包装对象。
 * [*Assignment (upon initialized):] To assign to the wrapped object the value
-of another wrapped object.
+of another wrapped object.\n
+  [*赋值(到已初始化的对象)：]将另一个包装对象的值赋值到包装对象。
 * [*Assignment (upon uninitialized):] To initialize the wrapped object with
-value of another wrapped object.
+value of another wrapped object.\n
+  [*赋值(到未初始化的对象)：]以另一个包装对象的值初始化包装对象。
 * [*Deep Relational Operations (when supported by the type T):] To compare
-wrapped object values taking into account the presence of uninitialized states.
-* [*Value access:] To unwrap the wrapped object.
+wrapped object values taking into account the presence of uninitialized states.\n
+  [*深比较操作(仅当被类型T支持时)：]比较两个包装对象的值，包括未初始化状态的情形。
+* [*Value access:] To unwrap the wrapped object.\n
+  [*值访问：]对包装对象去包装。 
 * [*Initialization state query:] To determine if the object is formally
-initialized or not.
+initialized or not.\n
+  [*初始化状态查询：]判断该对象是否已正式初始化。
 * [*Swap:] To exchange wrapped objects. (with whatever exception safety
-guarantees are provided by `T`'s swap).
+guarantees are provided by `T`'s swap).\n
+  [*交换：]交换包装的对象。(无论 `T` 的交换操作提供何种异常安全性保证)。 
 * [*De-initialization:] To release the wrapped object (if any) and leave the
-wrapper in the uninitialized state.
+wrapper in the uninitialized state.\n
+  [*去初始化：]释放包装的对象(如果有)，并使包装器保留未初始化状态。
 
 Additional operations are useful, such as converting constructors and
 converting assignments, in-place construction and assignment, and safe
-value access via a pointer to the wrapped object or null.
+value access via a pointer to the wrapped object or null.\n
+其它操作也是有用的，如转换构造函数和转换赋值，就地构造和赋值，以及通过包装对象的一个指针或空指针进行安全的值访问。
 
 [endsect]
 
-[section The Interface]
+[section:the_interface The Interface 接口]
 
 Since the purpose of optional is to allow us to use objects with a formal
 uninitialized additional state, the interface could try to follow the
@@ -152,31 +212,42 @@ the proper degree of adoption of the native `T` interface, the following must
 be noted: Even if all the operations supported by an instance of type `T` are
 defined for the entire range of values for such a type, an `optional<T>`
 extends such a set of values with a new value for which most
-(otherwise valid) operations are not defined in terms of `T`.
+(otherwise valid) operations are not defined in terms of `T`.\n
+由于 optional 的目的是允许我们使用增加了正式的未初始化状态的对象，所以它的接口应该尽可能跟随底层的类型 `T`. 
+为了选择适当的原本的 `T` 接口，应该留意以下几点：即使被类型 `T` 的实例所支持的所有操作是为该类的整个值域所定义的，
+但是 `optional<T>` 将该值域扩充了一个新值，所以很多(对其它值有效的)操作对该值没有定义。
 
 Furthermore, since `optional<T>` itself is merely a `T` wrapper (modeling a `T`
 supertype), any attempt to define such operations upon uninitialized optionals
-will be totally artificial w.r.t. `T`.
+will be totally artificial w.r.t. `T`.\n
+此外，由于 `optional<T>` 本身只不过是一个 `T` 的包装(类似于 `T` 的一个超类)，任何针对未初始化的 optional 的操作定义都应完全与 `T` 相关。
 
 This library chooses an interface which follows from `T`'s interface only for
 those operations which are well defined (w.r.t the type `T`) even if any of the
 operands are uninitialized. These operations include: construction,
-copy-construction, assignment, swap and relational operations.
+copy-construction, assignment, swap and relational operations.\n
+本库所选择的接口是，沿用 `T` 的接口，只要那些操作是有良好定义的(与类型 `T` 有关)，即使某些操作数未初始化。
+这样的操作包括有：构造，复制构造，赋值，交换和比较操作。
 
 For the value access operations, which are undefined (w.r.t the type `T`) when
 the operand is uninitialized, a different interface is chosen (which will be
-explained next).
+explained next).\n
+对于值访问操作，如果操作数是未初始化的，则是未定义的(与类型 `T` 有关)，所以选用了不同的接口(稍后将会解释)。
 
 Also, the presence of the possibly uninitialized state requires additional
-operations not provided by `T` itself which are supported by a special interface.
+operations not provided by `T` itself which are supported by a special interface.\n
+还有，未初始化状态的可能出现需要有更多的操作，这些操作是 `T` 本身所不具备的，它们将以特定的接口提供。
 
 [heading Lexically-hinted Value Access in the presence of possibly
-untitialized optional objects: The operators * and ->]
+untitialized optional objects: The operators * and ->\n
+对可能未初始化的 optional 对象的带提示的值访问：操作符 * 和 ->]
 
 A relevant feature of a pointer is that it can have a [*null pointer value].
 This is a ['special] value which is used to indicate that the pointer is not
 referring to any object at all. In other words, null pointer values convey
-the notion of inexistent objects.
+the notion of inexistent objects.\n
+指针的一个特点是它可以具有 [*空指针值]。这是一个['特殊]值，用于表示该指针没有指向任何对象。
+换句话说，空指针值表达的意思是不存在的对象。
 
 This meaning of the null pointer value allowed pointers to became a ['de
 facto] standard for handling optional objects because all you have to do
@@ -184,7 +255,10 @@ to refer to a value which you don't really have is to use a null pointer
 value of the appropriate type. Pointers have been used for decades—from
 the days of C APIs to modern C++ libraries—to ['refer] to optional (that is,
 possibly inexistent) objects; particularly as optional arguments to a
-function, but also quite often as optional data members.
+function, but also quite often as optional data members.\n
+空指针值的这个意义使得指针成为了处理 optional 对象的['事实]标准，因为当你要引向一个实际上不存在的值时，
+你要做的只是使用适当类型的空指针值。指针已经被使用了几十年 — 从 C APIs 一直到现代的 C++ 库 — 用来['表示] optional 
+(即可能不存在的)对象；尤其是用作函数的可选参数，但也常被用作可选数据成员。
 
 The possible presence of a null pointer value makes the operations that
 access the pointee's value possibly undefined, therefore, expressions which
@@ -192,12 +266,17 @@ use dereference and access operators, such as: `( *p = 2 )` and `( p->foo() )`,
 implicitly convey the notion of optionality, and this information is tied to
 the ['syntax] of the expressions. That is, the presence of operators `*` and `->`
 tell by themselves —without any additional context— that the expression will
-be undefined unless the implied pointee actually exist.
+be undefined unless the implied pointee actually exist.\n
+空指针值的可能出现使得访问被指物值的操作可能是无定义的，所以，使用提领和访问操作符的表达式，
+如 `( *p = 2 )` 和 `( p->foo() )`, 暗含了可选性的概念，此类信息被表达式的['语法]所依赖。
+即，操作符 `*` 和 `->` 本身 — 无需任何额外的上下文 — 就说明了该表达式可以是无定义的，除非被指物确实存在。
 
 Such a ['de facto] idiom for referring to optional objects can be formalized
 in the form of a concept: the __OPTIONAL_POINTEE__ concept.
 This concept captures the syntactic usage of operators `*`, `->` and
-conversion to `bool` to convey the notion of optionality.
+conversion to `bool` to convey the notion of optionality.\n
+这个表示 optional 对象的['事实上]的惯用法可以用一个概念来规范化：__OPTIONAL_POINTEE__ 概念。
+该概念包含了操作符 `*`, `->` 以及转换到 `bool` 的语法，以表达可选性的概念。
 
 However, pointers are good to [_refer] to optional objects, but not particularly
 good to handle the optional objects in all other respects, such as initializing
@@ -206,7 +285,10 @@ semantics: if you need to effectively move or copy the object, pointers alone
 are not enough. The problem is that copies of pointers do not imply copies of
 pointees. For example, as was discussed in the motivation, pointers alone
 cannot be used to return optional objects from a function because the object
-must move outside from the function and into the caller's context.
+must move outside from the function and into the caller's context.\n
+虽然指针适合于[_表示] optional 对象，但是并不特别适合处理 optional 对象的其它方面，如初始化或移动/复制。
+问题主要在于指针语义的浅复制：如果你需要高效地移动或复制对象，那么仅有指针是不够的。问题是指针的拷贝并不代表被指物的拷贝。
+例如，象在"动机"一节中所讨论的，仅用指针并不能从一个函数返回 optional 对象，因为该对象必须从函数中移至外部，进入调用者的上下文。
 
 A solution to the shallow-copy problem that is often used is to resort to
 dynamic allocation and use a smart pointer to automatically handle the details
@@ -219,18 +301,26 @@ manipulate optional values just as we do with ordinary values. Pointers do
 not have this semantics, so are inappropriate for the initialization and
 transport of optional values, yet are quite convenient for handling the access
 to the possible undefined value because of the idiomatic aid present in the
-__OPTIONAL_POINTEE__ concept incarnated by pointers.
+__OPTIONAL_POINTEE__ concept incarnated by pointers.\n
+解决浅复制问题的一个常用方法是，采用动态分配并使用智能指针来自动处理其细节。
+例如，如果一个函数可选性地返回一个对象 `X`, 则可以使用 `shared_ptr<X>` 作为返回值。
+不过，这要求对 `X` 进行动态分配。如果 `X` 是内建的或是小的 POD, 该技术在资源方面很不划算。
+Optional 对象本质上是值对象，所以，如果可以象我们处理普通的值对象那样，使用自动存储和深复制语义来维护 optional 值，才是最方便的。
+指针不具有这种语义，所以不适于初始化和转移 optional 值，但还是非常适合于访问有可能无定义的值，
+因为该用法已存在于以指针为代表的 __OPTIONAL_POINTEE__ 概念中。
 
 
-[heading Optional<T> as a model of OptionalPointee]
+[heading Optional<T> as a model of OptionalPointee  Optional<T>作为OptionalPointee的模型]
 
 For value access operations `optional<>` uses operators `*` and `->` to
 lexically warn about the possibly uninitialized state appealing to the
-familiar pointer semantics w.r.t. to null pointers.
+familiar pointer semantics w.r.t. to null pointers.\n
+对于值访问操作，`optional<>` 使用操作符 `*` 和 `->` 来提醒有可能出现的未初始化状态，这类似于指针语义中的空指针用法。
 
 [warning
 However, it is particularly important to note that `optional<>` objects
-are not pointers. [_`optional<>` is not, and does not model, a pointer].
+are not pointers. [_`optional<>` is not, and does not model, a pointer].\n
+但是，要重点留意的是，`optional<>` 对象不是指针。[_`optional<>` 不是也不符合指针的概念]。
 ]
 
 For instance, `optional<>` does not have shallow-copy so does not alias:
@@ -244,7 +334,13 @@ they do not compare pointee values.
 As a result, you might be able to replace `optional<T>` by `T*` on some
 situations but not always. Specifically, on generic code written for both,
 you cannot use relational operators directly, and must use the template
-functions __FUNCTION_EQUAL_POINTEES__ and __FUNCTION_LESS_POINTEES__ instead.
+functions __FUNCTION_EQUAL_POINTEES__ and __FUNCTION_LESS_POINTEES__ instead.\n
+例如，`optional<>` 没有浅复制，所以也没有别名：两个不同的 optional 永远不会引向['同一个]值，
+除非 `T` 本身是一个引用(但可以有['相等的]值)。必须注意 `optional<T>` 和指针间的区别，特别是因为它们的比较操作符的语义是不同的：
+因为 `optional<T>` 是一个值包装器，比较操作符是"深"的：它们比较 optional 的值；而指针的比较操作符则是"浅"的：
+它们不比较被指物的值。所以，你也许可以在某些情形下用 `T*` 替换 `optional<T>`，但并不是总可以这样做。
+特别是，在为两者所写的泛型代码中，你不能直接使用比较操作符，而必须使用模板函数 __FUNCTION_EQUAL_POINTEES__ 和 
+__FUNCTION_LESS_POINTEES__ 来代替。
 
 [endsect]
 

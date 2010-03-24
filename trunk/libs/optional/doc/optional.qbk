@@ -44,16 +44,18 @@ Distributed under the Boost Software License, Version 1.0.
 [def __GO_TO__ [$images/callouts/R.png]]
 
 
-[section Motivation]
+[section:motivation Motivation 动机]
 
 Consider these functions which should return a value but which might not have
-a value to return:
+a value to return:\n
+请看一下以下几个返回一个值的函数，它们也可能没有值可以返回：
 
 * (A) `double sqrt(double n );`
 * (B) `char get_async_input();`
 * (C) `point polygon::get_any_point_effectively_inside();`
 
-There are different approaches to the issue of not having a value to return.
+There are different approaches to the issue of not having a value to return.\n
+通常有几种不同的方法来处理无值可以返回的情形。
 
 A typical approach is to consider the existence of a valid return value as a
 postcondition, so that if the function cannot compute the value to return, it
@@ -62,13 +64,19 @@ runtime check and throws an exception if the postcondition is violated. This
 is a reasonable choice for example, for function (A), because the lack of a
 proper return value is directly related to an invalid parameter (out of domain
 argument), so it is appropriate to require the callee to supply only parameters
-in a valid domain for execution to continue normally.
+in a valid domain for execution to continue normally.\n
+最典型的方法是将有效的返回值视为后续条件，则如果函数不能计算出要返回的值，那么它要么具有未定义行为
+(也可以在调试的构建中使用断言)，要么使用运行期检查并在违反后续条件时抛出一个异常。
+对于函数(A)这是一个合理的选择，因为无法得到正确的返回值是直接由无效的参数(超出参数域)所引起的，
+所以要求调用者只能提供有效域内的参数是适合的。
 
 However, function (B), because of its asynchronous nature, does not fail just
 because it can't find a value to return; so it is incorrect to consider such
 a situation an error and assert or throw an exception. This function must
 return, and somehow, must tell the callee that it is not returning a meaningful
-value.
+value.\n
+但是对于函数(B)，由于它本身的异步性，不应该仅仅因为不能找到可返回的值就认为是失败；
+所以将这种情况视为错误或抛出异常都是不正确的。该函数必须返回，并且一定要通知调用者它没有返回一个有意义的值的。
 
 A similar situation occurs with function (C): it is conceptually an error to
 ask a ['null-area] polygon to return a point inside itself, but in many
@@ -76,31 +84,43 @@ applications, it is just impractical for performance reasons to treat this as
 an error (because detecting that the polygon has no area might be too expensive
 to be required to be tested previously), and either an arbitrary point
 (typically at infinity) is returned, or some efficient way to tell the callee
-that there is no such point is used.
+that there is no such point is used.\n
+类似的情形也发生在函数(C)上：询问一个空的多边形并返回一个内部点在概念上是错误的，但是在多数应用程序中，
+由于性能的原因，将它视为一个错误是不切实际的(因为在调用之前检测一个多边形是否为空可能代价很高)，
+要么返回任意一个点(通常是无限远)，要么以高效的方法通知调用者没有这样的点。
 
 There are various mechanisms to let functions communicate that the returned
 value is not valid. One such mechanism, which is quite common since it has
 zero or negligible overhead, is to use a special value which is reserved to
 communicate this. Classical examples of such special values are `EOF`,
-`string::npos`, points at infinity, etc...
+`string::npos`, points at infinity, etc...\n
+有多种机制来让函数通告返回值是无效的。其中最常用的一种机制没有或只有很小的开销，就是用一个保留的特殊值来通告。
+这种特殊值的一个典型例子包括 `EOF`, `string::npos`, 位于无限远的点，等等...
 
 When those values exist, i.e. the return type can hold all meaningful values
 ['plus] the ['signal] value, this mechanism is quite appropriate and well known.
 Unfortunately, there are cases when such values do not exist. In these cases,
 the usual alternative is either to use a wider type, such as `int` in place of
-`char`; or a compound type, such as `std::pair<point,bool>`.
+`char`; or a compound type, such as `std::pair<point,bool>`.\n
+如果存在这样的值，即返回类型可以持有所有有意义的值再['加上]这个['信号]值，那么这种机制就非常适合。
+不幸的是，有些情形下不存在这样的值。这时，通常可用的方法是，要么使用一个更宽的类型，如用 `int` 代替 `char`; 
+或者使用复合类型，如 `std::pair<point,bool>`. 
 
 Returning a `std::pair<T,bool>`, thus attaching a boolean flag to the result
 which indicates if the result is meaningful, has the advantage that can be
 turned into a consistent idiom since the first element of the pair can be
 whatever the function would conceptually return. For example, the last two
-functions could have the following interface:
+functions could have the following interface:\n
+返回一个 `std::pair<point,bool>`, 要在结果之后添加一个布尔标志，用于表示该结果是否有效，
+该方法的好处是，无论函数要返回什么类型，都可以用作 pair 的第一个元素，这可以成为一种通用的惯用法。
+例如，前例中的后两个函数可以具有以下接口：
 
     std::pair<char,bool> get_async_input();
     std::pair<point,bool> polygon::get_any_point_effectively_inside();
 
 These functions use a consistent interface for dealing with possibly inexistent
-results:
+results:\n
+这些函数使用了统一的接口来处理返回值不存在的可能性：
 
     std::pair<point,bool> p = poly.get_any_point_effectively_inside();
     if ( p.second )
@@ -108,9 +128,11 @@ results:
 
 However, not only is this quite a burden syntactically, it is also error prone
 since the user can easily use the function result (first element of the pair)
-without ever checking if it has a valid value.
+without ever checking if it has a valid value.\n
+不过，这不仅是语法上的负担，还会容易出错，因为用户很容易不检查函数结果(pair的第一个元素)是否有效就直接使用它。
 
-Clearly, we need a better idiom.
+Clearly, we need a better idiom.\n
+显然，我们需要更好的方法。
 
 [endsect]
 

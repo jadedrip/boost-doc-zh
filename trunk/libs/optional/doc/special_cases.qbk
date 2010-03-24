@@ -1,56 +1,71 @@
 
-[section Optional references]
+[section:optional_references Optional references  Optional引用]
 
 This library allows the template parameter `T` to be of reference type:
-`T&`, and to some extent, `T const&`.
+`T&`, and to some extent, `T const&`.\n
+本库允许模板参数 `T` 可以是引用类型：`T&`, 及其扩展 `T const&`.
 
 However, since references are not real objects some restrictions apply and
-some operations are not available in this case:
+some operations are not available in this case:\n
+不过，由于引用不是真正的对象，所以有一些限制，有些操作不可使用：
 
-* Converting constructors
-* Converting assignment
-* InPlace construction
-* InPlace assignment
-* Value-access via pointer
+* Converting constructors\n
+  转换构造函数
+* Converting assignment\n
+  转换赋值
+* InPlace construction\n
+  就地构造
+* InPlace assignment\n
+  就地赋值
+* Value-access via pointer\n
+  通过指针的值访问
 
 Also, even though `optional<T&>` treats it wrapped pseudo-object much as
-a real value, a true real reference is stored so aliasing will ocurr:
+a real value, a true real reference is stored so aliasing will ocurr:\n
+而且，虽然 `optional<T&>` 在处理其包装的伪对象时与真正的值对象非常相似，
+但实际上它保存的是一个真正的引用，所以可能发生以下容易混淆的情况：
 
 * Copies of `optional<T&>` will copy the references but all these references
-will nonetheless reefer to the same object.
+will nonetheless reefer to the same object.\n
+  复制 `optional<T&>` 将对引用进行复制，但所有被复制的引用都将引向同一个对象。
 * Value-access will actually provide access to the referenced object
-rather than the reference itself.
+rather than the reference itself.\n
+  值访问操作提供对被引用的对象而不是引用本身的访问。
 
 [endsect]
 
-[section Rebinding semantics for assignment of optional references]
+[section:rebinding_semantics_for_assignment_of_optional_references Rebinding semantics for assignment of optional references  
+optional引用赋值操作的重绑定语义]
 
 If you assign to an ['uninitialized ] `optional<T&>` the effect is to bind (for
-the first time) to the object. Clearly, there is no other choice.
+the first time) to the object. Clearly, there is no other choice.\n
+如果你对一个['未初始化的] `optional<T&>` 进行赋值，效果将是将它绑定(对于第一次赋值)到某个对象。显然，这里没有其它的选择。
 
     int x = 1 ;
     int& rx = x ;
     optional<int&> ora ;
     optional<int&> orb(x) ;
-    ora = orb ; // now 'ora' is bound to 'x' through 'rx'
-    *ora = 2 ; // Changes value of 'x' through 'ora'
+    ora = orb ; // now 'ora' is bound to 'x' through 'rx'  现在'ora'通过'rx'被绑定到'x'
+    *ora = 2 ; // Changes value of 'x' through 'ora'  通过'ora'修改'x'的值
     assert(x==2); 
 
 If you assign to a bare C++ reference, the assignment is forwarded to the
-referenced object; it's value changes but the reference is never rebound.
+referenced object; it's value changes but the reference is never rebound.\n
+如果你对一个C++裸引用进行赋值，赋值的操作将被前转至被引用的对象；结果是被引用对象的值被改变而引用本身不会被重绑定。
 
     int a = 1 ;
     int& ra = a ;
     int b = 2 ;
     int& rb = b ;
-    ra = rb ; // Changes the value of 'a' to 'b'
+    ra = rb ; // Changes the value of 'a' to 'b'  修改'a'的值为'b'
     assert(a==b);
     b = 3 ;
-    assert(ra!=b); // 'ra' is not rebound to 'b'
+    assert(ra!=b); // 'ra' is not rebound to 'b'  'ra'不会重绑定到'b'
 
 Now, if you assign to an ['initialized ] `optional<T&>`, the effect is to
 [*rebind] to the new object instead of assigning the referee. This is unlike
-bare C++ references.
+bare C++ references.\n
+现在，如果你对一个['已初始化的] `optional<T&>` 进行赋值，结果将是[*重绑定]到新的对象，而不是对引用物进行赋值。这和C++裸引用是不一样的。 
 
     int a = 1 ;
     int b = 2 ;
@@ -58,23 +73,26 @@ bare C++ references.
     int& rb = b ;
     optional<int&> ora(ra) ;
     optional<int&> orb(rb) ;
-    ora = orb ; // 'ora' is rebound to 'b'
-    *ora = 3 ; // Changes value of 'b' (not 'a')
+    ora = orb ; // 'ora' is rebound to 'b'  'ora'被重绑定至'a'
+    *ora = 3 ; // Changes value of 'b' (not 'a')  修改'b'(而不是'a')的值
     assert(a==1); 
     assert(b==3); 
 
-[heading Rationale]
+[heading:rationale Rationale 原理]
 
 Rebinding semantics for the assignment of ['initialized ] `optional` references has
 been chosen to provide [*consistency among initialization states] even at the
 expense of lack of consistency with the semantics of bare C++ references.
 It is true that `optional<U>` strives to behave as much as possible as `U`
 does whenever it is initialized; but in the case when `U` is `T&`, doing so would
-result in inconsistent behavior w.r.t to the lvalue initialization state.
+result in inconsistent behavior w.r.t to the lvalue initialization state.\n
+对['已初始化的] `optional` 引用的赋值操作的重绑定语义提供了[*对初始化状态的一致性]，这是以违反C++裸引用语义为代价的。
+确实，`optional<U>` 尽可能表现得和 `U` 一样，不论它是否已初始化；但是如果 `U` 是 `T&`, 这样做就会导致和左值初始化状态相关的不一致行为。
 
 Imagine `optional<T&>` forwarding assignment to the referenced object (thus
 changing the referenced object value but not rebinding), and consider the
-following code:
+following code:\n
+设想 `optional<T&>` 将赋值操作前转至被引用的对象(修改被引用的对象而不是重绑定)，考虑一下以下代码：
 
     optional<int&> a = get();
     int x = 1 ;
@@ -82,20 +100,26 @@ following code:
     optional<int&> b(rx);
     a = b ;
 
-What does the assignment do?
+What does the assignment do?\n
+这个赋值操作会做什么？
 
 If `a` is ['uninitialized], the answer is clear: it binds to `x` (we now have
 another reference to `x`).
 But what if `a` is already ['initialized]? it would change the value of the
 referenced object (whatever that is); which is inconsistent with the other
-possible case.
+possible case.\n
+如果 `a` 是['未初始化的]，那么答案非常清楚：它将被绑定到 `x` (这样我们就有了第二个到 `x` 的引用)。
+但是如果 `a` 已经['初始化]了呢？那么这个赋值操作可能会修改被引用对象(无论它是什么)的值，但是这样做就会和在未初始化情形下的行为不一致。
 
 If `optional<T&>` would assign just like `T&` does, you would never be able to
 use Optional's assignment without explicitly handling the previous
 initialization state unless your code is capable of functioning whether
-after the assignment, `a` aliases the same object as `b` or not.
+after the assignment, `a` aliases the same object as `b` or not.\n
+如果 `optional<T&>` 的赋值只是象 `T&` 那样做，你就永远不能在没有显式处理过原先的已初始化状态的时候使用 Optional 的赋值，
+除非你的代码能够判断在这个赋值之后，`a` 是 `b` 的别名抑或不是。
 
-That is, you would have to discriminate in order to be consistency.
+That is, you would have to discriminate in order to be consistency.\n
+即，你不得不为了一致性而进行分别处理。
 
 If in your code rebinding to another object is not an option, then is very
 likely that binding for the fist time isn't either. In such case, assignment
@@ -103,20 +127,25 @@ to an ['uninitialized ] `optional<T&>` shall be prohibited. It is quite possible
 that in such scenario the precondition that the lvalue must be already
 initialized exist. If it doesn't, then binding for the first time is OK
 while rebinding is not which is IMO very unlikely.
-In such scenario, you can assign the value itself directly, as in:
+In such scenario, you can assign the value itself directly, as in:\n
+如果将引用绑定到另一个对象对于你的代码来说是错误的，那么在第一次的时候通过赋值操作来绑定而不是初始化很可能也是错误的。
+在这种情况下，赋值到一个['未初始化的] `optional<T&>` 应该被禁止。很可能这种情况下前提条件是，左值必须是已初始化的。
+若非如此，则第一次的绑定是对的，而重绑定是错误的，这通常不大可能。这种情况下你可以直接向它赋值，如：
 
     assert(!!opt);
     *opt=value;
 
 [endsect]
 
-[section In-Place Factories]
+[section:in_place_factories In-Place Factories 就地创建]
 
 One of the typical problems with wrappers and containers is that their
 interfaces usually provide an operation to initialize or assign the
 contained object as a copy of some other object. This not only requires the
 underlying type to be __COPY_CONSTRUCTIBLE__, but also requires the existence of
-a fully constructed object, often temporary, just to follow the copy from:
+a fully constructed object, often temporary, just to follow the copy from:\n
+使用包装器和容器的一个常见问题是，它们通常会有一个接口提供一个操作，将所含对象初始化或赋值为另一个对象的拷贝。
+这不仅要求底层的类型是 __COPY_CONSTRUCTIBLE__，而且还要求一个完全构造的对象，该对象通常是临时的，仅用作复制的来源：
 
     struct X
     {
@@ -134,14 +163,16 @@ a fully constructed object, often temporary, just to follow the copy from:
 
     void foo()
     {
-        // Temporary object created.
+        // Temporary object created.  创建临时对象
         W ( X(123,"hello") ) ;
     }
 
 A solution to this problem is to support direct construction of the
 contained object right in the container's storage.
 In this scheme, the user only needs to supply the arguments to the
-constructor to use in the wrapped object construction.
+constructor to use in the wrapped object construction.\n
+解决这一问题的一种方法是，提供在容器的存储中直接构造所含对象的支持。
+这样一来，用户只需要将相关参数提供给构造函数，用于所含对象的构造。
 
     class W
     {
@@ -157,21 +188,27 @@ constructor to use in the wrapped object construction.
     {
         // Wrapped object constructed in-place
         // No temporary created.
+        // 就地创建所含对象，不再需要创建临时对象。
         W (123,"hello") ;
     }
 
 A limitation of this method is that it doesn't scale well to wrapped
 objects with multiple constructors nor to generic code were the constructor
-overloads are unknown.
+overloads are unknown.\n
+这种方法的限制在于，它不适用于带有多个构造函数的被包装对象，也不适用于对构造函数重载不知情的泛型代码。
 
 The solution presented in this library is the family of [*InPlaceFactories]
 and [*TypedInPlaceFactories].
 These factories are a family of classes which encapsulate an increasing
 number of arbitrary constructor parameters and supply a method to construct
 an object of a given type using those parameters at an address specified by
-the user via placement new.
+the user via placement new.\n
+在本库中，解决的方法是 [*InPlaceFactories] 和 [*TypedInPlaceFactories] 家族。
+这些工厂是一族类，这些类封装了不同参数数量的构造函数参数，提供一个方法来构造给定类型的一个对象，
+构造时使用这些被封装的参数，并通过 placement new 在用户指定的地址进行构造。
 
-For example, one member of this family looks like:
+For example, one member of this family looks like:\n
+例如，这个类族中的其中一个类如下：
 
     template<class T,class A0, class A1>
     class TypedInPlaceFactory2
@@ -185,7 +222,8 @@ For example, one member of this family looks like:
         void construct ( void* p ) { new (p) T(m_a0,m_a1) ; }
      } ;
 
-A wrapper class aware of this can use it as:
+A wrapper class aware of this can use it as:\n
+一个包装类可以这样来使用它：
 
     class W
     {
@@ -201,21 +239,27 @@ A wrapper class aware of this can use it as:
     {
         // Wrapped object constructed in-place via a TypedInPlaceFactory.
         // No temporary created.
+        // 通过 TypedInPlaceFactory 就地构造被包装对象。无需创建临时对象。
         W ( TypedInPlaceFactory2<X,int,std::string>(123,"hello")) ;
     }
 
-The factories are divided in two groups:
+The factories are divided in two groups:\n
+这些工厂类被分为两组：
 
 * [_TypedInPlaceFactories]: those which take the target type as a primary
-template parameter.
+template parameter.\n
+  [_TypedInPlaceFactories]: 它们以目标类型作为主模板参数。
 * [_InPlaceFactories]: those with a template `construct(void*)` member
-function taking the target type.
+function taking the target type.\n
+  [_InPlaceFactories]: 它们以模板化的 `construct(void*)` 成员函数来接受目标类型。
 
 Within each group, all the family members differ only in the number of
-parameters allowed.
+parameters allowed.\n
+在每一组中，所有类族成员仅在可接受的参数数量上有所不同。
 
 This library provides an overloaded set of helper template functions to
-construct these factories without requiring unnecessary template parameters:
+construct these factories without requiring unnecessary template parameters:\n
+本库还提供了一组重载的模板函数来构造这些工厂类，从而无需给定模板参数：
 
     template<class A0,...,class AN>
     InPlaceFactoryN <A0,...,AN> in_place ( A0 const& a0, ..., AN const& aN) ;
@@ -223,7 +267,8 @@ construct these factories without requiring unnecessary template parameters:
     template<class T,class A0,...,class AN>
     TypedInPlaceFactoryN <T,A0,...,AN> in_place ( T const& a0, A0 const& a0, ..., AN const& aN) ;
 
-In-place factories can be used generically by the wrapper and user as follows:
+In-place factories can be used generically by the wrapper and user as follows:\n
+就地创建可以被包装器和用户泛型地使用，如下：
 
     class W
     {
@@ -242,28 +287,36 @@ In-place factories can be used generically by the wrapper and user as follows:
     {
         // Wrapped object constructed in-place via a InPlaceFactory.
         // No temporary created.
+        // 通过 InPlaceFactory 就地构造被包装的对象。无需创建临时对象。
         W ( in_place(123,"hello") ) ;
     }
 
-The factories are implemented in the headers: __IN_PLACE_FACTORY_HPP__ and __TYPED_IN_PLACE_FACTORY_HPP__
+The factories are implemented in the headers: __IN_PLACE_FACTORY_HPP__ and __TYPED_IN_PLACE_FACTORY_HPP__\n
+这些工厂类在头文件 __IN_PLACE_FACTORY_HPP__ 和 __TYPED_IN_PLACE_FACTORY_HPP__ 中实现。
 
 [endsect]
 
-[section A note about optional<bool>]
+[section:a_note_about_optional_bool_ A note about optional<bool> 关于optional<bool>的说明]
 
-`optional<bool>` should be used with special caution and consideration.
+`optional<bool>` should be used with special caution and consideration.\n
+`optional<bool>` 在使用时需要特别小心和留意。
 
 First, it is functionally similar to a tristate boolean (false,maybe,true)
 —such as __BOOST_TRIBOOL__— except that in a tristate boolean, the maybe state
 [_represents a valid value], unlike the corresponding state of an uninitialized
 `optional<bool>`.
 It should be carefully considered if an `optional<bool>` instead of a `tribool`
-is really needed.
+is really needed.\n
+首先，它的功能类似于三态布尔类型(false,maybe,true) — 如 __BOOST_TRIBOOL__ — 只有一点区别，
+即在三态布尔类型中，maybe 状态[_代表了一个有效的值]，而不是未初始化的 `optional<bool>` 的相应状态。
+如果真的要用 `optional<bool>` 替代 `tribool`，你要非常小心谨慎。
 
 Second, `optional<>` provides an implicit conversion to `bool`. This
 conversion refers to the initialization state and not to the contained value.
 Using `optional<bool>` can lead to subtle errors due to the implicit `bool`
-conversion:
+conversion:\n
+其次，`optional<>` 提供了到 `bool` 的隐式转换。该转换表示了所含值是否为已初始化状态。
+使用 `optional<bool>` 可能会由于这个到 `bool` 的隐式转换而导致微妙的错误：
 
     void foo ( bool v ) ;
     void bar()
@@ -271,20 +324,24 @@ conversion:
         optional<bool> v = try();
 
         // The following intended to pass the value of 'v' to foo():
+        // 下面将 'v' 的值传递给 foo():
         foo(v);
         // But instead, the initialization state is passed
         // due to a typo: it should have been foo(*v).
+        // 但是实际上，被传递的是初始化状态。正确的写法应该是：foo(*v).
     }
 
 The only implicit conversion is to `bool`, and it is safe in the sense that
 typical integral promotions don't apply (i.e. if `foo()` takes an `int`
-instead, it won't compile).
+instead, it won't compile).\n
+隐式转换只是转为 `bool`, 不会对其进行整型类型的提升，所以它还是安全的(例如，如果 `foo()` 接受的是一个 `int`, 它将不能编译)。 
 
 [endsect]
 
-[section Exception Safety Guarantees]
+[section:exception_safety_guarantees Exception Safety Guarantees 异常安全性保证]
 
-Because of the current implementation (see [link boost_optional.implementation_notes Implementation Notes]), all of the assignment methods:
+Because of the current implementation (see [link boost_optional.implementation_notes Implementation Notes]), all of the assignment methods:\n
+由于当前的实现(请见 [link boost_optional.implementation_notes 实现说明])，所有赋值方法：
 
 * `optional<T>::operator= ( optional<T> const& )`
 * `optional<T>::operator= ( T const& )`
@@ -295,22 +352,28 @@ Because of the current implementation (see [link boost_optional.implementation_n
 
 Can only ['guarantee] the [_basic exception safety]: The lvalue optional is
 left [_uninitialized] if an exception is thrown (any previous value is ['first]
-destroyed using `T::~T()`)
+destroyed using `T::~T()`)\n
+只能['保证][_基本的异常安全性]：如果有异常被抛出，则左值 optional 将保持为 [_未初始化] (原来的值会['首先]用 `T::~T()` 销毁)。 
 
-On the other hand, the ['uninitializing] methods:
+On the other hand, the ['uninitializing] methods:\n
+另一方面，['去初始化]方法：
 
 * `optional<T>::operator= ( detail::none_t )`
 * `optional<T>::reset()`
 
-Provide the no-throw guarantee (assuming a no-throw `T::~T()`)
+Provide the no-throw guarantee (assuming a no-throw `T::~T()`)\n
+提供了无抛出保证(假定 `T::~T()` 是无抛出的)。 
 
 However, since `optional<>` itself doesn't throw any exceptions, the only
 source for exceptions here are `T`'s constructor, so if you know the exception
 guarantees for `T::T ( T const& )`, you know that `optional`'s assignment and
-reset has the same guarantees.
+reset has the same guarantees.\n
+不过，由于 `optional<>` 本身不抛出任何异常，所以在这里异常的唯一来源是 `T` 的构造函数，
+如果你知道 `T::T ( T const& )` 的异常安全性保证，那么你就可以知道 `optional` 的赋值和重置都具有相同的保证。
 
     //
     // Case 1: Exception thrown during assignment.
+    // Case 1: 在赋值时抛出异常。
     //
     T v0(123);
     optional<T> opt0(v0);
@@ -321,16 +384,19 @@ reset has the same guarantees.
         opt0 = opt1 ;
 
         // If no exception was thrown, assignment succeeded.
+        // 如果没有异常抛出，则赋值成功。
         assert( *opt0 == v1 ) ;
     }
     catch(...)
     {
         // If any exception was thrown, 'opt0' is reset to uninitialized.
+        // 如果有任何异常抛出，则 'opt0' 被重置为未初始化。
         assert( !opt0 ) ;
     }
 
     //
     // Case 2: Exception thrown during reset(v)
+    // Case 2: 在 reset(v) 时抛出异常
     //
     T v0(123);
     optional<T> opt(v0);
@@ -340,15 +406,17 @@ reset has the same guarantees.
         opt.reset ( v1 ) ;
 
         // If no exception was thrown, reset succeeded.
+        // 如果没有异常抛出，则重置成功。
         assert( *opt == v1 ) ;
     }
     catch(...)
     {
         // If any exception was thrown, 'opt' is reset to uninitialized.
+        // 如果有任何异常抛出，则 'opt' 被重置为未初始化。
         assert( !opt ) ;
     }
 
-[heading Swap]
+[heading Swap 交换]
 
 `void swap( optional<T>&, optional<T>& )` has the same exception guarantee
 as `swap(T&,T&)` when both optionals are initialized.
@@ -356,16 +424,21 @@ If only one of the optionals is initialized, it gives the same ['basic]
 exception guarantee as `optional<T>::reset( T const& )` (since
 `optional<T>::reset()` doesn't throw).
 If none of the optionals is initialized, it has no-throw guarantee
-since it is a no-op.
+since it is a no-op.\n
+`void swap( optional<T>&, optional<T>& )` 在两个 `optional` 均已初始化时，具有与 `swap(T&,T&)` 相同的异常保证。
+如果只有一个 `optional` 是已初始化的，则它提供与 `optional<T>::reset( T const& )` 一样的['基本]异常保证
+(因为 `optional<T>::reset( T const& )` 不会抛出)。如果两个 `optional` 均未初始化，则它具有无抛出保证，因为这是一个空操作。
 
 [endsect]
 
-[section Type requirements]
+[section:type_requirements Type requirements 类型要求]
 
 In general, `T` must be __COPY_CONSTRUCTIBLE__ and have a no-throw destructor.
-The copy-constructible requirement is not needed if [*InPlaceFactories] are used.
+The copy-constructible requirement is not needed if [*InPlaceFactories] are used.\n
+通常，`T` 必须是 __COPY_CONSTRUCTIBLE__ 且具有无抛出的析构函数。如果使用 [*InPlaceFactories]，则无须要求可复制构造。
 
-`T` [_is not] required to be __SGI_DEFAULT_CONSTRUCTIBLE__.
+`T` [_is not] required to be __SGI_DEFAULT_CONSTRUCTIBLE__.\n
+`T` [_并不]要求是 __SGI_DEFAULT_CONSTRUCTIBLE__。
 
 [endsect]
 
