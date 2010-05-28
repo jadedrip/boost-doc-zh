@@ -1,0 +1,902 @@
+<!DOCTYPE HTML PUBLIC "-//W3C//DTD HTML 4.01 Transitional//EN">
+<html><head>
+<meta http-equiv="Content-Type" content="text/html; charset=UTF-8">
+
+<title>Error Handling</title><link rel="stylesheet" href="../../../../../../../doc/html/boostbook.css" type="text/css">
+<meta name="generator" content="DocBook XSL Stylesheets Vsnapshot_2006-12-17_0120">
+<link rel="start" href="../../index.html" title="Math Toolkit">
+<link rel="up" href="../main_overview.html" title="Overview">
+<link rel="prev" href="result_type.html" title="Calculation of the Type of the Result">
+<link rel="next" href="compilers_overview.html" title="Compilers"></head>
+<body alink="#0000ff" bgcolor="white" link="#0000ff" text="black" vlink="#840084">
+<table cellpadding="2" width="100%"><tbody><tr>
+<td valign="top"><img alt="Boost C++ Libraries" src="../../../../../../../boost.png" height="86" width="277"></td>
+<td align="center"><a href="../../../../../../../index.html">Home</a></td>
+<td align="center"><a href="../../../../../../../libs/libraries.htm">Libraries</a></td>
+<td align="center"><a href="http://www.boost.org/users/people.html">People</a></td>
+<td align="center"><a href="http://www.boost.org/users/faq.html">FAQ</a></td>
+<td align="center"><a href="../../../../../../../more/index.htm">More</a></td>
+</tr></tbody></table>
+<hr>
+<div class="spirit-nav">
+<a accesskey="p" href="result_type.html"><img src="../../../../../../../doc/html/images/prev.png" alt="Prev"></a><a accesskey="u" href="../main_overview.html"><img src="../../../../../../../doc/html/images/up.png" alt="Up"></a><a accesskey="h" href="../../index.html"><img src="../../../../../../../doc/html/images/home.png" alt="Home"></a><a accesskey="n" href="compilers_overview.html"><img src="../../../../../../../doc/html/images/next.png" alt="Next"></a>
+</div>
+<div class="section" lang="en">
+<div class="titlepage"><div><div>
+  <h3 class="title">
+<a name="math_toolkit.main_overview.error_handling"></a><a href="error_handling.html" title="Error Handling"> 错误处理(Error Handling)</a>
+</h3>
+</div></div></div>
+<a name="math_toolkit.main_overview.error_handling.quick_reference"></a>
+<h5>
+<a name="id501001"></a>
+        <a href="error_handling.html#math_toolkit.main_overview.error_handling.quick_reference">快速指南</a>
+  </h5>
+<p>
+        这个库对错误的处理被拆分为两个正交的部分( orthogonal parts )：</p>
+<div class="itemizedlist"><ul type="disc">
+<li>
+          产生了哪种错误?
+      </li>
+<li>当产生错误时如何处理?
+      </li>
+</ul></div>
+<p>
+  可能产生的错误为：</p>
+<div class="variablelist">
+<p class="title"><b></b></p>
+<dl>
+<dt><span class="term">定义域错误(Domain Error)</span></dt>
+<dd>
+  <p>
+          当函数的一个或多个参数超出范围时出现这种错误。</p>
+</dd>
+<dt><span class="term">Pole Error</span></dt>
+<dd>
+  <p>
+            当特殊的参数引起函数在一个pole处(没有定义良好的剩余值(residual value))计算会出现这种错误。例如，如果函数<a href="../special/sf_gamma/tgamma.html" title="Gamma">tgamma</a>
+          在-2处计算时，依据你从－2之上还是从－2之下进行逼近，这个函数会逼近不同的极限值。因此，这个函数在-2这个值处不是定义良好的(well defined)，并且将会产生一个Pole Eror。</p>
+</dd>
+<dt><span class="term">向上溢出错误(Overflow Error)</span></dt>
+<dd>
+  <p>
+          当结果是无限的，或者结果太大以至于不能在函数的返回值的数值类型中表示，那么将会出现这种错误。</p>
+</dd>
+<dt><span class="term">向下错误溢出错误(Underflow Error)</span></dt>
+<dd>
+  <p>
+            当结果不为0，但是太小以至于不能在函数的返回值的数值类型中表示，那么将会出现这种错误。</p>
+</dd>
+<dt><span class="term">Denormalisation Error</span></dt>
+<dd>
+  <p>
+            当返回值是一个denormalised value时出现这种错误。</p>
+</dd>
+<dt><span class="term">舍入错误(Rounding Error)</span></dt>
+<dd>
+  <p>
+          当函数 <a class="link" title="Truncation Functions" href="../utils/rounding/trunc.html">trunc</a>, <a class="link" title="Rounding Functions" href="../utils/rounding/round.html">round</a> 和 <a class="link" title="Integer and Fractional Part Splitting (modf)" href="../utils/rounding/modf.html">modf</a> 的参数不能被表示为一个整数，或是超出返回值类型的范围的时候会出现这种错误。</p>
+</dd>
+<dt><span class="term">计算错误(Evaluation Error)</span></dt>
+<dd>
+  <p>
+          当出现内部错误，使得结果不能被计算的时候出现：这永远都不应当出现，但是如果出现这种错误，可能是因为迭代算法收敛得不够快。</p>
+</dd>
+<dt><span class="term">未定义结果错误(Indeterminate Result Error)</span></dt>
+<dd>
+  <p>
+          当对于传递给函数的参数值，函数的结果是未定义的时候会出现这种错误。</p>
+</dd>
+</dl>
+</div>
+<p>
+  在每种错误情况下所采取的处理方法由当前的<a href="../policy.html" title="Policies">策略</a> 来决定。这可以用过设置一些配置宏来在工程范围(project-wide)来改变策略，或是在名字空间作用域，或是在调用点(通过为调用的函数指定一个特定的策略)改变策略。</p>
+<p>
+  可以采取的错误处理措施是：</p>
+<div class="variablelist">
+<p class="title"><b></b></p>
+<dl>
+<dt><span class="term">throw_on_error</span></dt>
+<dd>
+  <p>
+          抛出一个最适合错误情况的异常。</p>
+</dd>
+<dt><span class="term">errno_on_error</span></dt>
+<dd>
+  <p>
+            将 ::errno 设置为一个合适的值，并返回最合适的结果。</p>
+</dd>
+<dt><span class="term">ignore_error</span></dt>
+<dd>
+  <p>
+          忽略这个错误并返回最合适的值。</p>
+</dd>
+<dt><span class="term">user_error</span></dt>
+<dd>
+  <p>
+            调用一个<a href="../policy/pol_tutorial/user_def_err_pol.html" title="Calling User Defined Error Handlers">用户提供的错误处理方法</a>。</p>
+</dd>
+</dl>
+</div>
+<p>
+        下面的表中所有的错误和采取的错误处理措施的排列(permutations)，每种错误的缺省处理措施以黑体显示：</p>
+<div class="table">
+<a name="id501321"></a>
+<p class="title"><b>对于定义域错误( Domain Errors)可采取的措施</b></p>
+<div class="table-contents"><table class="table" summary="Possible Actions for Domain Errors">
+<colgroup><col><col></colgroup>
+<thead><tr>
+<th>
+            <p>
+              措施</p>
+            </th>
+<th>
+            <p>
+              行为</p>
+            </th>
+</tr></thead>
+<tbody>
+<tr>
+<td>
+            <p>
+              throw_on_error
+            </p>
+            </td>
+<td>
+            <p>
+              <span class="bold"><strong>Throws <code class="computeroutput"><span class="identifier">std</span><span class="special">::</span><span class="identifier">domain_error</span></code></strong></span>
+            </p>
+            </td>
+</tr>
+<tr>
+<td>
+            <p>
+              errno_on_error
+            </p>
+            </td>
+<td>
+            <p>
+              设置<code class="computeroutput"><span class="special">::</span><span class="identifier">errno</span></code>
+              为<code class="computeroutput"><span class="identifier">EDOM</span></code> 并返回<code class="computeroutput"><span class="identifier">std</span><span class="special">::</span><span class="identifier">numeric_limits</span><span class="special">&lt;</span><span class="identifier">T</span><span class="special">&gt;::</span><span class="identifier">quiet_NaN</span><span class="special">()</span></code>            </p>
+            </td>
+</tr>
+<tr>
+<td>
+            <p>
+              ignore_error
+            </p>
+            </td>
+<td>
+            <p>
+              返回<code class="computeroutput"><span class="identifier">std</span><span class="special">::</span><span class="identifier">numeric_limits</span><span class="special">&lt;</span><span class="identifier">T</span><span class="special">&gt;::</span><span class="identifier">quiet_NaN</span><span class="special">()</span></code>
+            </p>
+            </td>
+</tr>
+<tr>
+<td>
+            <p>
+              user_error
+            </p>
+            </td>
+<td>
+            <p>              返回<code class="computeroutput"><span class="identifier">boost</span><span class="special">::</span><span class="identifier">math</span><span class="special">::</span><span class="identifier">policies</span><span class="special">::</span><span class="identifier">user_domain_error</span></code>:
+              <a href="../policy/pol_tutorial/user_def_err_pol.html" title="Calling User Defined Error Handlers">这个函数必须由用户定义</a>。</p>
+            </td>
+</tr>
+</tbody>
+</table></div>
+</div>
+<br class="table-break"><div class="table">
+<a name="id501638"></a>
+<p class="title"><b>对于 Pole Errors可采取的措施</b></p>
+<div class="table-contents"><table class="table" summary="Possible Actions for Pole Errors">
+<colgroup><col><col></colgroup>
+<thead><tr>
+<th>
+            <p>
+              措施</p>
+            </th>
+<th>
+            <p>
+              行为</p>
+            </th>
+</tr></thead>
+<tbody>
+<tr>
+<td>
+            <p>
+              throw_on_error
+            </p>
+            </td>
+<td>
+            <p>
+              <span class="bold"><strong>抛出<code class="computeroutput"><span class="identifier">std</span><span class="special">::</span><span class="identifier">domain_error异常</span></code></strong></span>
+            </p>
+            </td>
+</tr>
+<tr>
+<td>
+            <p>
+              errno_on_error
+            </p>
+            </td>
+<td>
+            <p>
+              设置<code class="computeroutput"><span class="special">::</span><span class="identifier">errno</span></code>
+              为<code class="computeroutput"><span class="identifier">EDOM</span></code> 并返回 <code class="computeroutput"><span class="identifier">std</span><span class="special">::</span><span class="identifier">numeric_limits</span><span class="special">&lt;</span><span class="identifier">T</span><span class="special">&gt;::</span><span class="identifier">quiet_NaN</span><span class="special">()</span></code>
+            </p>
+            </td>
+</tr>
+<tr>
+<td>
+            <p>
+              ignore_error
+            </p>
+            </td>
+<td>
+            <p>
+              返回<code class="computeroutput"><span class="identifier">std</span><span class="special">::</span><span class="identifier">numeric_limits</span><span class="special">&lt;</span><span class="identifier">T</span><span class="special">&gt;::</span><span class="identifier">quiet_NaN</span><span class="special">()</span></code>
+            </p>
+            </td>
+</tr>
+<tr>
+<td>
+            <p>
+              user_error
+            </p>
+            </td>
+<td>
+            <p>
+              返回<code class="computeroutput"><span class="identifier">boost</span><span class="special">::</span><span class="identifier">math</span><span class="special">::</span><span class="identifier">policies</span><span class="special">::</span><span class="identifier">user_pole_error</span></code>:
+              <a href="../policy/pol_tutorial/user_def_err_pol.html" title="Calling User Defined Error Handlers">这个函数必须由用户定义</a>。</p>
+            </td>
+</tr>
+</tbody>
+</table></div>
+</div>
+<br class="table-break"><div class="table">
+<a name="id501952"></a>
+<p class="title"><b>对于溢出错误( Overflow Errors )可采取的措施 </b></p>
+<div class="table-contents"><table class="table" summary="Possible Actions for Overflow Errors">
+<colgroup><col><col></colgroup>
+<thead><tr>
+<th>
+            <p>
+              措施</p>
+            </th>
+<th>
+            <p>
+              行为</p>
+            </th>
+</tr></thead>
+<tbody>
+<tr>
+<td>
+            <p>
+              throw_on_error
+            </p>
+            </td>
+<td>
+            <p>
+              <span class="bold"><strong>抛出<code class="computeroutput"><span class="identifier">std</span><span class="special">::</span><span class="identifier">overflow_error异常</span></code></strong></span>
+            </p>
+            </td>
+</tr>
+<tr>
+<td>
+            <p>
+              errno_on_error
+            </p>
+            </td>
+<td>
+            <p>
+              设置<code class="computeroutput"><span class="special">::</span><span class="identifier">errno</span></code>
+              为<code class="computeroutput"><span class="identifier">ERANGE</span></code> 并返回<code class="computeroutput"><span class="identifier">std</span><span class="special">::</span><span class="identifier">numeric_limits</span><span class="special">&lt;</span><span class="identifier">T</span><span class="special">&gt;::</span><span class="identifier">infinity</span><span class="special">()</span></code>
+            </p>
+            </td>
+</tr>
+<tr>
+<td>
+            <p>
+              ignore_error
+            </p>
+            </td>
+<td>
+            <p>
+              返回<code class="computeroutput"><span class="identifier">std</span><span class="special">::</span><span class="identifier">numeric_limits</span><span class="special">&lt;</span><span class="identifier">T</span><span class="special">&gt;::</span><span class="identifier">infinity</span><span class="special">()</span></code>
+            </p>
+            </td>
+</tr>
+<tr>
+<td>
+            <p>
+              user_error
+            </p>
+            </td>
+<td>
+            <p>
+              返回<code class="computeroutput"><span class="identifier">boost</span><span class="special">::</span><span class="identifier">math</span><span class="special">::</span><span class="identifier">policies</span><span class="special">::</span><span class="identifier">user_overflow_error</span></code>:
+              <a href="../policy/pol_tutorial/user_def_err_pol.html" title="Calling User Defined Error Handlers">这个函数必须由用户定义</a>。</p>
+            </td>
+</tr>
+</tbody>
+</table></div>
+</div>
+<br class="table-break"><div class="table">
+<a name="id502268"></a>
+<p class="title"><b>对于向下溢出( Underflow Errors)可采取的措施</b></p>
+<div class="table-contents"><table class="table" summary="Possible Actions for Underflow Errors">
+<colgroup><col><col></colgroup>
+<thead><tr>
+<th>
+            <p>
+              措施</p>
+            </th>
+<th>
+            <p>
+              行为</p>
+            </th>
+</tr></thead>
+<tbody>
+<tr>
+<td>
+            <p>
+              throw_on_error
+            </p>
+            </td>
+<td>
+            <p>
+              抛出<code class="computeroutput"><span class="identifier">std</span><span class="special">::</span><span class="identifier">underflow_error异常</span></code>
+            </p>
+            </td>
+</tr>
+<tr>
+<td>
+            <p>
+              errno_on_error
+            </p>
+            </td>
+<td>
+            <p>
+              设置<code class="computeroutput"><span class="special">::</span><span class="identifier">errno</span></code>
+              为<code class="computeroutput"><span class="identifier">ERANGE</span></code> 并返回
+              0</p>
+            </td>
+</tr>
+<tr>
+<td>
+            <p>
+              ignore_error
+            </p>
+            </td>
+<td>
+            <p>
+              <span class="bold"><strong>返回 0</strong></span>
+            </p>
+            </td>
+</tr>
+<tr>
+<td>
+            <p>
+              user_error
+            </p>
+            </td>
+<td>
+            <p>
+              返回<code class="computeroutput"><span class="identifier">boost</span><span class="special">::</span><span class="identifier">math</span><span class="special">::</span><span class="identifier">policies</span><span class="special">::</span><span class="identifier">user_underflow_error</span></code>:
+              <a href="../policy/pol_tutorial/user_def_err_pol.html" title="Calling User Defined Error Handlers">这个函数必须由用户定义</a>。</p>
+            </td>
+</tr>
+</tbody>
+</table></div>
+</div>
+<br class="table-break"><div class="table">
+<a name="id502492"></a>
+<p class="title"><b>对于 Denorm Errors可采取的措施</b></p>
+<div class="table-contents"><table class="table" summary="Possible Actions for Denorm Errors">
+<colgroup><col><col></colgroup>
+<thead><tr>
+<th>
+            <p>
+              措施</p>
+            </th>
+<th>
+            <p>
+              行为</p>
+            </th>
+</tr></thead>
+<tbody>
+<tr>
+<td>
+            <p>
+              throw_on_error
+            </p>
+            </td>
+<td>
+            <p>
+              抛出<code class="computeroutput"><span class="identifier">std</span><span class="special">::</span><span class="identifier">underflow_error异常</span></code>
+            </p>
+            </td>
+</tr>
+<tr>
+<td>
+            <p>
+              errno_on_error
+            </p>
+            </td>
+<td>
+            <p>
+              设置<code class="computeroutput"><span class="special">::</span><span class="identifier">errno</span></code>
+              为<code class="computeroutput"><span class="identifier">ERANGE</span></code> 并返回 denormalised value.
+            </p>
+            </td>
+</tr>
+<tr>
+<td>
+            <p>
+              ignore_error
+            </p>
+            </td>
+<td>
+            <p>
+              <span class="bold"><strong>返回 denormalised value.</strong></span>
+            </p>
+            </td>
+</tr>
+<tr>
+<td>
+            <p>
+              user_error
+            </p>
+            </td>
+<td>
+            <p>
+              返回<code class="computeroutput"><span class="identifier">boost</span><span class="special">::</span><span class="identifier">math</span><span class="special">::</span><span class="identifier">policies</span><span class="special">::</span><span class="identifier">user_denorm_error</span></code>:
+              <a href="../policy/pol_tutorial/user_def_err_pol.html" title="Calling User Defined Error Handlers">这个函数必须由用户定义</a>。</p>
+            </td>
+</tr>
+</tbody>
+</table></div>
+</div>
+<br class="table-break"><div class="table">
+<a name="id502716"></a>
+<p class="title"><b>对于舍入错误( Rounding Errors)可采取的措施</b></p>
+<div class="table-contents"><table class="table" summary="Possible Actions for Rounding Errors">
+<colgroup><col><col></colgroup>
+<thead><tr>
+<th>
+            <p>
+              措施</p>
+            </th>
+<th>
+            <p>
+              行为</p>
+            </th>
+</tr></thead>
+<tbody>
+<tr>
+<td>
+            <p>
+              throw_on_error
+            </p>
+            </td>
+<td>
+            <p>
+              抛出<code class="computeroutput"><span class="identifier">boost</span><span class="special">::</span><span class="identifier">math</span><span class="special">::</span><span class="identifier">rounding_error</span></code>
+            异常</p>
+            </td>
+</tr>
+<tr>
+<td>
+            <p>
+              errno_on_error
+            </p>
+            </td>
+<td>
+            <p>
+              设置<code class="computeroutput"><span class="special">::</span><span class="identifier">errno</span></code>
+              为<code class="computeroutput"><span class="identifier">ERANGE</span></code> 并返回一个未指定的值</p>
+            </td>
+</tr>
+<tr>
+<td>
+            <p>
+              ignore_error
+            </p>
+            </td>
+<td>
+            <p>
+              <span class="bold"><strong>返回一个未指定的值( unspecified value ).</strong></span>
+            </p>
+            </td>
+</tr>
+<tr>
+<td>
+            <p>
+              user_error
+            </p>
+            </td>
+<td>
+            <p>              返回<code class="computeroutput"><span class="identifier">boost</span><span class="special">::</span><span class="identifier">math</span><span class="special">::</span><span class="identifier">policies</span><span class="special">::</span><span class="identifier">user_rounding_error</span></code>:
+              <a href="../policy/pol_tutorial/user_def_err_pol.html" title="Calling User Defined Error Handlers">这个函数必须由用户定义</a>。</p>
+            </td>
+</tr>
+</tbody>
+</table></div>
+</div>
+<br class="table-break"><div class="table">
+<a name="id502950"></a>
+<p class="title"><b>对于内部计算错误( Internal Evaluation
+      Errors)可采取的措施</b></p>
+<div class="table-contents"><table class="table" summary="Possible Actions for Internal Evaluation
+      Errors">
+<colgroup><col><col></colgroup>
+<thead><tr>
+<th>
+            <p>
+              措施</p>
+            </th>
+<th>
+            <p>
+              行为</p>
+            </th>
+</tr></thead>
+<tbody>
+<tr>
+<td>
+            <p>
+              throw_on_error
+            </p>
+            </td>
+<td>
+            <p>
+              <span class="bold"><strong>抛出<code class="computeroutput"><span class="identifier">boost</span><span class="special">::</span><span class="identifier">math</span><span class="special">::</span><span class="identifier">evaluation_error异常</span></code></strong></span>
+            </p>
+            </td>
+</tr>
+<tr>
+<td>
+            <p>
+              errno_on_error
+            </p>
+            </td>
+<td>
+            <p>
+              设置<code class="computeroutput"><span class="special">::</span><span class="identifier">errno</span></code>
+              为<code class="computeroutput"><span class="identifier">EDOM</span></code> 并返回已查找到的最接近的逼近值.
+            </p>
+            </td>
+</tr>
+<tr>
+<td>
+            <p>
+              ignore_error
+            </p>
+            </td>
+<td>
+            <p>
+              返回已查找到的最接近的逼近值</p>
+            </td>
+</tr>
+<tr>
+<td>
+            <p>
+              user_error
+            </p>
+            </td>
+<td>
+            <p>
+              返回<code class="computeroutput"><span class="identifier">boost</span><span class="special">::</span><span class="identifier">math</span><span class="special">::</span><span class="identifier">policies</span><span class="special">::</span><span class="identifier">user_evaluation_error</span></code>:
+              <a href="../policy/pol_tutorial/user_def_err_pol.html" title="Calling User Defined Error Handlers">这个函数必须由用户定义</a>。</p>
+            </td>
+</tr>
+</tbody>
+</table></div>
+</div>
+<br class="table-break"><div class="table">
+<a name="id503185"></a>
+<p class="title"><b>对于未定义结果错误( Indeterminate Result
+      Errors)所采取的措施</b></p>
+<div class="table-contents"><table class="table" summary="Possible Actions for Indeterminate Result
+      Errors">
+<colgroup><col><col></colgroup>
+<thead><tr>
+<th>
+            <p>
+              措施</p>
+            </th>
+<th>
+            <p>
+              行为</p>
+            </th>
+</tr></thead>
+<tbody>
+<tr>
+<td>
+            <p>
+              throw_on_error
+            </p>
+            </td>
+<td>
+            <p>
+              抛出<code class="computeroutput"><span class="identifier">std</span><span class="special">::</span><span class="identifier">domain_error异常</span></code>
+            </p>
+            </td>
+</tr>
+<tr>
+<td>
+            <p>
+              errno_on_error
+            </p>
+            </td>
+<td>
+            <p>
+              设置<code class="computeroutput"><span class="special">::</span><span class="identifier">errno</span></code>
+              为<code class="computeroutput"><span class="identifier">EDOM</span></code> 并返回与<code class="computeroutput"><span class="identifier">ignore_error</span></code>相同的值.
+            </p>
+            </td>
+</tr>
+<tr>
+<td>
+            <p>
+              ignore_error
+            </p>
+            </td>
+<td>
+            <p>
+              <span class="bold"><strong>返回一个依赖于发生错误的函数的缺省值.</strong></span>
+            </p>
+            </td>
+</tr>
+<tr>
+<td>
+            <p>
+              user_error
+            </p>
+            </td>
+<td>
+            <p>
+              返回<code class="computeroutput"><span class="identifier">boost</span><span class="special">::</span><span class="identifier">math</span><span class="special">::</span><span class="identifier">policies</span><span class="special">::</span><span class="identifier">user_indeterminate_result_error</span></code>:
+              <a href="../policy/pol_tutorial/user_def_err_pol.html" title="Calling User Defined Error Handlers">这个函数必须由用户定义</a>。</p>
+            </td>
+</tr>
+</tbody>
+</table></div>
+</div>
+<br class="table-break"><a name="math_toolkit.main_overview.error_handling.rationale"></a>
+<h5>
+<a name="id503431"></a>
+        <a href="error_handling.html#math_toolkit.main_overview.error_handling.rationale">原理</a>
+  </h5>
+<p>
+  当前库实现的灵活性是相当明显的，缺省行为的选择依据过去的库的复审过程中的反馈信息：</p>
+<div class="itemizedlist"><ul type="disc">
+<li>
+          真正的错误(Genuine errors) 应当使用异常来标记出来而不是遵循C-兼容的行为并设置 ::errno。</li>
+<li>
+          数值向下溢出和denormalised results 在大多数情况下不被当作是严重错误(fatal
+      errors) ，因此这些错误应当被忽略。</li>
+</ul></div>
+<a name="math_toolkit.main_overview.error_handling.finding_more_information"></a>
+<h5>
+<a name="id503481"></a>
+        <a href="error_handling.html#math_toolkit.main_overview.error_handling.finding_more_information">查找更多信息</a>
+  </h5>
+<p>
+        有一些预编译宏来<a href="../policy/pol_ref/policy_defaults.html" title="Using macros to Change the Policy Defaults">改变缺省策略</a>。参考<a href="../policy.html" title="Policies">策略文档</a>。</p>
+<p>
+        在策略指南的<a href="../policy/pol_tutorial/changing_policy_defaults.html" title="Changing the Policy Defaults">改变缺省策略</a>中有一个例子。
+  </p>
+<p>
+        将一个非法参数(负的自由度)传递给一个学生t分布的的例子的完整代码在<a href="../dist/stat_tut/weg/error_eg.html" title="Error Handling Example">错误处理实例</a>中。</p>
+<p>
+  各种错误情况在下面进行了更详细的描述。</p>
+<a name="domain_error"></a><a name="math_toolkit.main_overview.error_handling.domain_errors"></a>
+<h5>
+<a name="id503575"></a>
+        <a href="error_handling.html#math_toolkit.main_overview.error_handling.domain_errors">定义域错误(Domain
+        Errors)</a>
+  </h5>
+<p>
+  当向一个特殊函数传递一个超出它所定义的变量范围的参数的时候，那么函数返回结果为：</p>
+<p><span class="identifier">boost</span><span class="special">::</span><span class="identifier">math</span><span class="special">::</span><span class="identifier">policies</span><span class="special">::</span><span class="identifier">raise_domain_error</span><span class="special">&lt;</span><span class="identifier">T</span><span class="special">&gt;(</span><span class="identifier">FunctionName</span><span class="special">,</span> <span class="identifier">Message</span><span class="special">,</span> <span class="identifier">Val</span><span class="special">,</span> <a href="../policy.html" title="Policies">Policy</a><span class="special">);</span>
+</p>
+<p>
+        其中<code class="computeroutput"><span class="identifier">T</span></code> 是传递给函数的浮点类型，<code class="computeroutput"><span class="identifier">FunctionName</span></code>
+        是函数的名字，<code class="computeroutput"><span class="identifier">Message</span></code>
+  是描述问题的报错消息。 Val 是超出范围的值，且<a href="../policy.html" title="Policies">Policy</a> 是当前调用的函数所使用的策略。</p>
+<p>
+        这些策略的缺省行为是抛出一个 std::domain_error
+        C++ 异常。但是如果<a href="../policy.html" title="Policies">Policy</a>
+        将忽略错误，并设置全局变量 ::errno，那么将返回一个 NaN 。 </p>
+<p>
+        选择这种行为是为了与<span class="emphasis"><em>ISO/IEC
+        9899:1999 Programming languages - C</em></span> 以及 <a href="http://www.open-std.org/jtc1/sc22/wg21/docs/papers/2005/n1836.pdf" target="_top">Draft
+        Technical Report on C++ Library Extensions, 2005-06-24, section 5.2.1, paragraph
+        6</a>相兼容：</p>
+<div class="blockquote"><blockquote class="blockquote">
+<p>
+      </p>
+<p>
+      <span class="emphasis"><em>"如果一个参数的值为NaN，那么上面声明的每个函数都应当返回NaN(Not a Number)，但它不应当报出定义域错误。否则，上面声明的每个函数都应当对超出定义域的参数报出定义域错误：</em></span></p>
+<p>
+      </p>
+</blockquote></div>
+<div class="blockquote"><blockquote class="blockquote">
+<p>
+      </p>
+<p>
+            <span class="emphasis"><em>"这个函数说明的返回条款( Returns clause ）明确地指定一个值域以及这些超出指定值域的参数；或者</em></span>
+      </p>
+<p>
+      </p>
+<p>
+            <span class="emphasis"><em>"对应的数学函数的值有一个非零的虚部(imaginary component); 或者</em></span>
+      </p>
+<p>
+      </p>
+<p>
+      <span class="emphasis"><em>"对应的数学函数在数学上是未定义的"</em></span></p>
+<p>
+      </p>
+</blockquote></div>
+<div class="blockquote"><blockquote class="blockquote">
+<p>
+      </p>
+<p>
+            <span class="emphasis"><em>"提示 2:一个数学函数是在数学上定义的，对于一个给定的参数集合，如果这个数学参数明确针对那些参数进行了定义，或者如果它的极限值存在并且不依赖于逼近的方向 (A mathematical function is mathematically defined
+            for a given set of argument values if it is explicitly defined for that
+            set of argument values or if its limiting value exists and does not depend
+            on the direction of approach)."</em></span>
+      </p>
+<p>
+      </p>
+</blockquote></div>
+<p>
+        注意，为了在抛出异常时支持具有丰富信息的报错消息，<code class="computeroutput"><span class="identifier">Message</span></code> 必须包含一个<a href="../../../../../../format/index.html" target="_top">Boost.Format</a>
+        可以解析的格式化指定符号：参数<code class="computeroutput"><span class="identifier">Val</span></code>
+  对应指定符号被插入到这个报错消息中。</p>
+<p>
+        例如，如果<code class="computeroutput"><span class="identifier">Message</span></code> 包含一个"%1%" ，那么它将使用T类型的完全精度的<code class="computeroutput"><span class="identifier">Val</span></code>
+        值来替换，其中"%.3g" 将包含 <code class="computeroutput"><span class="identifier">Val</span></code> 具有3个数字的值，参考<a href="../../../../../../format/index.html" target="_top">Boost.Format</a> 文档了解更多 信息。</p>
+<a name="pole_error"></a><a name="math_toolkit.main_overview.error_handling.evaluation_at_a_pole"></a>
+<h5>
+<a name="id503958"></a>
+        <a href="error_handling.html#math_toolkit.main_overview.error_handling.evaluation_at_a_pole">在 pole处计算</a>
+  </h5>
+<p>
+  当给一个特殊函数传递了一个在pole处而没有定义良好的剩余值(residual value)的参数值的时候，那么函数返回的结果为：</p>
+<pre class="programlisting"><span class="identifier">boost</span><span class="special">::</span><span class="identifier">math</span><span class="special">::</span><span class="identifier">policies</span><span class="special">::</span><span class="identifier">raise_pole_error</span><span class="special">&lt;</span><span class="identifier">T</span><span class="special">&gt;(</span><span class="identifier">FunctionName</span><span class="special">,</span> <span class="identifier">Message</span><span class="special">,</span> <span class="identifier">Val</span><span class="special">,</span> <a href="../policy.html" title="Policies">Policy</a><span class="special">);</span>
+</pre>
+<p>
+        其中<code class="computeroutput"><span class="identifier">T</span></code> 是传递给函数的浮点类型，<code class="computeroutput"><span class="identifier">FunctionName</span></code> 是函数的名字，<code class="computeroutput"><span class="identifier">Message</span></code> 是描述问题的报错消息。 Val 是在pole处的参数的值，且<a href="../policy.html" title="Policies">Policy</a> 是当前调用的函数所使用的策略。</p>
+<p>
+        这个函数的函数行为是缺省一个std::domain_error 异常。但是可以使用<a href="../policy/pol_ref/error_handling_policies.html" title="Error Handling Policies">错误处理策略</a> 来改变函数的缺省策略，例如改为<code class="computeroutput"><span class="identifier">ignore_error</span></code> 并返回 NaN。</p>
+<p>
+        注意，为了在抛出异常时支持具有丰富信息的报错消息，<code class="computeroutput"><span class="identifier">Message</span></code> 必须包含一个<a href="../../../../../../format/index.html" target="_top">Boost.Format</a> 可以解析的格式化指定符号：参数<code class="computeroutput"><span class="identifier">Val</span></code> 对应指定符号被插入到这个报错消息中。</p>
+<p>
+        例如，如果<code class="computeroutput"><span class="identifier">Message</span></code> 包含一个"%1%" ，那么它将使用T类型的完全精度的<code class="computeroutput"><span class="identifier">Val</span></code> 值来替换，其中"%.3g" 将包含 <code class="computeroutput"><span class="identifier">Val</span></code> 具有3个数字的值，参考<a href="../../../../../../format/index.html" target="_top">Boost.Format</a> 文档了解更多 信息。</p>
+<a name="overflow_error"></a><a name="math_toolkit.main_overview.error_handling.numeric_overflow"></a>
+<h5>
+<a name="id504279"></a>
+        <a href="error_handling.html#math_toolkit.main_overview.error_handling.numeric_overflow">数值溢出(Numeric
+        Overflow)</a>
+  </h5>
+<p>
+  当特殊函数的结果太大以至于不能存储在参数的浮点类型中时，那么函数返回的结果为：</p>
+<pre class="programlisting"><span class="identifier">boost</span><span class="special">::</span><span class="identifier">math</span><span class="special">::</span><span class="identifier">policies</span><span class="special">::</span><span class="identifier">raise_overflow_error</span><span class="special">&lt;</span><span class="identifier">T</span><span class="special">&gt;(</span><span class="identifier">FunctionName</span><span class="special">,</span> <span class="identifier">Message</span><span class="special">,</span> <a href="../policy.html" title="Policies">Policy</a><span class="special">);</span>
+</pre>
+<p>
+        其中<code class="computeroutput"><span class="identifier">T</span></code> 是传递给函数的浮点类型，<code class="computeroutput"><span class="identifier">FunctionName</span></code> 是函数的名字，<code class="computeroutput"><span class="identifier">Message</span></code> 是描述问题的报错消息，且<a href="../policy.html" title="Policies">Policy</a> 是当前调用的函数所使用的策略。</p>
+<p>
+        这个函数的缺省策略的行为是抛出<code class="computeroutput"><span class="identifier">std</span><span class="special">::</span><span class="identifier">overflow_error</span></code>
+        C++ 异常。但是如果，例如，使用了一个<code class="computeroutput"><span class="identifier">ignore_error</span></code>
+  策略，那么函数返回<code class="computeroutput"><span class="identifier">std</span><span class="special">::</span><span class="identifier">numeric_limits</span><span class="special">&lt;</span><span class="identifier">T</span><span class="special">&gt;::</span><span class="identifier">infinity</span><span class="special">()</span></code>。在这种情况下，如果类型T不支持无限值，那么这个类型的最大值将被返回。</p>
+<a name="underflow_error"></a><a name="math_toolkit.main_overview.error_handling.numeric_underflow"></a>
+<h5>
+<a name="id504560"></a>
+        <a href="error_handling.html#math_toolkit.main_overview.error_handling.numeric_underflow">数值向下溢出(Numeric
+        Underflow)</a>
+  </h5>
+<p>
+  如果特殊函数的结果已知为非零，但是计算结果发生向下溢出为0，那么函数的返回的结果为：</p>
+<pre class="programlisting"><span class="identifier">boost</span><span class="special">::</span><span class="identifier">math</span><span class="special">::</span><span class="identifier">policies</span><span class="special">::</span><span class="identifier">raise_underflow_error</span><span class="special">&lt;</span><span class="identifier">T</span><span class="special">&gt;(</span><span class="identifier">FunctionName</span><span class="special">,</span> <span class="identifier">Message</span><span class="special">,</span> <a href="../policy.html" title="Policies">Policy</a><span class="special">);</span>
+</pre>
+<p>
+        其中<code class="computeroutput"><span class="identifier">T</span></code> 是传递给函数的浮点类型，<code class="computeroutput"><span class="identifier">FunctionName</span></code> 是函数的名字，<code class="computeroutput"><span class="identifier">Message</span></code> 是描述问题的报错消息，且<a href="../policy.html" title="Policies">Policy</a> 是当前调用的函数所使用的策略。</p>
+<p>
+        函数在缺省情况下返回0。但使用其它的策略，类似于<code class="computeroutput"><span class="identifier">throw_on_error</span></code>，将抛出一个<code class="computeroutput"><span class="identifier">std</span><span class="special">::</span><span class="identifier">underflow_error</span></code> C++ 异常。</p>
+<a name="denorm_error"></a><a name="math_toolkit.main_overview.error_handling.denormalisation_errors"></a><h5>
+<a name="id504782"></a>
+        <a href="error_handling.html#math_toolkit.main_overview.error_handling.denormalisation_errors">Denormalisation
+        Errors</a>
+      </h5>
+<p>
+        特殊函数的计算结果是一个denormalised value <span class="emphasis"><em>z</em></span>
+  ，那么函数的返回值是：</p>
+<pre class="programlisting"><span class="identifier">boost</span><span class="special">::</span><span class="identifier">math</span><span class="special">::</span><span class="identifier">policies</span><span class="special">::</span><span class="identifier">raise_denorm_error</span><span class="special">&lt;</span><span class="identifier">T</span><span class="special">&gt;(</span><span class="identifier">z</span><span class="special">,</span> <span class="identifier">FunctionName</span><span class="special">,</span> <span class="identifier">Message</span><span class="special">,</span> <a href="../policy.html" title="Policies">Policy</a><span class="special">);</span>
+</pre>
+<p>
+        其中<code class="computeroutput"><span class="identifier">T</span></code> 是传递给函数的浮点类型，<code class="computeroutput"><span class="identifier">FunctionName</span></code> 是函数的名字，<code class="computeroutput"><span class="identifier">Message</span></code> 是描述问题的报错消息，且<a href="../policy.html" title="Policies">Policy</a> 是当前调用的函数所使用的策略。</p>
+<p>
+        函数的缺省行为是返回<span class="emphasis"><em>z</em></span>值。但是使用其它的策略，类似于<code class="computeroutput"><span class="identifier">throw_on_error</span></code>
+        将会抛出一个<code class="computeroutput"><span class="identifier">std</span><span class="special">::</span><span class="identifier">underflow_error</span></code> C++ 异常。</p>
+<a name="evaluation_error"></a><a name="math_toolkit.main_overview.error_handling.evaluation_errors"></a>
+<h5>
+<a name="id505019"></a>
+        <a href="error_handling.html#math_toolkit.main_overview.error_handling.evaluation_errors">计算错误(Evaluation
+        Errors)</a>
+  </h5>
+<p>
+  当一个特殊函数计算的结果已知是错误的，或者结果是不可计算的，那么函数调用：</p>
+<pre class="programlisting"><span class="identifier">boost</span><span class="special">::</span><span class="identifier">math</span><span class="special">::</span><span class="identifier">policies</span><span class="special">::</span><span class="identifier">raise_evaluation_error</span><span class="special">&lt;</span><span class="identifier">T</span><span class="special">&gt;(</span><span class="identifier">FunctionName</span><span class="special">,</span> <span class="identifier">Message</span><span class="special">,</span> <span class="identifier">Val</span><span class="special">,</span> <a href="../policy.html" title="Policies">Policy</a><span class="special">);</span>
+</pre>
+<p>
+        其中<code class="computeroutput"><span class="identifier">T</span></code> 是传递给函数的浮点类型，<code class="computeroutput"><span class="identifier">FunctionName</span></code> 是函数的名字，<code class="computeroutput"><span class="identifier">Message</span></code> 是描述问题的报错消息，Val是引发错误的值，且<a href="../policy.html" title="Policies">Policy</a> 是当前调用的函数所使用的策略。</p>
+<p>
+        The default behaviour of this function is to throw a <code class="computeroutput"><span class="identifier">boost</span><span class="special">::</span><span class="identifier">math</span><span class="special">::</span><span class="identifier">evaluation_error</span></code>.
+  </p>
+<p>
+        注意，为了在抛出异常时支持具有丰富信息的报错消息，<code class="computeroutput"><span class="identifier">Message</span></code> 必须包含一个<a href="../../../../../../format/index.html" target="_top">Boost.Format</a> 可以解析的格式化指定符号：参数<code class="computeroutput"><span class="identifier">Val</span></code> 对应指定符号被插入到这个报错消息中。</p>
+<p> 例如，如果<code class="computeroutput"><span class="identifier">Message</span></code> 包含一个"%1%" ，那么它将使用T类型的完全精度的<code class="computeroutput"><span class="identifier">Val</span></code> 值来替换，其中"%.3g" 将包含 <code class="computeroutput"><span class="identifier">Val</span></code> 具有3个数字的值，参考<a href="../../../../../../format/index.html" target="_top">Boost.Format</a> 文档了解更多 信息。</p>
+<a name="indeterminate_result_error"></a><a name="math_toolkit.main_overview.error_handling.indeterminate_result_errors"></a>
+<h5>
+<a name="id505350"></a>
+        <a href="error_handling.html#math_toolkit.main_overview.error_handling.indeterminate_result_errors">未定义的结果错误(Indeterminate
+        Result Errors)</a>
+  </h5>
+<p>
+  当对于传递给特殊函数的参数值，特殊函数的结果是一个未定义的值时，那么返回的返回值为：</p>
+<pre class="programlisting"><span class="identifier">boost</span><span class="special">::</span><span class="identifier">math</span><span class="special">::</span><span class="identifier">policies</span><span class="special">::</span><span class="identifier">raise_overflow_error</span><span class="special">&lt;</span><span class="identifier">T</span><span class="special">&gt;(</span><span class="identifier">FunctionName</span><span class="special">,</span> <span class="identifier">Message</span><span class="special">,</span> <span class="identifier">Val</span><span class="special">,</span> <span class="identifier">Default</span><span class="special">,</span> <a href="../policy.html" title="Policies">Policy</a><span class="special">);</span>
+</pre>
+<p>其中<code class="computeroutput"><span class="identifier">T</span></code> 是传递给函数的浮点类型，<code class="computeroutput"><span class="identifier">FunctionName</span></code> 是函数的名字，<code class="computeroutput"><span class="identifier">Message</span></code> 是描述问题的报错消息，Val是未定义的值，缺省情况下是一个必须被ignore_error 和 errno_on_error策略返回的值， 且<a href="../policy.html" title="Policies">Policy</a> 是当前调用的函数所使用的策略。
+  </p>
+<p>
+  这个函数的缺省策略是<code class="computeroutput"><span class="identifier">ignore_error</span></code>：注意，这种错误类型为结果是数学上未定义的或是未知的值的情况保留，但是没有一个返回值应当是多少的约定(convention)：例如，C99标准规定 0<sup>0</sup> 为 1，尽管这个值在数学上是未知的。</p>
+<a name="rounding_error"></a><a name="math_toolkit.main_overview.error_handling.rounding_errors"></a>
+<h5>
+<a name="id505577"></a>
+        <a href="error_handling.html#math_toolkit.main_overview.error_handling.rounding_errors">舍入错误(Rounding
+        Errors)</a>
+  </h5>
+<p> 当 <a class="link" title="Truncation Functions" href="../utils/rounding/trunc.html">trunc</a>, <a class="link" title="Rounding Functions" href="../utils/rounding/round.html">round</a> 和 <a class="link" title="Integer and Fractional Part Splitting (modf)" href="../utils/rounding/modf.html">modf</a><a href="../special/rounding/modf.html" title="Integer and Fractional Part Splitting (modf)"></a> 函数使用一个没有整数表示(integer representation)的参数调用时调用，或者参数太大以至于不能在返回值的类型中表示出来，那么返回值的结果是对于下面函数的调用：</p>
+<pre class="programlisting"><span class="identifier">boost</span><span class="special">::</span><span class="identifier">math</span><span class="special">::</span><span class="identifier">policies</span><span class="special">::</span><span class="identifier">raise_rounding_error</span><span class="special">&lt;</span><span class="identifier">T</span><span class="special">&gt;(</span><span class="identifier">FunctionName</span><span class="special">,</span> <span class="identifier">Message</span><span class="special">,</span> <span class="identifier">Val</span><span class="special">,</span> <a href="../policy.html" title="Policies">Policy</a><span class="special">);</span>
+</pre>
+<p>
+        其中<code class="computeroutput"><span class="identifier">T</span></code> 是传递给函数的浮点类型，<code class="computeroutput"><span class="identifier">FunctionName</span></code> 是函数的名字，<code class="computeroutput"><span class="identifier">Message</span></code> 是描述问题的报错消息，Val是引发错误的参数值，且<a href="../policy.html" title="Policies">Policy</a> 是当前调用的函数所使用的策略。</p>
+<p>
+        The default behaviour of this function is to throw a <code class="computeroutput"><span class="identifier">boost</span><span class="special">::</span><span class="identifier">math</span><span class="special">::</span><span class="identifier">rounding_error</span></code>.
+  </p>
+<p>
+        注意，为了在抛出异常时支持具有丰富信息的报错消息，<code class="computeroutput"><span class="identifier">Message</span></code> 必须包含一个<a href="../../../../../../format/index.html" target="_top">Boost.Format</a> 可以解析的格式化指定符号：参数<code class="computeroutput"><span class="identifier">Val</span></code> 对应指定符号被插入到这个报错消息中。</p>
+<p> 例如，如果<code class="computeroutput"><span class="identifier">Message</span></code> 包含一个"%1%" ，那么它将使用T类型的完全精度的<code class="computeroutput"><span class="identifier">Val</span></code> 值来替换，其中"%.3g" 将包含 <code class="computeroutput"><span class="identifier">Val</span></code> 具有3个数字的值，参考<a href="../../../../../../format/index.html" target="_top">Boost.Format</a> 文档了解更多 信息。</p>
+<a name="checked_narrowing_cast"></a><a name="math_toolkit.main_overview.error_handling.errors_from_typecasts"></a>
+<h5>
+<a name="id505931"></a>
+        <a href="error_handling.html#math_toolkit.main_overview.error_handling.errors_from_typecasts">类型转换带来的错误(Errors
+        from typecasts)</a>
+  </h5>
+<p> 为了在结果中确保完全的机器精度( machine
+precision)，许多特殊函数使用比参数精度高的类型进行计算：例如一个参数为float的函数在内部可能会使用double精确度来计算结果。上
+面出现的很多错误可能不会在计算的过程中出现，但在将计算结果转换为更窄的返回值类型时会出现上面的错误。这个函数</p>
+<pre class="programlisting"><span class="keyword">template</span> <span class="special">&lt;</span><span class="keyword">class</span> <span class="identifier">T</span><span class="special">,</span> <span class="keyword">class</span> <a href="../policy.html" title="Policies">Policy</a><span class="special">,</span> <span class="keyword">class</span> <span class="identifier">U</span><span class="special">&gt;</span>
+<span class="identifier">T</span> <span class="identifier">checked_narrowing_cast</span><span class="special">(</span><span class="identifier">U</span> <span class="keyword">const</span><span class="special">&amp;</span> <span class="identifier">val</span><span class="special">,</span> <span class="keyword">const</span> <span class="keyword">char</span><span class="special">*</span> <span class="identifier">function</span><span class="special">);</span>
+</pre>
+<p>
+        用于进行这些转换，并且在出现<a href="error_handling.html#overflow_error">向上溢出(overflow)</a>，<a href="error_handling.html#underflow_error">向下溢出(underflow)</a>
+        或<a href="error_handling.html#denorm_error">denormalisation</a>错误时调用上面的错误处理方法。</p>
+</div>
+<table xmlns:rev="http://www.cs.rpi.edu/~gregod/boost/tools/doc/revision" width="100%"><tbody><tr>
+<td align="left"></td>
+<td align="right"><div class="copyright-footer">Copyright ?2006 , 2007, 2008 John Maddock, Paul A. Bristow, Hubert
+      Holin, Xiaogang Zhang and Bruno Lalande<p>
+        Distributed under the Boost Software License, Version 1.0. (See accompanying
+        file LICENSE_1_0.txt or copy at <a href="http://www.boost.org/LICENSE_1_0.txt" target="_top">http://www.boost.org/LICENSE_1_0.txt</a>)
+      </p>
+</div></td>
+</tr></tbody></table>
+<hr>
+<div class="spirit-nav">
+<a accesskey="p" href="result_type.html"><img src="../../../../../../../doc/html/images/prev.png" alt="Prev"></a><a accesskey="u" href="../main_overview.html"><img src="../../../../../../../doc/html/images/up.png" alt="Up"></a><a accesskey="h" href="../../index.html"><img src="../../../../../../../doc/html/images/home.png" alt="Home"></a><a accesskey="n" href="compilers_overview.html"><img src="../../../../../../../doc/html/images/next.png" alt="Next"></a>
+</div>
+</body></html>

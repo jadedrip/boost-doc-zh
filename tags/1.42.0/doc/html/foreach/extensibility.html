@@ -1,0 +1,327 @@
+<!DOCTYPE HTML PUBLIC "-//W3C//DTD HTML 4.01 Transitional//EN">
+<html><head>
+
+
+  
+  <meta http-equiv="Content-Type" content="text/html; charset=UTF-8">
+
+
+
+  
+  
+  
+  <title>Extensibility</title><link rel="stylesheet" href="../boostbook.css" type="text/css">
+
+
+  
+  <meta name="generator" content="DocBook XSL Stylesheets V1.68.1">
+
+
+  
+  <link rel="start" href="../index.html" title="The Boost C++ Libraries BoostBook Documentation Subset">
+
+
+  
+  <link rel="up" href="../foreach.html" title="Chapter&nbsp;5.&nbsp;Boost.Foreach">
+
+
+  
+  <link rel="prev" href="../foreach.html" title="Chapter&nbsp;5.&nbsp;Boost.Foreach">
+
+
+  
+  <link rel="next" href="portability.html" title="Portability"></head>
+
+<body alink="#0000ff" bgcolor="white" link="#0000ff" text="black" vlink="#840084">
+
+
+<table cellpadding="2" width="100%">
+
+
+  <tbody>
+
+    <tr>
+
+      <td valign="top"><img alt="Boost C++ Libraries" src="../../../boost.png" height="86" width="277"></td>
+
+
+      <td align="center"><a href="../../../index.htm">Home</a></td>
+
+
+      <td align="center"><a href="../../../libs/libraries.htm">Libraries</a></td>
+
+
+      <td align="center"><a href="../../../people/people.htm">People</a></td>
+
+
+      <td align="center"><a href="../../../more/faq.htm">FAQ</a></td>
+
+
+      <td align="center"><a href="../../../more/index.htm">More</a></td>
+
+
+    </tr>
+
+  
+  </tbody>
+</table>
+
+
+<hr>
+<div class="spirit-nav">
+<a accesskey="p" href="../foreach.html"><img src="../images/prev.png" alt="Prev"></a><a accesskey="u" href="../foreach.html"><img src="../images/up.png" alt="Up"></a><a accesskey="h" href="../index.html"><img src="../images/home.png" alt="Home"></a><a accesskey="n" href="portability.html"><img src="../images/next.png" alt="Next"></a>
+</div>
+
+
+<div class="section" lang="en">
+<div class="titlepage">
+<div>
+<div>
+<h2 class="title" style="clear: both;">
+<a name="foreach.extensibility"></a>可扩展性</h2>
+
+</div>
+
+</div>
+
+</div>
+
+
+<p>如果我们想用 <code class="literal">BOOST_FOREACH</code> 来迭代某些新的集合类型，我们必须 "教会" <code class="literal">BOOST_FOREACH</code>
+      如何与我们的类型交互。因为 <code class="literal">BOOST_FOREACH</code> 是构建于 <a href="../../../libs/range/index.html" target="_top">Boost.Range</a> 之上的，所以我们必须扩展 <a href="../../../libs/range/index.html" target="_top">Boost.Range</a> 以扩展 <code class="literal">BOOST_FOREACH</code>. <a href="../../../libs/range/doc/boost_range.html#minimal_interface" target="_top">扩展
+      Boost.Range</a> 一节详细解释了这个话题。
+    </p>
+
+
+<p>以下是一个扩展 <code class="literal">BOOST_FOREACH</code> 的例子，它迭代一个子串类型，该类型包含了两个指向同一个 <code class="computeroutput"><span class="identifier">std</span><span class="special">::</span><span class="identifier">string</span></code> 的迭代器。
+    </p>
+
+
+<pre class="programlisting"><span class="keyword">namespace</span> <span class="identifier">my</span>
+<span class="special">{</span>
+    <span class="comment">// sub_string: 字符串的一部分，以一对迭代器来界定</span><span class="comment"><br></span>    <span class="keyword">struct</span> <span class="identifier">sub_string</span>
+    <span class="special">{</span>
+        <span class="identifier">std</span><span class="special">::</span><span class="identifier">string</span><span class="special">::</span><span class="identifier">iterator</span> <span class="identifier">begin</span><span class="special">;</span>
+        <span class="identifier">std</span><span class="special">::</span><span class="identifier">string</span><span class="special">::</span><span class="identifier">iterator</span> <span class="identifier">end</span><span class="special">;</span>
+        
+        <span class="comment">/* ... 实现 ... */</span>
+    <span class="special">};</span>
+
+    <span class="comment">// 在</span><span class="comment"> sub_string</span><span class="comment"> 的同一个名字空间中增加 boost_range_begin() 和<br></span>    <span class="comment">// </span><span class="comment">boost_range_end() 的重载，才可以被ADL(Argument-Dependent Lookup)查找到。</span><span class="comment"><br></span>
+    <span class="keyword">inline</span> <span class="identifier">std</span><span class="special">::</span><span class="identifier">string</span><span class="special">::</span><span class="identifier">iterator</span> <span class="identifier">boost_range_begin</span><span class="special">(</span> <span class="identifier">sub_string</span> <span class="special">&amp;</span> <span class="identifier">x</span> <span class="special">)</span>
+    <span class="special">{</span>
+        <span class="keyword">return</span> <span class="identifier">x</span><span class="special">.</span><span class="identifier">begin</span><span class="special">;</span>
+    <span class="special">}</span>
+
+    <span class="keyword">inline</span> <span class="identifier">std</span><span class="special">::</span><span class="identifier">string</span><span class="special">::</span><span class="identifier">iterator</span> <span class="identifier">boost_range_end</span><span class="special">(</span> <span class="identifier">sub_string</span> <span class="special">&amp;</span> <span class="identifier">x</span> <span class="special">)</span>
+    <span class="special">{</span>
+        <span class="keyword">return</span> <span class="identifier">x</span><span class="special">.</span><span class="identifier">end</span><span class="special">;</span>
+    <span class="special">}</span>
+
+    <span class="comment">// 再增加对 const sub_strings 的重载。注意我们在这里使用了从</span><span class="comment"> <br>    // string::iterator 到 string::const_iterator 的转换。<br></span>
+    <span class="keyword">inline</span> <span class="identifier">std</span><span class="special">::</span><span class="identifier">string</span><span class="special">::</span><span class="identifier">const_iterator</span> <span class="identifier">boost_range_begin</span><span class="special">(</span> <span class="identifier">sub_string</span> <span class="keyword">const</span> <span class="special">&amp;</span> <span class="identifier">x</span> <span class="special">)</span>
+    <span class="special">{</span>
+        <span class="keyword">return</span> <span class="identifier">x</span><span class="special">.</span><span class="identifier">begin</span><span class="special">;</span>
+    <span class="special">}</span>
+
+    <span class="keyword">inline</span> <span class="identifier">std</span><span class="special">::</span><span class="identifier">string</span><span class="special">::</span><span class="identifier">const_iterator</span> <span class="identifier">boost_range_end</span><span class="special">(</span> <span class="identifier">sub_string</span> <span class="keyword">const</span> <span class="special">&amp;</span> <span class="identifier">x</span> <span class="special">)</span>
+    <span class="special">{</span>
+        <span class="keyword">return</span> <span class="identifier">x</span><span class="special">.</span><span class="identifier">end</span><span class="special">;</span>
+    <span class="special">}</span>
+<span class="special">}</span>
+
+<span class="keyword">namespace</span> <span class="identifier">boost</span>
+<span class="special">{</span>
+    <span class="comment">// 在名字空间</span><span class="comment"> boost</span><span class="comment"> 中特化 rannge_iterator 和 range_const_iterator<br></span>    <span class="keyword">template</span><span class="special">&lt;&gt;</span>
+    <span class="keyword">struct</span> <span class="identifier">range_iterator</span><span class="special">&lt;</span> <span class="identifier">my</span><span class="special">::</span><span class="identifier">sub_string</span> <span class="special">&gt;</span>
+    <span class="special">{</span>
+        <span class="keyword">typedef</span> <span class="identifier">std</span><span class="special">::</span><span class="identifier">string</span><span class="special">::</span><span class="identifier">iterator</span> <span class="identifier">type</span><span class="special">;</span>
+    <span class="special">};</span>
+
+    <span class="keyword">template</span><span class="special">&lt;&gt;</span>
+    <span class="keyword">struct</span> <span class="identifier">range_const_iterator</span><span class="special">&lt;</span> <span class="identifier">my</span><span class="special">::</span><span class="identifier">sub_string</span> <span class="special">&gt;</span>
+    <span class="special">{</span>
+        <span class="keyword">typedef</span> <span class="identifier">std</span><span class="special">::</span><span class="identifier">string</span><span class="special">::</span><span class="identifier">const_iterator</span> <span class="identifier">type</span><span class="special">;</span>
+    <span class="special">};</span>
+<span class="special">}</span>
+</pre>
+
+
+<p>现在我们已经教会了 <a href="../../../libs/range/index.html" target="_top">Boost.Range</a>
+      (也就教会了 <code class="literal">BOOST_FOREACH</code>)关于我们的类型的知识，我们现在可以用
+      <code class="literal">BOOST_FOREACH</code> 来迭代我们的 sub_string 类型了。
+    </p>
+
+
+<pre class="programlisting"><span class="identifier">my</span><span class="special">::</span><span class="identifier">sub_string</span> <span class="identifier">substr</span><span class="special">;</span>
+<span class="identifier">BOOST_FOREACH</span><span class="special">(</span> <span class="keyword">char</span> <span class="identifier">ch</span><span class="special">,</span> <span class="identifier">substr</span> <span class="special">)</span>
+<span class="special">{</span>
+    <span class="comment">// Woo-hoo!<br></span><span class="special">}</span>
+</pre>
+
+
+<p>我们已经知道在扩展 <code class="literal">BOOST_FOREACH</code> 时有一些移植性的问题。请查看 <a href="portability.html" title="Portability">可移植性</a>
+      一节进行确认。特定地，如果你的编译器不支持 Argument-Dependent
+      Lookup,&nbsp; <a href="../../../libs/range/doc/portability.html" target="_top">Boost.Range
+      可移植性</a> 一节提供了一些绕过问题的办法。
+    </p>
+
+
+<a name="foreach.extensibility.making__literal_boost_foreach__literal__work_with_non_copyable_sequence_types"></a>
+<h2>
+<a name="id1183459"></a>将&nbsp; <code class="literal">BOOST_FOREACH</code> 用于不可复制的序列类型
+    </h2>
+
+
+<p>对于不可复制的序列类型，我们需要告诉 <code class="literal">BOOST_FOREACH</code>
+      不要试图去进行复制。如果我们的类型派生自 <a href="../../../libs/utility/utility.htm#Class_noncopyable" target="_top"><code class="computeroutput"><span class="identifier">boost</span><span class="special">::</span><span class="identifier">noncopyable</span></code></a>,
+      则不需要任何动作。如果不是的话，我们就必须特化 <code class="computeroutput"><span class="identifier">boost</span><span class="special">::</span><span class="identifier">foreach</span><span class="special">::</span><span class="identifier">is_noncopyable</span><span class="special">&lt;&gt;</span></code> 模板，如下：
+    </p>
+
+
+<pre class="programlisting"><span class="keyword">class</span> <span class="identifier">noncopy_vector</span>
+<span class="special">{</span>
+    <span class="comment">// ...<br></span><span class="keyword">private</span><span class="special">:</span>
+    <span class="identifier">noncopy_vector</span><span class="special">(</span> <span class="identifier">noncopy_vector</span> <span class="keyword">const</span> <span class="special">&amp;</span> <span class="special">);</span> <span class="comment">// 不可复制！<br></span><span class="special">};</span>
+
+<span class="keyword">namespace</span> <span class="identifier">boost</span> <span class="special">{</span> <span class="keyword">namespace</span> <span class="identifier">foreach</span>
+<span class="special">{</span>
+    <span class="keyword">template</span><span class="special">&lt;&gt;</span>
+    <span class="keyword">struct</span> <span class="identifier">is_noncopyable</span><span class="special">&lt;</span> <span class="identifier">noncopy_vector</span> <span class="special">&gt;</span>
+      <span class="special">:</span> <span class="identifier">mpl</span><span class="special">::</span><span class="identifier">true_</span>
+    <span class="special">{</span>
+    <span class="special">};</span>
+<span class="special">}}</span>
+</pre>
+
+
+<p>另一个有同样作用的方法是覆盖全局的 <code class="computeroutput"><span class="identifier">boost_foreach_is_noncopyable</span><span class="special">()</span></code> 函数。这一方法的好处是可以移植到老的编译器。
+    </p>
+
+
+<pre class="programlisting"><span class="comment">// 在全局作用域中...<br></span><span class="keyword">inline</span> <span class="identifier">boost</span><span class="special">::</span><span class="identifier">mpl</span><span class="special">::</span><span class="identifier">true_</span> <span class="special">*</span>
+<span class="identifier">boost_foreach_is_noncopyable</span><span class="special">(</span> <span class="identifier">noncopy_vector</span> <span class="special">*&amp;,</span> <span class="identifier">boost</span><span class="special">::</span><span class="identifier">foreach</span><span class="special">::</span><span class="identifier">tag</span> <span class="special">)</span>
+<span class="special">{</span>
+    <span class="keyword">return</span> <span class="number">0</span><span class="special">;</span>
+<span class="special">}</span>
+</pre>
+
+
+<div class="tip">
+<table summary="Tip" border="0">
+
+
+  <tbody>
+
+    <tr>
+
+
+      <td rowspan="2" align="center" valign="top" width="25"><img alt="[Tip]" src="../images/tip.png"></td>
+
+
+      <th align="left">提示</th>
+
+
+    </tr>
+
+
+    <tr>
+
+      <td align="left" valign="top">
+      
+      <p>虽然我们必须告诉 <code class="literal">BOOST_FOREACH</code> 我们的类型是不可复制的，但这并不意味着 <code class="literal">BOOST_FOREACH</code>
+        总是对我们的序列类型进行复制。显然，这样做是代价昂贵的，而且在某些情况下还是错误的。<code class="literal">BOOST_FOREACH</code> 非常聪明，知道何时应该复制，何时不该。<code class="computeroutput"><span class="identifier">is_noncopyable</span><span class="special">&lt;&gt;</span></code> trait&nbsp;用于取消复制，复制的分枝将不会被执行。
+      </p>
+
+      </td>
+
+    </tr>
+
+
+  
+  </tbody>
+</table>
+
+</div>
+
+
+<a name="foreach.extensibility.optimizing__literal_boost_foreach__literal__for_lightweight_proxy_sequence_types"></a>
+<h2>
+<a name="id1183913"></a>为轻量级代理序列类型优化 <code class="literal">BOOST_FOREACH</code>
+    </h2>
+
+
+<p>在一些编译器上，<code class="literal">BOOST_FOREACH</code>
+有时需要选择一条稍微慢一点的代码路径以保证正确地处理保存临时对象的序列。它问自己，"我应该复制这个对象吗？"，稍后又问，"我复制了这个对象吗？
+"。对于某些序列类型，这是多余的。考虑由一对迭代器所组成的序列。并不值得为了避免复制而进行这些跳转，因为它的复制代价是非常小的。 </p>
+
+
+<p>这样的一对迭代器就是轻量级代理的例子。它并不保存序列中的值；而是保存它们的迭代器。这意味着对这个代理对象的拷贝进行迭代与使用对象本身是同样的效果。对于这种类型，<code class="literal">BOOST_FOREACH</code> 提供了一个钩子让我们告诉它不需要关心复制的开销。这样可以生成更快的循环执行。只需要象下面这样特化 <code class="computeroutput"><span class="identifier">boost</span><span class="special">::</span><span class="identifier">foreach</span><span class="special">::</span><span class="identifier">is_lightweight_proxy</span><span class="special">&lt;&gt;</span></code> trait 就可以了：
+    </p>
+
+
+<pre class="programlisting"><span class="keyword">struct</span> <span class="identifier">sub_string</span>
+  <span class="special">:</span> <span class="identifier">boost</span><span class="special">::</span><span class="identifier">iterator_range</span><span class="special">&lt;</span> <span class="identifier">std</span><span class="special">::</span><span class="identifier">string</span><span class="special">::</span><span class="identifier">iterator</span> <span class="special">&gt;</span>
+<span class="special">{</span>
+    <span class="comment">// ...<br></span><span class="special">};</span>
+
+<span class="keyword">namespace</span> <span class="identifier">boost</span> <span class="special">{</span> <span class="keyword">namespace</span> <span class="identifier">foreach</span>
+<span class="special">{</span>
+    <span class="keyword">template</span><span class="special">&lt;&gt;</span>
+    <span class="keyword">struct</span> <span class="identifier">is_lightweight_proxy</span><span class="special">&lt;</span> <span class="identifier">sub_string</span> <span class="special">&gt;</span>
+      <span class="special">:</span> <span class="identifier">mpl</span><span class="special">::</span><span class="identifier">true_</span>
+    <span class="special">{</span>
+    <span class="special">};</span>
+<span class="special">}}</span>
+</pre>
+
+
+<p>另一种有相同作用的方法是覆盖全局的 <code class="computeroutput"><span class="identifier">boost_foreach_is_lightweight_proxy</span><span class="special">()</span></code>
+      函数，如下：
+    </p>
+
+
+<pre class="programlisting"><span class="comment">// </span><span class="comment">在全局作用域中</span><span class="comment">...<br></span><span class="keyword">inline</span> <span class="identifier">boost</span><span class="special">::</span><span class="identifier">mpl</span><span class="special">::</span><span class="identifier">true_</span> <span class="special">*</span>
+<span class="identifier">boost_foreach_is_lightweight_proxy</span><span class="special">(</span> <span class="identifier">sub_string</span> <span class="special">*&amp;,</span> <span class="identifier">boost</span><span class="special">::</span><span class="identifier">foreach</span><span class="special">::</span><span class="identifier">tag</span> <span class="special">)</span>
+<span class="special">{</span>
+    <span class="keyword">return</span> <span class="number">0</span><span class="special">;</span>
+<span class="special">}</span>
+</pre>
+
+
+<p>这个方法可移植到老的编译器。
+    </p>
+
+
+</div>
+
+
+<table width="100%">
+
+  <tbody>
+
+    <tr>
+
+
+      <td align="left"></td>
+
+
+      <td align="right"><small>Copyright © 2004 Eric Niebler</small></td>
+
+
+    </tr>
+
+  
+  </tbody>
+</table>
+
+
+<hr>
+<div class="copyright-footer"><p>Distributed under the Boost Software License, Version 1.0. (See accompanying 
+file LICENSE_1_0.txt or copy at <a href="http://www.boost.org/LICENSE_1_0.txt" target="_top">http://www.boost.org/LICENSE_1_0.txt</a>) </p></div>
+<div class="spirit-nav">
+<a accesskey="p" href="../foreach.html"><img src="../images/prev.png" alt="Prev"></a><a accesskey="u" href="../foreach.html"><img src="../images/up.png" alt="Up"></a><a accesskey="h" href="../index.html"><img src="../images/home.png" alt="Home"></a><a accesskey="n" href="portability.html"><img src="../images/next.png" alt="Next"></a>
+</div>
+
+
+</body></html>

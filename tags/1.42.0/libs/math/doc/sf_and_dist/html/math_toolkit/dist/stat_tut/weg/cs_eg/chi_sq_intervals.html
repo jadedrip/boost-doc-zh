@@ -1,0 +1,187 @@
+﻿<html>
+<head>
+<meta http-equiv="Content-Type" content="text/html; charset=UTF-8">
+<title>Confidence Intervals on the Standard Deviation</title>
+<link rel="stylesheet" href="../../../../../../../../../../doc/html/boostbook.css" type="text/css">
+<meta name="generator" content="DocBook XSL Stylesheets Vsnapshot_2006-12-17_0120">
+<link rel="start" href="../../../../../index.html" title="Math Toolkit">
+<link rel="up" href="../cs_eg.html" title="Chi Squared Distribution Examples">
+<link rel="prev" href="../cs_eg.html" title="Chi Squared Distribution Examples">
+<link rel="next" href="chi_sq_test.html" title="Chi-Square Test for the Standard Deviation">
+</head>
+<body bgcolor="white" text="black" link="#0000FF" vlink="#840084" alink="#0000FF">
+<table cellpadding="2" width="100%"><tr>
+<td valign="top"><img alt="Boost C++ Libraries" width="277" height="86" src="../../../../../../../../../../boost.png"></td>
+<td align="center"><a href="../../../../../../../../../../index.html">Home</a></td>
+<td align="center"><a href="../../../../../../../../../../libs/libraries.htm">Libraries</a></td>
+<td align="center"><a href="http://www.boost.org/users/people.html">People</a></td>
+<td align="center"><a href="http://www.boost.org/users/faq.html">FAQ</a></td>
+<td align="center"><a href="../../../../../../../../../../more/index.htm">More</a></td>
+</tr></table>
+<hr>
+<div class="spirit-nav">
+<a accesskey="p" href="../cs_eg.html"><img src="../../../../../../../../../../doc/html/images/prev.png" alt="Prev"></a><a accesskey="u" href="../cs_eg.html"><img src="../../../../../../../../../../doc/html/images/up.png" alt="Up"></a><a accesskey="h" href="../../../../../index.html"><img src="../../../../../../../../../../doc/html/images/home.png" alt="Home"></a><a accesskey="n" href="chi_sq_test.html"><img src="../../../../../../../../../../doc/html/images/next.png" alt="Next"></a>
+</div>
+<div class="section" lang="en">
+<div class="titlepage"><div><div>
+  <h5 class="title">
+<a name="math_toolkit.dist.stat_tut.weg.cs_eg.chi_sq_intervals"></a><a href="chi_sq_intervals.html" title="Confidence Intervals on the Standard Deviation">
+            标准差的置信区间(Confidence Intervals on the Standard Deviation)</a>
+</h5>
+</div></div></div>
+<p>
+              一旦你已经计算了数据的标准差，要问的一个合理的问题是“这个计算出的标准差的可信度有多高？”。在这种情况下，χ方形分布(Chi Squared distribution)可以用来计算标准差的置信区间。</p>
+<p>
+              完整的代码以及样本输出在<a href="../../../../../../../../example/chi_square_std_dev_test.cpp" target="_top">chi_square_std_deviation_test.cpp</a>中。</p>
+<p>
+  我们通过定义计算和打印置信区间(confidence interval)的函数开始：</p>
+<pre class="programlisting"><span class="keyword">void</span> <span class="identifier">confidence_limits_on_std_deviation</span><span class="special">(</span>
+     <span class="keyword">double</span> <span class="identifier">Sd</span><span class="special">,</span>    <span class="comment">// 样本标准差(Sample Standard Deviation)
+</span>     <span class="keyword">unsigned</span> <span class="identifier">N</span><span class="special">)</span>   <span class="comment">// 样本大小(Sample size)
+</span><span class="special">{</span>
+</pre>
+<p>
+  我们将打印一些基本信息：</p>
+<pre class="programlisting"><span class="identifier">cout</span> <span class="special">&lt;&lt;</span>
+   <span class="string">"________________________________________________\n"</span>
+   <span class="string">"2-Sided Confidence Limits For Standard Deviation\n"</span>
+   <span class="string">"________________________________________________\n\n"</span><span class="special">;</span>
+<span class="identifier">cout</span> <span class="special">&lt;&lt;</span> <span class="identifier">setprecision</span><span class="special">(</span><span class="number">7</span><span class="special">);</span>
+<span class="identifier">cout</span> <span class="special">&lt;&lt;</span> <span class="identifier">setw</span><span class="special">(</span><span class="number">40</span><span class="special">)</span> <span class="special">&lt;&lt;</span> <span class="identifier">left</span> <span class="special">&lt;&lt;</span> <span class="string">"Number of Observations"</span> <span class="special">&lt;&lt;</span> <span class="string">"=  "</span> <span class="special">&lt;&lt;</span> <span class="identifier">N</span> <span class="special">&lt;&lt;</span> <span class="string">"\n"</span><span class="special">;</span>
+<span class="identifier">cout</span> <span class="special">&lt;&lt;</span> <span class="identifier">setw</span><span class="special">(</span><span class="number">40</span><span class="special">)</span> <span class="special">&lt;&lt;</span> <span class="identifier">left</span> <span class="special">&lt;&lt;</span> <span class="string">"Standard Deviation"</span> <span class="special">&lt;&lt;</span> <span class="string">"=  "</span> <span class="special">&lt;&lt;</span> <span class="identifier">Sd</span> <span class="special">&lt;&lt;</span> <span class="string">"\n"</span><span class="special">;</span>
+</pre>
+<p>
+  然后我们定义了将计算置信区间的显著性水平(significance level)表。</p>
+<pre class="programlisting"><span class="keyword">double</span> <span class="identifier">alpha</span><span class="special">[]</span> <span class="special">=</span> <span class="special">{</span> <span class="number">0.5</span><span class="special">,</span> <span class="number">0.25</span><span class="special">,</span> <span class="number">0.1</span><span class="special">,</span> <span class="number">0.05</span><span class="special">,</span> <span class="number">0.01</span><span class="special">,</span> <span class="number">0.001</span><span class="special">,</span> <span class="number">0.0001</span><span class="special">,</span> <span class="number">0.00001</span> <span class="special">};</span>
+</pre>
+<p>
+  我们用于计算置信区间的分布是自由度(degree of freedom)为(N-1)的χ方形分布(Chi Squared distribution)：</p>
+<pre class="programlisting"><span class="identifier">chi_squared</span> <span class="identifier">dist</span><span class="special">(</span><span class="identifier">N</span> <span class="special">-</span> <span class="number">1</span><span class="special">);</span>
+</pre>
+<p>
+  对于每一个 alpha 值，置信区间的方程由下面的的等式给定：</p>
+<p>
+              <span class="inlinemediaobject"><img src="../../../../../../equations/chi_squ_tut1.png"></span>
+  </p>
+<p>
+              其中<span class="inlinemediaobject"><img src="../../../../../../equations/chi_squ_tut2.png"></span>是χ方形分布( Chi Squared distribution)的上临界值( upper critical value)，且<span class="inlinemediaobject"><img src="../../../../../../equations/chi_squ_tut3.png"></span>是下临界值( lower critical value)。</p>
+<p>
+  在代码中，我们通过打印表头开始：</p>
+<p><span class="identifier">cout</span> <span class="special">&lt;&lt;</span> <span class="string">"\n\n"</span>
+              <span class="string">"_____________________________________________\n"</span>
+              <span class="string">"Confidence          Lower          Upper\n"</span>
+              <span class="string">" Value (%)          Limit          Limit\n"</span>
+              <span class="string">"_____________________________________________\n"</span><span class="special">;</span>
+</p>
+<p>
+              然后循环计算每个 alpha 值对应的区间：记住，下临界值(lower critical value)与分位点(quantile)相同，而上临界值(upper critical value)与概率补集的分位点相同：</p>
+<pre class="programlisting"><span class="keyword">for</span><span class="special">(</span><span class="keyword">unsigned</span> <span class="identifier">i</span> <span class="special">=</span> <span class="number">0</span><span class="special">;</span> <span class="identifier">i</span> <span class="special">&lt;</span> <span class="keyword">sizeof</span><span class="special">(</span><span class="identifier">alpha</span><span class="special">)/</span><span class="keyword">sizeof</span><span class="special">(</span><span class="identifier">alpha</span><span class="special">[</span><span class="number">0</span><span class="special">]);</span> <span class="special">++</span><span class="identifier">i</span><span class="special">)</span>
+<span class="special">{</span>
+   <span class="comment">// Confidence value:
+</span>   <span class="identifier">cout</span> <span class="special">&lt;&lt;</span> <span class="identifier">fixed</span> <span class="special">&lt;&lt;</span> <span class="identifier">setprecision</span><span class="special">(</span><span class="number">3</span><span class="special">)</span> <span class="special">&lt;&lt;</span> <span class="identifier">setw</span><span class="special">(</span><span class="number">10</span><span class="special">)</span> <span class="special">&lt;&lt;</span> <span class="identifier">right</span> <span class="special">&lt;&lt;</span> <span class="number">100</span> <span class="special">*</span> <span class="special">(</span><span class="number">1</span><span class="special">-</span><span class="identifier">alpha</span><span class="special">[</span><span class="identifier">i</span><span class="special">]);</span>
+   <span class="comment">// 计算界限:
+</span>   <span class="keyword">double</span> <span class="identifier">lower_limit</span> <span class="special">=</span> <span class="identifier">sqrt</span><span class="special">((</span><span class="identifier">N</span> <span class="special">-</span> <span class="number">1</span><span class="special">)</span> <span class="special">*</span> <span class="identifier">Sd</span> <span class="special">*</span> <span class="identifier">Sd</span> <span class="special">/</span> <span class="identifier">quantile</span><span class="special">(</span><span class="identifier">complement</span><span class="special">(</span><span class="identifier">dist</span><span class="special">,</span> <span class="identifier">alpha</span><span class="special">[</span><span class="identifier">i</span><span class="special">]</span> <span class="special">/</span> <span class="number">2</span><span class="special">)));</span>
+   <span class="keyword">double</span> <span class="identifier">upper_limit</span> <span class="special">=</span> <span class="identifier">sqrt</span><span class="special">((</span><span class="identifier">N</span> <span class="special">-</span> <span class="number">1</span><span class="special">)</span> <span class="special">*</span> <span class="identifier">Sd</span> <span class="special">*</span> <span class="identifier">Sd</span> <span class="special">/</span> <span class="identifier">quantile</span><span class="special">(</span><span class="identifier">dist</span><span class="special">,</span> <span class="identifier">alpha</span><span class="special">[</span><span class="identifier">i</span><span class="special">]</span> <span class="special">/</span> <span class="number">2</span><span class="special">));</span>
+   <span class="comment">// 打印界限值:
+</span>   <span class="identifier">cout</span> <span class="special">&lt;&lt;</span> <span class="identifier">fixed</span> <span class="special">&lt;&lt;</span> <span class="identifier">setprecision</span><span class="special">(</span><span class="number">5</span><span class="special">)</span> <span class="special">&lt;&lt;</span> <span class="identifier">setw</span><span class="special">(</span><span class="number">15</span><span class="special">)</span> <span class="special">&lt;&lt;</span> <span class="identifier">right</span> <span class="special">&lt;&lt;</span> <span class="identifier">lower_limit</span><span class="special">;</span>
+   <span class="identifier">cout</span> <span class="special">&lt;&lt;</span> <span class="identifier">fixed</span> <span class="special">&lt;&lt;</span> <span class="identifier">setprecision</span><span class="special">(</span><span class="number">5</span><span class="special">)</span> <span class="special">&lt;&lt;</span> <span class="identifier">setw</span><span class="special">(</span><span class="number">15</span><span class="special">)</span> <span class="special">&lt;&lt;</span> <span class="identifier">right</span> <span class="special">&lt;&lt;</span> <span class="identifier">upper_limit</span> <span class="special">&lt;&lt;</span> <span class="identifier">endl</span><span class="special">;</span>
+<span class="special">}</span>
+<span class="identifier">cout</span> <span class="special">&lt;&lt;</span> <span class="identifier">endl</span><span class="special">;</span>
+</pre>
+<p>
+              了查看一些样本输出，我们使用来自于<a href="http://www.itl.nist.gov/div898/handbook/" target="_top">NIST/SEMATECH e-Handbook of Statistical Methods.</a>的<a href="http://www.itl.nist.gov/div898/handbook/eda/section3/eda3581.htm" target="_top">gear data</a> ，这些数据表示来自于一个制造过程(manufacturing process)中测量的齿轮直径( gear diameter)。</p>
+<pre class="programlisting">________________________________________________
+2-Sided Confidence Limits For Standard Deviation
+________________________________________________
+
+Number of Observations                  =  100
+Standard Deviation                      =  0.006278908
+
+
+_____________________________________________
+Confidence          Lower          Upper
+ Value (%)          Limit          Limit
+_____________________________________________
+    50.000        0.00601        0.00662
+    75.000        0.00582        0.00685
+    90.000        0.00563        0.00712
+    95.000        0.00551        0.00729
+    99.000        0.00530        0.00766
+    99.900        0.00507        0.00812
+    99.990        0.00489        0.00855
+    99.999        0.00474        0.00895
+</pre>
+<p>
+              因此在 95% 的置信水平(confidence level)，我们判定标准差在 0.00551 到 0.00729之间。</p>
+<a name="math_toolkit.dist.stat_tut.weg.cs_eg.chi_sq_intervals.confidence_intervals_as_a_function_of_the_number_of_observations"></a>
+<h5>
+<a name="id533078"></a>
+              <a href="chi_sq_intervals.html#math_toolkit.dist.stat_tut.weg.cs_eg.chi_sq_intervals.confidence_intervals_as_a_function_of_the_number_of_observations">置信区间作为观测数目的函数(Confidence
+              intervals as a function of the number of observations)</a>
+  </h5>
+<p>
+  类似地，对于增长的观测数量，我们也可以计算通常的置信水平为95%时标准差的置信区间。</p>
+<p>
+              用于计算这些值的标准差为1，因此对于任何特定的标准差，这里列举的界限都是<span class="bold"><strong>乘积</strong></span> 。给定一个标准差0.0062789 ，就像在上面的例子中显示的那样；对于100次观测，乘积是 0.8780，给定下置信界限(lower confidence limit) 0.8780 * 0.006728 =
+              0.00551。</p>
+<pre class="programlisting">____________________________________________________
+Confidence level (two-sided)            =  0.0500000
+Standard Deviation                      =  1.0000000
+________________________________________
+Observations        Lower          Upper
+                    Limit          Limit
+________________________________________
+         2         0.4461        31.9102
+         3         0.5207         6.2847
+         4         0.5665         3.7285
+         5         0.5991         2.8736
+         6         0.6242         2.4526
+         7         0.6444         2.2021
+         8         0.6612         2.0353
+         9         0.6755         1.9158
+        10         0.6878         1.8256
+        15         0.7321         1.5771
+        20         0.7605         1.4606
+        30         0.7964         1.3443
+        40         0.8192         1.2840
+        50         0.8353         1.2461
+        60         0.8476         1.2197
+       100         0.8780         1.1617
+       120         0.8875         1.1454
+      1000         0.9580         1.0459
+     10000         0.9863         1.0141
+     50000         0.9938         1.0062
+    100000         0.9956         1.0044
+   1000000         0.9986         1.0014
+</pre>
+<p>
+              对于 2 次观测，界限从<span class="bold"><strong>0.445</strong></span>
+              到<span class="bold"><strong>31.9</strong></span>，所以标准差可能是观测值的<span class="bold"><strong>一半</strong></span> 到观测值的<span class="bold"><strong>30 倍 </strong></span> !
+  </p>
+<p>
+  使用少量的数据来估算标准差留下了相当大的不确定性，尤其是上界限(upper limit)。注意：尤其是上界限(upper limit)与最可能的标准差偏移太远。</p>
+<p>
+              即使对于 10 次观测， 通常认为是一个合理的数值，范围仍然是从 0.69 到 1.8，大约是一个从 0.7 到 2的范围，并且仍然是严重歪斜的，上边界(upper limit)是均值的<span class="bold"><strong>两倍</strong></span>
+              。</p>
+<p>
+              当我们有 1000 次观测时， 估算的标准差开始看起来具有说服力，范围为 0.95 到 1.05 - 现在接近对称，但仍然偏移 + 或 - 5%。</p>
+<p>
+              仅当我们有 10000 或更多重复的观测时，我们才能够开始合理的自信(reasonably confident) 。 (假定我们确信其它的因素，例如，漂移(drift)，不会出现)</p>
+<p>
+              对于 10000 次观测，区间为 0.99 到 1.1 - 最终的具有说服力的 + or -1% 置信度。</p>
+</div>
+<table xmlns:rev="http://www.cs.rpi.edu/~gregod/boost/tools/doc/revision" width="100%"><tr>
+<td align="left"></td>
+<td align="right"><div class="copyright-footer">Copyright ?2006 , 2007, 2008 John Maddock, Paul A. Bristow, Hubert
+      Holin, Xiaogang Zhang and Bruno Lalande<p>
+        Distributed under the Boost Software License, Version 1.0. (See accompanying
+        file LICENSE_1_0.txt or copy at <a href="http://www.boost.org/LICENSE_1_0.txt" target="_top">http://www.boost.org/LICENSE_1_0.txt</a>)
+      </p>
+</div></td>
+</tr></table>
+<hr>
+<div class="spirit-nav">
+<a accesskey="p" href="../cs_eg.html"><img src="../../../../../../../../../../doc/html/images/prev.png" alt="Prev"></a><a accesskey="u" href="../cs_eg.html"><img src="../../../../../../../../../../doc/html/images/up.png" alt="Up"></a><a accesskey="h" href="../../../../../index.html"><img src="../../../../../../../../../../doc/html/images/home.png" alt="Home"></a><a accesskey="n" href="chi_sq_test.html"><img src="../../../../../../../../../../doc/html/images/next.png" alt="Next"></a>
+</div>
+</body>
+</html>

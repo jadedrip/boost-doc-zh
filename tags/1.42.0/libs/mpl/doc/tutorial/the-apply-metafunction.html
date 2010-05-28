@@ -1,0 +1,105 @@
+<!DOCTYPE html PUBLIC "-//W3C//DTD XHTML 1.0 Transitional//EN" "http://www.w3.org/TR/xhtml1/DTD/xhtml1-transitional.dtd">
+<html xmlns="http://www.w3.org/1999/xhtml" xml:lang="en" lang="en">
+<head>
+<!-- Copyright Aleksey Gurtovoy 2006. Distributed under the Boost --><!-- Software License, Version 1.0. (See accompanying --><!-- file LICENSE_1_0.txt or copy at http://www.boost.org/LICENSE_1_0.txt) -->
+  <meta http-equiv="Content-Type" content="text/html; charset=utf-8" />
+
+  <meta name="generator" content="Docutils 0.3.6: http://docutils.sourceforge.net/" />
+
+
+  <title>THE BOOST MPL LIBRARY: The apply Metafunction</title>
+  <link rel="stylesheet" href="../style.css" type="text/css" />
+</head>
+
+
+
+
+
+
+<body class="docframe">
+
+<table class="header">
+  <tbody>
+    <tr class="header">
+      <td class="header-group navigation-bar"><span class="navigation-group"><a href="./the-lambda-metafunction.html" class="navigation-link">Prev</a>&nbsp;<a href="./more-lambda-capabilities.html" class="navigation-link">Next</a></span><span class="navigation-group-separator">&nbsp;|&nbsp;</span><span class="navigation-group"><a href="./the-lambda-metafunction.html" class="navigation-link">Back</a>&nbsp;Along</span><span class="navigation-group-separator">&nbsp;|&nbsp;</span><span class="navigation-group"><a href="./handling-placeholders.html" class="navigation-link">Up</a>&nbsp;<a href="../index.html" class="navigation-link">Home</a></span><span class="navigation-group-separator">&nbsp;|&nbsp;</span><span class="navigation-group"><a href="./tutorial_toc.html" class="navigation-link">Full TOC</a></span></td>
+
+      <td class="header-group page-location"><a href="../index.html" class="navigation-link">标题页</a> / <a href="./tutorial-metafunctions.html" class="navigation-link">教程：元函数和高阶元编程</a> / <a href="./handling-placeholders.html" class="navigation-link">处理占位符</a> / <a href="./the-apply-metafunction.html" class="navigation-link">apply 元函数</a></td>
+
+    </tr>
+  </tbody>
+</table>
+<div class="header-separator"></div>
+
+<div class="section" id="the-apply-metafunction">
+<h1><a class="toc-backref" href="./handling-placeholders.html#id50" name="the-apply-metafunction"><tt class="literal"><span class="pre">apply</span></tt> 元函数</a></h1>
+
+<p>对 <tt class="literal"><span class="pre">lambda</span></tt> 的结果进行调用是一个非常常见的模式，因此 MPL 提供了一个 <tt class="literal"><span class="pre">apply</span></tt> 元函数来做这件事。使用 <tt class="literal"><span class="pre">mpl::apply</span></tt>，我们的 <tt class="literal"><span class="pre">twice</span></tt> 版本可以变为：</p>
+
+<pre class="literal-block">#include &lt;boost/mpl/apply.hpp&gt;<br /><br />template &lt;class F, class X&gt;<br />struct twice<br />   : mpl::apply&lt;F, typename mpl::apply&lt;F,X&gt;::type&gt;<br />{};<br /></pre>
+
+<!-- @ example.append(twice_test + '''
+BOOST_MPL_ASSERT((boost::is_same<twice<boost::add_pointer<_1>,int>::type,int**>));
+''')
+compile()
+prefix.append('#include <boost/mpl/apply.hpp>') -->
+<p>你可以将 <tt class="literal"><span class="pre">mpl::apply</span></tt> 想象为就象我们所写的 <tt class="literal"><span class="pre">apply1</span></tt>
+模板那样，但是它有另外两个特性：</p>
+
+<ol class="arabic">
+
+  <li>
+    <p class="first"><tt class="literal"><span class="pre">apply1</span></tt> 只能操作元函数类，而 <tt class="literal"><span class="pre">mpl::apply</span></tt> 的第一个参数可以是任意 lambda 表达式(包括由占位符构建的表达式)。</p>
+
+  </li>
+
+  <li>
+    <p class="first"><tt class="literal"><span class="pre">apply1</span></tt> 只能接受一个额外参数来用于元函数类，而 <tt class="literal"><span class="pre">mpl::apply</span></tt> 可以用0-5个参数来调用其第一个参数。<a class="footnote-reference" href="#arity" id="id11" name="id11">[5]</a>  例如：</p>
+
+    <pre class="literal-block">// 用2个参数调用二元 lambda 表达式<br />mpl::apply&lt;<br />    mpl::plus&lt;_1,_2&gt;   <br />  , <strong>mpl::int_&lt;6&gt;</strong>
+  , <strong>mpl::int_&lt;7&gt;</strong>
+&gt;::type::value // == 13
+    </pre>
+
+  </li>
+
+</ol>
+
+<table class="footnote" id="arity" frame="void" rules="none">
+
+  <colgroup><col class="label" /><col /></colgroup>
+  <tbody valign="top">
+
+    <tr>
+      <td class="label"><a class="fn-backref" href="#id11" name="arity">[5]</a></td>
+      <td>有关如何改变 <tt class="literal"><span class="pre">mpl::apply</span></tt> 所处理的最大参数数量，请见 <a class="reference" href="reference-manual.html">MPL 参考手册</a> 中的 Configuration Macros 一节。</td>
+    </tr>
+
+  </tbody>
+</table>
+
+<!-- @ prefix+=['#include <boost/mpl/plus.hpp>']
+example.wrap('enum { is13 = ','''};
+BOOST_STATIC_ASSERT(is13 == 13);''')
+compile() -->
+<div class="admonition-guideline admonition">
+<p class="admonition-title first">指导方针</p>
+
+<p>在编写调用其参数的元函数时，使用 <tt class="literal"><span class="pre">mpl::apply</span></tt> 以便可用于 lambda 表达式。</p>
+
+</div>
+
+</div>
+
+
+<div class="footer-separator"></div>
+
+<table class="footer">
+  <tbody>
+    <tr class="footer">
+      <td class="header-group navigation-bar"><span class="navigation-group"><a href="./the-lambda-metafunction.html" class="navigation-link">Prev</a>&nbsp;<a href="./more-lambda-capabilities.html" class="navigation-link">Next</a></span><span class="navigation-group-separator">&nbsp;|&nbsp;</span><span class="navigation-group"><a href="./the-lambda-metafunction.html" class="navigation-link">Back</a>&nbsp;Along</span><span class="navigation-group-separator">&nbsp;|&nbsp;</span><span class="navigation-group"><a href="./handling-placeholders.html" class="navigation-link">Up</a>&nbsp;<a href="../index.html" class="navigation-link">Home</a></span><span class="navigation-group-separator">&nbsp;|&nbsp;</span><span class="navigation-group"><a href="./tutorial_toc.html" class="navigation-link">Full TOC</a></span></td>
+
+    </tr>
+  </tbody>
+</table>
+</body>
+</html>

@@ -1,0 +1,437 @@
+<!DOCTYPE HTML PUBLIC "-//W3C//DTD HTML 4.01 Transitional//EN">
+<html><head>
+
+
+
+  
+  
+  
+  <meta content="text/html; charset=UTF-8" http-equiv="content-type"><!--
+  -- Copyright (c) Jeremy Siek 2000
+  --
+  -- Permission to use, copy, modify, distribute and sell this software
+  -- and its documentation for any purpose is hereby granted without fee,
+  -- provided that the above copyright notice appears in all copies and
+  -- that both that copyright notice and this permission notice appear
+  -- in supporting documentation.  Silicon Graphics makes no
+  -- representations about the suitability of this software for any
+  -- purpose.  It is provided "as is" without express or implied warranty.
+  -->
+
+
+
+
+  
+  
+  
+  <title>Property Map Library</title></head>
+
+<body alink="#ff0000" bgcolor="#ffffff" link="#0000ee" text="#000000" vlink="#551a8b">
+
+
+
+ 
+<img style="width: 277px; height: 86px;" src="../../../boost.png" alt="C++ Boost"> 
+
+<br clear="">
+
+
+
+
+
+<h1><a name="sec:property-maps"></a>
+Boost Property Map 库
+</h1>
+
+
+
+
+
+<p>Boost Property Map 库主要是以概念(类似于 STL <a href="http://www.sgi.com/tech/stl/stl_introduction.html">[2]</a> 中的迭代器概念)的方式给出了一些接口的规范。这些接口规范是打算给泛型库的实现者使用的，用于与库的使用者进行有关模板参数要求方面的沟通。具体地说，Boost
+Property Map 概念为键对象到相应的值对象的映射定义了一个通用的接口，从而向算法隐藏映射实现的细节。遵循 property map
+接口的类型的实现由算法的使用者提供。property map
+对于键对象与值对象的类型的要求被故意模糊化，以使得泛型库的函数模板可以获得最大限度的通用性。
+</p>
+
+
+
+
+
+<p>对于 property map 接口的需要来自于 <a href="../../graph/doc/index.html">Boost Graph 库</a>(BGL), 该库包含了许多算法例子，这些例子都使用了 property map
+概念来指明算法的接口。例如，<a href="../../graph/doc/breadth_first_search.html"><tt>breadth_first_search</tt></a> 中的 ColorMap 模板参数。此外，BGL 还包含了许多实现了 property map 接口的具体类型的例子。<a href="../../graph/doc/adjacency_list.html"><tt>adjacency_list</tt></a> 类模板实现了用于访问附属于图的边和顶点的对象(属性)的 property map.
+</p>
+
+
+
+
+
+<p>Boost Property Map 库还包含了 <a href="#sec:property-map-types"> 少量的适配器</a>，它们将实现映射操作的常用数据结构，如内建数组(指针)、迭代器和 <a href="http://www.sgi.com/tech/stl/Map.html"> <tt>std::map</tt></a>, 转换为具有 property map 接口。这些适配器并不打算满足所有映射需要，但可以用作一个实现该接口的例子，同时也可用于一些常见的情况。有关细节请见头文件。
+</p>
+
+
+
+
+
+<p>Property maps 是静态类型实体。如果你需要在更为动态的设置中访问
+property maps(如，你要从一个文件中读出一组未知的属性)，你可以使用 <a href="dynamic_property_map.html"><code>dynamic_properties</code></a>
+类来通过动态类型接口访问一组 property maps. </p>
+
+
+
+
+
+<h2><a name="sec:property-map-concepts"></a>
+Property Map 概念
+</h2>
+
+
+
+property map 接口包含了一组概念(关于"概念"的定义，请见 <a href="../../concept_check/concept_check.htm#introduction">[1]</a> 和 <a href="http://www.sgi.com/tech/stl/stl_introduction.html">[2]</a>)，
+这些概念定义了一种语法，将键对象映射到相应的值对象。由于 property map
+操作是一些全局函数(实际上它们不一定是全局的，不过他们总是可以被不带限定符地进行调用，可以通过ADL被查找到)，所以重载这些映射函数就可以使用几
+乎是任意的键类型和值类型。property map 的接口包括三个函数：<tt>get()</tt>,
+<tt>put()</tt>, 和 <tt>operator[]</tt>. 以下实际例子来自于 <a href="./example1.cpp">example1.cpp</a>，它示范了如何使用这三个函数来存取不同人员的住址。我们在这里使用了一个独立的函数模板，以突出程序中使用了 property map 概念接口的部分。在 <tt>main()</tt> 函数中，我们使用了 <tt>std::map</tt> 和 <tt>boost::associative_property_map</tt>, 不过使用任意符合 property map 要求的类型(包括你自己创建的定制类型)都是可以的。
+
+<pre>#include &lt;iostream&gt;<br>#include &lt;map&gt;<br>#include &lt;string&gt;<br>#include &lt;boost/property_map/property_map.hpp&gt;<br><br><br>template &lt;typename AddressMap&gt;<br>void foo(AddressMap address)<br>{<br>  typedef typename boost::property_traits&lt;AddressMap&gt;::value_type value_type;<br>  typedef typename boost::property_traits&lt;AddressMap&gt;::key_type key_type;<br><br>  value_type old_address, new_address;<br>  key_type fred = "Fred";<br>  old_address = get(address, fred);<br>  new_address = "384 Fitzpatrick Street";<br>  put(address, fred, new_address);<br><br>  key_type joe = "Joe";<br>  value_type&amp; joes_address = address[joe];<br>  joes_address = "325 Cushing Avenue";<br>}<br><br>int<br>main()<br>{<br>  std::map&lt;std::string, std::string&gt; name2address;<br>  boost::associative_property_map&lt; std::map&lt;std::string, std::string&gt; &gt;<br>    address_map(name2address);<br><br>  name2address.insert(make_pair(std::string("Fred"), <br>				std::string("710 West 13th Street")));<br>  name2address.insert(make_pair(std::string("Joe"), <br>				std::string("710 West 13th Street")));<br><br>  foo(address_map);<br>  <br>  for (std::map&lt;std::string, std::string&gt;::iterator i = name2address.begin();<br>       i != name2address.end(); ++i)<br>    std::cout &lt;&lt; i-&gt;first &lt;&lt; ": " &lt;&lt; i-&gt;second &lt;&lt; "\n";<br><br>  return EXIT_SUCCESS;<br>}</pre>
+
+
+
+
+
+<p>对于每一个 property map 对象，存在一组 <i>有效键</i>，有效键到值对象的映射是被定义好的。对无效键调用
+property map 函数将导致未定义行为。property map 概念不规定如何创建和修改这组有效键。一个使用
+property map 的函数必须将指定有效键集合作为其前置条件。
+
+</p>
+
+
+
+<p>对于 property maps 的需求来自于对 Boost
+Graph 库的设计，该库的算法需要一个接口来访问附属于图的顶点和边的属性。在这种上下文中，顶点描述符和边描述符就是 property
+map 的键类型。
+
+<!-- historical note about Decorators and Data Maps -->
+
+</p>
+
+
+
+<p>property maps 被分为几类，它们提供了不同的访问能力：
+</p>
+
+
+
+<dl>
+
+
+
+
+  <dt><strong>可读的</strong></dt>
+
+
+
+
+  <dd>关联的属性数据只能被读。数据以值的方式返回。多数定义问题输入(如边的权重)的 property map 可被定义为可读
+  property maps.
+
+    
+    
+    
+    <p>
+
+    </p>
+
+
+
+  </dd>
+
+
+
+  <dt><strong>可写的</strong></dt>
+
+
+
+
+  <dd>关联的属性数据只能被写。用于记录在先宽搜索树中的路径的父结点数组就是一个被定义为可写 property map 的例子。
+
+    
+    
+    
+    <p>
+
+    </p>
+
+
+
+  </dd>
+
+
+
+  <dt><strong>读/写的</strong></dt>
+
+
+
+
+  <dd>关联的属性数据即可以读也可以写。在 Dijkstra 最短路径算法中的距离属性必须提供读和写的能力。
+
+    
+    
+    
+    <p>
+
+    </p>
+
+
+
+  </dd>
+
+
+
+  <dt><strong>左值的</strong></dt>
+
+
+
+
+  <dd>关联的属性数据在内存中表示，并可以获得对该数据的引用。左值类别的 property map 同时也支持读/写 property
+  map 的要求。
+
+    
+    
+    
+    <p>
+
+    </p>
+
+
+
+  </dd>
+
+
+
+</dl>
+
+
+
+
+
+<p>对于这四个 property
+map 类别，分别定义了相应的概念。下面列出各个 property map 概念，并分别链接到各自的文档。
+
+</p>
+
+
+
+<ul>
+
+
+
+
+  <li><a href="./ReadablePropertyMap.html">可读PropertyMap</a></li>
+
+
+
+
+  <li><a href="./WritablePropertyMap.html">可写PropertyMap</a></li>
+
+
+
+
+  <li><a href="./ReadWritePropertyMap.html">读写PropertyMap</a></li>
+
+
+
+
+  <li><a href="./LvaluePropertyMap.html">左值PropertyMap</a></li>
+
+
+
+
+</ul>
+
+
+
+
+
+<h2><a name="sec:property-map-tags">Property Map 类别 Tags</a></h2>
+
+
+
+
+
+<p>每一类 property
+map 都有一个 tag, 定义于头文件
+<tt>&lt;boost/property_map/property_map.hpp&gt;</tt>.&nbsp;
+
+</p>
+
+
+
+<pre>namespace boost {<br><br>  struct readable_property_map_tag { };<br><br>  struct writable_property_map_tag { };<br><br>  struct read_write_property_map_tag :<br>    public readable_property_map_tag,<br>    public writable_property_map_tag { };<br><br>  struct lvalue_property_map_tag : <br>    public read_write_property_map_tag { };<br><br>}</pre>
+
+
+
+
+
+<h2><a name="sec:property-map-traits">Property Map Traits</a></h2>
+
+
+
+
+
+<p>类似于 STL 的 <tt>std::iterator_traits</tt> 类，库提供了一个 <tt>boost::property_traits</tt> 类，用于推断与某个 property map 类型相关联的类型: 键类型和值类型，以及 property map 类别。同时还提供了一个 <tt>boost::property_traits</tt> 特化类，使得指针也可以用作
+property map 对象。另外，property map
+函数也针对指针进行了重载。这些 traits 类和函数定义在&nbsp;<tt>&lt;boost/property_map/property_map.hpp&gt;</tt> 中。
+
+</p>
+
+
+
+<pre>namespace boost {<br><br>  template &lt;typename PropertyMap&gt;<br>  struct property_traits {<br>     typedef typename PropertyMap::key_type key_type;<br>     typedef typename PropertyMap::value_type value_type;<br>     typedef typename PropertyMap::category category;<br>  };<br><br>}</pre>
+
+
+
+
+
+<h2><a name="sec:property-map-types">Property Map 类型</a></h2>
+
+
+
+
+
+<ul>
+
+
+
+
+  <li>C++ 内建指针类型<br>
+
+以下的 <tt>property_traits</tt>&nbsp;特化类以及 <tt>put()</tt> 和 <tt>get()</tt> 的重载使得可以使用 C++ 内建的指针类型作为 property maps. 它们定义于 <tt>boost/property_map.hpp</tt>. 更明确地说，这意味着 <tt>T*</tt> 为 <a href="./LvaluePropertyMap.html">左值PropertyMap</a>, 它的键类型至少可以转换为 <tt>std::ptrdiff_t</tt>.
+
+    
+    
+    
+    <pre>namespace boost {<br>  // 使用指针作为 property maps 的特化<br>  template &lt;typename T&gt;<br>  struct property_traits&lt;T*&gt; {<br>    typedef T value_type;<br>    typedef std::ptrdiff_t key_type;<br>    typedef random_access_iterator_pa_tag category;<br>  };<br><br>  // 指针的 property map 函数的重载<br>  template&lt;&gt;<br>  void put(T* pmap, std::ptrdiff_t k, const T&amp; val) { pmap[k] = val;  }<br><br>  template&lt;&gt;<br>  const T&amp; get(const T* pmap, std::ptrdiff_t k) { return pmap[k]; }<br><br>}</pre>
+
+
+
+
+  </li>
+
+
+
+
+  <li><a href="./identity_property_map.html">identity_property_map</a> </li>
+
+
+
+
+  <li><a href="./iterator_property_map.html">iterator_property_map</a></li><li><a href="./shared_array_property_map.html">shared_array_property_map</a></li>
+
+
+
+
+  <li><a href="./associative_property_map.html">associative_property_map</a></li>
+
+
+
+
+  <li><a href="./const_assoc_property_map.html">const_associative_property_map</a></li>
+
+
+
+
+  <li><a href="./vector_property_map.html">vector_property_map</a></li>
+  <li><a href="./ref_property_map.html">ref_property_map</a></li>
+
+
+
+
+</ul>
+
+
+
+
+
+<h3>历史</h3>
+
+
+
+
+
+The property map interface originated as <i>data accessors</i> in
+Dietmar Kühl's Masters Thesis on generic graph algorithms.  The
+property map idea also appeared under the guise of <i>decorators</i>
+in early versions of the Generic Graph Component Library (GGCL), which
+is now the Boost Graph Library (BGL).  The main motivation for the
+property map interface was to support the access of data associated
+with vertices and edges in a graph, though the applicability of
+property maps goes beyond this.
+
+<h3>鸣谢</h3>
+
+
+
+
+
+Thanks go to Dietmar Kühl for coming up with this mechanism, and
+thanks go to the Boost members who helped refine and improve the
+property map interface. Thanks to Dave Abrahams for managing the
+formal review of the BGL which included the property map library.
+
+<h3>实现者的注意事项</h3>
+
+复制 property map 的代价应该是较低的，因为它们通常会以传值的方式被传递。<br>
+
+
+
+
+<hr>
+<table>
+
+
+
+
+  <tbody>
+
+
+
+    <tr valign="top">
+
+
+
+
+      <td nowrap="nowrap">Copyright © 2000-2002</td>
+
+
+
+      <td>
+      <a href="../../people/jeremy_siek.htm">Jeremy Siek</a>, Indiana University (<a href="mailto:jsiek@osl.iu.edu">jsiek@osl.iu.edu</a>)
+      </td>
+
+
+
+    </tr>
+
+
+
+  
+  
+  
+  </tbody>
+</table>
+
+
+
+
+
+<!--  LocalWords:  ALT STL html genericity BGL ColorMap htm cpp iostream hpp hl
+ -->
+<!--  LocalWords:  typename AddressMap foo fred joe joes int writeable lvalue
+ -->
+<!--  LocalWords:  ReadablePropertyMap WritablePropertyMap ReadWritePropertyMap
+ -->
+<!--  LocalWords:  LvaluePropertyMap struct namespace PropertyMap pmap const
+ -->
+<!--  LocalWords:  val Dietmar hl's GGCL Abrahams
+ -->
+</body></html>

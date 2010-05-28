@@ -1,0 +1,211 @@
+<html>
+<head>
+<meta http-equiv="Content-Type" content="text/html; charset=UTF-8">
+<title>Minimax Approximations and the Remez Algorithm</title>
+<link rel="stylesheet" href="../../../../../../../../doc/html/boostbook.css" type="text/css">
+<meta name="generator" content="DocBook XSL Stylesheets Vsnapshot_2006-12-17_0120">
+<link rel="start" href="../../../index.html" title="Math Toolkit">
+<link rel="up" href="../internals2.html" title="Testing and Development">
+<link rel="prev" href="polynomials.html" title="Polynomials">
+<link rel="next" href="error_test.html" title="Relative Error and Testing">
+</head>
+<body bgcolor="white" text="black" link="#0000FF" vlink="#840084" alink="#0000FF">
+<table cellpadding="2" width="100%"><tr>
+<td valign="top"><img alt="Boost C++ Libraries" width="277" height="86" src="../../../../../../../../boost.png"></td>
+<td align="center"><a href="../../../../../../../../index.html">Home</a></td>
+<td align="center"><a href="../../../../../../../../libs/libraries.htm">Libraries</a></td>
+<td align="center"><a href="http://www.boost.org/users/people.html">People</a></td>
+<td align="center"><a href="http://www.boost.org/users/faq.html">FAQ</a></td>
+<td align="center"><a href="../../../../../../../../more/index.htm">More</a></td>
+</tr></table>
+<hr>
+<div class="spirit-nav">
+<a accesskey="p" href="polynomials.html"><img src="../../../../../../../../doc/html/images/prev.png" alt="Prev"></a><a accesskey="u" href="../internals2.html"><img src="../../../../../../../../doc/html/images/up.png" alt="Up"></a><a accesskey="h" href="../../../index.html"><img src="../../../../../../../../doc/html/images/home.png" alt="Home"></a><a accesskey="n" href="error_test.html"><img src="../../../../../../../../doc/html/images/next.png" alt="Next"></a>
+</div>
+<div class="section" lang="en">
+<div class="titlepage"><div><div>
+  <h4 class="title">
+<a name="math_toolkit.toolkit.internals2.minimax"></a><a href="minimax.html" title="Minimax Approximations and the Remez Algorithm"> 极值逼近以及Remez算法(Minimax Approximations
+        and the Remez Algorithm)</a>
+</h4>
+</div></div></div>
+<p>
+        在 libs/math/minimax 目录下包含一个命令行驱动的程序用于使用Remez算法生成极值逼近。多项式逼近和有理函数逼近都得到支持，虽然后者很验证收敛：有理函数不能收敛是很常见的。对于永远都会顺利收敛的多项式就没有这些限制。</p>
+<p>
+  值得强调的是：为函数开发有理逼近通常不是一件容易的工作，对于这方面的研究有很多书籍。为了使用这个工具，你需要对Remez算法有一个了解，以及你想达到的逼近的一般形式。</p>
+<p>
+          除非你已经了解了Remez算法，否则推荐你先阅读<a href="../../backgrounders/remez.html" title="The Remez Method">解释Remez算法原理的背景文章</a>。</p>
+<p>
+          这个程序由两部分构造：</p>
+<div class="variablelist">
+<p class="title"><b></b></p>
+<dl>
+<dt><span class="term">main.cpp</span></dt>
+<dd>
+  <p>
+            包含一个命令行的解析器，以及所有对Remez算法代码的调用。</p>
+</dd>
+<dt><span class="term">f.cpp</span></dt>
+<dd>
+  <p>
+              包含逼近的函数。</p>
+</dd>
+</dl>
+</div>
+<p>
+  因此，为了使用这个工具，你必须修改 f.cpp 返回逼近的函数。这个程序支持使用同一个编译好的程序来逼近多个函数：每一个作为一个单独的变量：</p>
+<pre class="programlisting"><span class="identifier">NTL</span><span class="special">::</span><span class="identifier">RR</span> <span class="identifier">f</span><span class="special">(</span><span class="keyword">const</span> <span class="identifier">NTL</span><span class="special">::</span><span class="identifier">RR</span><span class="special">&amp;</span> <span class="identifier">x</span><span class="special">,</span> <span class="keyword">int</span> <span class="identifier">variant</span><span class="special">);</span>
+</pre>
+<p>
+  返回在<span class="emphasis"><em>x</em></span>外的函数<span class="emphasis"><em>variant</em></span>的值。所以，如果你愿意，你可以在已存在的例子后面加上一个新的逼近函数作为一个新的变量。</p>
+<p>
+          除了这两个文件，这个程序需要与一个<a href="../../using_udt/use_ntl.html" title="Using With NTL - a High-Precision Floating-Point Library">patched NTL library </a>进行链接。</p>
+<p>
+          注意，函数<span class="emphasis"><em>f</em></span> 必须返回逼近结果的有理数部分：例如，如果你逼近一个函数<span class="emphasis"><em>f(x)</em></span> ，那么使用下面的等式就很常见了：</p>
+<pre class="programlisting"><span class="identifier">f</span><span class="special">(</span><span class="identifier">x</span><span class="special">)</span> <span class="special">=</span> <span class="identifier">g</span><span class="special">(</span><span class="identifier">x</span><span class="special">)(</span><span class="identifier">Y</span> <span class="special">+</span> <span class="identifier">R</span><span class="special">(</span><span class="identifier">x</span><span class="special">))</span>
+</pre>
+<p>
+          其中<span class="emphasis"><em>g(x)</em></span> 是函数 <span class="emphasis"><em>f(x)</em></span>的帜部分( dominant part )，<span class="emphasis"><em>Y</em></span> 是某个常量，<span class="emphasis"><em>R(x)</em></span>
+  是有理逼近部分(rational approximation part)，通常进行绝对误差优化。</p>
+<p>
+          在这种情况下，你需要定义函数<span class="emphasis"><em>f</em></span> 返回<span class="emphasis"><em>f(x)/g(x)</em></span>
+          然后设置与逼近Y的偏移为 y-offset 
+          (参看下面的命令行选项)。</p>
+<p>
+  许多其它的形式也是可能的，但在所有的情况中，目标是将函数<span class="emphasis"><em>f(x)</em></span> 拆分为一个可以很容易使用标准的数学函数进行计算的帜部分(dominant part)以及一个光滑且缓慢变化的有理逼近部分。参考你所喜欢的教科书参看更多的例子。</p>
+<p>
+  程序的命令行选项为：</p>
+<div class="variablelist">
+<p class="title"><b></b></p>
+<dl>
+<dt><span class="term">variant N</span></dt>
+<dd>
+  <p>
+            设置当前函数的变种( function variant )为N。这使得多个被逼近的函数可以编译到同一个可执行文件中。缺省为0。</p>
+</dd>
+<dt><span class="term">range a b</span></dt>
+<dd>
+  <p>
+              设置逼近的范围 [a,b]，缺省为 [0,1]。</p>
+</dd>
+<dt><span class="term">relative</span></dt>
+<dd>
+  <p>
+            设置 Remez 代码针对相对误差进行优化。这在程序的启动时是缺省的。仅当在被优化的区间上函数f(x)没有根才可以使用相对误差。</p>
+</dd>
+<dt><span class="term">absolute</span></dt>
+<dd>
+  <p>
+            设置 Remez 代码对绝对误差进行优化。</p>
+</dd>
+<dt><span class="term">pin [true|false]</span></dt>
+<dd>
+  <p>
+              "Pins" 代码，使得有理逼近函数穿过坐标原点。如果R(0)必须为0，则设置为true。通常这会在试图在 [0,0]处保留一个根同查又针对相对误差进行优化时发生。</p>
+</dd>
+<dt><span class="term">order N D</span></dt>
+<dd>
+  <p>
+              设置分子中的逼近次数为<span class="emphasis"><em>N</em></span> 且分母中的逼近次数为<span class="emphasis"><em>D</em></span> 。如果<span class="emphasis"><em>D</em></span>
+            为0，那么结果是多项式逼近。总共有N+D+2 个系数，如果<span class="emphasis"><em>pin</em></span>设置为真，那么分子的第一个系数为0，分母的第一个系数永远为1.</p>
+</dd>
+<dt><span class="term">working-precision N</span></dt>
+<dd>
+  <p>
+              设置 NTL::RR 库的计算精度为<span class="emphasis"><em>N</em></span> 个二进制数字。缺省为 250。</p>
+</dd>
+<dt><span class="term">target-precision N</span></dt>
+<dd>
+  <p>
+            设置打印出结果精度为<span class="emphasis"><em>N</em></span> 个二进制数字：与将用于逼近的类型的数字个数设为同样个数。缺省为53(对于double精度)。</p>
+</dd>
+<dt><span class="term">skew val</span></dt>
+<dd>
+  <p>
+            将初始的内插值控制点( initial interpolated control points)向范围的一个或另一个端点"偏斜(Skews)"。正值向范围的左边界编斜，负值向范围的右边界偏斜。如果一个逼近不能收敛(常见情况)，调整偏斜值，使得第一步产生最小的可能误差。<span class="emphasis"><em>val</em></span> 应当在范围 [-100,+100]之中，缺省为0。</p>
+</dd>
+<dt><span class="term">brake val</span></dt>
+<dd>
+  <p>
+              设置每一步的减速值(brake)，使得在控制点中减速(brake)<span class="emphasis"><em>val%</em></span> 。缺省为50，如果逼近不会收敛，那么尝试一个更大的值，如果逼近很快收敛，设置一个更小的值。</p>
+</dd>
+<dt><span class="term">x-offset val</span></dt>
+<dd>
+  <p>
+              设置与<span class="emphasis"><em>val</em></span>的x-offset值：逼近将会针对<code class="computeroutput"><span class="identifier">f</span><span class="special">(</span><span class="identifier">S</span> <span class="special">*</span> <span class="special">(</span><span class="identifier">x</span> <span class="special">+</span> <span class="identifier">X</span><span class="special">))</span> <span class="special">+</span> <span class="identifier">Y</span></code>
+              生成，其中<span class="emphasis"><em>X</em></span> 是 x-offset，<span class="emphasis"><em>S</em></span>
+            是 x-scale 而 <span class="emphasis"><em>Y</em></span> 是 y-offset。缺省为0。为了避免传入误差，注意指定一个可以精确表示为浮点数的值。</p>
+</dd>
+<dt><span class="term">x-scale val</span></dt>
+<dd>
+  <p>
+              设置与 <span class="emphasis"><em>val</em></span>的 x-scale ： 逼近将会针对<code class="computeroutput"><span class="identifier">f</span><span class="special">(</span><span class="identifier">S</span> <span class="special">*</span> <span class="special">(</span><span class="identifier">x</span> <span class="special">+</span> <span class="identifier">X</span><span class="special">))</span> <span class="special">+</span> <span class="identifier">Y</span></code> 生成，其中<span class="emphasis"><em>X</em></span> 是 x-offset，<span class="emphasis"><em>S</em></span> 是 x-scale 而 <span class="emphasis"><em>Y</em></span> 是 y-offset。缺省为1。为了避免传入误差，注意指定一个可以精确表示为浮点数的值。</p>
+</dd>
+<dt><span class="term">y-offset val</span></dt>
+<dd>
+  <p>
+              设置与<span class="emphasis"><em>val</em></span>的y-offset值：逼近将会针对<code class="computeroutput"><span class="identifier">f</span><span class="special">(</span><span class="identifier">S</span> <span class="special">*</span> <span class="special">(</span><span class="identifier">x</span> <span class="special">+</span> <span class="identifier">X</span><span class="special">))</span> <span class="special">+</span> <span class="identifier">Y</span></code> 生成，其中<span class="emphasis"><em>X</em></span> 是 x-offset，<span class="emphasis"><em>S</em></span> 是 x-scale 而 <span class="emphasis"><em>Y</em></span> 是 y-offset。缺省为0。为了避免传入误差，注意指定一个可以精确表示为浮点数的值。</p>
+</dd>
+<dt><span class="term">y-offset auto</span></dt>
+<dd>
+  <p>
+              设置与函数f(x)在两个端点处以及区间中心处的的函数值的均值的 y-offset 。计算结果被有意截断为<span class="emphasis"><em>float</em></span> 精度
+              (并且应当在你的代码中存储为一个<span class="emphasis"><em>float</em></span> 值)。
+              逼近将会针对<code class="computeroutput"><span class="identifier">f</span><span class="special">(</span><span class="identifier">S</span> <span class="special">*</span> <span class="special">(</span><span class="identifier">x</span> <span class="special">+</span> <span class="identifier">X</span><span class="special">))</span> <span class="special">+</span> <span class="identifier">Y</span></code> 生成，其中<span class="emphasis"><em>X</em></span> 是 x-offset，<span class="emphasis"><em>Y</em></span> 是 y-offset。缺省为0。</p>
+</dd>
+<dt><span class="term">graph N</span></dt>
+<dd>
+  <p>
+            在被优化的范围上打印 N 个 均匀分布的点。如果没有指定，那么N缺省为3.用于检查函数f(x)是不在区间上是光滑的。</p>
+</dd>
+<dt><span class="term">step N</span></dt>
+<dd>
+  <p>
+            进行<span class="emphasis"><em>N</em></span> 步，或者如果没有指定N，则进行一步<span class="emphasis"><em>。</em></span> 在每一步之后打印：打印逼近的误差函数(error function)在极值点处的 peek error，在最后一步打印求解的理论误差项，以及在 Chebyshev control points的最大相对改变。当两个误差项(近似地)相等并且在控制点处的改变已经减小到一个合适的值时，逼近在极值解处收敛。</p>
+</dd>
+<dt><span class="term">test [float|double|long]</span></dt>
+<dd>
+  <p>
+            以 float， double，或 long double 精度测试当前逼近。用于检查以固定的精度进行逼近的舍入误差。测试在逼近的误差函数的极值处进行，以及在误差函数的函数值为0的点进行。</p>
+</dd>
+<dt><span class="term">test [float|double|long] N</span></dt>
+<dd>
+  <p>
+              以 float， double， 或 long double 精度测试当前的逼近。用于检查以固定的精度进行逼近的舍入误差。测试在整个逼近区间上的N个均匀分布的点上进行。如果没有指定 [float|double|long]中的任何一个，那么测试使用NTL::RR，这可以侧重于获取逼近的误差函数(
+            error function )。</p>
+</dd>
+<dt><span class="term">rescale a b</span></dt>
+<dd>
+  <p>
+              取当前的 Chebeshev control points，并在一个新的区间[a,b]上将它们改变尺度(rescale)。有时这可以用于为那些不能收敛的函数设置起始控制点。</p>
+</dd>
+<dt><span class="term">rotate</span></dt>
+<dd>
+  <p>
+              将分子中的一项移到分母中，但保持
+              Chebyshev control points 不变。有时这可以用于为那些不能收敛的函数设置起始控制点。</p>
+</dd>
+<dt><span class="term">info</span></dt>
+<dd>
+  <p>
+              打印当前的逼近值：误差函数(error function)的值为0的位置， Chebyshev control points控制点的位置，
+            x 和 y 偏移，以及多项式的系数。</p>
+</dd>
+</dl>
+</div>
+</div>
+<table xmlns:rev="http://www.cs.rpi.edu/~gregod/boost/tools/doc/revision" width="100%"><tr>
+<td align="left"></td>
+<td align="right"><div class="copyright-footer">Copyright ?2006 , 2007, 2008 John Maddock, Paul A. Bristow, Hubert
+      Holin, Xiaogang Zhang and Bruno Lalande<p>
+        Distributed under the Boost Software License, Version 1.0. (See accompanying
+        file LICENSE_1_0.txt or copy at <a href="http://www.boost.org/LICENSE_1_0.txt" target="_top">http://www.boost.org/LICENSE_1_0.txt</a>)
+      </p>
+</div></td>
+</tr></table>
+<hr>
+<div class="spirit-nav">
+<a accesskey="p" href="polynomials.html"><img src="../../../../../../../../doc/html/images/prev.png" alt="Prev"></a><a accesskey="u" href="../internals2.html"><img src="../../../../../../../../doc/html/images/up.png" alt="Up"></a><a accesskey="h" href="../../../index.html"><img src="../../../../../../../../doc/html/images/home.png" alt="Home"></a><a accesskey="n" href="error_test.html"><img src="../../../../../../../../doc/html/images/next.png" alt="Next"></a>
+</div>
+</body>
+</html>

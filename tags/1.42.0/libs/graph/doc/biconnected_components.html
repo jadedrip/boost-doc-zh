@@ -1,0 +1,179 @@
+<!DOCTYPE HTML PUBLIC "-//W3C//DTD HTML 4.01 Transitional//EN">
+<html><head><meta content="text/html; charset=UTF-8" http-equiv="content-type"><!--
+  -- Copyright 2001-2004 The Trustees of Indiana University.
+  --
+  -- Use, modification and distribution is subject to the Boost Software
+  -- License, Version 1.0. (See accompanying file LICENSE_1_0.txt or copy at
+  -- http://www.boost.org/LICENSE_1_0.txt)
+  --
+  --  Authors: Douglas Gregor
+  --           Jeremy Siek
+  --           Andrew Lumsdaine
+  -->
+<title>Boost Graph Library: Biconnected Components and Articulation Points</title></head>
+<body alink="#ff0000" bgcolor="#ffffff" link="#0000ee" text="#000000" vlink="#551a8b"> 
+<img src="../../../boost.png" alt="C++ Boost" height="86" width="277"> 
+
+<br clear="">
+
+<h1>
+<tt>
+<img src="figs/python.gif" alt="(Python)">
+<a name="sec:biconnected-components">biconnected_components
+</a>
+</tt>
+and 
+<tt>articulation_points</tt>
+</h1>
+
+<pre><i>// 命名参数版本</i>
+template &lt;typename Graph, typename ComponentMap, typename OutputIterator,
+          typename P, typename T, typename R&gt;
+std::pair&lt;std::size_t, OutputIterator&gt;
+biconnected_components(const Graph&amp; g, ComponentMap comp, OutputIterator out, 
+                       const bgl_named_params&lt;P, T, R&gt;&amp; params)
+
+template &lt;typename Graph, typename ComponentMap,
+          typename P, typename T, typename R&gt;
+std::size_t
+biconnected_components(const Graph&amp; g, ComponentMap comp, 
+                       const bgl_named_params&lt;P, T, R&gt;&amp; params)
+
+template &lt;typename Graph, typename OutputIterator, 
+          typename P, typename T, typename R&gt;
+OutputIterator articulation_points(const Graph&amp; g, OutputIterator out, 
+                                   const bgl_named_params&lt;P, T, R&gt;&amp; params)
+
+<i>// 非命名参数版本</i>
+template &lt;typename Graph, typename ComponentMap, typename OutputIterator,
+          typename DiscoverTimeMap, typename LowPointMap&gt;
+std::pair&lt;std::size_t, OutputIterator&gt;
+biconnected_components(const Graph&amp; g, ComponentMap comp, OutputIterator out, 
+                       DiscoverTimeMap discover_time, LowPointMap lowpt);
+
+template &lt;typename Graph, typename ComponentMap, typename OutputIterator&gt;
+std::pair&lt;std::size_t, OutputIterator&gt;
+biconnected_components(const Graph&amp; g, ComponentMap comp, OutputIterator out);
+
+template &lt;typename Graph, typename ComponentMap&gt;
+std::size_t biconnected_components(const Graph&amp; g, ComponentMap comp);
+<a name="sec:articulation_points">
+template &lt;typename Graph, typename OutputIterator&gt;
+OutputIterator articulation_points(const Graph&amp; g, OutputIterator out);
+</a></pre>
+
+<p>
+<a name="sec:articulation_points">一个连通图如果移除其任一个顶点(及该顶点关联的所有边)，该图仍然连通，则称该图为 <i>双连通biconnected</i> 的。一般来说，一个图的双连通分支是指满足以下条件的最大顶点子集，从该子图中去掉任一顶点都不会令子图变为不连通。与连通分支不同，一个顶点可能属于多个双连通分支：那些属于一个以上双连通分支的顶点被称为 <em>挂接点</em> 或
+<em>分割点</em>。挂接点是这样的顶点，移除它们将会增加图中连通分支的数量。因此，没有挂接点的图是双连通的。下图示范了一个小图中的挂接点和双连通分支：
+
+</a></p><p></p><center><a name="sec:articulation_points"><img src="figs/biconnected.png"></a></center>
+
+<p><a name="sec:articulation_points">一个顶点可以出现在多个双连通分支中，但每条边只能属于一个双连通分支。<tt>biconnected_components</tt> 算法的输出将每条边所属的双连通分支号记录在属性映射
+<tt>comp</tt>中。挂接点则被输出至</a> <tt>biconnected_components</tt> (可选的)输出迭代器参数，或者通过
+<tt>articulation_points</tt>
+来计算，不需要使用双连通分支号映射。这些函数返回双连通分支的数量、挂接点输出迭代器，或者这些数量的值对，这取决于记录了哪些信息。
+
+</p><p><a name="sec:articulation_points">该算法的实现归功于 Tarjan [</a><a href="bibliography.html#tarjan72:dfs_and_linear_algo">41</a>].
+
+</p><h3>Where Defined 定义于</h3>
+
+<p>
+<a href="../../../boost/graph/biconnected_components.hpp"><tt>boost/graph/biconnected_components.hpp</tt></a>
+
+
+</p><h3>Parameters 参数</h3>
+
+IN: <tt>const Graph&amp; g</tt>
+<blockquote>一个无向图。图的类型必须符合 <a href="VertexListGraph.html">点列表图Vertex List Graph</a> 和 <a href="IncidenceGraph.html">关联图Incidence Graph</a>。<br>
+<b>Python</b>: 该参数名为 <tt>graph</tt>.
+</blockquote>
+
+OUT: <tt>ComponentMap c</tt>
+<blockquote>该算法计算图中有多少双连通分支，并赋给每个分支一个整数标签。然后该算法通过将分支号写入分支属性映射，来记录每条边属于哪个分支。类型
+<tt>ComponentMap</tt> 必须符合 <a href="../../property_map/doc/WritablePropertyMap.html">可写属性映射</a>。其值类型应为整数类型，最好与图的 <tt>edges_size_type</tt> 相同。键类型则必须为图的边描述符类型。<br>
+<b>缺省值：</b><tt>dummy_property_map</tt>.<br>
+  <b>Python</b>: 必须是该图的一个 <tt>edge_int_map</tt>。<br>
+  <b>Python 缺省值：</b><tt>graph.get_edge_int_map("bicomponent")</tt>
+</blockquote>
+
+OUT: <tt>OutputIterator out</tt>
+<blockquote>该算法通过这个输出迭代器写出挂接点，并返回结果迭代器。<br>
+<b>缺省值：</b>一个哑迭代器，忽略写入的值。<br>
+
+<b>Python</b>: Python 中没有使用该参数。而是返回一个包含有挂接点的 Python <tt>list</tt>。
+</blockquote>
+
+<h3>Named Parameters 命名参数</h3>
+
+IN: <tt>vertex_index_map(VertexIndexMap i_map)</tt> 
+<blockquote>它将每个顶点映射至位于区间 <tt>[0,
+  num_vertices(g))</tt> 中的一个整数。仅当使用了缺省的颜色属性映射时需要该参数。类型 <tt>VertexIndexMap</tt>
+  必须符合 <a href="../../property_map/doc/ReadablePropertyMap.html">可读属性映射</a>。该映射的值类型必须是一个整数类型。图的顶点描述符类型需要可以被用作该映射的键类型。<br>
+  
+
+  <b>缺省值：</b><tt>get(vertex_index, g)</tt>.&nbsp;<br>
+
+  <b>Python</b>: 不支持该参数。&nbsp;&nbsp;
+</blockquote>
+
+UTIL/OUT: <tt>discover_time_map(DiscoverTimeMap discover_time)</tt>
+<blockquote>各顶点在深度优先搜索中被发现的时间。类型&nbsp;<tt>DiscoverTimeMap</tt> 必须符合 <a href="../../property_map/doc/ReadWritePropertyMap.html"> 读/写属性映射</a>。该映射的值类型必须为整数类型。图的顶点描述符类型必须可作为该映射的键类型。<br>
+  <b>缺省值：</b>一个 <a href="../../property_map/doc/iterator_property_map.html">
+  <tt>iterator_property_map</tt></a>，创建自一个大小为 <tt>num_vertices(g)</tt> 的 <tt>vertices_size_type</tt> <tt>的 std::vector</tt>，且以&nbsp;<tt>get(vertex_index, g)</tt><tt></tt> 作为索引映射。<br>
+
+  
+
+  <b>Python</b>: 不支持该参数。&nbsp;
+</blockquote>
+
+UTIL/OUT: <tt>lowpoint_map(LowPointMap lowpt)</tt>
+<blockquote>各顶点在深度优先搜索中的低点，即从给定顶点通过至多一条反向边可到达的最小顶点。类型 <tt>LowPointMap</tt> 必须符合 <a href="../../property_map/doc/ReadWritePropertyMap.html">读/写属性映射</a>。该映射的值类型必须是整数类型。图的顶点描述符必须可用作该映射的键类型。<br>
+<b>缺省值：</b>一个 <a href="../../property_map/doc/iterator_property_map.html">
+  iterator_property_map</a>，创建自一个大小为 <tt>num_vertices(g)</tt> 的 <tt>vertices_size_type</tt> <tt>的 std::vector</tt>，且以&nbsp;<tt>get(vertex_index, g)</tt> 作为索引映射。<br>
+
+  
+
+  <b>Python</b>: 不支持该参数。&nbsp;
+</blockquote>
+
+UTIL/OUT: <tt>predecessor_map(PredecessorMap p_map)</tt> 
+<blockquote>该前趋映射记录了深度优先搜索树。类型 <tt>PredecessorMap</tt> 必须是一个 <a href="../../property_map/doc/ReadWritePropertyMap.html">读/写属性映射</a>，其键类型与值类型均与图的顶点描述符类型相同。<br>
+  <b>缺省值：</b>一个 <a href="../../property_map/doc/iterator_property_map.html">
+  iterator_property_map</a>，创建自一个大小为 <tt>num_vertices(g)</tt> 的 <tt>vertices_</tt><tt>descriptor</tt> <tt>的 std::vector</tt>，且以&nbsp;<tt>get(vertex_index, g)</tt> 作为索引映射。<br>
+
+  
+
+  <b>Python</b>: 必须是图的一个 <tt>vertex_vertex_map</tt>。<br>
+</blockquote>
+
+IN: <tt>visitor(DFSVisitor vis)</tt>
+<blockquote>
+  一个遍历器对象，在算法内部的某些事件点被调用，这些事件点由 <a href="./DFSVisitor.html">DFS
+  遍历器</a> 概念给出。该遍历器对象是以值方式传递的<a href="#1">[1]</a>。<br> <b>缺省值：</b><tt>dfs_visitor&lt;null_visitor&gt;</tt><br>
+
+  <b>Python</b>: 该参数应为派生自该图的&nbsp;<a href="DFSVisitor.html#python"><tt>DFSVisitor</tt></a>&nbsp;类型的一个对象。
+</blockquote>
+
+<h3>Complexity 复杂度</h3>
+
+<p>双连通分支和挂接点算法的时间复杂度为
+<i>O(V + E)</i>.
+
+</p><p>
+
+</p><h3>Example 示例</h3>
+
+<p>文件 <a href="../example/biconnected_components.cpp"><tt>examples/biconnected_components.cpp</tt></a>
+包含了计算一个无向图的双连通分支和挂接点的例子。
+
+<br>
+</p><hr>
+<table>
+<tbody><tr valign="top">
+<td nowrap="nowrap">Copyright © 2000-2004</td><td>
+<a href="http://www.boost.org/people/jeremy_siek.htm">Jeremy Siek</a>, Indiana
+University (<a href="mailto:jsiek@osl.iu.edu">jsiek@osl.iu.edu</a>)<br>
+<a href="http://www.boost.org/people/doug_gregor.html">Doug Gregor</a>, Indiana University
+</td></tr></tbody></table>
+
+</body></html>

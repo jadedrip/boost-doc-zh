@@ -1,0 +1,74 @@
+<!DOCTYPE html PUBLIC "-//W3C//DTD XHTML 1.0 Strict//EN" "http://www.w3.org/TR/xhtml1/DTD/xhtml1-strict.dtd">
+<html xmlns="http://www.w3.org/1999/xhtml" xml:lang="en" lang="en"><head>
+	<meta http-equiv="Content-Type" content="text/html; charset=utf-8" />
+	
+	<title>transporting of arbitrary data to the catch site</title><link href="reno.css" type="text/css" rel="stylesheet" /></head>
+
+<body>
+<div class="body-0">
+<div class="body-1">
+<div class="body-2">
+<div>
+<div id="boost_logo">
+<a href="http://www.boost.org"><img style="border: 0pt none ;" src="http://www.boost.org/boost.png" alt="Boost" height="86" width="277" /></a>
+</div>
+<h1>Boost Exception</h1>
+</div>
+<!-- Copyright (c) 2006-2009 Emil Dotchevski and Reverge Studios, Inc. -->
+<!-- Distributed under the Boost Software License, Version 1.0. (See accompanying -->
+<!-- file LICENSE_1_0.txt or copy at http://www.boost.org/LICENSE_1_0.txt) -->
+<div class="RenoIncludeDIV"><div class="RenoAutoDIV"><h2>向catch端传递任意的数据</h2>
+</div>
+<p>所有从 boost::<span class="RenoLink"><a href="exception.html">exception</a></span> 继承的子类对象都可以作为类型安全的任意数据的容器使用, 而且这个异常类型还遵从ANSI C++对异常类型无抛出规范(15.5.1)的要求.</p>
+<p>当异常是从 boost::<span class="RenoLink"><a href="exception.html">exception</a></span> 继承, 任何的数据都可以添加到异常对象中, 当:</p>
+<div><ul><li>异常抛出的时候;</li>
+<li>在以后某个调用栈展开的时刻.</li>
+</ul></div>
+<div class="RenoIncludeDIV"><div class="RenoAutoDIV"><h3>在异常抛出点添加任意的数据</h3>
+</div>
+<p>下面的实例说明了如何使用Boost Exception向异常对象添加errno:</p>
+<pre>#include &lt;<span class="RenoLink"><a href="boost_exception_all_hpp.html">boost/exception/all.hpp</a></span>&gt;<br />#include &lt;iostream&gt;<br /><br />typedef boost::<span class="RenoLink"><a href="error_info.html">error_info</a></span>&lt;struct tag_my_info,int&gt; my_info; //(1)<br /><br />struct my_error: virtual boost::<span class="RenoLink"><a href="exception.html">exception</a></span>, virtual std::exception { }; //(2)<br /><br />void<br />f()<br />    {<br />    throw my_error() &lt;&lt; my_info(42); //(3)<br />    }<br /></pre>
+<p>首先, 我们使用唯一的标识符tag_my_info和其对应的数据类型int实例化 <span class="RenoLink"><a href="error_info.html">error_info</a></span> 模板对象. 这确保了向异常对象存储的各种数据对象是编译时类型安全的.</p>
+<p>而后, 我们定义了 my_error, 这是一个从 boost::<span class="RenoLink"><a href="exception.html">exception</a></span>继承的类型.</p>
+<p>最后, (3) 说明了在异常对象的抛出点, 如何联合使用在 (1) 定义的typedef和操作符 <span class="RenoLink"><a href="exception_operator_shl.html">operator&lt;&lt;</a></span> ,把数据存储在异常对象当中.</p>
+<p>存储的&nbsp;my_info  数值可以在其后的某个时间像这样被恢复出来:</p>
+<pre>// ...continued<br /><br />void<br />g()<br />    {<br />    try<br />        {<br />        f();<br />        }<br />    catch(<br />    my_error &amp; x )<br />        {<br />        if( int const * mi=boost::<span class="RenoLink"><a href="get_error_info.html">get_error_info</a></span>&lt;my_info&gt;(x) )<br />            std::cerr &lt;&lt; "My info: " &lt;&lt; *mi;<br />        }<br />    }</pre>
+<p>函数模板 <span class="RenoLink"><a href="get_error_info.html">get_error_info</a></span> 通过(1)处的typedef实例化, 并传入多态类型的异常对象作为参数. 如果异常对象包含需要的数据, 返回的对象智能指针; 否则返回空指针.</p>
+</div><div class="RenoIncludeDIV"><div class="RenoAutoDIV"><h3>向活动的异常对象添加任意的数据</h3>
+</div>
+<p>有时候 throw 端没有足够的信息, 这些信息使得catch端能够辨明错误的意义. 假定我们有一个异常对象,类型是 file_read_error, 它的的构造函数需要一个文件名作为参数. 考虑下面的函数:</p>
+<pre>void<br />file_read( FILE * f, void * buffer, size_t size )<br />    {<br />    if( size!=fread(buffer,1,size,f) )<br />        throw file_read_error(????);<br />    }</pre>
+<p>函数 file_read 如何向异常类型的构造函数传递一个文件名作为参数 ? 它知道的全部信息是一个文件句柄对象.</p>
+<p>使用 boost::<span class="RenoLink"><a href="exception.html">exception</a></span> ,我们就不必再函数 file_read 进行异常抛出的时候向异常对象传入文件名参数:</p>
+<pre>#include &lt;<span class="RenoLink"><a href="boost_exception_all_hpp.html">boost/exception/all.hpp</a></span>&gt;<br />#include &lt;boost/shared_ptr.hpp&gt;<br />#include &lt;stdio.h&gt;<br />#include &lt;errno.h&gt;<br /><br />struct file_read_error: virtual boost::<span class="RenoLink"><a href="exception.html">exception</a></span> { };<br /><br />void<br />file_read( FILE * f, void * buffer, size_t size )<br />    {<br />    if( size!=fread(buffer,1,size,f) )<br />        throw file_read_error() &lt;&lt; boost::<span class="RenoLink"><a href="errinfo_errno.html">errinfo_errno</a></span>(errno);<br />    }</pre>
+<p>如果函数 file_read 检测到错误的发生, 他会抛出相关的异常对象, 其中包含当时能够得到的错误信息,即errno. 其他相关的信息,例如文件名, 可以在高端的调用堆栈上下文环境中得到,并添加到对象当中,那时它很自然的就知道了这个信息:</p>
+<pre>#include &lt;<span class="RenoLink"><a href="boost_exception_all_hpp.html">boost/exception/all.hpp</a></span>&gt;<br />#include &lt;boost/shared_ptr.hpp&gt;<br />#include &lt;stdio.h&gt;<br />#include &lt;string&gt;<br /><br />boost::shared_ptr&lt;FILE&gt; file_open( char const * file_name, char const * mode );<br />void file_read( FILE * f, void * buffer, size_t size );<br /><br />void<br />parse_file( char const * file_name )<br />    {<br />    boost::shared_ptr&lt;FILE&gt; f = file_open(file_name,"rb");<br />    assert(f);<br />    try<br />        {<br />        char buf[1024];<br />        file_read( f.get(), buf, sizeof(buf) );<br />        }<br />    catch(<br />    boost::<span class="RenoLink"><a href="exception.html">exception</a></span> &amp; e )<br />        {<br />        e &lt;&lt; boost::<span class="RenoLink"><a href="errinfo_file_name.html">errinfo_file_name</a></span>(file_name);<br />        throw;<br />        }<br />    }</pre>
+<p>上面的实例(几乎)是异常中立的 -- 如果在try代码块中,任何的函数抛出了异常, parse_file 不需要做特别的工作, 而只是截获任何的 boost::<span class="RenoLink"><a href="exception.html">exception</a></span> 对象, 存储文件名,然后重新抛出. 截获  boost::<span class="RenoLink"><a href="exception.html">exception</a></span> 对象是因为文件名和发生在函数 parse_file 中的错误相关,<i>即便是这个错误和文件 I/O 无关</i>. </p>
+</div><div class="RenoIncludeDIV"><div class="RenoAutoDIV"><h3>向异常对象添加组数据</h3>
+</div>
+<p>下面的代码片段展示了 boost::<span class="RenoLink"><a href="http://www.boost.org/libs/tuple/doc/tuple_users_guide.html">tuple</a></span> 的用法, 用它把发生错误的函数名称和errno信息打包存储到异常对象当中,这样更加方便:</p>
+<pre>#include &lt;<span class="RenoLink"><a href="boost_exception_info_tuple_hpp.html">boost/exception/info_tuple.hpp</a></span>&gt;<br />#include &lt;<span class="RenoLink"><a href="boost_exception_errinfo_file_name_hpp.html">boost/exception/errinfo_file_name.hpp</a></span>&gt;<br />#include &lt;<span class="RenoLink"><a href="boost_exception_errinfo_api_function_hpp.html">boost/exception/errinfo_api_function.hpp</a></span>&gt;<br />#include &lt;<span class="RenoLink"><a href="boost_exception_errinfo_errno_hpp.html">boost/exception/errinfo_errno.hpp</a></span>&gt;<br />#include &lt;boost/shared_ptr.hpp&gt;<br />#include &lt;stdio.h&gt;<br />#include &lt;string&gt;<br />#include &lt;errno.h&gt;<br /><br />typedef boost::<span class="RenoLink"><a href="http://www.boost.org/libs/tuple/doc/tuple_users_guide.html">tuple</a></span>&lt;boost::<span class="RenoLink"><a href="errinfo_api_function.html">errinfo_api_function</a></span>,boost::<span class="RenoLink"><a href="errinfo_errno.html">errinfo_errno</a></span>&gt; clib_failure;<br /><br />struct file_open_error: virtual boost::<span class="RenoLink"><a href="exception.html">exception</a></span> { };<br /><br />boost::shared_ptr&lt;FILE&gt;<br />file_open( char const * name, char const * mode )<br />    {<br />    if( FILE * f=fopen(name,mode) )<br />        return boost::shared_ptr&lt;FILE&gt;(f,fclose);<br />    else<br />        throw file_open_error() &lt;&lt;<br />            boost::<span class="RenoLink"><a href="errinfo_file_name.html">errinfo_file_name</a></span>(name) &lt;&lt;<br />            clib_failure("fopen",errno);<br />    }</pre>
+<p>注意到 boost::<span class="RenoLink"><a href="http://www.boost.org/libs/tuple/doc/tuple_users_guide.html">tuple</a></span> 的各个成员是单独存储到异常对象中的; 它们也只能单独的获取出来, 使用函数 <span class="RenoLink"><a href="get_error_info.html">get_error_info</a></span> .</p>
+</div></div><div class="RenoAutoDIV"><div class="RenoHR"><hr /></div>
+<h3>参见:</h3>
+<div class="RenoPageList"><a href="boost-exception.html">Boost Exception<br />
+</a><a href="tutorial_enable_error_info.html">Integrating Boost Exception in Existing Exception Class Hierarchies<br />
+</a></div>
+</div>
+<!-- Copyright (c) 2006-2009 Emil Dotchevski and Reverge Studios, Inc. -->
+<!-- Distributed under the Boost Software License, Version 1.0. (See accompanying -->
+<!-- file LICENSE_1_0.txt or copy at http://www.boost.org/LICENSE_1_0.txt) -->
+<div id="footer">
+<p>&nbsp;</p>
+<hr />
+<p>
+<a class="logo" href="http://jigsaw.w3.org/css-validator/check/referer"><img class="logo_pic" src="valid-css.png" alt="Valid CSS" height="31" width="88" /></a>
+<a class="logo" href="http://validator.w3.org/check?uri=referer"><img class="logo_pic" src="valid-xhtml.png" alt="Valid XHTML 1.0" height="31" width="88" /></a>
+<small>Copyright (c) 2006-2009 by Emil Dotchevski and Reverge Studios, Inc.<br />
+Distributed under the <a href="http://www.boost.org/LICENSE_1_0.txt">Boost Software License, Version 1.0</a>.<p><i>Copyright © 2009 <a href="http://zadecn.spaces.live.com/">zade</a></i></p>.</small>
+</p>
+</div>
+</div>
+</div>
+</div>
+</body></html>

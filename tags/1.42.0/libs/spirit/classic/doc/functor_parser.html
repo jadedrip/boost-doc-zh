@@ -1,0 +1,63 @@
+<!DOCTYPE HTML PUBLIC "-//W3C//DTD HTML 4.01 Transitional//EN">
+<html><head>
+
+<title>Functor Parser</title><meta http-equiv="Content-Type" content="text/html; charset=UTF-8">
+<link rel="stylesheet" href="theme/style.css" type="text/css"></head>
+<body>
+<table background="theme/bkd2.gif" border="0" cellspacing="2" width="100%">
+  <tbody><tr> 
+    <td width="10"> 
+    </td>
+    <td width="85%"> <font face="Verdana, Arial, Helvetica, sans-serif" size="6"><b>Functor 
+      Parser 仿函数分析器</b></font> </td>
+    <td width="112"><a href="http://spirit.sf.net"><img src="theme/spirit.gif" align="right" border="0" height="48" width="112"></a></td>
+  </tr>
+</tbody></table>
+<br>
+<table border="0">
+  <tbody><tr>
+    <td width="10"></td>
+    <td width="30"><a href="../index.html"><img src="theme/u_arr.gif" border="0"></a></td>
+    <td width="30"><a href="list_parsers.html"><img src="theme/l_arr.gif" border="0"></a></td>
+    <td width="30"><a href="refactoring.html"><img src="theme/r_arr.gif" border="0"></a></td>
+  </tr>
+</tbody></table>
+<p>The simplest way to write your hand coded parser that works well with the rest 
+  of the Spirit library is to simply write a functor parser.<br>使得你所写的代码能和Spirit其他部分合作愉快的最简单的方法就是简单地写一个仿函数分析器。</p>
+<p> A functor parser is expected to have the interface:<br>一个仿函数分析器应该有如下接口：</p>
+<pre>    <code><span class="keyword">struct </span><span class="identifier">functor<br>    </span><span class="special">{<br>        </span><span class="keyword">typedef </span><span class="identifier">T </span><span class="identifier">result_t</span><span class="special">;<br><br>        </span><span class="keyword">template </span><span class="special">&lt;</span><span class="keyword">typename </span><span class="identifier">ScannerT</span><span class="special">&gt;<br>        </span><span class="keyword">std::ptrdiff_t<br>        </span><span class="keyword">operator</span><span class="special">()(</span><span class="identifier">ScannerT </span><span class="keyword">const</span><span class="special">&amp; </span><span class="identifier">scan</span><span class="special">, </span><span class="identifier">result_t</span><span class="special">&amp; </span><span class="identifier">result</span><span class="special">) </span><span class="keyword">const</span><span class="special">;<br>    </span><span class="special">};<br></span></code></pre>
+<p> where typedef T result_t; is the attribute type of the parser that will be 
+  passed back to the match result (see <a href="indepth_the_parser.html">In-depth: 
+  The Parser</a>). If the parser does not need to return an attribute, this can 
+  simply be nil_t. The <span class="keyword"><tt>std::ptrdiff_t</tt></span> result 
+  is the number of matching characters matched by your parser. A negative value 
+  flags an unsucessful match.<br>这里 typedef T result_t; 是分析器的属性类，将会传回给匹配结果（见<a href="indepth_the_parser.html">深入：分析器</a>）。如果分析器不需要返回一个属性，这一类型可以是nil_t。<span class="keyword"><tt>std::ptrdiff_t</tt></span> 作为结果反映了你的分析器所匹配的字符数量。负数表明匹配失败。<span class="keyword"></span></p>
+<p> A conforming functor parser can transformed into a well formed Spirit parser 
+  by wrapping it in the functor_parser template:<br>一个符合要求的仿函数分析器可以转变为格式良好的Spirit分析器，通过把它封装在 functor_parser 模板中：</p>
+<pre>    <code><span class="identifier">functor_parser</span><span class="special">&lt;</span><span class="identifier">functor</span><span class="special">&gt; </span><span class="identifier">functor_p</span><span class="special">;<br></span></code></pre>
+
+<h2>Example 例子</h2>
+<p> The following example puts the functor_parser into action:<br>下面的例子用上了 functor_parser：</p>
+<pre>    <code><span class="keyword">struct </span><span class="identifier">number_parser<br>    </span><span class="special">{<br>        </span><span class="keyword">typedef </span><span class="keyword">int </span><span class="identifier">result_t</span><span class="special">;<br>        </span><span class="keyword">template </span><span class="special">&lt;</span><span class="keyword">typename </span><span class="identifier">ScannerT</span><span class="special">&gt;<br>        </span><span class="keyword">std::ptrdiff_t</span>
+        <span class="keyword">operator</span><span class="special">()(</span><span class="identifier">ScannerT </span><span class="keyword">const</span><span class="special">&amp; </span><span class="identifier">scan</span><span class="special">, </span><span class="identifier">result_t</span><span class="special">&amp; </span><span class="identifier">result</span><span class="special">) </span><span class="keyword">const<br>        </span><span class="special">{<br>            </span><span class="keyword">if </span><span class="special">(</span><span class="identifier">scan</span><span class="special">.</span><span class="identifier">at_end</span><span class="special">())<br>                </span><span class="keyword">return </span><span class="special">-</span><span class="number">1</span><span class="special">;<br><br>            </span><span class="keyword">char </span><span class="identifier">ch </span><span class="special">= </span><span class="special">*</span><span class="identifier">scan</span><span class="special">;<br>            </span><span class="keyword">if </span><span class="special">(</span><span class="identifier">ch </span><span class="special">&lt; </span><span class="literal">'0' </span><span class="special">|| </span><span class="identifier">ch </span><span class="special">&gt; </span><span class="literal">'9'</span><span class="special">)<br>                </span><span class="keyword">return </span><span class="special">-</span><span class="number">1</span><span class="special">;<br><br>            </span><span class="identifier">result </span><span class="special">= </span><span class="number">0</span><span class="special">;<br>            </span><span class="keyword">std::ptrdiff_t</span> <span class="identifier">len </span><span class="special">= </span><span class="number">0</span><span class="special">;<br><br>            </span><span class="keyword">do<br>            </span><span class="special">{<br>                </span><span class="identifier">result </span><span class="special">= </span><span class="identifier">result</span><span class="special">*</span><span class="number">10 </span><span class="special">+ </span><span class="keyword">int</span><span class="special">(</span><span class="identifier">ch </span><span class="special">- </span><span class="literal">'0'</span><span class="special">);<br>                </span><span class="special">++</span><span class="identifier">len</span><span class="special">;<br>                </span><span class="special">++</span><span class="identifier">scan</span><span class="special">;<br>            </span><span class="special">} </span><span class="keyword">while </span><span class="special">(!</span><span class="identifier">scan</span><span class="special">.</span><span class="identifier">at_end</span><span class="special">() </span><span class="special">&amp;&amp; </span><span class="special">(</span><span class="identifier">ch </span><span class="special">= </span><span class="special">*</span><span class="identifier">scan</span><span class="special">, </span><span class="identifier">ch </span><span class="special">&gt;= </span><span class="literal">'0' </span><span class="special">&amp;&amp; </span><span class="identifier">ch </span><span class="special">&lt;= </span><span class="literal">'9'</span><span class="special">));<br><br>            </span><span class="keyword">return </span><span class="identifier">len</span><span class="special">;<br>        </span><span class="special">}<br>    </span><span class="special">};<br><br>    </span><span class="identifier">functor_parser</span><span class="special">&lt;</span><span class="identifier">number_parser</span><span class="special">&gt; </span><span class="identifier">number_parser_p</span><span class="special">;<br></span></code></pre>
+<p>  <img src="theme/lens.gif" height="16" width="15"> The full source code can be <a href="../example/fundamental/functor_parser.cpp">viewed here</a>. This is part of the Spirit distribution.<br><img src="theme/lens.gif" height="16" width="15">&nbsp;完整代码<a href="../example/fundamental/functor_parser.cpp">在此查阅</a>。这是Spirit发布包的组成部分。</p>
+<p>To further understand the implementation, see <a href="indepth_the_scanner.html">In-depth: 
+    The Scanner</a> for the scanner API details. We now have a parser <tt>number_parser_p</tt> that we can use just like any other Spirit parser. Example:<br>要进一步了解实现，可参考<a href="indepth_the_scanner.html">深入：扫描器</a>中扫描器API的细节。我们现在有了 <tt>number_parser_p</tt><span style="font-family: Courier New;">，可以像使用其他Spirit分析那样使用它。例子：</span></p>
+<pre>    <code><span class="identifier">r </span><span class="special">= </span><span class="identifier">number_parser_p </span><span class="special">&gt;&gt; </span><span class="special">*(</span><span class="literal">',' </span><span class="special">&gt;&gt; </span><span class="identifier">number_parser_p</span><span class="special">);<br></span></code></pre>
+<table border="0">
+  <tbody><tr> 
+    <td width="10"></td>
+    <td width="30"><a href="../index.html"><img src="theme/u_arr.gif" border="0"></a></td>
+    <td width="30"><a href="list_parsers.html"><img src="theme/l_arr.gif" border="0"></a></td>
+    <td width="30"><a href="refactoring.html"><img src="theme/r_arr.gif" border="0"></a></td>
+  </tr>
+</tbody></table>
+<br>
+<hr size="1">
+<p class="copyright">Copyright © 1998-2003 Joel de Guzman<br>
+  <br>
+<font size="2">Use, modification and distribution is subject to the Boost Software
+    License, Version 1.0. (See accompanying file LICENSE_1_0.txt or copy at
+    http://www.boost.org/LICENSE_1_0.txt)</font></p>
+<p class="copyright">&nbsp;</p>
+</body></html>

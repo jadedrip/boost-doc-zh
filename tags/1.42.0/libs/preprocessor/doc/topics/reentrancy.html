@@ -1,0 +1,385 @@
+<!DOCTYPE HTML PUBLIC "-//W3C//DTD HTML 4.01 Transitional//EN">
+<html>
+<head>
+
+
+
+  
+  
+  
+  <meta content="text/html; charset=UTF-8" http-equiv="content-type">
+
+
+
+
+		
+		
+  
+  
+  
+  
+  
+  
+  <title>reentrancy.html</title>
+  <link rel="stylesheet" type="text/css" href="../styles.css">
+</head>
+
+
+<body>
+
+
+
+
+		
+<h4>重入性
+		</h4>
+
+
+
+
+		
+<div>预处理器中的宏扩展是一项完整的功能。因此，不存在迭代。不幸的是，预处理器也不允许递归。这意味着本库必须通过定义一组实现类似功能的宏来仿造迭代和递归。
+		</div>
+
+
+
+
+		
+<div>例如，有一个简单的连接宏：
+		</div>
+
+
+
+
+		
+<div class="code">
+			
+<pre>#define CONCAT(a, b) CONCAT_D(a, b)<br>#define CONCAT_D(a, b) a ## b<br><br>CONCAT(a, CONCAT(b, c)) // abc<br></pre>
+
+
+
+
+		</div>
+
+
+
+
+		
+<div>在简单的情形下，这是没问题的，但如果在以下情形下，会发生什么：
+		</div>
+
+
+
+
+		
+<div class="code">
+			
+<pre>#define AB(x, y) CONCAT(x, y)<br><br>CONCAT(A, B(p, q)) // CONCAT(p, q)<br></pre>
+
+
+
+
+		</div>
+
+
+
+
+		
+<div>由于不存在递归，上述例子会被扩展为 <code>CONCAT(p, q)</code>
+			而不是 <code>pq</code>.
+		</div>
+
+
+
+
+		
+<div>只有两种方法来 "解决" 它。第一种方法是，在文档中写明 <code>AB</code> 使用了 <code>CONCAT</code> 并禁止以上用法。第二种方法是，提供多个串接宏....
+		</div>
+
+
+
+
+		
+<div class="code">
+			
+<pre>#define CONCAT_1(a, b) CONCAT_1_D(a, b)<br>#define CONCAT_1_D(a, b) a ## b<br><br>#define CONCAT_2(a, b) CONCAT_2_D(a, b)<br>#define CONCAT_2_D(a, b) a ## b<br><br>#define AB(x, y) CONCAT_2(x, y)<br><br>CONCAT_1(A, B(p, q)) // pq<br></pre>
+
+
+
+
+		</div>
+
+
+
+
+		
+<div>这可以解决问题。不过，现在需要知道 <code>AB</code> 用的是特定的 <code>CONCAT_2</code>，而不仅是某个串接宏。
+		</div>
+
+
+
+
+		
+<div>更好的解决办法是，抽象出被使用的是哪个串接宏....
+		</div>
+
+
+
+
+		
+<div class="code">
+			
+<pre>#define AB(c, x, y) CONCAT_ ## c(x, y)<br><br>CONCAT_1(A, B(2, p, q)) // pq<br></pre>
+
+
+
+
+		</div>
+
+
+
+
+		
+<div>这是一个 <i>通用重入</i> 的例子，在这个例子中，重入的是一组编造出来的串接宏。参数 <code>c</code> 表示了某个串接结构的 
+			"状态"，用户只要对该状态保持跟踪，<code>AB</code> 就可以用于串接宏的内部。
+		</div>
+
+
+
+
+		
+<div>这个库选择了同样的方法。它要么禁止某个结构在其自身内部使用，要么提供单个结构的多个等价的定义并提供相同的方法来重入该结构。本库中有几个结构需要递归(如 <b>BOOST_PP_WHILE</b>)。因此，本库选择了提供多组宏来支持重入。
+		</div>
+
+
+
+
+		
+<div>具体地说，本库必须提供对 <b>BOOST_PP_FOR</b>, <b>BOOST_PP_REPEAT</b>, 和 <b>BOOST_PP_WHILE</b> 的重入。有两种机制用于实现这一点：状态参数(就象前面的串接例子那样)和<i>自动递归</i>。
+		</div>
+
+
+
+
+		
+<h4>状态参数
+		</h4>
+
+
+
+
+		
+<div>以上结构(<b>BOOST_PP_FOR</b>, <b>BOOST_PP_REPEAT</b>, 和 <b>BOOST_PP_WHILE</b>) 
+		中的每一个都有一个相关联的状态。该状态提供了重入相对应的结构的手段。
+		</div>
+
+
+
+
+		
+<div>这些结构中的每一个都会被传入几个用户自定义的宏(用作谓词、操作等等)。每次调用某个用户自定义宏时，它会被传入调用它的结构的当前状态，以便该宏可以在需要的时候重入到各组宏之中。
+		</div>
+
+
+
+
+		
+<div>这些状态会按以下两种方法之一来使用 -- 要么通过连接来使用，要么传递给另一个宏。
+		</div>
+
+
+
+
+		
+<div>共有三种宏要使用这些状态参数。第一种是，通过串接的方式重入到本身。第二种是，相应的宏组的效果就象它们是主要组的一部分。它们也是通过串接的方式来重入的。还有第三种，在宏的内部使用了第一种或第二种的宏。这些宏将这个状态作为额外的参数。
+		</div>
+
+
+
+
+		
+<div><b>BOOST_PP_WHILE</b> 的状态以字母 <i>D</i> 来表示。传入到 <b>BOOST_PP_WHILE</b> 的用户自定义宏有两个 -- 一个谓词和一个操作。当 <b>BOOST_PP_WHILE</b> 展开这些宏时，它将自身的状态也传递进去，以便这些宏可以重入到 <b>BOOST_PP_WHILE</b> 组。&nbsp;
+		</div>
+
+
+
+
+		
+<div>考虑以下乘法实现，它示范了这一技术：
+		</div>
+
+
+
+
+		
+<div class="code">
+			
+<pre>// 加法接口宏。<br>// _D 表示它以串接方式重入 BOOST_PP_WHILE<br><br>#define ADD_D(d, x, y) \<br>   BOOST_PP_TUPLE_ELEM( \<br>      2, 0, \<br>      BOOST_PP_WHILE_ ## d(ADD_P, ADD_O, (x, y)) \<br>   ) \<br>   /**/<br><br>// 传给 BOOST_PP_WHILE 的谓词。<br>// 它返回 "true" 直至 "y" 变为0.<br><br>#define ADD_P(d, xy) BOOST_PP_TUPLE_ELEM(2, 1, xy)<br><br>// 传给 BOOST_PP_WHILE 的操作。<br>// 它递增 "x" 并递减 "y" 直至 "y" 为零，<br>// 并因此导致谓词返回 "false."<br><br>#define ADD_O(d, xy) \<br>   ( \<br>      BOOST_PP_INC( \<br>         BOOST_PP_TUPLE_ELEM(2, 0, xy) \<br>      ), \<br>      BOOST_PP_DEC( \<br>         BOOST_PP_TUPLE_ELEM(2, 1, xy) \<br>      ) \<br>   ) \<br>   /**/<br><br>// 乘法接口宏。<br><br>#define MUL(x, y) \<br>   BOOST_PP_TUPLE_ELEM( \<br>      3, 0, \<br>      BOOST_PP_WHILE(MUL_P, MUL_O, (0, x, y)) \<br>   ) \<br>   /**/<br><br>// 传给 BOOST_PP_WHILE 的谓词。<br>// 它返回 "true" 直至 "y" 变为0.<br><br>#define MUL_P(d, rxy) BOOST_PP_TUPLE_ELEM(3, 2, rxy)<br><br>// 传给 BOOST_PP_WHILE 的操作。<br>// 它将 "x" 加到 "r" 并递减 "y" 直至 "y" 为零，<br>// 并因此导致谓词返回 "false."<br><br>#define MUL_O(d, rxy) \<br>   ( \<br>      ADD_D( \<br>         d, /* 传递状态给 ADD_D */ \<br>         BOOST_PP_TUPLE_ELEM(3, 0, rxy), \<br>         BOOST_PP_TUPLE_ELEM(3, 1, rxy) \<br>      ), \<br>      BOOST_PP_TUPLE_ELEM(3, 1, rxy), \<br>      BOOST_PP_DEC( \<br>         BOOST_PP_TUPLE_ELEM(3, 2, rxy) \<br>      ) \<br>   ) \<br>   /**/<br><br>MUL(3, 2) // 展开为 6<br></pre>
+
+
+
+
+		</div>
+
+
+
+
+		
+<div>以上实现中有两件事情要注意。第一，留意 <code>ADD_D</code> 如何使用 <i>d</i> 状态参数重入 <b>BOOST_PP_WHILE</b>. 第二，注意 <code>MUL</code> 是如何操作的，它被 <b>BOOST_PP_WHILE</b> 展开，将状态传给 <code>ADD_D</code>. 它示范了同时通过参数和串接进行状态重入。
+		</div>
+
+
+
+
+		
+<div>本库中的每一个使用 <b>BOOST_PP_WHILE</b> 的宏，都有一个状态重入变量。如果该变量用的是参数而不是串接，则它以 <code>_D</code> 为后缀以标识出重入的方法。例子包括本库中的 <b>BOOST_PP_ADD_D</b> 和 <b>BOOST_PP_MUL_D</b>. 如果该变量使用串接，则它以一个下划线为后缀。它要串接一个状态才是完整的。这包括 <b>BOOST_PP_WHILE</b> 中的 <b>BOOST_PP_WHILE_</b>
+			## <i>d</i> 以及 <b>BOOST_PP_LIST_FOLD_LEFT</b> 中的 <b>BOOST_PP_LIST_FOLD_LEFT_</b>
+			## <i>d</i>.
+		</div>
+
+
+
+
+		
+<div>相同的约定也被用于 <b>BOOST_PP_FOR</b> 和 <b>BOOST_PP_REPEAT</b>, 
+			不过分别以字母 <i>R</i> 和 <i>Z</i> 来标识其状态。
+		</div>
+
+
+
+
+		
+<div>还要注意上述的 <code>MUL</code> 实现使用了所有三种重入，虽然不是很明显。它不仅使用了两种状态重入，同时还使用了自动递归....
+		</div>
+
+
+
+
+		
+<h4>自动递归
+		</h4>
+
+
+
+
+		
+<div>自动递归是一种非常简单的使用重入结构的技术。使用它可以不再使用任何状态参数。
+		</div>
+
+
+
+
+		
+<div>前面的 <code>MUL</code> 例子在使用 <b>BOOST_PP_WHILE</b>
+			就使用了自动递归。换句话说，<code>MUL</code> 还是可以使用内部的 <b>BOOST_PP_WHILE</b>，即使它没有通过将状态串接到 <b>BOOST_PP_WHILE_</b> 之后来重入 <b>BOOST_PP_WHILE</b>.
+		</div>
+
+
+
+
+		
+<div>为了达到此目的，库使用了一个 "诡计"。不论它看起来象什么，其实宏 <b>BOOST_PP_WHILE</b> 并不是带三个参数的。实际上，它不带参数。宏 <b>BOOST_PP_WHILE</b> 被展开为一个带三个参数的宏。它只是检查下一个可用的 <b>BOOST_PP_WHILE_</b> ## <i>d</i> 宏是哪个并返回它而已。这种检查过程稍微有些棘手，所以我不打算在这里讲解它如何实现，只告诉你它的确是这样的就够了。
+		</div>
+
+
+
+
+		
+<div>使用自动递归来重入到宏的不同组中是很简单的。它完全隐藏了底层的实现细节。那么，如果它那么容易用，为什么状态参数还要保留呢？原因也很简
+单。如果使用状态参数，那么在任何时候都可以知道相关的状态。而使用自动递归就不是这样的了。自动递归机制必须在所使用的每个点进行状态推断。这意味着在
+某些情形下-- 特别是宏的深度较深时 -- 预处理会很缓慢。
+		 </div>
+
+
+
+
+		
+<h4>结论
+		</h4>
+
+
+
+
+		
+<div>使用状态参数还是自动递归来进行重入是需要权衡的。自动递归的好处在于容易使用并实现了封装。随之而来的是某些预处理器在某些情形下要花费较多
+时间。而另一方面，状态参数的主要好处在于效率。使用状态参数是得到最高效率的唯一方法。效率的代价则是代码的复杂度和实现细节的暴露。
+		</div>
+
+
+
+
+		
+<h4>参见
+		</h4>
+
+
+
+
+		
+<ul>
+
+
+
+
+			<li><a href="../ref/for.html">BOOST_PP_FOR</a></li>
+
+
+
+
+			<li><a href="../ref/repeat.html">BOOST_PP_REPEAT</a></li>
+
+
+
+
+			<li><a href="../ref/while.html">BOOST_PP_WHILE</a></li>
+
+
+
+
+		
+</ul>
+
+
+
+
+		
+<div class="sig">
+			- Paul Mensonides
+		</div>
+
+
+
+
+	
+<hr size="1">
+	
+<div style="margin-left: 0px;">
+		<i>&copy; Copyright <a href="http://www.housemarque.com" target="_top">Housemarque Oy</a> 2002</i>
+		<br>
+
+
+
+<i>&copy; Copyright Paul Mensonides 2002</i>
+	</div>
+
+
+
+
+	
+<div style="margin-left: 0px;">
+		
+<p><small>Distributed under the Boost Software License, Version 1.0. (See
+		accompanying file <a href="../../../../LICENSE_1_0.txt">LICENSE_1_0.txt</a> or
+		copy at <a href="http://www.boost.org/LICENSE_1_0.txt">www.boost.org/LICENSE_1_0.txt</a>)</small></p>
+
+
+
+
+	</div>
+
+
+
+
+	
+</body>
+</html>

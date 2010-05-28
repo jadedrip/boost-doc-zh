@@ -1,0 +1,1063 @@
+<!DOCTYPE html PUBLIC "-//W3C//DTD HTML 4.01 Transitional//EN">
+<html>
+<head>
+
+
+  
+  <meta http-equiv="Content-Language" content="en-us">
+
+
+  
+  <meta http-equiv="Content-Type" content="text/html; charset=UTF-8">
+
+
+  
+  <meta name="GENERATOR" content="Microsoft FrontPage 6.0">
+
+
+  
+  <meta name="ProgId" content="FrontPage.Editor.Document">
+
+
+  
+  <link rel="stylesheet" type="text/css" href="../../../boost.css">
+
+  
+  <title>The Boost Statechart Library - Rationale</title>
+</head>
+
+
+<body link="#0000ff" vlink="#800080">
+
+
+<table summary="header" border="0" cellpadding="7" cellspacing="0" width="100%">
+
+
+  <tbody>
+
+
+    <tr>
+
+
+      <td valign="top" width="300">
+      
+      <h3><a href="../../../index.htm"><img alt="C++ Boost" src="../../../boost.png" border="0" height="86" width="277"></a></h3>
+
+
+      </td>
+
+
+      <td valign="top">
+      
+      <h1 align="center">Boost Statechart 库</h1>
+
+
+      
+      <h2 align="center">Rationale 原理</h2>
+
+
+      </td>
+
+
+    </tr>
+
+
+  
+  </tbody>
+</table>
+
+
+<hr>
+<dl class="index">
+
+
+  <dt><a href="#Introduction">Introduction 简介</a></dt>
+
+
+  <dt><a href="#WhyYetAnotherStateMachineFramework">Why
+yet another state machine framework 为何还要另一个状态机框架</a></dt>
+
+
+  <dt><a href="#StateLocalStorage">State-local
+storage 状态局部存储</a></dt>
+
+
+  <dt><a href="#DynamicConfigurability">Dynamic
+configurability 动态配置能力</a></dt>
+
+
+  <dt><a href="#ErrorHandling">Error handling 错误处理</a></dt>
+
+
+  <dt><a href="#AsynchronousStateMachines">Asynchronous
+state machines 异步状态机</a></dt>
+
+
+  <dt><a href="#MemberFunctionsVsFunctionObjects">User
+actions: Member functions vs. function objects 用户的动作：成员函数 vs. 函数对象</a></dt>
+
+
+  <dt><a href="#Limitations">Limitations 局限性</a></dt>
+
+
+</dl>
+
+
+<h2><a name="Introduction" id="Introduction">Introduction
+简介</a></h2>
+
+
+<p>Most of the design decisions made during the development of
+this library are the result of the following requirements.<br>
+
+
+在本库的开发期间所作的大多数设计决策都是以下要求的结果。</p>
+
+
+<p>Boost.Statechart should ...<br>
+
+
+Boost.Statechart 应该 ...</p>
+
+
+<ol>
+
+
+  <li>be fully type-safe. Whenever possible, type mismatches
+should be flagged with an error at compile-time<br>
+
+
+是完全类型安全的。只要有可能，类型的错配就应当被标
+识为编译期错误</li>
+
+
+  <li>not require the use of a code generator. A lot of the
+existing FSM solutions force the developer to design the state machine
+either graphically or in a specialized language. All or part of the
+code is then generated<br>
+
+
+无需使用代码生成
+器。大量已有的FSM解决方案都强迫开发人员以图形化的方式或特定语言的方式来设计状态机。然后生成全部或部分代码</li>
+
+
+  <li>allow for easy transformation of a UML statechart (defined
+in <a href="http://www.omg.org/cgi-bin/doc?formal/03-03-01">http://www.omg.org/cgi-bin/doc?formal/03-03-01</a>)
+into a working state machine. Vice versa, an existing C++
+implementation of a state machine should be fairly trivial to transform
+into a UML statechart. Specifically, the following state machine
+features should be supported:<br>
+
+
+可以很容易地从一个UML状态图(在 <a href="http://www.omg.org/cgi-bin/doc?formal/03-03-01">http://www.omg.org/cgi-bin/doc?formal/03-03-01</a>
+中定义)转化为可工作的状态机。反之亦然，一个已有状态机的C++实现也可以相当简单地转化为一个UML状态图。特别是，可以支持以下状态机特性：
+    
+    <ul>
+
+
+      <li>Hierarchical (composite, nested) states<br>
+
+
+分层的(组合，嵌套)状态</li>
+
+
+      <li>Orthogonal (concurrent) states<br>
+
+
+正交(并行)状态</li>
+
+
+      <li>Entry-, exit- and transition-actions<br>
+
+
+进入、退出和转换动作</li>
+
+
+      <li>Guards<br>
+
+
+警戒</li>
+
+
+      <li>Shallow/deep history<br>
+
+
+浅历史/深历史</li>
+
+
+    
+    </ul>
+
+
+  </li>
+
+
+  <li>produce a customizable reaction when a C++ exception is
+propagated from user code<br>
+
+
+当用户代码传出一个C++异常时，产生一个可定制的反应</li>
+
+
+  <li>support synchronous and asynchronous state machines and
+leave it to the user which thread an asynchronous state machine will
+run in. Users should also be able to use the threading library of their
+choice<br>
+
+
+支持同步和异步状态机，并且让用户选择运行异步状态机的线程。用户还可以使用他们选择的线程库</li>
+
+
+  <li>support the development of arbitrarily large and complex
+state machines. Multiple developers should be able to work on the same
+state machine simultaneously<br>
+
+
+支持任意大型和任意复杂的状态机的开发。多个开发人员可以同时开发一个状态机</li>
+
+
+  <li>allow the user to customize all resource management so that
+the library could be used for applications with hard real-time
+requirements<br>
+
+
+允许用户定制所有资源管理，使得本库可以用于有严格实时性要求的应用</li>
+
+
+  <li>enforce as much as possible at compile time. Specifically,
+invalid state machines should not compile<br>
+
+
+尽可能在编译期查错。尤其是，无效的状态机不能通过编译</li>
+
+
+  <li>offer reasonable performance for a wide range of
+applications<br>
+
+
+为大范围的应用程序提供合理的性能</li>
+
+
+</ol>
+
+
+<h2><a name="WhyYetAnotherStateMachineFramework" id="WhyYetAnotherStateMachineFramework">Why yet another
+state machine framework? 为何还要另一个状态机框架？</a></h2>
+
+
+<p>Before I started to develop this library I had a look at the
+following frameworks:<br>
+
+
+我在开始开发这个库之前，看过以下框架：</p>
+
+
+<ul>
+
+
+  <li>The framework accompanying the book "Practical Statecharts
+in C/C++" by Miro Samek, CMP Books, ISBN: 1-57820-110-1<br>
+
+
+Miro
+Samek 的 "Practical Statecharts
+in C/C++" 一书所附的框架，CMP Books, ISBN: 1-57820-110-1<br>
+
+
+    <a href="http://www.quantum-leaps.com">http://www.quantum-leaps.com<br>
+
+
+    </a> Fails to satisfy at least the requirements 1, 3, 4, 6, 8.<a href="http://www.quantum-leaps.com/"><br>
+
+
+    </a>至少不能满足以上要求中的 1, 3, 4, 6, 8.</li>
+
+
+  <li>The framework accompanying "Rhapsody in C++" by ILogix (a
+code generator solution)<br>
+
+
+ILogix 的 "Rhapsody in C++" 一书所附的框架(采用代码生成器的方案)<br>
+
+
+    <a href="http://www.ilogix.com/sublevel.aspx?id=53">http://www.ilogix.com/sublevel.aspx?id=53<br>
+
+
+    </a> This might look like comparing apples with oranges.
+However, there is no inherent reason why a code generator couldn't
+produce code that can easily be understood and modified by humans.
+Fails to satisfy at least the requirements 2, 4, 5, 6, 8 (there is
+quite a bit of error checking before code generation, though).<a href="http://www.ilogix.com/sublevel.aspx?id=53"><br>
+
+
+    </a>这有点象是用苹果和橙子进行比较。不过，代码生成器不能生成可以让人容易理解和修改的代码并没有必然的原因。这个框架至少不
+能满足要求 2, 4, 5, 6, 8 (尽管在代码生成之前有一些错误的检查)。</li>
+
+
+  <li>The framework accompanying the article "State Machine
+Design in C++"<a href="http://www.ilogix.com/sublevel.aspx?id=53"><br>
+
+
+    </a>论文 "State Machine
+Design in C++" 所附的框架<br>
+
+
+    <a href="http://www.ddj.com/184401236?pgno=1">http://www.ddj.com/184401236?pgno=1<br>
+
+
+    </a> Fails to satisfy at least the requirements 1, 3, 4, 5
+(there is no direct threading support), 6, 8.<a href="http://www.ddj.com/184401236?pgno=1"><br>
+
+
+    </a>至少不能满足要求 1, 3, 4, 5
+(没有直接的线程支持), 6, 8.</li>
+
+
+</ul>
+
+
+<p>I believe Boost.Statechart satisfies all requirements.<br>
+
+
+我相信 Boost.Statechart 可以满足以上所有要求。</p>
+
+
+<h2><a name="StateLocalStorage" id="StateLocalStorage">State-local
+storage 状态局部存储</a></h2>
+
+
+<p>This not yet widely known state machine feature is enabled by
+the fact that every state is represented by a class. Upon state-entry,
+an object of the class is constructed and the object is later
+destructed when the state machine exits the state. Any data that is
+useful only as long as the machine resides in the state can (and
+should) thus be a member of the state. This feature paired with the
+ability to spread a state machine over several translation units makes
+possible virtually unlimited scalability.&nbsp;<br>
+
+
+状态机的一个尚未广为人知的特性是，事实上每一个状态可以用一个类来表示。在进入状态时，该类的一个对象被构造，而在状态机退出该状态时，该对象就被析
+构。任何仅在状态机处于该状态时才可用的数据可以(也应当)成为该状态的数据成员。这一特性和可以将状态机分散到多个编译单元中的能力一起，使得无限扩展
+成为可能。</p>
+
+
+<p>In most existing FSM frameworks the whole state machine runs
+in one environment (context). That is, all resource handles and
+variables local to the state machine are stored in one place (normally
+as members of the class that also derives from some state machine base
+class). For large state machines this often leads to the class having a
+huge number of data members most of which are needed only briefly in a
+tiny part of the machine. The state machine class therefore often
+becomes a change hotspot what leads to frequent recompilations of the
+whole state machine.<br>
+
+
+在大多数已有的FSM框架中，整个状态机运行在一个环境(上下文)中。即，所有在状态机中的局部资源句柄和变量都保存在一个地方(通常被作为派生自状态机
+基类的某个子类的数据成员)。对于大的状态机来说，这种方法常常会导致这个类具有大量的数据成员，而所需的只是其中一小部分。因此这个状态机类常常会成为
+修改热点，从而导致整个状态机的频繁重编译。</p>
+
+
+<p>The FAQ item "<a href="faq.html#StateLocalStorage">What's
+so cool about state-local storage?</a>" further explains this by
+comparing the tutorial StopWatch to a behaviorally equivalent version
+that does not use state-local storage.<br>
+
+
+在FAQ中的 "<a href="faq.html#StateLocalStorage">状态局部存储有什么好处？</a>"
+一项中，通过将"指南"一文中的 StopWatch 例子和一个不使用状态局部存储的等效版本进行比较，进一步解释了这个问题。</p>
+
+
+<h2><a name="DynamicConfigurability" id="DynamicConfigurability">Dynamic configurability 动态配置能力</a></h2>
+
+
+<h3>Two types of state machine frameworks 两类状态机框架</h3>
+
+
+<ul>
+
+
+  <li>A state machine framework supports dynamic configurability
+if the whole layout of a state machine can be defined at runtime
+("layout" refers to states and transitions, actions are still specified
+with normal C++ code). That is, data only available at runtime can be
+used to build arbitrarily large machines. See "A Multiple Substring
+Search Algorithm" by Moishe Halibard and Moshe Rubin in June 2002 issue
+of CUJ for a good example (unfortunately not available online).<br>
+
+
+如果一个状态机的整
+个布局可以在运行期定义("布局"是指所有状态和转换，动作还是由普通的C++代码来指定的)，则称为支持动态配置。即是，只在运行期有效的数据可用于构
+建任意大的状态机。一个好的例子请见 CUJ 2002年6月号，由 Moishe Halibard 和 Moshe Rubin 写的 "A
+Multiple Substring
+Search Algorithm" (不幸的是它没有在线版本)。</li>
+
+
+  <li>On the other side are state machine frameworks which
+require the layout to be specified at compile time<br>
+
+
+另一类的状态机框架要求其布局在编译期指定</li>
+
+
+</ul>
+
+
+<p>State machines that are built at runtime almost always get
+away with a simple state model (no hierarchical states, no orthogonal
+states, no entry and exit actions, no history) because the layout is
+very often <b>computed by an algorithm</b>. On the other
+hand, machine layouts that are fixed at compile time are almost always
+designed by humans, who frequently need/want a sophisticated state
+model in order to keep the complexity at acceptable levels. Dynamically
+configurable FSM frameworks are therefore often optimized for simple
+flat machines while incarnations of the static variant tend to offer
+more features for abstraction.<br>
+
+
+在运行期构建的状态机几乎总是使用简单的状态模型(没有分层状态，没有正交状态，没有进入和退出动作，没有历史)，因为它的布局通常都是<span style="font-weight: bold;">用一个算法来计算的</span>。另一方面，在编译期就固
+定的状态机布局则几乎总是由人来设计的，通常都需要/希望使用复杂的状态模型以将复杂度保持在可接受的水平。因此可动态配置的FSM框架通常为简单的平面
+状态机进行优化，而静态的状态机框架则关注于为抽象能力提供更多的特性。</p>
+
+
+<p>However, fully-featured dynamic FSM libraries do exist. So,
+the question is:<br>
+
+
+不过，也存在完整特性的动态FSM库。所以，现在的问题是：</p>
+
+
+<h3>Why not use a dynamically configurable FSM library for all
+state machines? 为何不对所有状态机使用可动态配置的FSM库？</h3>
+
+
+<p>One might argue that a dynamically configurable FSM framework
+is all one ever needs because <b>any</b> state machine can
+be implemented with it. However, due to its nature such a framework has
+a number of disadvantages when used to implement static machines:<br>
+
+
+有人可能会争辨，可动态配置的FSM框架是所有人都需要的，因为<span style="font-weight: bold;">任
+意</span>状态机都可以用它来实现。但是，由于它的固有特点，这样的框架被用于实现静态状态机时，具有多个缺点：</p>
+
+
+<ul>
+
+
+  <li>No compile-time optimizations and validations can be made.
+For example, Boost.Statechart determines the <a href="definitions.html#InnermostCommonContext">innermost
+common context</a> of the transition-source and destination state
+at compile time. Moreover, compile time checks ensure that the state
+machine is valid (e.g. that there are no transitions between orthogonal
+states).<br>
+
+
+不能进行编译期优化和检查。例如，Boost.Statechart 可以在编译期判断转换源状态和目标状态的 <a href="definitions.html#InnermostCommonContext">最内层公共上下文</a>。
+此外，编译期检查可以确保状态机是有效的(例如，在正交状态之间不会有转换)。</li>
+
+
+  <li>Double dispatch must inevitably be implemented with some
+kind of a table. As argued under <a href="performance.html#DoubleDispatch">Double dispatch</a>,
+this scales badly.<br>
+
+
+双重分派不可避免地要以某种类型的表格来实现。就象在 <a href="performance.html#DoubleDispatch">双
+重分派</a>
+中讨论的那样，它的扩展性很差。</li>
+
+
+  <li>To warrant fast table lookup, states and events must be
+represented with an integer. To keep the table as small as possible,
+the numbering should be continuous, e.g. if there are ten states, it's
+best to use the ids 0-9. To ensure continuity of ids, all states are
+best defined in the same header file. The same applies to events.
+Again, this does not scale.<br>
+
+
+为保证快速的表格查找，状态和事件必须以整数来表示。为了表格能够尽可能小，这些整数应该是连续
+的，例如，如果有10个状态，那么最好是使用 id 0-9. 为确保 id
+的连续性，所有状态最好在同一个头文件中定义。对于事件也是如此。同样，其扩展性较差。</li>
+
+
+  <li>Because events carrying parameters are not represented by a
+type, some sort of a generic event with a property map must be used and
+type-safety is enforced at runtime rather than at compile
+time.<br>
+
+
+因为以参数传送的事件不是由类型来表示 的，所以必须使用带有属性图的通用事件，而且必须在运行期而不是编译期强制类型安全。</li>
+
+
+</ul>
+
+
+<p>It is for these reasons, that Boost.Statechart was built from
+ground up to <b>not</b> support dynamic configurability.
+However, this does not mean that it's impossible to dynamically shape a
+machine implemented with this library. For example, guards can be used
+to make different transitions depending on input only available at
+runtime. However, such layout changes will always be limited to what
+can be foreseen before compilation. A somewhat related library, the
+boost::spirit parser framework, allows for roughly the same runtime
+configurability.<br>
+
+
+由于这些原因，Boost.Statechart 从开始构建起就<span style="font-weight: bold;">不</span>支
+持动态配置能力。不过，这并不意味着用本库实现的状态机不可能动态改变。例如，可以用警戒来根据仅在运行期有效的输入来进行不同的转换。但是，这种布局的
+变化总是被限制在编译前就预见到的范围之内。有一个稍微有点相关的库，boost::spirit 分析器框架，同样允许这种粗略的运行期配置能力。</p>
+
+
+<h2><a name="ErrorHandling" id="ErrorHandling">Error
+handling 错误处理</a></h2>
+
+
+<p>There is not a single word about error handling in the UML
+state machine semantics specifications. Moreover, most existing FSM
+solutions also seem to ignore the issue.&nbsp;<br>
+
+
+在UML状态机语义规范中，没有一个字是关于错误处理的。此外，许多现有的FSM方案似乎也忽略了这个问题。</p>
+
+
+<h3>Why an FSM library should support error handling
+为什么一个FSM库应该支持错误处理</h3>
+
+
+<p>Consider the following state configuration:<br>
+
+
+考虑以下状态配置：</p>
+
+
+<p><img alt="A" src="A.gif" border="0" height="170" width="230"></p>
+
+
+<p>Both states define entry actions (x() and y()). Whenever state
+A becomes active, a call to x() will immediately be followed by a call
+to y(). y() could depend on the side-effects of x(). Therefore,
+executing y() does not make sense if x() fails. This is not an esoteric
+corner case but happens in every-day state machines all the time. For
+example, x() could acquire memory the contents of which is later
+modified by y(). There is a different but in terms of error handling
+equally critical situation in the Tutorial under <a href="tutorial.html#GettingStateInformationOutOfTheMachine">Getting
+state information out of the machine</a> when <code>Running::~Running()</code>
+accesses its outer state <code>Active</code>. Had the
+entry action of <code>Active</code> failed and had <code>Running</code>
+been entered anyway then <code>Running</code>'s exit
+action would have invoked undefined behavior. The error handling
+situation with outer and inner states resembles the one with base and
+derived classes: If a base class constructor fails (by throwing an
+exception) the construction is aborted, the derived class constructor
+is not called and the object never comes to life.<br>
+
+
+以上两个状态均定义了进入动作(x() 和 y())。当状态
+A 成为活动时，将会调用 x() 并立即跟随一个对 y() 的调用。y() 可能依赖于 x() 的副作用。因此，如果 x() 失败则执行
+y() 是没有意义的。这并非一种隐秘或罕见的情形，而是在每天的状态机中随时都会发生的。例如，x() 可能要负责申请稍后由 y()
+进行修改的数据内容的内存。这与"指南"文档的 <a href="tutorial.html#GettingStateInformationOutOfTheMachine">从
+状态机之外获取状态信息</a> 中<code>Running::~Running()</code>
+访问其外层状态 <code>Active</code> 的例子虽然不同，但在错误处理方面则是同样危险的情形。如果 <code>Active</code>
+的进入动作失败了，而照样进入 <code>Running</code>
+的话，那么 <code>Running</code>
+的退出动作将引发未定义的行为。外层状态与内层状态的错误处理就象基类和派生类一样：如果基类的构造函数失败(抛出一个异常)而退出构造的话，派生类的构
+造函数则不会被调用，对象也不会成为生存的。<br>
+
+
+In most traditional FSM frameworks such an error situation is
+relatively easy to tackle <b>as long as the error can be
+propagated to the state machine client</b>. In this case a failed
+action simply propagates a C++ exception into the framework. The
+framework usually does not catch the exception so that the state
+machine client can handle it. Note that, after doing so, the client can
+no longer use the state machine object because it is either in an
+unknown state or the framework has already reset the state because of
+the exception (e.g. with a scope guard). That is, by their nature,
+state machines typically only offer basic exception safety.<br>
+
+
+在许多传统的FSM框架中，这种错误情况相对容易应付，<span style="font-weight: bold;">只
+要错误可以被传播给状态机的客户</span>。在这种情况下，失败的动作只需传递一个异常给框架就可以了。框架通常不会捕获该异常，这样状
+态机的客户就可以处理它了。注意，这样做之后，客户不可能再使用这个状态机对象，因为它已经处于未知状态，或者框架由于该异常而重置了状态(如使用一个全
+局的警戒)。即，由于这些固有的特性，状态机通常只提供基本的异常保证。<br>
+
+
+However, error handling with traditional FSM frameworks becomes
+surprisingly cumbersome as soon as a lot of actions can fail and the
+state machine <b>itself</b> needs to gracefully handle
+these errors. Usually, a failing action (e.g. x()) then posts an
+appropriate error event and sets a global error variable to true. Every
+following action (e.g. y()) first has to check the error variable
+before doing anything. After all actions have completed (by doing
+nothing!), the previously posted error event has to be processed what
+leads to the execution of the remedy action. Please note that it is not
+sufficient to simply queue the error event as other events could still
+be pending. Instead, the error event has absolute priority and has to
+be dealt with immediately. There are slightly less cumbersome
+approaches to FSM error handling but these usually necessitate a change
+of the statechart layout and thus obscure the normal behavior. No
+matter what approach is used, programmers are normally forced to write
+a lot of code that deals with errors and most of that code is <b>not</b>
+devoted to error handling but to error propagation.<br>
+
+
+但是，一旦这些传统FSM框架中有大量动作有可能失败，且状态机<span style="font-weight: bold;">本
+身</span>需要适度地处理这些错误时，错误的处理将变得异常的笨重。通常 ，一个失败的动作(如
+x())会发出一个适当的错误事件并将一个全局的错误变量设置为真。接下来的每个动作(如
+y())在做任何事情之前首先要检查这个错误变量。在所有动作完成后(其实没有做任何事!)，先前被发出的错误事件必须进行处理，它引发补救动作的执行。
+请注意，仅将错误事件和其它未决事件一样进行排队是不够的。相反，错误事件应具有绝对的优先级且必须立即处理。有一些稍微没那么笨重的FSM错误处理方
+法，但通常都需要对状态图布局作一些修改，从而使得正常的行为变得模糊。无论使用哪一种方法，程序员通常都要写大量的代码来处理错误，而这些代码中的大部
+分<span style="font-weight: bold;">不是</span>专注于错误的处理而是
+错误的传播。</p>
+
+
+<h3>Error handling support in Boost.Statechart Boost.Statechart
+中所支持的错误处理</h3>
+
+
+<p>C++ exceptions may be propagated from any action to signal a
+failure. Depending on how the state machine is configured, such an
+exception is either immediately propagated to the state machine client
+or caught and converted into a special event that is dispatched
+immediately. For more information see the <a href="tutorial.html#ExceptionHandling">Exception handling</a>
+chapter in the Tutorial.<br>
+
+
+C++
+异常可以从任何动作中传出，以表示某种失败。取决于状态机如何配置，这种异常要么被立即传递给状态机的客户，要么被捕获并转换为一种被立即分派的特殊事
+件。更多的信息请见"指南"中的 <a href="tutorial.html#ExceptionHandling">错
+误处理</a>
+一章。</p>
+
+
+<h3>Two stage exit 两阶段退出</h3>
+
+
+<p>An exit action can be implemented by adding a destructor to a
+state. Due to the nature of destructors, there are two disadvantages to
+this approach:<br>
+
+
+通常为一个状态增加一个析构函数，可以实现退出动作。由于析构函数的固有特性，这一方法有两个缺点：</p>
+
+
+<ul>
+
+
+  <li>Since C++ destructors should virtually never throw, one
+cannot simply propagate an exception from an exit action as one does
+when any of the other actions
+fails<br>
+
+
+由于C++析构函数本质上应该不会抛出异常，你不能象其它动作那样，在退出动作失败时抛出一个异常</li>
+
+
+  <li>When a <code>state_machine&lt;&gt;</code>
+object is destructed then all currently active states are inevitably
+also destructed. That is, state machine termination is tied to the
+destruction of the state machine object<br>
+
+
+当一个 <code>state_machine&lt;&gt;</code>
+对象被析构，所有当前活动的状态不可避免也会被析构。即，状态机的终止依赖于状态机对象的析构</li>
+
+
+</ul>
+
+
+<p>In my experience, neither of the above points is usually
+problem in practice since ...<br>
+
+
+以我的经验，以上两点通常实际上都不是问题，因为 ...</p>
+
+
+<ul>
+
+
+  <li>exit actions cannot often fail. If they can, such a failure
+is usually either<br>
+
+
+退出动作通常不能失败。如果它们可以失败的话，这样的失败通常是
+    
+    <ul>
+
+
+      <li>not of interest to the outside world, i.e. the failure
+can simply be ignored<br>
+
+
+外部世界并不关心，即该失败可以被忽略</li>
+
+
+      <li>so severe, that the application needs to be terminated
+anyway. In such a situation stack unwind is almost never desirable and
+the failure is better signaled through other mechanisms (e.g.
+abort())<br>
+
+
+非常严重，以致于应用程序必须马上终止。在这种情况下，栈的回滚并不需要，且这种失败通常用其它机制(如
+abort())来反映更为适合</li>
+
+
+    
+    </ul>
+
+
+  </li>
+
+
+  <li>to clean up properly, often exit actions <b>must</b>
+be executed when a state machine object is destructed, even if it is
+destructed as a result of a stack unwind<br>
+
+
+为了正确地清理，通常在状态机对象被析构时，退出动作<span style="font-weight: bold;">必
+须</span>执行，即使它的析构是由栈回滚引起的</li>
+
+
+</ul>
+
+
+<p>However, several people have put forward theoretical arguments
+and real-world scenarios, which show that the exit action to destructor
+mapping <b>can</b> be a problem and that workarounds are
+overly cumbersome. That's why <a href="tutorial.html#TwoStageExit">two
+stage exit</a> is now supported.<br>
+
+
+不过，有些人已经提出理论依据和实际情形，显示将退出动作映射为析构函数<span style="font-weight: bold;">会</span>存
+在问题，而且解决的办法相当麻烦。这就是为什么现在已经支持 <a href="tutorial.html#TwoStageExit">两
+阶段退出</a> 的原因。</p>
+
+
+<h2><a name="AsynchronousStateMachines" id="AsynchronousStateMachines">Asynchronous state machines
+异步状态机</a></h2>
+
+
+<h3>Requirements 要求</h3>
+
+
+<p>For asynchronous state machines different applications have
+rather varied requirements:<br>
+
+
+对于异步状态机，不同的应用有不同的要求：</p>
+
+
+<ol>
+
+
+  <li>In some applications each state machine needs to run in its
+own thread, other applications are single-threaded and run all machines
+in the same thread<br>
+
+
+有一些应用中，每个状态机需要在各自的线程中运行，有些应用则是单线程的，所有状态机运行在同一个线程中</li>
+
+
+  <li>For some applications a FIFO scheduler is perfect, others
+need priority- or EDF-schedulers<br>
+
+
+对于某些应用，先入先出的调度器很理想，而有些应用则需要带优先级的或是EDF调度器</li>
+
+
+  <li>For some applications the boost::thread library is just
+fine, others might want to use another threading library, yet other
+applications run on OS-less platforms where ISRs are the only mode of
+(apparently) concurrent
+execution<br>
+
+
+对于某些应用，boost::thread 库就够用了，而有些则希望使用其它线程库，还有些应用则运行在没有OS的平台上，ISR是其
+唯一的并行执行模式(很显然)</li>
+
+
+</ol>
+
+
+<h3>Out of the box behavior</h3>
+
+
+<p>By default, <code>asynchronous_state_machine&lt;&gt;</code>
+subtype objects are serviced by a <code>fifo_scheduler&lt;&gt;</code>
+object. <code>fifo_scheduler&lt;&gt;</code> does
+not lock or wait in single-threaded applications and uses boost::thread
+primitives to do so in multi-threaded programs. Moreover, a <code>fifo_scheduler&lt;&gt;</code>
+object can service an arbitrary number of <code>asynchronous_state_machine&lt;&gt;</code>
+subtype objects. Under the hood, <code>fifo_scheduler&lt;&gt;</code>
+is just a thin wrapper around an object of its <code>FifoWorker</code>
+template parameter (which manages the queue and ensures thread safety)
+and a <code>processor_container&lt;&gt;</code>
+(which manages the lifetime of the state machines).<br>
+
+
+缺省情况下，<code>asynchronous_state_machine&lt;&gt;</code>
+子类的对象由一个 <code>fifo_scheduler&lt;&gt;</code>
+对象服务。<code>fifo_scheduler&lt;&gt;</code>
+在单线程应用中不会有锁或等待，而在多线程程序中很使用 boost::thread
+原语来实现。此外，一个 <code>fifo_scheduler&lt;&gt;</code>
+对象可以服务任意数量的 <code>asynchronous_state_machine&lt;&gt;</code>
+子类对象。在内部，<code>fifo_scheduler&lt;&gt;</code>
+只是对其 <code>FifoWorker</code>
+模板参数(负责管理队列并确保线程安全)的一个对象和一个 <code>processor_container&lt;&gt;</code>
+(负责管理状态机的生命周期)的简单包装。</p>
+
+
+<p>The UML standard mandates that an event not triggering a
+reaction in a state machine should be silently discarded. Since a <code>fifo_scheduler&lt;&gt;</code>
+object is itself also a state machine, events destined to no longer
+existing <code>asynchronous_state_machine&lt;&gt;</code>
+subtype objects are also silently discarded. This is enabled by the
+fact that <code>asynchronous_state_machine&lt;&gt;</code>
+subtype objects cannot be constructed or destructed directly. Instead,
+this must be done through <code>fifo_scheduler&lt;&gt;::create_processor&lt;&gt;()</code>
+and <code>fifo_scheduler&lt;&gt;::destroy_processor()</code>
+(<code>processor</code> refers to the fact that <code>fifo_scheduler&lt;&gt;</code>
+can only host <code>event_processor&lt;&gt;</code>
+subtype objects; <code>asynchronous_state_machine&lt;&gt;</code>
+is just one way to implement such a processor). Moreover, <code>create_processor&lt;&gt;()</code>
+only returns a <code>processor_handle</code> object. This
+must henceforth be used to initiate, queue events for, terminate and
+destroy the state machine through the scheduler.<br>
+
+
+UML标准要求，在一个状态机中，不触发反应的事件应被丢弃。由于 <code>fifo_scheduler&lt;&gt;</code>
+对象本身也是一个状态机，所以发往不再存在的 <code>asynchronous_state_machine&lt;&gt;</code>
+子类对象的事件也会被丢弃。这是通过不允许直接构造或析构 <code>asynchronous_state_machine&lt;&gt;</code>
+子类对象来实现的。相反，必须通过 <code>fifo_scheduler&lt;&gt;::create_processor&lt;&gt;()</code>
+和 <code>fifo_scheduler&lt;&gt;::destroy_processor()</code>
+(<code>processor</code> 指出以下事实，<code>fifo_scheduler&lt;&gt;</code>
+只能管理 <code>event_processor&lt;&gt;</code> 子类对象；<code>asynchronous_state_machine&lt;&gt;</code>
+是实现这样一个 processor 的唯一方法)来完成这一工作。此外，<code>create_processor&lt;&gt;()</code>
+只返回一个 <code>processor_handle</code>&nbsp;对象。其后它将被调度器用于初
+始化、事件排队、终止和销毁状态机。</p>
+
+
+<h3>Customization 定制</h3>
+
+
+<p>If a user needs to customize the scheduler behavior she can do
+so by instantiating <code>fifo_scheduler&lt;&gt;</code>
+with her own class modeling the <code>FifoWorker</code>
+concept. I considered a much more generic design where locking and
+waiting is implemented in a policy but I have so far failed to come up
+with a clean and simple interface for it. Especially the waiting is a
+bit difficult to model as some platforms have condition variables,
+others have events and yet others don't have any notion of waiting
+whatsoever (they instead loop until a new event arrives, presumably via
+an ISR). Given the relatively few lines of code required to implement a
+custom <code>FifoWorker</code> type and the fact that
+almost all applications will implement at most one such class, it does
+not seem to be worthwhile anyway. Applications requiring a less or more
+sophisticated event processor lifetime management can customize the
+behavior at a more coarse level, by using a custom <code>Scheduler</code>
+type. This is currently also true for applications requiring non-FIFO
+queuing schemes. However, Boost.Statechart will probably provide a <code>priority_scheduler</code>
+in the future so that custom schedulers need to be implemented only in
+rare cases.<br>
+
+
+如果用户需要定制调度器的行为，他可通过以自己的符合 <code>FifoWorker</code>
+概念的类型来实例化 <code>fifo_scheduler&lt;&gt;</code>，以实现定
+制。我考虑过一个更为通用的设计，基于策略来实现锁和等待，但是我到目前为止也无法拿出一个清晰而简单的接口。特别是在等待方面，有的平台有条件变量，另
+一些则有事件，还有一些什么都没有(它们只能循环直至事件到达，可能是通过ISR实现)，难以建立统一的模型。以相对较少的代码来实现一个定制的 <code>FifoWorker</code>
+类型，并且事实上几乎所有应用程序都只会实现最多一个这样的类，看来这是不值得的。要求对事件处理器进行更少或更多的生存期管理的应用程序，可以在更为低
+的级别来定制这些行为，通过使用一个定制的 <code>Scheduler</code>
+类型。对于要求非FIFO队列机制的应用程序，也可以如此。不过，Boost.Statechart 有可能在以后提供 <code>priority_scheduler</code>，
+这样就只在很罕见的情况下才需要实现定制的调度器了。</p>
+
+
+<h2><a name="MemberFunctionsVsFunctionObjects" id="MemberFunctionsVsFunctionObjects">User actions: Member
+functions vs. function objects 用户的动作：成员函数 vs. 函数对象</a></h2>
+
+
+<p>All user-supplied functions (<code>react</code>
+member functions, entry-, exit- and transition-actions) must be class
+members. The reasons for this are as follows:<br>
+
+所有用户提供的函数(<code>react</code>
+成员函数，进入、退出和转换动作)都必须是类成员。原因如下：</p>
+
+
+<ul>
+
+
+  <li>The concept of state-local storage mandates that
+state-entry and state-exit actions are implemented as
+members<br>
+
+状态局部存储的概念要求进入状态和退出状态的动作要以成员来实现</li>
+
+
+  <li><code>react</code> member functions and
+transition actions often access state-local data. So, it is most
+natural to implement these functions as members of the class the data
+of which the functions will operate on anyway<br>
+
+    <code>react</code>
+成员函数和转换动作通常要访问状态局部数据。因此，这些函数自然要以类成员来实现，才可以操作类中的数据</li>
+
+
+</ul>
+
+
+<h2><a name="Limitations" id="Limitations">Limitations
+局限性</a></h2>
+
+
+<h4>Junction points 汇合点</h4>
+
+
+<p>UML junction points are not supported because arbitrarily
+complex guard expressions can easily be implemented with <code>custom_reaction&lt;&gt;</code>s.<br>
+不支持 UML 的汇合点，因为可用多个 <code>custom_reaction&lt;&gt;</code> 很容易地实现任意复杂的警戒表达式。</p>
+
+
+<h4>Dynamic choice points 动态选择点</h4>
+
+
+<p>Currently there is no direct support for this UML element
+because its behavior can often be implemented with <code>custom_reaction&lt;&gt;</code>s.
+In rare cases this is not possible, namely when a choice point happens
+to be the initial state. Then, the behavior can easily be implemented
+as follows:<br>
+当前没有对这个 UML 元素的直接支持，因为它的行为通常可以用多个 <code>custom_reaction&lt;&gt;</code> 来实现。有极少见的情形下可能不行，即当选择点恰好是初始状态时。这时，可以象以下这样来实现：</p>
+
+
+<pre>struct make_choice : sc::event&lt; make_choice &gt; {};<br><br>// universal choice point base class template<br>// 通用的选择点基类模板<br>template&lt; class MostDerived, class Context &gt;<br>struct choice_point : sc::state&lt; MostDerived, Context, <br> sc::custom_reaction&lt; make_choice &gt; &gt;<br>{<br> typedef sc::state&lt; MostDerived, Context, <br> sc::custom_reaction&lt; make_choice &gt; &gt; base_type;<br> typedef typename base_type::my_context my_context;<br> typedef choice_point my_base;<br><br> choice_point( my_context ctx ) : base_type( ctx )<br> {<br> this-&gt;post_event( boost::intrusive_ptr&lt; make_choice &gt;(<br> new make_choice() ) );<br> }<br>};<br><br>// ...<br><br>struct MyChoicePoint;<br>struct Machine : sc::state_machine&lt; Machine, MyChoicePoint &gt; {};<br><br>struct Dest1 : sc::simple_state&lt; Dest1, Machine &gt; {};<br>struct Dest2 : sc::simple_state&lt; Dest2, Machine &gt; {};<br>struct Dest3 : sc::simple_state&lt; Dest3, Machine &gt; {};<br><br>struct MyChoicePoint : choice_point&lt; MyChoicePoint, Machine &gt;<br>{<br> MyChoicePoint( my_context ctx ) : my_base( ctx ) {}<br><br> sc::result react( const make_choice &amp; )<br> {<br> if ( /* ... */ )<br> {<br> return transit&lt; Dest1 &gt;();<br> }<br> else if ( /* ... */ )<br> {<br> return transit&lt; Dest2 &gt;();<br> }<br> else<br> {<br> return transit&lt; Dest3 &gt;();<br> }<br> }<br>};<br></pre>
+
+
+<p><code>choice_point&lt;&gt;</code> is not
+currently part of Boost.Statechart, mainly because I fear that
+beginners could use it in places where they would be better off with <code>custom_reaction&lt;&gt;</code>.
+If the demand is high enough I will add it to the library.<br>
+<code>choice_point&lt;&gt;</code> 现在还不是 Boost.Statechart 的组成部分，主要是因为我担心初学者会将它用于本应使用 <code>custom_reaction&lt;&gt;</code> 的地方。如果有足够多的需求，我会将它加入到本库中。</p>
+
+
+<h4>Deep history of orthogonal regions 正交区域的深历史</h4>
+
+
+<p>Deep history of states with orthogonal regions is currently
+not supported:<br>
+当前不支持带正交区域的状态的深历史：</p>
+
+
+<p><img alt="DeepHistoryLimitation1" src="DeepHistoryLimitation1.gif" border="0" height="346" width="331"></p>
+
+
+<p>Attempts to implement this statechart will lead to a
+compile-time error because B has orthogonal regions and its direct or
+indirect outer state contains a deep history pseudo state. In other
+words, a state containing a deep history pseudo state must not have any
+direct or indirect inner states which themselves have orthogonal
+regions. This limitation stems from the fact that full deep history
+support would be more complicated to implement and would consume more
+resources than the currently implemented limited deep history support.
+Moreover, full deep history behavior can easily be implemented with
+shallow history:<br>
+试图实现以上状态图会导致编译期错误，因为 B
+具有正交区域，且它的直接或间接外层状态包含有深历史伪状态。换句话说，一个包含有深历史伪状态的状态不能有任何直接或间接的内层状态带有正交区域。这一
+限制是由以下事实引致的，完全深历史的支持实现起来非常复杂，而且要比当前的实现消耗更多的资源。此外，完全深历史的行为可以很容易地用浅历史来实现：</p>
+
+
+<p><img alt="DeepHistoryLimitation2" src="DeepHistoryLimitation2.gif" border="0" height="347" width="332"></p>
+
+
+<p>Of course, this only works if C, D, E or any of their direct
+or indirect inner states do not have orthogonal regions. If not so then
+this pattern has to be applied recursively.<br>
+当然，这仅在 C, D, E 或其所有直接或间接内层状态不带正交区域时才可以。如果不是这样的话，这一模式必须被重复递归应用。</p>
+
+
+<h4>Synchronization (join and fork) bars 同步(汇合与分叉)条</h4>
+
+
+<p><img alt="JoinAndFork" src="JoinAndFork.gif" border="0" height="301" width="541"></p>
+
+
+<p>Synchronization bars are not supported, that is, a transition
+always originates at exactly one state and always ends at exactly one
+state. Join bars are sometimes useful but their behavior can easily be
+emulated with guards. The support of fork bars would make the
+implementation <b>much</b> more complex and they are only
+needed rarely.<br>
+同步条不被支持，即一个转换总是由刚好一个状态发起且以刚好一个状态为结束。汇合条有时很有用，不过其行为可以很容易地用警戒来模拟。分叉条的支持则会使得实现过于复杂，而且它们仅在极少数情况下需要。</p>
+
+
+<h4>Event dispatch to orthogonal regions&nbsp;分派到多个正交区域的事件</h4>
+
+
+<p>The Boost.Statechart event dispatch algorithm is different to
+the one specified in <a href="http://www.wisdom.weizmann.ac.il/%7Edharel/SCANNED.PAPERS/Statecharts.pdf">David
+Harel's original paper</a> and in the <a href="http://www.omg.org/cgi-bin/doc?formal/03-03-01">UML
+standard</a>. Both mandate that each event is dispatched to all
+orthogonal regions of a state machine. Example:<br>
+Boost.Statechart 的事件分派算法与在 <a href="http://www.wisdom.weizmann.ac.il/%7Edharel/SCANNED.PAPERS/Statecharts.pdf">David
+Harel 的原创论文</a> 及 <a href="http://www.omg.org/cgi-bin/doc?formal/03-03-01">UML
+标准</a> 中所给出的算法不同。它们都要求每个事件要被分派到状态机的所有正交区域。例如：</p>
+
+
+<p><img alt="EventDispatch" src="EventDispatch.gif" border="0" height="211" width="436"></p>
+
+
+<p>Here the Harel/UML dispatch algorithm specifies that the
+machine must transition from (B,D) to (C,E) when an EvX event is
+processed. Because of the subtleties that Harel describes in chapter 7
+of <a href="http://www.wisdom.weizmann.ac.il/%7Edharel/SCANNED.PAPERS/Statecharts.pdf">his
+paper</a>, an implementation of this algorithm is not only quite
+complex but also much slower than the simplified version employed by
+Boost.Statechart, which stops searching for <a href="definitions.html#Reaction">reactions</a> as soon
+as it has found one suitable for the current event. That is, had the
+example been implemented with this library, the machine would have
+transitioned non-deterministically from (B,D) to either (C,D) or (B,E).
+This version was chosen because, in my experience, in real-world
+machines different orthogonal regions often do not specify transitions
+for the same events. For the rare cases when they do, the UML behavior
+can easily be emulated as follows:<br>
+这里，Harel/UML 的分派算法规定，状态机在处理一个 EvX 事件时，必须从 (B,D) 转换为 (C,E)。因为 Harel 在 <a href="http://www.wisdom.weizmann.ac.il/%7Edharel/SCANNED.PAPERS/Statecharts.pdf">他的论文</a> 的第7章中所描述的这一点区别，这一算法的实现不仅非常复杂，而且比
+Boost.Statechart 所采用的简化版本要慢很多，简化版本在查找到适用于当前事件的一个 <a href="definitions.html#Reaction">反应</a>
+后，就会马上停止搜索。即，这个例子如果用本库来实现，状态机会不确定地由 (B,D) 转换到 (C,D) 或
+(B,E)。选择这一版本的原因是，以我的经验，在真实世界中状态机的不同正交区域通常不会同时为同一个事件指定转换。对于确实这样做的极少数情形，
+UML 的行为也可以很容易地模拟出来：</p>
+
+
+<p><img alt="SimpleEventDispatch" src="SimpleEventDispatch.gif" border="0" height="226" width="466"></p>
+
+
+<h4>Transitions across orthogonal regions 跨正交区域的转换</h4>
+
+
+<p><img alt="TransAcrossOrthRegions" src="TransAcrossOrthRegions.gif" border="0" height="271" width="226"></p>
+
+
+<p>Transitions across orthogonal regions are currently flagged
+with an error at compile time (the UML specifications explicitly allow
+them while Harel does not mention them at all). I decided to not
+support them because I have erroneously tried to implement such a
+transition several times but have never come across a situation where
+it would make any sense. If you need to make such transitions, please
+do let me know!<br>
+跨正交区域的转换当前会被标记为编译期错误(UML 明确规定可以允许这样而 Harel 则根本未提及)。我决定不支持这种转换，因为我几次尝试实现这种转换都不正确，而且从未碰到过一种值得去这样做的情况。如果你需要这种转换，请告诉我！</p>
+
+
+<hr>
+<p><a href="http://validator.w3.org/check?uri=referer"><img src="http://www.w3.org/Icons/valid-html401" alt="Valid HTML 4.01 Transitional" border="0" height="31" width="88"></a></p>
+
+
+<p>Revised<!--webbot bot="Timestamp" s-type="EDITED" s-format="%d %B, %Y" startspan -->
+03 December, 2006<!--webbot bot="Timestamp" endspan i-checksum="38512" --></p>
+
+
+<p><i>Copyright &copy; 2003-<!--webbot bot="Timestamp" s-type="EDITED" s-format="%Y" startspan -->2006<!--webbot bot="Timestamp" endspan i-checksum="770" -->
+<a href="contact.html">Andreas Huber D&ouml;nni</a></i></p>
+
+
+<p><i>Distributed under the Boost Software License, Version
+1.0. (See accompanying file <a href="../../../LICENSE_1_0.txt">LICENSE_1_0.txt</a>
+or copy at <a href="http://www.boost.org/LICENSE_1_0.txt">http://www.boost.org/LICENSE_1_0.txt</a>)</i></p>
+
+
+</body>
+</html>

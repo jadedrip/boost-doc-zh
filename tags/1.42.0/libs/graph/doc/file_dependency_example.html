@@ -1,0 +1,109 @@
+<!DOCTYPE HTML PUBLIC "-//W3C//DTD HTML 4.01 Transitional//EN">
+<html><head><meta content="text/html; charset=UTF-8" http-equiv="content-type"><!--
+  -- Copyright (c) Jeremy Siek 2000
+  --
+  -- Distributed under the Boost Software License, Version 1.0.
+  -- (See accompanying file LICENSE_1_0.txt or copy at
+  -- http://www.boost.org/LICENSE_1_0.txt)
+  -->
+<title>File Dependency Example</title></head>
+<body alink="#ff0000" bgcolor="#ffffff" link="#0000ee" text="#000000" vlink="#551a8b"> 
+<img src="../../../boost.png" alt="C++ Boost" height="86" width="277"> 
+
+<br clear="">
+
+
+<h1><a name="sec:file-depend-eg"></a>
+File Dependency Example 文件依赖关系示例
+</h1>
+
+<p>图抽象在计算机科学中最常见的用途是跟踪依赖相关。一个我们每天基本上都会遇到的有关依赖关系跟踪的例子就是，在我们所编写的程序中的文件编译依赖关系。这些依赖关系会在象 <tt>make</tt> 这样的程序或是象
+Visual C++ 这些IDE内部用于在某些文件发生变化后找出必须要重编译的最小文件数量。
+
+</p><p>
+<a href="#fig:file-dep">图1</a> 画出了一个图，<tt>killerapp</tt> 程序中的每个源文件、目标文件和库文件分别对应一个顶点。图中的边则表示了哪个文件在创建其它文件时被用到。而箭头所指方向的选择则有些随意。只要我们始终记得箭头表示的是"被...使用"，那么就没问题了。相反的方向则表示"依赖于"。</p>
+<div align="center"><a name="fig:file-dep"></a>
+<table>
+<caption align="bottom"><strong>图 1:</strong>
+表示文件依赖关系的图</caption>
+<tbody><tr><td><img src="./figs/file_dep.gif" height="351" width="331"></td></tr>
+</tbody></table>
+</div>
+
+<p>一个象 <tt>make</tt> 那样的编译系统必须可以回答一系列问题：</p><ol>
+<li>如果我们需要编译(或重编译)所有文件，那么要按怎样的顺序来做？
+</li>
+<li>哪些文件可以并行地编译？
+</li>
+<li>如果某个文件发生了变化，哪些文件必须要重编译？
+</li>
+<li>依赖关系中存在循环吗？(这将意味着用户犯了某个错误，并将引发错误)
+</li>
+</ol>
+
+<p>在下面的例子中，我们将依据依赖关系图逐个阐述以上的问题，然后找出提供解决方案的图算法。在以下所有例子中都将使用<a href="#fig:file-dep">图1</a>中的图。这个例子的源代码可以在文件 <a href="../example/file_dependencies.cpp"><tt>examples/file_dependencies.cpp</tt></a> 中找到。</p><h2>Graph Setup 图的建立</h2>
+
+<p>以下我们示范该图的构造。首先，需要以下头文件：</p><pre>#include &lt;iostream&gt; // std::cout<br>#include &lt;utility&gt; // std::pair<br>#include &lt;boost/graph/graph_traits.hpp&gt;<br>#include &lt;boost/graph/adjacency_list.hpp&gt;<br>#include &lt;boost/graph/topological_sort.hpp&gt;<br></pre>
+
+<p>为简单起见，我们来"手工"构造这个图。而象 <tt>make</tt> 这样的一个编译系统则会对 <tt>Makefile</tt> 进行分析，取出文件列表并建立依赖关系。我们用
+<tt>adjacency_list</tt> 类来表示这个图。使用表示 <tt>std::vector</tt> 的
+<tt>vecS</tt> 选择符来表示每个边列表，这可以提供高效遍历。而
+<tt>bidirectionalS</tt> 选择符则表示我们要的是一个有向图，可以同时访问每个顶点的出边和入边，并且
+<tt>color_property</tt> 将一个颜色属性关联至图中的每个顶点。该颜色属性将在后面章节中多个算法中使用。</p><pre>  enum files_e { dax_h, yow_h, boz_h, zow_h, foo_cpp, <br>                 foo_o, bar_cpp, bar_o, libfoobar_a,<br>                 zig_cpp, zig_o, zag_cpp, zag_o, <br>                 libzigzag_a, killerapp, N };<br>  const char* name[] = { "dax.h", "yow.h", "boz.h", "zow.h", "foo.cpp",<br>                         "foo.o", "bar.cpp", "bar.o", "libfoobar.a",<br>                         "zig.cpp", "zig.o", "zag.cpp", "zag.o",<br>                         "libzigzag.a", "killerapp" };<br><br>  typedef std::pair&lt;int, int&gt; Edge;<br>  Edge used_by[] = {<br>    Edge(dax_h, foo_cpp), Edge(dax_h, bar_cpp), Edge(dax_h, yow_h),<br>    Edge(yow_h, bar_cpp), Edge(yow_h, zag_cpp),<br>    Edge(boz_h, bar_cpp), Edge(boz_h, zig_cpp), Edge(boz_h, zag_cpp),<br>    Edge(zow_h, foo_cpp), <br>    Edge(foo_cpp, foo_o),<br>    Edge(foo_o, libfoobar_a),<br>    Edge(bar_cpp, bar_o),<br>    Edge(bar_o, libfoobar_a),<br>    Edge(libfoobar_a, libzigzag_a),<br>    Edge(zig_cpp, zig_o),<br>    Edge(zig_o, libzigzag_a),<br>    Edge(zag_cpp, zag_o),<br>    Edge(zag_o, libzigzag_a),<br>    Edge(libzigzag_a, killerapp)<br>  };<br><br>  using namespace boost;<br>  typedef adjacency_list&lt;vecS, vecS, bidirectionalS, <br>      property&lt;vertex_color_t, default_color_type&gt;<br>    &gt; Graph;<br>  Graph g(used_by, used_by + sizeof(used_by) / sizeof(Edge), N);<br>  typedef graph_traits&lt;Graph&gt;::vertex_descriptor Vertex;<br></pre>
+
+<h2>Compilation Order (All Files) 编译顺序(所有文件)</h2>
+
+<p>对某个特定项目首次执行 <tt>make</tt> 时，所有文件都必须被编译。给定各文件间的依赖关系，编译和链接它们的正确顺序是怎样的呢？首先我们必须制定这样的一张图。编译的顺序与图中顶点的顺序是一样的。其顺序上的约束就是文件依赖关系的顺序，我们用边来表示它。如果图中有一条边<i>(u,v)</i>，则 <i>v</i> 最好不要排在 <i>u</i> 之前。事实上，这种顺序的约束被称为<i>拓朴排序</i>。因此，回答编译顺序的问题非常容易，只需调用BGL算法 <a href="./topological_sort.html"><tt>topological_sort()</tt></a>。拓朴排序的传统输出格式是被排序顶点的一个链表。但BGL算法则可将已排序的顶点写入任意的 <a href="http://www.sgi.com/tech/stl/OutputIterator.html">输出迭代器</a>，这样更为灵活。以下我们将用
+<tt>std::front_insert_iterator</tt> 来创建一个输出迭代器，将顶点插入到一个链表的前端。其它可能的选项是，将输出写至文件，或是插入到另一个STL或定制的容器中。</p><pre>  typedef std::list&lt;Vertex&gt; MakeOrder;<br>  MakeOrder make_order;<br>  boost::topological_sort(g, std::front_inserter(make_order));<br>    <br>  std::cout &lt;&lt; "make ordering: ";<br>  for (MakeOrder::iterator i = make_order.begin();<br>       i != make_order.end(); ++i)<br>    std::cout &lt;&lt; name[*i] &lt;&lt; " ";<br>  std::cout &lt;&lt; std::endl;<br></pre>以上程序的输出为：
+<pre>  make ordering: zow.h boz.h zig.cpp zig.o dax.h yow.h zag.cpp \<br>  zag.o bar.cpp bar.o foo.cpp foo.o libfoobar.a libzigzag.a killerapp<br></pre>
+
+<h2><a name="sec:parallel-compilation"></a>
+Parallel Compilation 并行编译
+</h2>
+
+
+
+<p>关于编译系统的另一个可能需要回答的问题是：哪些文件可以同时编译？这样可以让系统生成多个进程并利用多处理器来提高构建的速度。这个问题也可以以
+另一种稍微不同的方式提出：假如可以同时构建不限数量的文件，那么某个文件最早可以在什么时候构建？一个文件什么时候可以构建的主要标准是，它所依赖的所
+有文件都已完成构建。为简单起见，在这个例子中，我们假设每个文件需要1个时间单元来构建(即使是头文件)。为了并行编译，我们可以同时构建所对应的顶点
+相互间没有依赖关系的所有文件，例如，在第一步时，构建所有<i>入度</i>为0的文件。对于其它文件，决定某个文件的"构建时间点"的主要标准就是，构建的时间点必须比它所依赖的文件的最大时间点大一个时间单元。
+
+</p><p>我们先创建一个 vector <code>time</code> 用于保存每个文件的构建时间点。我们要将其中的每个值初始化为零。</p><pre>  std::vector&lt;int&gt; time(N, 0);<br></pre>
+
+<p>现在，我们要按拓朴顺序访问各顶点，从需要首先构建的哪些文件开始，到最后要被构造的文件为止。不过，我们不是立即打印这个文件顺序，而是基于各个文件所依赖的文件的构建时间点，来计算每个文件的构建时间点。我们只需要考虑那些入度大于零的文件。</p>
+
+<pre>    for (i = make_order.begin(); i != make_order.end(); ++i) {    <br>      if (in_degree (*i, g) &gt; 0) {<br>        Graph::in_edge_iterator j, j_end;<br>        int maxdist = 0;<br>        for (tie(j, j_end) = in_edges(*i, g); j != j_end; ++j)<br>          maxdist = std::max(time[source(*j, g)], maxdist);<br>        time[*i]=maxdist+1;<br>      }<br>    }<br></pre>
+
+<p>最后，我们输出为每个标点计算得到的时间点。</p><pre>  std::cout &lt;&lt; "parallel make ordering, " &lt;&lt; std::endl<br>       &lt;&lt; "  vertices with same group number" &lt;&lt; std::endl<br>       &lt;&lt; "  can be made in parallel" &lt;&lt; std::endl &lt;&lt; std::endl;<br>  for (boost::tie(i, iend) = vertices(g); i != iend; ++i)<br>    std::cout &lt;&lt; "time_slot[" &lt;&lt; name[*i] &lt;&lt; "] = " &lt;&lt; time[*i] &lt;&lt; std::endl;<br></pre>输出如下：
+<pre>  parallel make ordering, <br>    vertices with same group number <br>    can be made in parallel<br>  time_slot[dax.h] = 0<br>  time_slot[yow.h] = 1<br>  time_slot[boz.h] = 0<br>  time_slot[zow.h] = 0<br>  time_slot[foo.cpp] = 1<br>  time_slot[foo.o] = 2<br>  time_slot[bar.cpp] = 2<br>  time_slot[bar.o] = 3<br>  time_slot[libfoobar.a] = 4<br>  time_slot[zig.cpp] = 1<br>  time_slot[zig.o] = 2<br>  time_slot[zag.cpp] = 2<br>  time_slot[zag.o] = 3<br>  time_slot[libzigzag.a] = 5<br>  time_slot[killerapp] = 6<br></pre>
+
+<h2><a name="SECTION001014000000000000000"></a>
+<a name="sec:cycles"></a>
+<br>
+Cyclic Dependencies 循环依赖
+</h2>
+
+<p>对于编译系统，需要回答的另一个问题是，在其依赖关系中是否存在循环。如果有循环，系统应能向用户报告一个错误，以便可以去掉该循环。一个较为容易的检测循环的方法是，运行 <a href="./depth_first_search.html">深度优先搜索</a>，如果搜索遇到一个已发现的顶点(属于当前搜索树的顶点)，则存在一个循环。BGL的图搜索算法(其中包括了
+<tt>depth_first_search()</tt>)都可以通过
+<i>遍历器visitor</i> 机制来扩展。遍历器类似于函数对象，但它有多个方法代替单个的
+<tt>operator()</tt>。遍历器的方法在算法的某些特定点被调用，由此给用户一种办法来扩展图搜索算法的功能。有关遍历器的详细说明，请见 <a href="visitor_concepts.html">遍历器概念Visitor Concepts</a> 一节。
+
+</p><p>我们将创建一个遍历器类，并填入 <tt>back_edge()</tt>
+方法，该方法是DFS遇到一条连至某个已发现顶点的边时进行调用的 <a href="./DFSVisitor.html">DFSVisitor</a> 方法。对该方法的调用表明存在某个循环。继承自 <tt>dfs_visitor&lt;&gt;</tt> 为这个遍历器中的其它遍历器方法提供了一个空版本。创建了我们的遍历器后，就可以构造一个对象并将它传递给BGL算法。遍历器对象被以值的方式传入BGL算法，所以 <tt>has_cycle</tt> 标志要以引用的方式保存在该遍历器中。</p><pre>  struct cycle_detector : public dfs_visitor&lt;&gt;<br>  {<br>    cycle_detector( bool&amp; has_cycle) <br>      : _has_cycle(has_cycle) { }<br><br>    template &lt;class Edge, class Graph&gt;<br>    void back_edge(Edge, Graph&amp;) {<br>      _has_cycle = true;<br>    }<br>  protected:<br>    bool&amp; _has_cycle;<br>  };<br></pre>
+
+<p>现在我们可以调用BGL的 <tt>depth_first_search()</tt>
+算法，并传入这个循环检测遍历器。</p><pre>  bool has_cycle = false;<br>  cycle_detector vis(has_cycle);<br>  boost::depth_first_search(g, visitor(vis));<br>  std::cout &lt;&lt; "The graph has a cycle? " &lt;&lt; has_cycle &lt;&lt; std::endl;<br></pre>
+
+<p><a href="#fig:file-dep">图1</a> (忽略其中的点线) 中的图不存在循环，但是如果我们在
+<tt>bar.cpp</tt> 和 <tt>dax.h</tt> 之间增加一个依赖关系，就有了循环。这个依赖关系被标识为一个用户错误。</p><pre>  add_edge(bar_cpp, dax_h, g);<br></pre>
+
+
+<br>
+<hr>
+<table>
+<tbody><tr valign="top">
+<td nowrap="nowrap">Copyright © 2000-2001</td><td>
+<a href="http://www.boost.org/people/jeremy_siek.htm">Jeremy Siek</a>, Indiana University (<a href="mailto:jsiek@osl.iu.edu">jsiek@osl.iu.edu</a>)
+</td></tr></tbody></table>
+
+</body></html>

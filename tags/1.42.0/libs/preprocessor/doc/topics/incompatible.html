@@ -1,0 +1,278 @@
+<!DOCTYPE HTML PUBLIC "-//W3C//DTD HTML 4.01 Transitional//EN">
+<html>
+<head>
+
+  
+  <meta content="text/html; charset=UTF-8" http-equiv="content-type">
+
+
+	
+	
+  
+  
+  <title>incompatible.html</title>
+  <link rel="stylesheet" type="text/css" href="../styles.css">
+</head>
+
+
+<body>
+
+
+	
+<h4>不兼容性</h4>
+
+
+	
+<div>
+		存在几个与以前的 Boost 版本(1.28)的不兼容问题。可以大致分为三类：
+	</div>
+
+
+	
+<ul>
+
+
+		<li>基于 <b>BOOST_PP_REPEAT</b> 的水平重复原语<b></b></li>
+
+
+		<li>重入性语法</li>
+
+
+		<li><i>list</i> folding</li>
+
+
+	
+</ul>
+
+
+	
+<h4>重复目标</h4>
+
+
+	
+<div>首先，也可能是最常用的，是传入 <b>BOOST_PP_REPEAT</b> 的目标宏，以及使用 <b>BOOST_PP_REPEAT</b> 的水平重复结构。它们包括所有要求带一个目标宏的 <b>BOOST_PP_REPEAT_</b>* 原语。
+	</div>
+
+
+	
+<div>这个不兼容性是很简单的，但它要求更新源码。
+	</div>
+
+
+	
+<div>这些目标宏现在必须接受第三个参数。这个额外的参数成为了每个目标宏的第一个参数。它表示了下一个重复维度，并将 <b>BOOST_PP_REPEAT</b> 带入到库的其它部分。
+	</div>
+
+
+	
+<div>所以，以前用：
+	</div>
+
+
+	
+<div class="code">
+		#define <i>macro</i>(<i>n</i>, <i>data</i>) ...<br>
+
+
+		<b>BOOST_PP_REPEAT</b>(<i>5</i>, <i>macro</i>, <i>data</i>)
+	</div>
+
+
+	
+<div>
+		...现在改为：
+	</div>
+
+
+	
+<div class="code">
+		#define <i>macro</i>(<i>z</i>, <i>n</i>, <i>data</i>) ...<br>
+
+
+		<b>BOOST_PP_REPEAT</b>(<i>5</i>, <i>macro</i>, <i>data</i>)
+	</div>
+
+
+	
+<div>这个参数可用于更高效地进入到 <b>BOOST_PP_REPEAT</b> 机制中。不过，对于可以自动检测下一个可重复维度的库来说，它就是不必要的了。
+	</div>
+
+
+	
+<h4>维度顺序&nbsp;</h4>
+
+
+	
+<div>不过，由于这种检测，不按顺序使用 <b>BOOST_PP_REPEAT_1ST</b>, <b>BOOST_PP_REPEAT_2ND</b>, 和 <b>BOOST_PP_REPEAT_3RD</b> 将会是不安全的。这些宏绕过了 <i>自动递归</i> 机制，而 <i>自动递归</i> 机制又依赖于以正确的顺序使用宏。说得明白些，如果你使用了这些绕过机制的宏，那么最外层的循环必须是 <b>BOOST_PP_REPEAT_1ST</b>, 然后是 <b>BOOST_PP_REPEAT_2ND</b>, 最后是 <b>BOOST_PP_REPEAT_3RD</b>. 任何其它用法都不被本库所支持。有时候可能可以用，但其它时候就不行。
+	</div>
+
+
+	
+<h4>重入性语法</h4>
+
+
+	
+<div>
+		<i>自动递归</i> 还带来了另一个问题。以前，<b>BOOST_PP_WHILE</b> (类似于 <b>BOOST_PP_FOR</b>) 的重入性语法如下：
+	</div>
+
+
+	
+<div class="code">
+		<b>BOOST_PP_WHILE</b> ## <i>d</i>(<i>pred</i>, <i>op</i>, <i>state</i>)
+	</div>
+
+
+	
+<div>
+		...或者:
+	</div>
+
+
+	
+<div class="code">
+		<b>BOOST_PP_CAT</b>(<b>BOOST_PP_WHILE</b>, <i>d</i>)(<i>pred</i>, <i>op</i>, <i>state</i>)
+	</div>
+
+
+	
+<div>在 <i>自动递归</i> 模式下，<b>BOOST_PP_CAT</b> 版本不能用了。这是因为 <b>BOOST_PP_CAT</b> 允许其它参数在连接之前扩展，而 <b>BOOST_PP_WHILE</b> 是一个可以不带参数进行扩展的宏。库让它象带有三个参数那样出现，但其实这是 <i>自动递归</i> 的窍门。就象以下例子一样：
+	</div>
+
+
+	
+<div class="code">
+		#define A(x, y) ...<br>
+
+
+		#define B A<br>
+
+
+		// ...<br>
+
+
+		B(2, 3)
+	</div>
+
+
+	
+<div>这个语法看起来好象 <i>B</i> 宏带有两个参数，但其实不是。<i>自动递归</i> 机制按这样的方式来工作，"<i>B</i>" 宏推断出下一个可用的 "<i>A</i>" 宏。
+	</div>
+
+
+	
+<div>因为有些预处理器仍旧较慢，所以直接重入(即没有<i>自动递归</i>)在非平凡的情形下仍是必须的。因此，本库使用了一种新的语法来处理重入：
+	</div>
+
+
+	
+<div class="code">
+		<b>BOOST_PP_FOR_</b> ## <i>r</i>(<i>state</i>, <i>pred</i>, <i>op</i>, <i>macro</i>)<br>
+
+
+		<b>BOOST_PP_REPEAT_</b> ## <i>z</i>(<i>count</i>, <i>macro</i>, <i>data</i>)<br>
+
+
+		<b>BOOST_PP_WHILE_</b> ## <i>d</i>(<i>pred</i>, <i>op</i>, <i>state</i>)
+	</div>
+
+
+	
+<h4>Folding</h4>
+
+
+	
+<div>
+		以前，<b>BOOST_PP_LIST_FOLD_RIGHT</b>&nbsp;宏的参数与 <b>BOOST_PP_LIST_FOLD_LEFT</b> 相反。同样，传入 <b>BOOST_PP_LIST_FOLD_RIGHT</b> 的 accumulation 宏也是以相反的参数顺序来调用的。这些差别已经被消除了。
+	</div>
+
+
+	
+<div>例如，<b>BOOST_PP_LIST_FOLD_RIGHT</b> 通常这样使用：
+	</div>
+
+
+	
+<div class="code">
+		#define <i>macro</i>(<i>d</i>, <u><i>elem</i></u>, <u><i>state</i></u>)<br>
+
+
+		<b>BOOST_PP_LIST_FOLD_RIGHT</b>(<i>macro</i>, <u><i>list</i></u>, <u><i>state</i></u>)
+	</div>
+
+
+	
+<div>现在已经替换为：
+	</div>
+
+
+	
+<div class="code">
+		#define <i>macro</i>(<i>d</i>, <u><i>state</i></u>, <u><i>elem</i></u>)<br>
+
+
+		<b>BOOST_PP_LIST_FOLD_RIGHT</b>(<i>macro</i>, <u><i>state</i></u>, <u><i>list</i></u>)
+	</div>
+
+
+	
+<h4>小结</h4>
+
+
+	
+<div>本库有许多在 1.28 版本中没有的新特性，本文并没有将它们全部列出。这里只是一个简短的列表，列出了那些为了兼容于新版本而必须修改代码的情形。
+	</div>
+
+
+	
+<h4>参见</h4>
+
+
+	
+<ul>
+
+
+		<li><a href="../ref/for.html">BOOST_PP_FOR</a></li>
+
+
+		<li><a href="../ref/list_fold_right.html">BOOST_PP_LIST_FOLD_RIGHT</a></li>
+
+
+		<li><a href="../ref/repeat.html">BOOST_PP_REPEAT</a></li>
+
+
+		<li><a href="../ref/while.html">BOOST_PP_WHILE</a></li>
+
+
+	
+</ul>
+
+
+	
+<div class="sig">- Paul Mensonides</div>
+
+
+	
+<hr size="1">
+	
+<div style="margin-left: 0px;">
+		<i>&copy; Copyright <a href="http://www.housemarque.com" target="_top">Housemarque Oy</a> 2002</i>
+		<br>
+
+<i>&copy; Copyright Paul Mensonides 2002</i>
+	</div>
+
+
+	
+<div style="margin-left: 0px;">
+		
+<p><small>Distributed under the Boost Software License, Version 1.0. (See
+		accompanying file <a href="../../../../LICENSE_1_0.txt">LICENSE_1_0.txt</a> or
+		copy at <a href="http://www.boost.org/LICENSE_1_0.txt">www.boost.org/LICENSE_1_0.txt</a>)</small></p>
+
+
+	</div>
+
+
+</body>
+</html>

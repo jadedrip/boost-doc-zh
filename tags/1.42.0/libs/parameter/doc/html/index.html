@@ -1,0 +1,2085 @@
+<!DOCTYPE html PUBLIC "-//W3C//DTD XHTML 1.0 Transitional//EN" "http://www.w3.org/TR/xhtml1/DTD/xhtml1-transitional.dtd">
+<html xmlns="http://www.w3.org/1999/xhtml" xml:lang="en" lang="en"><head>
+<meta http-equiv="Content-Type" content="text/html; charset=utf-8" />
+<meta name="generator" content="Docutils 0.5: http://docutils.sourceforge.net/" />
+<meta name="translator" content="xuwaters@qq.com" /><title>Boost Parameter 库</title>
+
+<link rel="stylesheet" href="rst.css" type="text/css" /></head>
+<body>
+<div class="document" id="the-boost-parameter-library">
+<h1 class="title">Boost Parameter 库</h1>
+<p><a class="reference" href="../../../../index.htm"><img alt="Boost" src="../../../../boost.png" /></a></p>
+<hr class="docutils" />
+<table class="docutils field-list" frame="void" rules="none">
+<col class="field-name" /> <col class="field-body" /><tbody valign="top">
+<tr class="field">
+<th style="width: 81px;" class="field-name">Abstract
+摘要:</th>
+<td style="width: 987px;" class="field-body">
+<p class="first">Use this library to write functions
+and class templates that can accept arguments by name:</p>
+<p class="first">使用这个库，可以写出通过名字传参数的函数或者类模板：</p>
+<pre class="literal-block">new_window("alert", <strong>_width=10</strong>, <strong>_titlebar=false</strong>);<br /><br />smart_ptr&lt;<br /> Foo<br /> , <strong>deleter&lt;Deallocate&lt;Foo&gt; &gt;</strong><br />, <strong>copy_policy&lt;DeepCopy&gt;</strong> &gt; p(new Foo);<br /></pre>
+<p class="last">Since named arguments can be passed
+in any order, they are especially useful when a function or template
+has more than one parameter with a useful default value. The library
+also supports deduced parameters; that is to say, parameters whose
+identity can be deduced from their types.
+</p>
+<p class="last">传递有名参数可以不考虑参数之间的顺序，这样在写带有参数默认值的函数或者模板
+时，这种传参方式会来带很多便利。这个库也支持 <em>推导的(deduced)</em>
+参数；也就是说，根据参数的类型可以
+推导出参数标识符（identity）的参数。</p>
+</td>
+</tr>
+</tbody>
+</table>
+<!-- @jam_prefix.append(''' project test : requirements <include>. <source>/boost//headers ;''') -->
+<!-- @example.prepend(''' #include <boost/parameter.hpp> namespace test { BOOST_PARAMETER_NAME(title) BOOST_PARAMETER_NAME(width) BOOST_PARAMETER_NAME(titlebar) BOOST_PARAMETER_FUNCTION( (int), new_window, tag, (required (title,*)(width,*)(titlebar,*))) { return 0; } BOOST_PARAMETER_TEMPLATE_KEYWORD(deleter) BOOST_PARAMETER_TEMPLATE_KEYWORD(copy_policy) template <class T> struct Deallocate {}; struct DeepCopy {}; namespace parameter = boost::parameter; struct Foo {}; template <class T, class A0, class A1> struct smart_ptr { smart_ptr(Foo*); }; } using namespace test; int x = '''); --><!-- @test('compile') -->
+<hr class="docutils" />
+<table class="docutils field-list" frame="void" rules="none">
+<col class="field-name" /> <col class="field-body" /><tbody valign="top">
+<tr class="field">
+<th style="width: 85px;" class="field-name">作
+者:</th>
+<td style="width: 1043px;" class="field-body">David
+Abrahams, Daniel Wallin</td>
+</tr>
+<tr class="field">
+<th style="width: 85px;" class="field-name">联系
+方式:</th>
+<td style="width: 1043px;" class="field-body"><a class="reference" href="mailto:dave@boost-consulting.com">dave@boost-consulting.com</a>,
+<a class="reference" href="mailto:dalwan01@student.umu.se">dalwan01@student.umu.se</a></td>
+</tr>
+<tr class="field">
+<th style="width: 85px;" class="field-name">组
+织:</th>
+<td style="width: 1043px;" class="field-body"><a class="reference" href="http://www.boost-consulting.com">Boost
+Consulting</a></td>
+</tr>
+<tr class="field">
+<th style="width: 85px;" class="field-name">日
+期:</th>
+<td style="width: 1043px;" class="field-body">$Date:
+2005/07/18 20:34:31 $</td>
+</tr>
+<tr class="field">
+<th style="width: 85px;" class="field-name">版
+权:</th>
+<td style="width: 1043px;" class="field-body">Copyright
+David Abrahams, Daniel Wallin 2005.
+Distributed under the Boost Software License,
+Version 1.0. (See accompanying file LICENSE_1_0.txt
+or copy at <a class="reference" href="http://www.boost.org/LICENSE_1_0.txt">http://www.boost.org/LICENSE_1_0.txt</a>)</td>
+</tr>
+</tbody>
+</table>
+<hr class="docutils" />
+<p>[Note: this tutorial does not cover all details of the library. Please see also the <a class="reference external" href="reference.html">reference documentation</a>]<br />[注：本指南并未覆盖本库所有细节。请参见 <a class="reference external" href="reference.html">参考文档</a>]</p>
+<div class="contents topic">
+<p class="topic-title first"><a id="table-of-contents" name="table-of-contents"><strong>Table of Contents 目录</strong></a></p>
+<ul class="auto-toc simple">
+<li><a class="reference" href="#motivation" id="id21" name="id21">1&nbsp;&nbsp;&nbsp;Motivation
+动机</a>
+<ul class="auto-toc">
+<li><a class="reference" href="#named-function-parameters" id="id22" name="id22">1.1&nbsp;&nbsp;&nbsp;Named
+Function Parameters 有名的函数参变量</a></li>
+<li><a class="reference" href="#deduced-function-parameters" id="id23" name="id23">1.2&nbsp;&nbsp;&nbsp;Deduced
+Function Parameters 推导的函数参数</a></li>
+<li><a class="reference" href="#class-template-parameter-support" id="id24" name="id24">1.3&nbsp;&nbsp;&nbsp;Class Template
+Parameter Support 类模板参数支持</a></li>
+</ul>
+</li>
+<li><a class="reference" href="#tutorial" id="id25" name="id25">2&nbsp;&nbsp;&nbsp;Tutorial
+教程</a>
+<ul class="auto-toc">
+<li><a class="reference" href="#parameter-enabled-functions" id="id26" name="id26">2.1&nbsp;&nbsp;&nbsp;Parameter-Enabled
+Functions Boost.Parameter式(Parameter-Enabled)的函数</a></li>
+<li><a class="reference" href="#parameter-enabled-member-functions" id="id41" name="id41">2.2&nbsp;&nbsp;&nbsp;Parameter-Enabled
+Member Functions Boost.Parameter式(Parameter-Enabled)的成员函数</a></li>
+<li><a class="reference" href="#parameter-enabled-constructors" id="id42" name="id42">2.3&nbsp;&nbsp;&nbsp;Parameter-Enabled
+Constructors Boost.Parameter式(Parameter-Enabled)的构造函数</a></li>
+<li><a class="reference" href="#parameter-enabled-class-templates" id="id43" name="id43">2.4&nbsp;&nbsp;&nbsp;Parameter-Enabled
+Class Templates Boost.Parameter式(Parameter-Enabled)的类模板</a></li>
+</ul>
+</li>
+<li><a class="reference" href="#advanced-topics" id="id51" name="id51">3&nbsp;&nbsp;&nbsp;Advanced
+Topics 高级话题</a>
+<ul class="auto-toc">
+<li><a class="reference" href="#fine-grained-name-control" id="id52" name="id52">3.1&nbsp;&nbsp;&nbsp;Fine-Grained
+Name Control 细粒度的命名控制</a></li>
+<li><a class="reference" href="#more-argumentpacks" id="id53" name="id53">3.2&nbsp;&nbsp;&nbsp;More
+<span class="concept">ArgumentPack</span>s
+关于参数包(ArgumentPack)的更多信息</a></li>
+</ul>
+</li>
+<li><a class="reference" href="#best-practices" id="id57" name="id57">4&nbsp;&nbsp;&nbsp;Best
+Practices 最佳实践</a>
+<ul class="auto-toc">
+<li><a class="reference" href="#keyword-naming" id="id58" name="id58">4.1&nbsp;&nbsp;&nbsp;Keyword
+Naming 关键字命名</a></li>
+<li><a class="reference" href="#namespaces" id="id59" name="id59">4.2&nbsp;&nbsp;&nbsp;Namespaces
+名字空间</a></li>
+<li><a class="reference" href="#documentation" id="id60" name="id60">4.3&nbsp;&nbsp;&nbsp;Documentation
+文档</a></li>
+</ul>
+</li>
+<li><a class="reference" href="#portability-considerations" id="id61" name="id61">5&nbsp;&nbsp;&nbsp;Portability
+Considerations 可移植性考虑</a>
+<ul class="auto-toc">
+<li><a class="reference" href="#no-sfinae-support" id="id62" name="id62">5.1&nbsp;&nbsp;&nbsp;No
+SFINAE Support 不支持 SFINAE</a></li>
+<li><a class="reference" href="#no-support-for-result-of" id="id63" name="id63">
+5.2&nbsp;&nbsp;&nbsp;No Support for <tt class="docutils literal"><span class="pre">result_of</span></tt>
+不支持 <tt class="docutils literal"><span class="pre">result_of</span></tt>
+</a></li>
+<li><a class="reference" href="#compiler-can-t-see-references-in-unnamed-namespace" id="id64" name="id64">
+5.3&nbsp;&nbsp;&nbsp;Compiler Can't See References In
+Unnamed Namespace 编译器看不到无名名字空间中的引用</a></li>
+</ul>
+</li>
+<li><a class="reference" href="#python-binding" id="id65" name="id65">6&nbsp;&nbsp;&nbsp;Python
+Binding Python 绑定</a></li>
+<li><a class="reference" href="#reference" id="id66" name="id66">7&nbsp;&nbsp;&nbsp;Reference
+参考资料</a></li>
+<li><a class="reference" href="#glossary" id="id67" name="id67">8&nbsp;&nbsp;&nbsp;Glossary
+词汇表</a></li>
+<li><a class="reference" href="#acknowledgements" id="id68" name="id68">9&nbsp;&nbsp;&nbsp;Acknowledgements
+致谢</a></li>
+</ul>
+</div>
+<hr class="docutils" />
+<div class="section">
+<h1><a class="toc-backref" href="#id21" id="motivation" name="motivation">1&nbsp;&nbsp;&nbsp;Motivation
+动机</a></h1>
+<p>In C++, <a class="reference" href="#arguments">arguments</a>
+are normally given meaning by their positions
+with respect to a <a class="reference" href="#parameter">parameter</a>
+list: the first argument passed maps
+onto the first parameter in a function's definition, and so on.
+That protocol is fine when there is at most one parameter with a
+default value, but when there are even a few useful defaults, the
+positional interface becomes burdensome: </p>
+<p>在C++中，参数（<a class="reference" href="#arguments">arguments</a>）
+的含义通常是由它们在参变量（<a class="reference" href="#parameter">parameter</a>）
+列表中的位置决定的：第一个参数对应了函数定义中的第一个参变量，如此等等。这个约定（protocol）在最多只有一个参变量带有默认值的时候还是比较
+好用的，但是当有许多有用的默认值时，这种位置相关的接口方式就变得笨拙起来。</p>
+<ul>
+<li>
+<div class="first compound">
+<p class="compound-first">Since an argument's meaning
+is given by its position, we have to
+choose an (often arbitrary) order for parameters with default
+values, making some combinations of defaults
+unusable:</p>
+<p class="compound-first">由于参数的含义是由它所在的位置决定的，我们不得不为这些带有
+默认值的参变量选择一个顺序（通常是任意的），这使得一些默认值的组合变
+得不可用：</p>
+<pre class="compound-middle literal-block">window* new_window(<br /> char const* name,<br /> <strong>int border_width = default_border_width,</strong><br />bool movable = true,<br />bool initially_visible = true<br />);<br />const bool movability = false;<br />window* w = new_window("alert box", movability);<br /></pre>
+<p class="compound-middle">In the example above we
+wanted to make an unmoveable window
+with a default <tt class="docutils literal"><span class="pre">border_width</span></tt>, but
+instead we got a moveable
+window with a <tt class="docutils literal"><span class="pre">border_width</span></tt> of zero. To
+get the desired
+effect, we'd need to write:</p>
+<p class="compound-middle">再上面的这个例子中，我们希望得到一个不可移动的
+window，并且 <tt class="docutils literal"><span class="pre">border_width</span></tt>
+使用其默认值，但是（例子里的调用方
+式）却使我们得到了一个 moveable 的 window，并且 <tt class="docutils literal"><span class="pre">border_width</span></tt>
+的值变成了0。为了得到我们想要的效果，我们只好这样写：</p>
+<pre class="compound-last literal-block">window* w = new_window(<br /> "alert box", <strong>default_border_width</strong>, movability);<br /></pre>
+</div>
+</li>
+<li>
+<div class="first compound">
+<p class="compound-first">It can become difficult for
+readers to understand the meaning of
+arguments at the call site: </p>
+<p class="compound-first">这样的方式使得读者难以理解调用者传入参数的具体含义：</p>
+<pre class="compound-middle literal-block">window* w = new_window("alert", 1, true, false);<br /></pre>
+<p class="compound-last">Is this window moveable and
+initially invisible, or unmoveable
+and initially visible? The reader needs to remember the order
+of arguments to be
+sure.</p>
+<p class="compound-last">这个window是可移动的(movable)并且初始为不可见
+的(invisible)呢，还是不可移动的(unmovable)并且初始为
+可见的(visible)呢？读者需要记住参数的含义的顺序才能确定这一点。</p>
+</div>
+</li>
+<li>
+<p class="first">The author of the call may not
+remember the order of the
+arguments either, leading to hard-to-find
+bugs.</p>
+<p class="first">调用这个函数的作者也可能记不住参数含义的顺序，这会导致一些难以找出的bug。</p>
+</li>
+</ul>
+<!-- @ignore(3) -->
+<div class="section">
+<h2><a class="toc-backref" href="#id22" id="named-function-parameters" name="named-function-parameters">1.1&nbsp;&nbsp;&nbsp;Named
+Function Parameters 有名的函数参变量</a></h2>
+<div class="compound">
+<p class="compound-first">This library addresses the
+problems outlined above by associating
+each parameter name with a keyword object. Now users can identify
+arguments by name, rather than by
+position:</p>
+<p class="compound-first">这个库通过将每个参变量名和一个关键字对象联系起来，解决了上面提出的
+问题。现在用户可以通过名字来识别参数，而不是位置：</p>
+<pre class="compound-last literal-block">window* w = new_window("alert box", <strong>movable_=</strong>false); // OK!<br /></pre>
+</div>
+<!-- @ignore() -->
+</div>
+<div class="section">
+<h2><a class="toc-backref" href="#id23" id="deduced-function-parameters" name="deduced-function-parameters">1.2&nbsp;&nbsp;&nbsp;Deduced
+Function Parameters 推导的函数参变量</a></h2>
+<div class="compound">
+<p class="compound-first">A <strong>deduced
+parameter</strong> can be passed in any position <em>without</em>
+supplying an explicit parameter name. It's not uncommon for a
+function to have parameters that can be uniquely identified based
+on the types of arguments passed. The <tt class="docutils literal"><span class="pre">name</span></tt> parameter to
+<tt class="docutils literal"><span class="pre">new_window</span></tt>
+is one such example. None of the other arguments,
+if valid, can reasonably be converted to a <tt class="docutils literal"><span class="pre">char</span>
+<span class="pre">const*</span></tt>. With
+a deduced parameter interface, we could pass the window name in
+<em>any</em> argument position without causing
+ambiguity:
+</p>
+<p class="compound-first"><strong>推导的参变量(deduced
+parameter)</strong> 可以在任何位置传
+入，而 <em>不需要</em>
+提供显式的参变量名字。对于一个函数来说，可以通过传入参数的类型来唯一地识别出函数的参变量，
+这样的情况并不少见。对于 <tt class="docutils literal"><span class="pre">new_window</span></tt> 来说，
+<tt class="docutils literal"><span class="pre">name</span></tt>
+参变量就是个例子。其他的参数，如果正确的话，都不能合理地转化成 <tt class="docutils literal"><span class="pre">char</span> <span class="pre">const*<br /></span></tt> 类型。有了一个可推导的参变量接口，我们就可以在 <em>任意</em>
+一个参数位置传入 window 的 name，而不会产生歧义。</p>
+<pre class="compound-middle literal-block">window* w = new_window(movable_=false, <strong>"alert box"</strong>); // OK!<br />window* w = new_window(<strong>"alert box"</strong>, movable_=false); // OK!<br /></pre>
+<p class="compound-last">Appropriately used, a deduced
+parameter interface can free the
+user of the burden of even remembering the formal parameter
+names.</p>
+<p class="compound-last">适当地使用，可推导的参变量接口可以减轻记忆正规参变量名的负担。</p>
+</div>
+<!-- @ignore() -->
+</div>
+<div class="section">
+<h2><a class="toc-backref" href="#id24" id="class-template-parameter-support" name="class-template-parameter-support">1.3&nbsp;&nbsp;&nbsp;Class
+Template Parameter Support 类模板参变量的支持</a></h2>
+<div class="compound">
+<p class="compound-first">The reasoning we've given for
+named and deduced parameter
+interfaces applies equally well to class templates as it does to
+functions. Using the Parameter library, we can create interfaces
+that allow template arguments (in this case <tt class="docutils literal"><span class="pre">shared</span></tt>
+and
+<tt class="docutils literal"><span class="pre">Client</span></tt>)
+to be explicitly named, like
+this:</p>
+<p class="compound-last">对于函数，我们需要可推导的参变量接口，同样的理由也适用于类模板。使用
+Parameter库，我们可以创建显示命名的模板参数（在这里是 <tt class="docutils literal"><span class="pre">shared</span></tt> 和 <tt class="docutils literal"><span class="pre"><br />Client</span></tt>），就像这样：</p>
+<pre class="compound-middle literal-block">smart_ptr&lt;<strong>ownership&lt;shared&gt;</strong>, <strong>value_type&lt;Client&gt;</strong> &gt; p;<br /></pre>
+<p class="compound-middle">The syntax for passing named
+template arguments is not quite as
+natural as it is for function arguments (ideally, we'd be able to
+write <tt class="docutils literal"><span class="pre">smart_ptr&lt;ownership=shared,…&gt;</span></tt>).
+This small syntactic
+deficiency makes deduced parameters an especially big win when
+used with class templates:
+</p>
+<p class="compound-middle">传递有名模板参数的语法不像函数参数那样自然（理想情况下，我们希望
+能这样写 <tt class="docutils literal"><span class="pre">smart_ptr&lt;ownership=shared,…&gt;</span></tt>）。
+这个小的语法瑕疵使得可推导的参变量在使用到类模板中时赢得了巨大的成功。</p>
+<pre class="compound-last literal-block">// <em>p and q could be equivalent, given a deduced</em><br />// <em>parameter interface. </em><em>在可推导参变量接口的情况下，</em><em>p和q是等价的</em><br />smart_ptr&lt;<strong>shared</strong>, <strong>Client</strong>&gt; p;<br />smart_ptr&lt;<strong>Client</strong>, <strong>shared</strong>&gt; q;<br /></pre>
+</div>
+<!-- @ignore(2) -->
+</div>
+</div>
+<div class="section">
+<h1><a class="toc-backref" href="#id25" id="tutorial" name="tutorial">2&nbsp;&nbsp;&nbsp;Tutorial
+教程</a></h1>
+<p>This tutorial shows all the basics—how to build both
+named- and deduced-parameter
+interfaces to function templates and class templates—and
+several
+more advanced idioms as
+well.
+</p>
+<p>这个教程展示了所有的基本知识——如何为函数和类模板定义有名的以及可推导的参变量接口——和一些高级的惯用手法。</p>
+<div class="section">
+<h2><a class="toc-backref" href="#id26" id="parameter-enabled-functions" name="parameter-enabled-functions">2.1&nbsp;&nbsp;&nbsp;Parameter-Enabled
+Functions Boost.Parameter式的函数</a></h2>
+<p>In this section we'll show how the Parameter library can be
+used to
+build an expressive interface to the <a class="reference" href="../../../graph/index.html">Boost Graph library</a>'s
+<a class="reference" href="../../../graph/doc/depth_first_search.html"><tt class="docutils literal"><span class="pre">depth_first_search</span></tt></a>
+algorithm.<a class="footnote-reference" href="#old-interface" id="id2" name="id2"><sup>1</sup></a>
+</p>
+<p>在这一节中，我们将展示Parameter库是如何定义一个清晰易懂的(expressive)接口，被<a class="reference" href="../../../graph/index.html">Boost
+Graph library</a>
+的 <a class="reference" href="../../../graph/doc/depth_first_search.html"><tt class="docutils literal"><span class="pre">depth_first_search</span></tt></a>
+算法所使用的。<a class="reference" href="../../../graph/doc/depth_first_search.html"><tt class="docutils literal"><span class="pre"></span></tt></a></p>
+<!-- Revisit this After laying some groundwork and describing the algorithm's abstract interface, we'll show you how to build a basic implementation with keyword support. Then we'll add support for default arguments and we'll gradually refine the implementation with syntax improvements. Finally we'll show how to streamline the implementation of named parameter interfaces, improve their participation in overload resolution, and optimize their runtime efficiency. -->
+<div class="section">
+<h3><a class="toc-backref" href="#id27" id="headers-and-namespaces" name="headers-and-namespaces">2.1.1&nbsp;&nbsp;&nbsp;Headers
+And Namespaces 头文件和名字空间(namespace)</a></h3>
+<p>Most components of the Parameter library are declared in a
+header named for the component. For
+example,
+</p>
+<p>这个库(Parameter)大多数的组件都被声明在一个以这个库命名的头文件中。比如，</p>
+<pre class="literal-block">#include &lt;boost/parameter/keyword.hpp&gt;<br /></pre>
+<p>will ensure <tt class="docutils literal"><span class="pre">boost::parameter::keyword</span></tt>
+is known to the
+compiler. There is also a combined header,
+<tt class="docutils literal"><span class="pre">boost/parameter.hpp</span></tt>,
+that includes most of the library's
+components. For the the rest of this tutorial, unless we say
+otherwise, you can use the rule above to figure out which header
+to <tt class="docutils literal"><span class="pre">#include</span></tt>
+to access any given component of the library. </p>
+<p>将确保编译器知道&nbsp;<tt class="docutils literal"><span class="pre">boost::parameter::keyword</span></tt>。
+也有一个组合的头文件<tt class="docutils literal"><span class="pre"><br />boost/parameter.hpp</span></tt>，它包括了这个库的大部分组件。对于这个教程的剩下部分，你在
+需要访问这个库的某个组件时，可以使用上面的这条规则来找到所需要 <tt class="docutils literal"><span class="pre">#include</span></tt> 的头文件，除非我们特别说明。</p>
+<!-- @example.append(''' using boost::parameter::keyword; ''') -->
+<!-- @test('compile') -->
+<p>Also, the examples below will also be written as if the
+namespace alias </p>
+<p>而且，接下来的例子可能会使用一个名字空间的别名，就像</p>
+<pre class="literal-block">namespace parameter = boost::parameter;<br /></pre>
+<!-- @ignore() -->
+<p>has been declared: we'll write <tt class="docutils literal"><span class="pre">parameter::xxx</span></tt> instead
+of
+<tt class="docutils literal"><span class="pre">boost::parameter::xxx</span></tt>.
+</p>
+<p>声明的那样：我们会写 <tt class="docutils literal"><span class="pre">parameter::xxx</span></tt> 来代替 <tt class="docutils literal"><span class="pre">boost::parameter::xxx</span></tt>。</p>
+</div>
+<div class="section">
+<h3><a class="toc-backref" href="#id28" id="the-abstract-interface-to-dfs" name="the-abstract-interface-to-dfs">2.1.2&nbsp;&nbsp;&nbsp;The
+Abstract Interface to <tt class="docutils literal"><span class="pre">depth_first_search</span></tt> <tt class="docutils literal"><span class="pre">depth_first_search</span></tt>的
+抽象接口</a></h3>
+<p>The Graph library's <tt class="docutils literal"><span class="pre">depth_first_search</span></tt>
+algorithm is a generic function accepting
+from one to four arguments by reference. If all arguments were
+required, its signature might be as follows: </p>
+<p>Graph库的 <tt class="docutils literal"><span class="pre">depth_first_search</span></tt>
+算法是一个泛型函数，它接受一到四个引用参数。如果所有的参数都是必须的，它的函数签名(signature)就会是这样的：</p>
+<pre class="literal-block">template &lt;<br /> class Graph, class DFSVisitor, class Index, class ColorMap<br />&gt;<br />void depth_first_search(<br /> , Graph const&amp; graph<br /> , DFSVisitor visitor<br /> , typename graph_traits&lt;g&gt;::vertex_descriptor root_vertex<br /> , IndexMap index_map<br /> , ColorMap&amp; color);<br /></pre>
+<!-- @ignore() -->
+<p>However, most of the parameters have a useful default value,
+as
+shown in the table below. </p>
+<p>然而，大多数的参变量都有一个有用的默认值，如下表所示。</p>
+<span id="parameter-table"></span>
+<table class="docutils" id="default-expressions" border="1">
+<caption><a id="default-expressions" name="default-expressions"><span id="parameter-table"></span><tt class="docutils literal"><span class="pre">depth_first_search</span></tt>
+Parameters</a></caption> <colgroup><col width="17%" /><col width="11%" /><col width="35%" /><col width="37%" /></colgroup><thead valign="bottom"><tr>
+<th class="head">参变量(Parameter)名</th>
+<th class="head">数据流向</th>
+<th class="head">变量类型(Type)</th>
+<th class="head">默认值（如果有的话）</th>
+</tr>
+</thead> <tbody valign="top">
+<tr>
+<td><tt class="docutils literal"><span class="pre">graph</span></tt></td>
+<td>in 传入</td>
+<td>Model of <a class="reference" href="../../../graph/doc/IncidenceGraph.html"><span class="concept">Incidence Graph</span></a> and <a class="reference" href="../../../graph/doc/VertexListGraph.html"><span class="concept">Vertex List Graph</span></a> <br />
+<a class="reference" href="../../../graph/doc/IncidenceGraph.html"><span class="concept">Incidence Graph</span></a> 和 <a class="reference" href="../../../graph/doc/VertexListGraph.html"><span class="concept">Vertex List Graph</span></a>
+类型的模式(model) </td>
+<td>none - this argument is required. <br />
+无——这个参数是必须的。</td>
+</tr>
+<tr>
+<td><tt class="docutils literal"><span class="pre">visitor</span></tt></td>
+<td>in 传入</td>
+<td>Model of <a class="reference" href="../../../graph/doc/DFSVisitor.html"><span class="concept">DFS Visitor</span></a></td>
+<td><tt class="docutils literal"><span class="pre">boost::dfs_visitor&lt;&gt;()</span></tt></td>
+</tr>
+<tr>
+<td><tt class="docutils literal"><span class="pre">root_vertex</span></tt></td>
+<td>in 传入</td>
+<td><tt class="docutils literal"><span class="pre">graph</span></tt>'s vertex
+descriptor type. <br />
+<tt class="docutils literal"><span class="pre">graph</span></tt>
+的顶点描述符(vertex descriptor)类型。 </td>
+<td><tt class="docutils literal"><span class="pre">*vertices(graph).first</span></tt></td>
+</tr>
+<tr>
+<td><tt class="docutils literal"><span class="pre">index_map</span></tt></td>
+<td>in 传入</td>
+<td>Model of <a class="reference" href="../../../property_map/doc/ReadablePropertyMap.html"><span class="concept">Readable Property Map</span></a>
+with key type := <tt class="docutils literal"><span class="pre">graph</span></tt>'s
+vertex descriptor and value type
+an integer type.
+<br />
+<a class="reference" href="../../../property_map/doc/ReadablePropertyMap.html"><span class="concept">Readable Property Map</span></a>
+模式(model)，其 key 类型 := <tt class="docutils literal"><span class="pre">graph</span></tt> 的顶点描述符(vertex
+descriptor)类型，且 value 类型是整型。
+<br />
+</td>
+<td><tt class="docutils literal"><span class="pre">get(boost::vertex_index,graph)</span></tt></td>
+</tr>
+<tr>
+<td><tt class="docutils literal"><span class="pre">color_map</span></tt></td>
+<td>in/out 传入/传出</td>
+<td>Model of <a class="reference" href="../../../property_map/doc/ReadWritePropertyMap.html"><span class="concept">Read/Write Property Map</span></a>
+with key type := <tt class="docutils literal"><span class="pre">graph</span></tt>'s
+vertex descriptor type.
+<br />
+<a class="reference" href="../../../property_map/doc/ReadWritePropertyMap.html"><span class="concept">Read/Write Property Map</span></a>
+模式(model)，其 key 类型 := <tt class="docutils literal"><span class="pre">graph</span></tt> 的顶点描述符(vertex
+descriptor)类型.
+</td>
+<td>an <tt class="docutils literal"><span class="pre">iterator_property_map</span></tt>
+created from a <tt class="docutils literal"><span class="pre">std::vector</span></tt> of <tt class="docutils literal"><span class="pre">default_color_type</span></tt>
+of size <tt class="docutils literal"><span class="pre">num_vertices(graph)</span></tt>
+and using <tt class="docutils literal"><span class="pre">index_map</span></tt>
+for the index map.
+<br />
+从一个大小为 <tt class="docutils literal"><span class="pre">num_vertices(graph)&nbsp;</span></tt>，
+类型为 <tt class="docutils literal"><span class="pre">default_color_type&nbsp;</span></tt>
+的 <tt class="docutils literal"><span class="pre">std::vector</span></tt>
+创建的 <tt class="docutils literal"><span class="pre">iterator_property_map</span></tt>，
+并且使用了 <tt class="docutils literal"><span class="pre">index_map</span></tt>
+来做索引映射。</td>
+</tr>
+</tbody>
+</table>
+<p>Don't be intimidated by the information in the second and
+third
+columns above. For the purposes of this exercise, you don't need
+to understand them in detail. </p>
+<p>不要被上面第二和第三列的内容吓到了。对这个练习来说，你不需要理解他们的细节。</p>
+</div>
+<div class="section">
+<h3><a class="toc-backref" href="#id29" id="defining-the-keywords" name="defining-the-keywords">2.1.3&nbsp;&nbsp;&nbsp;Defining
+the Keywords 定义关键字(Keywords)</a></h3>
+<p>The point of this exercise is to make it possible to call
+<tt class="docutils literal"><span class="pre">depth_first_search</span></tt>
+with named arguments, leaving out any
+arguments for which the default is appropriate:
+</p>
+<p>这个练习的关键是要使我们可以通过有名参数来调用 <tt class="docutils literal"><span class="pre">depth_first_search</span></tt>
+函数，并且让其他所有的参数都使用自己的默认值。<tt class="docutils literal"><span class="pre"></span></tt></p>
+<pre class="literal-block">graphs::depth_first_search(g, <strong>color_map_=my_color_map</strong>);<br /></pre>
+<!-- @ignore() -->
+<p>To make that syntax legal, there needs to be an object called
+“<tt class="docutils literal"><span class="pre">color_map_</span></tt>”
+whose assignment operator can accept a
+<tt class="docutils literal"><span class="pre">my_color_map</span></tt>
+argument. In this step we'll create one such
+<strong>keyword object</strong> for each parameter. Each
+keyword object will be
+identified by a unique <strong>keyword tag type</strong>.
+</p>
+<p>为了是上面的语法能够使用(legal)，我们需要定义一个叫做“<tt class="docutils literal"><span class="pre">color_map_</span></tt>”并且它的
+赋值操作符(=)能够接受参数<tt class="docutils literal"><span class="pre"> my_color_map </span></tt>的对象。在这一步里
+面，我们将为每一个参变量创建一个这样的<strong>关键字对象(</strong><strong>keyword
+object)</strong>。每一个关键字都可以通过一个唯一
+的 <strong>关键字tag类型(</strong><strong>keyword tag type)</strong>
+进行标识。</p>
+<!-- Revisit this We're going to define our interface in namespace ``graphs``. Since users need access to the keyword objects, but not the tag types, we'll define the keyword objects so they're accessible through ``graphs``, and we'll hide the tag types away in a nested namespace, ``graphs::tag``. The library provides a convenient macro for that purpose. -->
+<p>We're going to define our interface in namespace <tt class="docutils literal"><span class="pre">graphs</span></tt>.
+The
+library provides a convenient macro for defining keyword objects:
+</p>
+<p>我们在名字空间 <tt class="docutils literal"><span class="pre">graphs</span></tt>
+中定义自己的接口。这个库提供了一个方便的宏来定义关键字对象：</p>
+<pre class="literal-block">#include &lt;boost/parameter/name.hpp&gt;<br /><br />namespace graphs<br />{<br /> BOOST_PARAMETER_NAME(graph) // Note: no semicolon 注意：没有分号<br /> BOOST_PARAMETER_NAME(visitor)<br /> BOOST_PARAMETER_NAME(root_vertex)<br /> BOOST_PARAMETER_NAME(index_map)<br /> BOOST_PARAMETER_NAME(color_map)<br />}<br /></pre>
+<!-- @test('compile') -->
+<p>The declaration of the <tt class="docutils literal"><span class="pre">graph</span></tt> keyword you see
+here is
+equivalent to: </p>
+<p>你看到这里声明的 <tt class="docutils literal"><span class="pre">graph </span></tt>关键字等价于：</p>
+<pre class="literal-block">namespace graphs<br />{<br /> namespace tag { struct graph; } // 关键字标签类型(keyword tag type)<br /><br /> namespace // 无名的名字空间<br /> {<br /> // A reference to the keyword object 对关键字对象的引用<br /> boost::parameter::keyword&lt;tag::graph&gt;&amp; _graph<br /> = boost::parameter::keyword&lt;tag::graph&gt;::get();<br /> }<br />}<br /></pre>
+<!-- @example.prepend('#include <boost/parameter/keyword.hpp>') -->
+<!-- @test('compile') -->
+<p>It defines a <em>keyword tag type</em> named <tt class="docutils literal"><span class="pre">tag::graph</span></tt>
+and a <em>keyword
+object</em> reference named <tt class="docutils literal"><span class="pre">_graph</span></tt>. </p>
+<p> 它定义了一个叫做 <tt class="docutils literal"><span class="pre">tag::graph</span></tt> 的 <em>关
+键字tag类型(</em><em>keyword tag type)</em> 和
+一个引用名为 <tt class="docutils literal"><span class="pre">_graph</span></tt>
+的 <em>关键字对象</em>(<em>keyword object</em>)。
+</p>
+<p>This “fancy dance” involving an unnamed
+namespace and references
+is all done to avoid violating the One Definition Rule (ODR)<a class="footnote-reference" href="#odr" id="id4" name="id4"><sup>2</sup></a> when the named
+parameter interface is used by function
+templates that are instantiated in multiple translation
+units (MSVC6.x users see <a class="reference" href="#compiler-can-t-see-references-in-unnamed-namespace">this
+note</a>). </p>
+<p>这里包括无名名字空间和引用在内的有趣东西( “fancy
+dance”)是为了：在多个翻译单元(translation unit)（MSVC6.x 用户请查看&nbsp;<a class="reference" href="index.html#compiler-can-t-see-references-in-unnamed-namespace">这
+个注意事项</a>）中被实例化函数模板使用有名参数时，避免与One Definition Rule (ODR)<a class="footnote-reference" href="index.html#odr" id="id4" name="id4"><sup>2</sup></a>规则相冲突。</p>
+</div>
+<div class="section">
+<h3><a class="toc-backref" href="#id30" id="writing-the-function" name="writing-the-function">2.1.4&nbsp;&nbsp;&nbsp;Writing
+the Function 写函数</a></h3>
+<p>Now that we have our keywords defined, the function template
+definition follows a simple pattern using the
+<tt class="docutils literal"><span class="pre">BOOST_PARAMETER_FUNCTION</span></tt>
+macro: </p>
+<p>现在我们已经有了定义好的关键字，函数模板的定义可以使用 <tt class="docutils literal"><span class="pre">BOOST_PARAMETER_FUNCTION</span></tt>
+宏以一种简单的模式来定义：
+</p>
+<pre class="literal-block">#include &lt;boost/parameter/preprocessor.hpp&gt;<br /><br />namespace graphs<br />{<br /> BOOST_PARAMETER_FUNCTION(<br /> (void), // 1. parenthesized return type 圆括号括起来的返回类型<br /> depth_first_search, // 2. name of the function template 函数模板的名字<br /><br /> tag, // 3. namespace of tag types 标签类型(tag type)的名字空间<br /><br /> (required (graph, *) ) // 4. one required parameter, and 一个必选的参变量，和<br /><br /> (optional // four optional parameters, with defaults 四个可选的参变量，以及它们的默认值<br /> (visitor, *, boost::dfs_visitor&lt;&gt;())<br /> (root_vertex, *, *vertices(graph).first)<br /> (index_map, *, get(boost::vertex_index,graph))<br /> (in_out(color_map), *,<br /> default_color_map(num_vertices(graph), index_map) )<br /> )<br /> )<br /> {<br /> // ... body of function goes here... 函数体<br /> // use graph, visitor, index_map, and color_map<br /> }<br />}<br /></pre>
+<!-- @example.prepend(''' #include <boost/parameter/name.hpp> BOOST_PARAMETER_NAME(graph) BOOST_PARAMETER_NAME(visitor) BOOST_PARAMETER_NAME(root_vertex) BOOST_PARAMETER_NAME(index_map) BOOST_PARAMETER_NAME(color_map) namespace boost { template <class T = int> struct dfs_visitor {}; int vertex_index = 0; }''') -->
+<!-- @test('compile') -->
+<p>The arguments to <tt class="docutils literal"><span class="pre">BOOST_PARAMETER_FUNCTION</span></tt>
+are: &nbsp;<tt class="docutils literal"><span class="pre">BOOST_PARAMETER_FUNCTION </span></tt>宏
+的参数如下：</p>
+<ol class="arabic simple">
+<li>The return type of the resulting function template.
+Parentheses
+around the return type prevent any commas it might contain from
+confusing the preprocessor, and are always required.
+函数模板的返回类型。返回类型用圆括号括起来可以防止它可能包含的逗号干扰处理器，并且括号是必须的。</li>
+<li>The name of the resulting function template.函数模板的名字。</li>
+<li>The name of a namespace where we can find tag types whose
+names
+match the function's parameter names.
+名字空间，我们可以从这个名字空间中找到名字与函数参变量名相匹配的tag类型。</li>
+<li>The function signature. 函数签名(signature)。</li>
+</ol>
+</div>
+<div class="section">
+<h3><a class="toc-backref" href="#id31" id="function-signatures" name="function-signatures">2.1.5&nbsp;&nbsp;&nbsp;Function
+Signatures 函数签名(Signature)</a></h3>
+<p>Function signatures are described as one or two adjacent
+parenthesized terms (a <a class="reference" href="../../../preprocessor/index.html">Boost.Preprocessor</a>
+<a class="reference" href="http://boost-consulting.com/mplbook/preprocessor.html#sequences">sequence</a>)
+describing
+the function's parameters in the order in which they'd be expected
+if passed positionally. Any required parameters must come first,
+but the <tt class="docutils literal"><span class="pre">(required</span>
+<span class="pre">…</span> <span class="pre">)</span></tt>
+clause can be omitted
+when all the
+parameters are optional. </p>
+<p>函数签名是由一个或两个相邻的带圆括号的短语（一个<a class="reference" href="../../../preprocessor/index.html">Boost.Preprocessor</a>
+<a class="reference" href="http://boost-consulting.com/mplbook/preprocessor.html#sequences">sequence</a>）
+来描述的。</p>
+<div class="section">
+<h4><a class="toc-backref" href="#id32" id="required-parameters" name="required-parameters">2.1.5.1&nbsp;&nbsp;&nbsp;Required
+Parameters 必选的参变量</a></h4>
+<div class="compound">
+<p class="compound-first">Required parameters are given
+first—nested in a <tt class="docutils literal"><span class="pre">(required</span> <span class="pre">…</span>
+<span class="pre">)</span></tt>
+clause—as a series of two-element tuples describing each
+parameter
+name and any requirements on the argument type. In this case there
+is only a single required parameter, so there's just a single
+tuple: </p>
+<p>必选的参变量——嵌在一个<tt class="docutils literal"><span class="pre">(required</span> <span class="pre">…</span>
+<span class="pre">)</span></tt>语句中——以一系列连续的二元组形
+式给出，每个二元组描述一个参变量的名字和对参数类型的限制条件。在这个练习中，只有一个必选的参变量，所以这里只有
+一个元组：</p>
+<pre class="compound-middle literal-block">(required <strong>(graph, *)</strong> )<br /></pre>
+<p class="compound-last">Since <tt class="docutils literal"><span class="pre">depth_first_search</span></tt>
+doesn't require any particular type
+for its <tt class="docutils literal"><span class="pre">graph</span></tt>
+parameter, we use an asterix to indicate that
+any type is allowed. Required parameters must always precede any
+optional parameters in a signature, but if there are <em>no</em>
+required parameters, the <tt class="docutils literal"><span class="pre">(required</span> <span class="pre">…</span>
+<span class="pre">)</span></tt> clause can be
+omitted
+entirely. </p>
+<p class="compound-last">由于 <tt class="docutils literal"><span class="pre">depth_first_search</span></tt>
+的 <tt class="docutils literal"><span class="pre">graph</span></tt>
+参变量不针对任何特定的类型，我们使用一个星号来表示任何类型都是允许的。在函数签名(signature)中，必选的参变量必须在任何可选参变量的前
+面，
+但是如果<em>没有</em>必选的参变量，<tt class="docutils literal"><span class="pre">(required</span> <span class="pre">…</span>
+<span class="pre">)</span></tt> 语句可以被完全省略。</p>
+</div>
+<!-- @example.prepend(''' #include <boost/parameter.hpp> BOOST_PARAMETER_NAME(graph) BOOST_PARAMETER_FUNCTION((void), f, tag, ''') -->
+<!-- @example.append(') {}') --><!-- @test('compile') --></div>
+<div class="section">
+<h4><a class="toc-backref" href="#id33" id="optional-parameters" name="optional-parameters">2.1.5.2&nbsp;&nbsp;&nbsp;Optional
+Parameters 可选的参变量</a></h4>
+<div class="compound">
+<p class="compound-first">Optional
+parameters—nested in an <tt class="docutils literal"><span class="pre">(optional</span> <span class="pre">…</span>
+<span class="pre">)</span></tt>
+clause—are given
+as a series of adjacent <em>three</em>-element tuples
+describing the
+parameter name, any requirements on the argument type, <em>and</em>
+and an
+expression representing the parameter's default value:
+</p>
+<p class="compound-first">可选参变量——嵌在一个<tt class="docutils literal"><span class="pre">(optional</span>
+<span class="pre">…</span>
+<span class="pre">)</span></tt>语句中—
+—以一系列连续的三元组形式给出，每个三元组描述一个参变量的名字，对参数类型的限制条件以及表示这个参数默认值的表达式：</p>
+<pre class="compound-last literal-block">(optional<br /> <strong>(visitor, *, boost::dfs_visitor&lt;&gt;())<br /> (root_vertex, *, *vertices(graph).first)<br /> (index_map, *, get(boost::vertex_index,graph))<br /> (in_out(color_map), *,<br /> default_color_map(num_vertices(graph), index_map) )</strong><br />)<br /></pre>
+</div>
+<!-- @example.prepend(''' #include <boost/parameter.hpp> namespace boost { int vertex_index = 0; template <class T = int> struct dfs_visitor {}; } BOOST_PARAMETER_NAME(graph) BOOST_PARAMETER_NAME(visitor) BOOST_PARAMETER_NAME(root_vertex) BOOST_PARAMETER_NAME(index_map) BOOST_PARAMETER_NAME(color_map) BOOST_PARAMETER_FUNCTION((void), f, tag, (required (graph, *)) ''') -->
+<!-- @example.append(') {}') --><!-- @test('compile') --></div>
+<div class="section">
+<h4><a class="toc-backref" href="#id34" id="handling-out-parameters" name="handling-out-parameters">2.1.5.3&nbsp;&nbsp;&nbsp;Handling
+“Out” Parameters 处理Out参变量</a></h4>
+<div class="compound">
+<p class="compound-first">Within the function body, a
+parameter name such as <tt class="docutils literal"><span class="pre">visitor</span></tt> is
+a <em>C++ reference</em>, bound either to an actual
+argument passed by
+the caller or to the result of evaluating a default expression.
+In most cases, parameter types are of the form <tt class="docutils literal"><span class="pre">T</span>
+<span class="pre">const&amp;</span></tt>
+for
+some <tt class="docutils literal"><span class="pre">T</span></tt>.
+Parameters whose values are expected to be modified,
+however, must be passed by reference to <em>non</em>-<tt class="docutils literal"><span class="pre">const</span></tt>.
+To
+indicate that <tt class="docutils literal"><span class="pre">color_map</span></tt> is both read
+and written, we wrap
+its name in <tt class="docutils literal"><span class="pre">in_out(…)</span></tt>:
+</p>
+<p class="compound-first">在函数体中，参变量名（比如 <tt class="docutils literal"><span class="pre">visitor</span></tt>）
+是一个 C++ <em>引用</em>，绑定到调用者传入的真实参数或者默认表达式的计算结果。在大多数情况下，对于某个类
+型 <tt class="docutils literal"><span class="pre">T</span></tt>，
+参变量都是 <tt class="docutils literal"><span class="pre">T</span>
+<span class="pre">const&amp;</span></tt>
+的形式。那些值会被修改的参变量必须以 <em>non</em>-<tt class="docutils literal"><span class="pre">const</span></tt>
+引用的形式传入。为了表示 <tt class="docutils literal"><span class="pre">color_map</span></tt> 是可读写的，我们将它的名字
+包括在 <tt class="docutils literal"><span class="pre">in_out(…)</span></tt>
+中：</p>
+<pre class="compound-last literal-block">(optional<br /> (visitor, *, boost::dfs_visitor&lt;&gt;())<br /> (root_vertex, *, *vertices(graph).first)<br /> (index_map, *, get(boost::vertex_index,graph))<br /> (<strong>in_out(color_map)</strong>, *,<br /> default_color_map(num_vertices(graph), index_map) )<br />)<br /></pre>
+</div>
+<!-- @example.prepend(''' #include <boost/parameter.hpp> namespace boost { int vertex_index = 0; template <class T = int> struct dfs_visitor {}; } BOOST_PARAMETER_NAME(graph) BOOST_PARAMETER_NAME(visitor) BOOST_PARAMETER_NAME(root_vertex) BOOST_PARAMETER_NAME(index_map) BOOST_PARAMETER_NAME(color_map) BOOST_PARAMETER_FUNCTION((void), f, tag, (required (graph, *)) ''') -->
+<!-- @example.append(') {}') --><!-- @test('compile') -->
+<p>If <tt class="docutils literal"><span class="pre">color_map</span></tt> were strictly
+going to be modified but not examined,
+we could have written <tt class="docutils literal"><span class="pre">out(color_map)</span></tt>. There is
+no functional
+difference between <tt class="docutils literal"><span class="pre">out</span></tt> and <tt class="docutils literal"><span class="pre">in_out</span></tt>;
+the library provides
+both so you can make your interfaces more self-documenting. </p>
+<p>如果 <tt class="docutils literal"><span class="pre">color_map</span></tt>
+是一个只用于修改的值，而不需要进行参数检查，我们可以这样写 <tt class="docutils literal"><span class="pre">out(color_map)</span></tt>。
+在功能上，<tt class="docutils literal"><span class="pre">out</span></tt>
+和 <tt class="docutils literal"><span class="pre">in_out</span></tt>
+没有区别；这个库提供这两者是为了使你的接口更加一目了然(self-documenting)。</p>
+</div>
+<div class="section">
+<h4><a class="toc-backref" href="#id35" id="positional-arguments" name="positional-arguments">2.1.5.4&nbsp;&nbsp;&nbsp;Positional
+Arguments 位置相关的参数</a></h4>
+<p>When arguments are passed positionally (without the use of
+keywords), they will be mapped onto parameters in the order the
+parameters are given in the signature, so for example in this
+call </p>
+<p>当参数通过位置相关的(positional)方式传入时（不使用关键字），他们将以函数签名中给定的参变量顺序映射到相应的参变量，
+所以在下面这个调用的例子中</p>
+<pre class="literal-block">graphs::depth_first_search(x, y);<br /></pre>
+<!-- @ignore() -->
+<p><tt class="docutils literal"><span class="pre">x</span></tt>
+will always be interpreted as a graph and <tt class="docutils literal"><span class="pre">y</span></tt>
+will always
+be interpreted as a visitor. </p>
+<p><tt class="docutils literal"><span class="pre">x</span></tt>
+就会被解释成一个 graph，<tt class="docutils literal"><span class="pre">y</span></tt> 就
+会被解释成一个 visitor。</p>
+</div>
+<div class="section">
+<h4><a class="toc-backref" href="#id36" id="default-expression-evaluation" name="default-expression-evaluation">2.1.5.5&nbsp;&nbsp;&nbsp;Default
+Expression Evaluation 默认表达式的求值</a></h4>
+<div class="compound">
+<p class="compound-first">Note that in our example, the
+value of the graph parameter is
+used in the default expressions for <tt class="docutils literal"><span class="pre">root_vertex</span></tt>,
+<tt class="docutils literal"><span class="pre">index_map</span></tt>
+and <tt class="docutils literal"><span class="pre">color_map</span></tt>.
+</p>
+<p class="compound-first">请注意，在我们的例子中，graph 参变量的值被用在了 <tt class="docutils literal"><span class="pre">root_vertex</span></tt>，<tt class="docutils literal"><span class="pre">index_map</span></tt>
+和 <tt class="docutils literal"><span class="pre">color_map<br /></span></tt> 的默认表达式中。</p>
+<pre class="compound-middle literal-block">(required (<strong>graph</strong>, *) )<br />(optional<br /> (visitor, *, boost::dfs_visitor&lt;&gt;())<br /> (root_vertex, *, *vertices(<strong>graph</strong>).first)<br /> (index_map, *, get(boost::vertex_index,<strong>graph</strong>))<br /> (in_out(color_map), *,<br /> default_color_map(num_vertices(<strong>graph</strong>), index_map) )<br />)<br /></pre>
+<!-- @ignore() -->
+<p class="compound-last">A default expression is evaluated
+in the context of all preceding
+parameters, so you can use any of their values by name.
+</p>
+<p class="compound-last">默认表达式的值是以它之前的所有参变量为上下文的环境中被计算的，因此你
+可以通过名字来使用它们的值。</p>
+</div>
+<div class="compound">
+<p class="compound-first">A default expression is never
+evaluated—or even instantiated—if
+an actual argument is passed for that parameter. We can actually
+demonstrate that with our code so far by replacing the body of
+<tt class="docutils literal"><span class="pre">depth_first_search</span></tt>
+with something that prints the arguments:
+</p>
+<p class="compound-first">如果真实的参数被传给了当前的参变量，默认表达式的值是不会被计
+算的——甚至不会被实例化（译注：编译器不会编译这一段）。在我们的代码里，我们现在可以通过在 <tt class="docutils literal"><span class="pre">depth_first_search</span></tt>
+函数体中替换上一些打印参数的语句来演示这一点：</p>
+<pre class="compound-middle literal-block">#include &lt;boost/graph/depth_first_search.hpp&gt; // for dfs_visitor<br /><br />BOOST_PARAMETER_FUNCTION(<br /> (void), depth_first_search, tag<br /> <em>…signature goes here…</em><br />)<br />{<br />std::cout &lt;&lt; "graph=" &lt;&lt; graph &lt;&lt; std::endl;<br />std::cout &lt;&lt; "visitor=" &lt;&lt; visitor &lt;&lt; std::endl;<br />std::cout &lt;&lt; "root_vertex=" &lt;&lt; root_vertex &lt;&lt; std::endl;<br />std::cout &lt;&lt; "index_map=" &lt;&lt; index_map &lt;&lt; std::endl;<br />std::cout &lt;&lt; "color_map=" &lt;&lt; color_map &lt;&lt; std::endl;<br />}<br />int main()<br />{<br />depth_first_search(1, 2, 3, 4, 5);<br />depth_first_search(<br />"1", '2', _color_map = '5',<br />_index_map = "4", _root_vertex = "3");<br />}<br /></pre>
+<p class="compound-last">Despite the fact that default
+expressions such as
+<tt class="docutils literal"><span class="pre">vertices(graph).first</span></tt>
+are ill-formed for the given <tt class="docutils literal"><span class="pre">graph</span></tt>
+arguments, both calls will compile, and each one will print
+exactly the same thing.
+</p>
+<p class="compound-last">类似 <tt class="docutils literal"><span class="pre">vertices(graph).first</span></tt>
+的默认表达式对例子中给定的 <tt class="docutils literal"><span class="pre">graph</span></tt>
+参数来说是完全非法的，调用或者编译都是，但是上面的例子却会完整地打印出传入的参数。</p>
+</div>
+<!-- @example.prepend(''' #include <boost/parameter.hpp> #include <iostream> BOOST_PARAMETER_NAME(graph) BOOST_PARAMETER_NAME(visitor) BOOST_PARAMETER_NAME(root_vertex) BOOST_PARAMETER_NAME(index_map) BOOST_PARAMETER_NAME(color_map)''') -->
+<!-- @example.replace_emphasis(''' , (required (graph, *) (visitor, *) (root_vertex, *) (index_map, *) (color_map, *) ) ''') --><!-- @test('compile') --></div>
+<div class="section">
+<h4><a class="toc-backref" href="#id37" id="signature-matching-and-overloading" name="signature-matching-and-overloading">2.1.5.6&nbsp;&nbsp;&nbsp;Signature
+Matching and Overloading 函数签名(signature)匹配和函数重载(overloading)</a></h4>
+<p>In fact, the function signature is so general that any call to
+<tt class="docutils literal"><span class="pre">depth_first_search</span></tt>
+with fewer than five arguments will match
+our function, provided we pass <em>something</em> for the
+required
+<tt class="docutils literal"><span class="pre">graph</span></tt>
+parameter. That might not seem to be a problem at first;
+after all, if the arguments don't match the requirements imposed by
+the implementation of <tt class="docutils literal"><span class="pre">depth_first_search</span></tt>, a
+compilation error
+will occur later, when its body is instantiated. </p>
+<p>实际上，这个函数的签名是非常通用的，对<tt class="docutils literal"><span class="pre">depth_first_search</span></tt>
+来说，只要我们为 <tt class="docutils literal"><span class="pre">graph</span></tt>
+参变量传入 <em>某个值</em>，任何少于五个参数的调用
+都会匹配到这个函数。刚开始，这看起来可能没有什么问题；毕竟，如果参数跟 <tt class="docutils literal"><span class="pre">depth_first_search</span></tt>
+的实现（所用到的参数类型）不匹配，在函数体被编译时就会出现编译错误。</p>
+<p>There are at least three problems with very general function
+signatures. </p>
+<p>对于这种非常通用的函数签名，至少存在三个问题：</p>
+<ol class="arabic simple">
+<li>
+<p>By the time our <tt class="docutils literal"><span class="pre">depth_first_search</span></tt> is
+instantiated, it has
+been selected as the best matching overload. Some other <tt class="docutils literal"><span class="pre">depth_first_search</span></tt>
+overload might've worked had it been
+chosen instead. By the time we see a compilation error, there's
+no chance to change that decision. </p>
+<p>在我们的被 <tt class="docutils literal"><span class="pre">depth_first_search</span></tt>
+实例化的时候，它已经是做为最合适的函数重载被选择的。选择其他的 <tt class="docutils literal"><span class="pre">depth_first_search</span></tt>
+重载可能不能工作。当我们看到编译错误的时候，已经没有机会来改变这个选择了。
+</p>
+</li>
+<li>
+<p> Even if there&nbsp;are no overloads, error messages
+generated at
+instantiation time usually expose users to confusing
+implementation details. For example, users might see references
+to names generated by <tt class="docutils literal"><span class="pre">BOOST_PARAMETER_FUNCTION</span></tt>
+such as <tt class="docutils literal"><span class="pre">graphs::detail::depth_first_search_with_named_params</span></tt>
+(or
+worse—think of the kinds of errors you get from your STL
+implementation when you make a mistake).<a class="footnote-reference" href="#conceptcpp" id="id6" name="id6"><sup>4</sup></a>
+</p>
+<p>就算没有函数重载，在实例化期间出现的错误信息通常暴露给用户一些令人费解的实现细节。比如，用户可能看到一些由 <tt class="docutils literal"><span class="pre">BOOST_PARAMETER_FUNCTION</span></tt>
+生成的引用名，比如 <tt class="docutils literal"><span class="pre">graphs::detail::depth_first_search_with_named_params</span></tt>（或
+者更糟糕——想想当你犯了个错的时候，看到的那些STL实现所生成的错误信息）<a class="footnote-reference" href="#conceptcpp" id="id6" name="id6"><sup>4</sup></a>。</p>
+</li>
+<li>
+<p> The problems with exposing such permissive function
+template
+signatures have been the subject of much discussion, especially
+in the presence of <a class="reference" href="http://anubis.dkuug.dk/jtc1/sc22/wg21/docs/lwg-defects.html#225">unqualified
+calls</a>. If all we want is to
+avoid unintentional argument-dependent lookup (ADL), we can
+isolate <tt class="docutils literal"><span class="pre">depth_first_search</span></tt>
+in a namespace containing no
+types<a class="footnote-reference" href="#using" id="id7" name="id7"><sup>6</sup></a>,
+but suppose we <em>want</em> it to found via ADL?
+</p>
+<p>这种暴露过于通用的函数模板签名所带来的问题已经成为了众多讨论的话题，特别是在 <a class="reference" href="http://anubis.dkuug.dk/jtc1/sc22/wg21/docs/lwg-defects.html#225">unqualified
+calls</a> 出现之后。如果我们想要的只是避免这种无意的参数依赖查找(Argument-Dependent Lookup
+or
+ADL)，我们可以将 <tt class="docutils literal"><span class="pre">depth_first_search</span></tt> 隔离在一个
+不包含任何类型 <a class="footnote-reference" href="#using" id="id7" name="id7"><sup>6</sup></a>
+的命名空间中，但是如果我们 <em>希望</em> 能通过 ADL 来查找呢？</p>
+</li>
+</ol>
+<p>It's usually a good idea to prevent functions from being
+considered
+for overload resolution when the passed argument types aren't
+appropriate. The library already does this when the required
+<tt class="docutils literal"><span class="pre">graph</span></tt>
+parameter is not supplied, but we're not likely to see a
+depth first search that doesn't take a graph to operate on.
+Suppose, instead, that we found a different depth first search
+algorithm that could work on graphs that don't model
+<a class="reference" href="../../../graph/doc/IncidenceGraph.html"><span class="concept">Incidence Graph</span></a>? If
+we just added a simple overload,
+it would be ambiguous: </p>
+<p>在传入的参数不合适的时候，阻止函数被重载机制选择到，这通常是一个好办法。这个库在没有提供必需的 <tt class="docutils literal"><span class="pre">graph</span></tt>
+参变量的时候已经这样做了，只是我们不希望看到一个不对任何图进行遍历的深度优先搜索函
+数。要是我们发现一个不同的深度优先搜索算法，它可以在不是 <a class="reference" href="../../../graph/doc/IncidenceGraph.html"><span class="concept">Incidence Graph</span></a>
+的图上面遍历呢？如果我们仅仅只是加入一个简单的重载，这就会产生歧义。</p>
+<pre class="literal-block">// new overload 新的重载<br />BOOST_PARAMETER_FUNCTION(<br /> (void), depth_first_search, (tag), (required (graph,*))( … ))<br />{<br /> // new algorithm implementation 新算法的实现<br />}<br /><br />…<br /><br />// ambiguous! 歧义！<br />depth_first_search(boost::adjacency_list&lt;&gt;(), 2, "hello");<br /></pre>
+<!-- @ignore() -->
+<div class="section">
+<h5><a class="toc-backref" href="#id38" id="adding-type-requirements" name="adding-type-requirements">2.1.5.6.1&nbsp;&nbsp;&nbsp;Adding
+Type Requirements 加入类型的约束信息</a></h5>
+<p>We really don't want the compiler to consider the original
+version
+of <tt class="docutils literal"><span class="pre">depth_first_search</span></tt>
+because the <tt class="docutils literal"><span class="pre">root_vertex</span></tt> argument,
+<tt class="docutils literal"><span class="pre">"hello"</span></tt>,
+doesn't meet the <a class="reference" href="#parameter-table">requirement</a>
+that it match the
+<tt class="docutils literal"><span class="pre">graph</span></tt>
+parameter's vertex descriptor type. Instead, this call
+should just invoke our new overload. To take the original
+<tt class="docutils literal"><span class="pre">depth_first_search</span></tt>
+overload out of contention, we need to tell
+the library about this requirement by replacing the <tt class="docutils literal"><span class="pre">*</span></tt>
+element
+of the signature with the required type, in parentheses:
+</p>
+<p>我们真的不希望编译器来考虑使用原始版本的 <tt class="docutils literal"><span class="pre">depth_first_search</span></tt> 函数，因为
+<tt class="docutils literal"><span class="pre">root_vertex</span></tt>
+参数 <tt class="docutils literal"><span class="pre">"hello"</span></tt>
+不满足 <a class="reference" href="#parameter-table">约束
+条件(requirement)</a>（这个约束条件匹配 <tt class="docutils literal"><span class="pre">graph </span></tt> 参变量的顶点描述(vertex
+descriptor)类型）。那么，这个调用就应该只调用我们新的重载函数。为了让编译器不考虑使用原始版本的 <tt class="docutils literal"><span class="pre">depth_first_search</span></tt>
+函数，我们需要将函数签名中的星号元素(<tt class="docutils literal"><span class="pre">*</span></tt>)替
+换成这个约束的类型（用圆括号括起来），来把这个约束信息告诉库。</p>
+<pre class="literal-block">(root_vertex,<br /> <strong>(typename boost::graph_traits&lt;graph_type&gt;::vertex_descriptor)</strong>,<br /> *vertices(graph).first)<br /></pre>
+<!-- @ignore() -->
+<p>Now the original <tt class="docutils literal"><span class="pre">depth_first_search</span></tt> will
+only be called when
+the <tt class="docutils literal"><span class="pre">root_vertex</span></tt>
+argument can be converted to the graph's vertex
+descriptor type, and our example that <em>was</em>
+ambiguous will smoothly
+call the new overload. </p>
+<p>现在原始版本的 <tt class="docutils literal"><span class="pre">depth_first_search</span></tt> 函数只有在
+<tt class="docutils literal"><span class="pre">root_vertex</span></tt>
+参数可以转换成图的顶点描述(vertex descriptor)类型时才会被调用，并且我们那个 <em>曾经</em>
+有歧义的例子现在也可以顺利调用新的重载方法了。</p>
+<div class="note">
+<p class="first admonition-title">Note 注意</p>
+<p class="last">The <em>type</em> of the <tt class="docutils literal"><span class="pre">graph</span></tt>
+argument is available in the
+signature—and in the function body—as <tt class="docutils literal"><span class="pre">graph_type</span></tt>.
+In
+general, to access the type of any parameter <em>foo</em>,
+write <em>foo</em><tt class="docutils literal"><span class="pre">_type</span></tt>.<tt class="docutils literal"><span class="pre"><br />graph</span></tt> </p>
+<p class="last">参数的<em>类型</em>在函数签名中是以 <tt class="docutils literal"><span class="pre">graph_type</span></tt>
+类型存在的——在函数体中也是。一般地讲，要获得某个参变量 <em>foo</em> 的类型时，只需要写 <em>foo</em><tt class="docutils literal"><span class="pre">_type</span></tt>
+就行了。</p>
+</div>
+</div>
+<div class="section">
+<h5><a class="toc-backref" href="#id39" id="predicate-requirements" name="predicate-requirements">2.1.5.6.2&nbsp;&nbsp;&nbsp;Predicate
+Requirements 谓词约束</a></h5>
+<p>The requirements on other arguments are a bit more interesting
+than
+those on <tt class="docutils literal"><span class="pre">root_vertex</span></tt>;
+they can't be described in terms of simple
+type matching. Instead, they must be described in terms of <a class="reference" href="../../../mpl/doc/refmanual/metafunction.html">MPL
+Metafunctions</a>. There's no space to give a complete
+description
+of metafunctions or of graph library details here, but we'll show
+you the complete signature with maximal checking, just to give you
+a feel for how it's done. Each predicate metafunction is enclosed
+in parentheses <em>and preceded by an asterix</em>, as
+follows: </p>
+<p>其他参数的类型约束信息比 <tt class="docutils literal"><span class="pre">root_vertex</span></tt> 的更有趣
+一些；他们不能用简单的类型匹配短语来描述。他们必须用 <a class="reference" href="../../../mpl/doc/refmanual/metafunction.html">MPL
+Metafunctions</a> 的短语来描述。这里没有篇幅来对 metafuncitons 以及 graph
+库的细节进行完整的描述，但是我们会给你看一个带有最大参数检查的完整函数签名，让你感受下它是如何做到的。每一个谓词元函数(predicate
+metafunction)都被括在括号里面<em>并且在前面加一个星号</em>，就像下面这样：</p>
+<pre class="literal-block">BOOST_PARAMETER_FUNCTION(<br /> (void), depth_first_search, graphs<br /><br /> , (required<br /> (graph<br /> , <strong>*(boost::mpl::and_&lt;<br /><br /> boost::is_convertible&lt;<br /> boost::graph_traits&lt;_&gt;::traversal_category<br /> , boost::incidence_graph_tag<br /> &gt;<br /> , boost::is_convertible&lt;<br /> boost::graph_traits&lt;_&gt;::traversal_category<br /> , boost::vertex_list_graph_tag<br /> &gt;<br /> &gt;)</strong> ))<br /><br /> (optional<br /> (visitor, *, boost::dfs_visitor&lt;&gt;()) // not checkable 不可检查的<br /><br /> (root_vertex<br /> , (typename boost::graph_traits&lt;graphs::graph::_&gt;::vertex_descriptor)<br /> , *vertices(graph).first)<br /><br /> (index_map<br /> , <strong>*(boost::mpl::and_&lt;<br /><br /> boost::is_integral&lt;<br /> boost::property_traits&lt;_&gt;::value_type<br /> &gt;<br /> , boost::is_same&lt;<br /> typename boost::graph_traits&lt;graphs::graph::_&gt;::vertex_descriptor<br /> , boost::property_traits&lt;_&gt;::key_type<br /> &gt;<br /><br /> &gt;)</strong><br />, get(boost::vertex_index,graph))<br />(in_out(color_map)<br />, <strong>*(boost::is_same&lt;<br /> typename boost::graph_traits&lt;graphs::graph::_&gt;::vertex_descriptor<br /> , boost::property_traits&lt;_&gt;::key_type<br /> &gt;)</strong><br />, default_color_map(num_vertices(graph), index_map) )<br />)<br />)<br /></pre>
+<!-- @example.prepend(''' #include <boost/parameter.hpp> BOOST_PARAMETER_NAME((_graph, graphs) graph) BOOST_PARAMETER_NAME((_visitor, graphs) visitor) BOOST_PARAMETER_NAME((_root_vertex, graphs) root_vertex) BOOST_PARAMETER_NAME((_index_map, graphs) index_map) BOOST_PARAMETER_NAME((_color_map, graphs) color_map) using boost::mpl::_; namespace boost { struct incidence_graph_tag {}; struct vertex_list_graph_tag {}; int vertex_index = 0; template <class T> struct graph_traits { typedef int traversal_category; typedef int vertex_descriptor; }; template <class T> struct property_traits { typedef int value_type; typedef int key_type; }; template <class T = int> struct dfs_visitor {}; }''') -->
+<!-- @example.append(''' {}''') --><!-- @test('compile') -->
+<p>We acknowledge that this signature is pretty hairy looking.
+Fortunately, it usually isn't necessary to so completely encode the
+type requirements on arguments to generic functions. However, it
+is usally worth the effort to do so: your code will be more
+self-documenting and will often provide a better user experience.
+You'll also have an easier transition to an upcoming C++ standard
+with <a class="reference" href="http://www.generic-programming.org/software/ConceptGCC/">language
+support for concepts</a>.
+</p>
+<p>我们承认，这个函数签名看起来非常的冗长。幸运的是，通常情况下没有必要对泛型函数的参数写如此完整的类型检查。然而，它却值得你去这
+样做：你的代码将会
+更加的一目了然(self-documenting)并且会给你带来更好的用户体验。你也会有一个更加容易移植到即将到来的C++标准（<a class="reference" href="http://www.generic-programming.org/software/ConceptGCC/">语
+言本身支持 concept (language support for concepts)</a>）。</p>
+</div>
+</div>
+<div class="section">
+<h4><a class="toc-backref" href="#id40" id="deduced-parameters" name="deduced-parameters">2.1.5.7&nbsp;&nbsp;&nbsp;Deduced
+Parameters 推导的参变量</a></h4>
+<p>To illustrate deduced parameter support we'll have to leave
+behind
+our example from the Graph library. Instead, consider the example
+of the <a class="reference" href="../../../python/doc/v2/def.html"><tt class="docutils literal"><span class="pre">def</span></tt></a>
+function from <a class="reference" href="../../../python/doc/index.html">Boost.Python</a>.
+Its signature is
+roughly as follows: </p>
+<p>为了演示对推导参变量的支持，我们只好将 Graph 库的例子先放一放。考虑 <a class="reference" href="../../../python/doc/index.html">Boost.Python</a>&amp;
+nbsp;库里面的 <tt><a class="reference" href="../../../python/doc/v2/def.html"><tt class="docutils literal"><span class="pre">def</span></tt></a></tt>&amp;
+nbsp;函数。它的函数签名如下：</p>
+<pre class="literal-block">template &lt;<br /> class Function, Class KeywordExpression, class CallPolicies<br />&gt;<br />void def(<br /> // Required parameters<br /> char const* name, Function func<br /><br /> // Optional, deduced parameters<br /> , char const* docstring = ""<br /> , KeywordExpression keywords = no_keywords()<br /> , CallPolicies policies = default_call_policies()<br />);<br /></pre>
+<!-- @ignore() -->
+<p>Try not to be too distracted by the use of the term
+“keywords” in
+this example: although it means something analogous in Boost.Python
+to what it means in the Parameter library, for the purposes of this
+exercise you can think of it as being completely different.
+</p>
+<p>不要被这个例子中的 “keywords” 弄迷糊了：尽管它在 Boost.Python 库中也有着跟 Parameter
+库中像类似的含义，在这个例子中你可以把它们当成是完全不同的。</p>
+<p>When calling <tt class="docutils literal"><span class="pre">def</span></tt>, only two arguments
+are required. The
+association between any additional arguments and their parameters
+can be determined by the types of the arguments actually passed, so
+the caller is neither required to remember argument positions or
+explicitly specify parameter names for those arguments. To
+generate this interface using <tt class="docutils literal"><span class="pre">BOOST_PARAMETER_FUNCTION</span></tt>,
+we need
+only enclose the deduced parameters in a <tt class="docutils literal"><span class="pre">(deduced</span>
+<span class="pre">…)</span></tt>
+clause, as
+follows: </p>
+<p>在调用&nbsp;<tt class="docutils literal"><span class="pre">def</span></tt>
+时，只有两个参数是必需的。任何其他参数和相应的参变量都可以通过传入参数的类型来对应上，因此调用者既不需要记住参数的位置，也不需要显式的给出参数相
+应参变量的名字。要使用 <tt class="docutils literal"><span class="pre">BOOST_PARAMETER_FUNCTION</span></tt>&amp;
+nbsp;来生成这个接口，我们只需要将推导参变量括在一个 <tt class="docutils literal"><span class="pre">(deduced</span>
+<span class="pre">…)</span></tt>&nbsp;语句中，就
+像下面这样：</p>
+<pre class="literal-block">namespace mpl = boost::mpl;<br /><br />BOOST_PARAMETER_FUNCTION(<br /> (void), def, tag,<br /><br /> (required (name,(char const*)) (func,*) ) // nondeduced 不可推导的<br /><br /> <strong>(deduced</strong><br />(optional<br />(docstring, (char const*), "")<br />(keywords<br />, *(is_keyword_expression&lt;mpl::_&gt;) // 见<a class="footnote-reference" href="#is-keyword-expression" id="id12" name="id12"><sup>5</sup></a><br />, no_keywords())<br />(policies<br />, *(mpl::not_&lt;<br />mpl::or_&lt;<br />boost::is_convertible&lt;mpl::_, char const*&gt;<br />, is_keyword_expression&lt;mpl::_&gt; // 见<a class="footnote-reference" href="#is-keyword-expression" id="id13" name="id13"><sup>5</sup></a><br />&gt;<br />&gt;)<br />, default_call_policies()<br />)<br />)<br /><strong>)</strong><br />)<br />{<br /><em>…</em><br />}<br /></pre>
+<!-- @example.replace_emphasis('') -->
+<!-- @example.prepend(''' #include <boost/parameter.hpp> BOOST_PARAMETER_NAME(name) BOOST_PARAMETER_NAME(func) BOOST_PARAMETER_NAME(docstring) BOOST_PARAMETER_NAME(keywords) BOOST_PARAMETER_NAME(policies) struct default_call_policies {}; struct no_keywords {}; struct keywords {}; template <class T> struct is_keyword_expression : boost::mpl::false_ {}; template <> struct is_keyword_expression<keywords> : boost::mpl::true_ {}; default_call_policies some_policies; void f() {} ''') -->
+<div class="admonition-syntax-note admonition">
+<p class="first admonition-title">Syntax Note 语法注意事项</p>
+<p class="last">A <tt class="docutils literal"><span class="pre">(deduced&nbsp;…)</span></tt>
+clause always contains a&nbsp;``(required&nbsp;…)``
+and/or an&nbsp;``(optional&nbsp;…)`` subclause, and
+must follow any
+<tt class="docutils literal"><span class="pre">(required&nbsp;…)</span></tt>
+or&nbsp;``(optional&nbsp;…)`` clauses indicating
+nondeduced parameters at the outer level. </p>
+<p class="last">推导语句 <tt class="docutils literal"><span class="pre">(deduced&nbsp;…)</span></tt>&nbsp;
+总是包含一个 <tt class="docutils literal"><span class="pre">(required<br />…)</span></tt> 和/或一个&nbsp;<tt class="docutils literal"><span class="pre">(optional<br />…)</span></tt> 子语句，并且必须跟在外面一层表示非推导参变量的所有 <tt class="docutils literal"><span class="pre">(required<br />…)</span></tt>&nbsp;或&nbsp;<tt class="docutils literal"><span class="pre">(optional<br />…)</span></tt> 语句的后面。</p>
+</div>
+<p>With the declaration above, the following two calls are
+equivalent: </p>
+<p>使用上面的声明，下面两个调用是等价的：</p>
+<pre class="literal-block">def("f", &amp;f, <strong>some_policies</strong>, <strong>"Documentation for f"</strong>);<br />def("f", &amp;f, <strong>"Documentation for f"</strong>, <strong>some_policies</strong>);<br /><br /></pre>
+<!-- @example.prepend(''' int main() {''') -->
+<p>If the user wants to pass a <tt class="docutils literal"><span class="pre">policies</span></tt> argument that
+was also,
+for some reason, convertible to <tt class="docutils literal"><span class="pre">char</span> <span class="pre">const*</span></tt>,
+she can always
+specify the parameter name explicitly, as follows: </p>
+<p>如果用户想传递一个因某种原因可以转化为 <tt class="docutils literal"><span class="pre">char</span> <span class="pre">const*</span></tt>
+的 <tt class="docutils literal"><span class="pre">policies</span></tt>
+参数，她可以像下面这样显式的指定参变量的名字：</p>
+<pre class="literal-block">def(<br /> "f", &amp;f<br /> , <strong>_policies = some_policies</strong>, "Documentation for f");<br /><br /></pre>
+<!-- @example.append('}') -->
+<!-- @test('compile', howmany='all') --></div>
+</div>
+<div class="section">
+<h2><a class="toc-backref" href="#id41" id="parameter-enabled-member-functions" name="parameter-enabled-member-functions">2.2&nbsp;&nbsp;&nbsp;Parameter-Enabled
+Member Functions 允许参变量的成员函数</a></h2>
+<p>The <tt class="docutils literal"><span class="pre">BOOST_PARAMETER_MEMBER_FUNCTION</span></tt>
+and
+<tt class="docutils literal"><span class="pre">BOOST_PARAMETER_CONST_MEMBER_FUNCTION</span></tt>
+macros accept exactly the
+same arguments as <tt class="docutils literal"><span class="pre">BOOST_PARAMETER_FUNCTION</span></tt>,
+but are designed to
+be used within the body of a class:
+</p>
+<p><tt class="docutils literal"><span class="pre">BOOST_PARAMETER_MEMBER_FUNCTION</span></tt>
+宏
+和 <tt class="docutils literal"><span class="pre">BOOST_PARAMETER_CONST_MEMBER_FUNCTION</span></tt>
+宏接受
+跟 <tt class="docutils literal"><span class="pre">BOOST_PARAMETER_FUNCTION</span></tt>
+宏完全一样的参数，只是它们是被设计来用在类里面的：</p>
+<pre class="literal-block">BOOST_PARAMETER_NAME(arg1)<br />BOOST_PARAMETER_NAME(arg2)<br /><br />struct callable2<br />{<br /> BOOST_PARAMETER_CONST_MEMBER_FUNCTION(<br /> (void), operator(), tag, (required (arg1,(int))(arg2,(int))))<br /> {<br /> std::cout &lt;&lt; arg1 &lt;&lt; ", " &lt;&lt; arg2 &lt;&lt; std::endl;<br /> }<br />};<br /></pre>
+<!-- @example.prepend(''' #include <boost/parameter.hpp> #include <iostream>''') -->
+<!-- @test('compile') -->
+<p>These macros don't directly allow a function's interface to be
+separated from its implementation, but you can always forward
+arguments on to a separate implementation function: </p>
+<p>这些宏不能直接地允许一个函数的接口同它的实现相分离，但是你可以将这些参数传递到一个单独的实现函数：</p>
+<pre class="literal-block">struct callable2<br />{<br />BOOST_PARAMETER_CONST_MEMBER_FUNCTION(<br />(void), operator(), tag, (required (arg1,(int))(arg2,(int))))<br />{<br />call_impl(arg1,arg2);<br />}<br />private:<br />void call_impl(int, int); // implemented elsewhere. 在别的地方实现<br />};<br /></pre>
+<!-- @example.prepend(''' #include <boost/parameter.hpp> BOOST_PARAMETER_NAME(arg1) BOOST_PARAMETER_NAME(arg2)''') -->
+<!-- @test('compile') -->
+<div class="section">
+<h2><a class="toc-backref" href="#id42" id="parameter-enabled-constructors" name="parameter-enabled-constructors">2.3&nbsp;&nbsp;&nbsp;Parameter-Enabled
+Constructors 参变量允许的构造函数</a></h2>
+<p>The lack of a “delegating constructor”
+feature in C++
+(<a class="reference" href="http://www.open-std.org/jtc1/sc22/wg21/docs/papers/2006/n1986.pdf">http://www.open-std.org/jtc1/sc22/wg21/docs/papers/2006/n1986.pdf</a>)
+limits somewhat the quality of interface this library can provide
+for defining parameter-enabled constructors. The usual workaround
+for a lack of constructor delegation applies: one must factor the
+common logic into a base class. </p>
+<p>由于C++缺少“代理构造(delegating constructor)”特性
+(<a class="reference" href="http://www.open-std.org/jtc1/sc22/wg21/docs/papers/2006/n1986.pdf">http://www.open-std.org/jtc1/sc22/wg21/docs/papers/2006/n1986.pdf</a>)
+，这在某种程度上限制了这个库接能提供的参变量允许的构造函数(parameter-enabled
+constructor)的接口质量。对于缺少构造函数代理机制的情形来说，通常的工作转移是这样的：
+你必须将公共的逻辑转移到基类中去。
+</p>
+<p>Let's build a parameter-enabled constructor that simply prints
+its
+arguments. The first step is to write a base class whose
+constructor accepts a single argument known as an <a class="reference" href="reference.html#argumentpack"><span class="concept">ArgumentPack</span></a>:
+a bundle of references to the actual arguments, tagged with their
+keywords. The values of the actual arguments are extracted from
+the <span class="concept">ArgumentPack</span> by <em>indexing</em>
+it with keyword objects:
+</p>
+<p>我们先构建一个参数允许的构造函数(parameter-enabled
+constructor)，它只是简单的打印出它的参数。第一步就是写一个基类，它的构造函数
+接受一个单独的参数，我们把这个参数叫做<a class="reference" href="reference.html#argumentpack"><span class="concept">参
+数包(ArgumentPack)</span></a>：
+一组对实际参数的引用，它们用各自的关键字做过标记(tagged)。
+真实参数的值可以通过用关键字对象做为<em>索引(index)</em>从<span class="concept">参数包(ArgumentPack)</span>中获得。
+</p>
+<pre class="literal-block">BOOST_PARAMETER_NAME(name)<br />BOOST_PARAMETER_NAME(index)<br /><br />struct myclass_impl<br />{<br /> template &lt;class ArgumentPack&gt;<br /> myclass_impl(ArgumentPack const&amp; args)<br /> {<br /> std::cout &lt;&lt; "name = " &lt;&lt; args[_name]<br /> &lt;&lt; "; index = " &lt;&lt; args[_index | 42]<br /> &lt;&lt; std::endl;<br /> }<br />};<br /><br /></pre>
+<!-- @example.prepend(''' #include <boost/parameter.hpp> #include <iostream>''') -->
+<p>Note that the bitwise or (“<tt class="docutils literal"><span class="pre">|</span></tt>”)
+operator has a special
+meaning when applied to keyword objects that are passed to an
+<span class="concept">ArgumentPack</span>'s indexing
+operator: it is used to indicate a
+default value. In this case if there is no <tt class="docutils literal"><span class="pre">index</span></tt>
+parameter in
+the <span class="concept">ArgumentPack</span>, <tt class="docutils literal"><span class="pre">42</span></tt>
+will be used instead.
+</p>
+<p>注意这里的按位或运算符(“<tt class="docutils literal"><span class="pre">|</span></tt>”)在被用到传
+给<span class="concept">参数包(ArgumentPack)</span>作为索引
+(index)的关键字对象上时有它特殊的含义：它表示默认值。
+这个例子中，如果在<span class="concept">ArgumentPack</span>中没有<tt class="docutils literal"><span class="pre">index</span></tt>
+参变量，<tt class="docutils literal"><span class="pre">42</span></tt>将
+会被作为默认值使用。
+</p>
+<p>Now we are ready to write the parameter-enabled constructor
+interface:
+</p>
+<p>现在我们已经写了一个参数允许的构造函数(parameter-enabled constructor)接口：
+</p>
+<pre class="literal-block">struct myclass : myclass_impl<br />{<br /> BOOST_PARAMETER_CONSTRUCTOR(<br /> myclass, (myclass_impl), tag<br /> , (required (name,*)) (optional (index,*))) // no semicolon 没有分号<br />};<br /></pre>
+<p>Since we have supplied a default value for <tt class="docutils literal"><span class="pre">index</span></tt>
+but not for
+<tt class="docutils literal"><span class="pre">name</span></tt>,
+only <tt class="docutils literal"><span class="pre">name</span></tt>
+is required. We can exercise our new
+interface as follows:
+</p>
+<p>我们已经为<tt class="docutils literal"><span class="pre">index</span></tt>提供了一个默认值，但是没有为
+<tt class="docutils literal"><span class="pre">name</span></tt>提
+供默认值，只有<tt class="docutils literal"><span class="pre">name</span></tt>
+是必需的。我们像下面这样练习我们的新接口：
+</p>
+<pre class="literal-block">myclass x("bob", 3); // positional 位置相关的<br />myclass y(_index = 12, _name = "sally"); // named 有名的<br />myclass z("june"); // positional/defaulted 位置相关的或者默认的<br /><br /></pre>
+<!-- @example.wrap('int main() {', '}') -->
+<!-- @test('run', howmany='all') -->
+<p>For more on <span class="concept">ArgumentPack</span>
+manipulation, see the <a class="reference" href="#advanced-topics">Advanced Topics</a>
+section. </p>
+<p>关于<span class="concept">参数包(ArgumentPack)</span>更
+多的信息，请参考<a class="reference" href="#advanced-topics">高
+级话题(Advanced Topics)</a>这一节。
+</p>
+</div>
+<div class="section">
+<h2><a class="toc-backref" href="#id43" id="parameter-enabled-class-templates" name="parameter-enabled-class-templates">2.4&nbsp;&nbsp;&nbsp;Parameter-Enabled
+Class Templates 参数允许的类模板</a></h2>
+<p>In this section we'll use Boost.Parameter to build <a class="reference" href="../../../python/doc/index.html">Boost.Python</a>'s
+<a class="reference" href="http://www.boost.org/libs/python/doc/v2/class.html#class_-spec">class_</a>
+template, whose “signature” is:
+</p>
+<p>在这一节里面，我们将使用 Boost.Parameter 构建一个 <a class="reference" href="../../../python/doc/index.html">Boost.Python</a>
+的
+<a class="reference" href="http://www.boost.org/libs/python/doc/v2/class.html#class_-spec">class_</a>类
+模板，它的签名(signature)如下：
+</p>
+<pre class="literal-block">template class&lt;<br /> ValueType, BaseList = bases&lt;&gt;<br /> , HeldType = ValueType, Copyable = void<br />&gt;<br />class class_;<br /></pre>
+<!-- @ignore() -->
+<p>Only the first argument, <tt class="docutils literal"><span class="pre">ValueType</span></tt>, is required.
+</p>
+<p>只有第一个参数，<tt class="docutils literal"><span class="pre">ValueType</span></tt>是必需的。 </p>
+<div class="section">
+<h3><a class="toc-backref" href="#id44" id="named-template-parameters" name="named-template-parameters">2.4.1&nbsp;&nbsp;&nbsp;Named
+Template Parameters 有名模板参变量</a></h3>
+<p>First, we'll build an interface that allows users to pass
+arguments
+positionally or by name:
+</p>
+<p>首先，我们构建一个允许用户通过位置或者名字传递参数的接口：
+</p>
+<pre class="literal-block">struct B { virtual ~B() = 0; };<br />struct D : B { ~D(); };<br /><br />class_&lt;<br /> <strong>class_type&lt;B&gt;</strong>, <strong>copyable&lt;boost::noncopyable&gt;</strong><br />&gt; …;<br />class_&lt;<br /><strong>D</strong>, <strong>held_type&lt;std::auto_ptr&lt;D&gt; &gt;</strong>, <strong>base_list&lt;bases&lt;B&gt; &gt;</strong><br />&gt; …;<br /></pre>
+<!-- @ignore() -->
+<div class="section">
+<h4><a class="toc-backref" href="#id45" id="template-keywords" name="template-keywords">2.4.1.1&nbsp;&nbsp;&nbsp;Template
+Keywords 模板关键字</a></h4>
+<p>The first step is to define keywords for each template
+parameter:
+</p>
+<p>第一步是为每个模板参变量定义关键字：
+</p>
+<pre class="literal-block">namespace boost { namespace python {<br /><br />BOOST_PARAMETER_TEMPLATE_KEYWORD(class_type)<br />BOOST_PARAMETER_TEMPLATE_KEYWORD(base_list)<br />BOOST_PARAMETER_TEMPLATE_KEYWORD(held_type)<br />BOOST_PARAMETER_TEMPLATE_KEYWORD(copyable)<br /><br />}}<br /></pre>
+<!-- @example.prepend('#include <boost/parameter.hpp>') -->
+<!-- @test('compile') -->
+<p>The declaration of the <tt class="docutils literal"><span class="pre">class_type</span></tt> keyword you
+see here is
+equivalent to:
+</p>
+<p>这里你看到的<tt class="docutils literal"><span class="pre">class_type</span></tt>关键字声明等价于：
+</p>
+<pre class="literal-block">namespace boost { namespace python {<br />namespace tag { struct class_type; } // keyword tag type<br />template &lt;class T&gt;<br />struct class_type<br />: parameter::template_keyword&lt;tag::class_type,T&gt;<br />{};<br />}}<br /></pre>
+<!-- @example.prepend('#include <boost/parameter.hpp>') -->
+<!-- @test('compile') -->
+<p>It defines a keyword tag type named <tt class="docutils literal"><span class="pre">tag::class_type</span></tt>
+and a
+<em>parameter passing template</em> named <tt class="docutils literal"><span class="pre">class_type</span></tt>.
+</p>
+<p>这里定义了一个叫做 <tt class="docutils literal"><span class="pre">tag::class_type</span></tt>
+的关键字标签类型(keyword tag type)
+和一个叫做 <tt class="docutils literal"><span class="pre">class_type</span></tt>
+的 <em>参数传递模板(parameter passing template)</em>。
+</p>
+</div>
+<div class="section">
+<h4><a class="toc-backref" href="#id46" id="class-template-skeleton" name="class-template-skeleton">2.4.1.2&nbsp;&nbsp;&nbsp;Class
+Template Skeleton 类模板骨架</a></h4>
+<p>The next step is to define the skeleton of our class template,
+which has three optional parameters. Because the user may pass
+arguments in any order, we don't know the actual identities of
+these parameters, so it would be premature to use descriptive names
+or write out the actual default values for any of them. Instead,
+we'll give them generic names and use the special type
+<tt class="docutils literal"><span class="pre">boost::parameter::void_</span></tt>
+as a default:
+</p>
+<p>下一步就是定义我们的类模板骨架，它有三个可选参数。因为用户可能以任何顺序传递参数，我们不需要知道这些参变量的真实标识符
+(identity)，
+因此为它们使用描述性的名字或者写出真实的默认值是不可取的。取而代之，我们将给他们一些通用的名字并使用一个特殊的
+类型<tt class="docutils literal"><span class="pre">boost::parameter::void_</span></tt>作
+为默认值：
+</p>
+<pre class="literal-block">namespace boost { namespace python {<br /><br />template &lt;<br /> class A0<br /> , class A1 = parameter::void_<br /> , class A2 = parameter::void_<br /> , class A3 = parameter::void_<br />&gt;<br />struct class_<br />{<br /> <em>…</em><br />};<br />}}<br /></pre>
+<!-- @example.prepend('#include <boost/parameter.hpp>') -->
+<!-- @example.replace_emphasis('') --><!-- @test('compile') -->
+<div class="section">
+<h4><a class="toc-backref" href="#id47" id="class-template-signatures" name="class-template-signatures">2.4.1.3&nbsp;&nbsp;&nbsp;Class
+Template Signatures 类模板签名(Signature)</a></h4>
+<p>Next, we need to build a type, known as a <a class="reference" href="reference.html#parameterspec"><span class="concept">ParameterSpec</span></a>,
+describing the “signature” of <tt class="docutils literal"><span class="pre">boost::python::class_</span></tt>.
+A
+<a class="reference" href="reference.html#parameterspec"><span class="concept">ParameterSpec</span></a>
+enumerates the required and optional parameters in
+their positional order, along with any type requirements (note that
+it does <em>not</em> specify defaults -- those will be
+dealt with separately):
+</p>
+<p>接下来我们构建一个叫做<a class="reference" href="reference.html#parameterspec"><span class="concept">ParameterSpec</span></a>的
+类型，
+用来描述<tt class="docutils literal"><span class="pre">boost::python::class_</span></tt>类
+的“签名(signature)”。
+<a class="reference" href="reference.html#parameterspec"><span class="concept">ParameterSpec</span></a>将以位置顺序枚举必
+需的和可选的参变量，
+也包括所有的类型约束(type requirements)（注意它并不关注默认值——它们将被单独处理）：
+</p>
+<pre class="literal-block">namespace boost { namespace python {<br /><br />using boost::mpl::_;<br /><br />typedef parameter::parameters&lt;<br /> required&lt;tag::class_type, is_class&lt;_&gt; &gt;<br /> , optional&lt;tag::base_list, mpl::is_sequence&lt;_&gt; &gt;<br /> , optional&lt;tag::held_type&gt;<br /><br /> , optional&lt;tag::copyable&gt;<br />&gt; class_signature;<br /><br />}}<br /></pre>
+<!-- @example.prepend(''' #include <boost/parameter.hpp> #include <boost/mpl/is_sequence.hpp> #include <boost/noncopyable.hpp> #include <memory> using namespace boost::parameter; namespace boost { namespace python { BOOST_PARAMETER_TEMPLATE_KEYWORD(class_type) BOOST_PARAMETER_TEMPLATE_KEYWORD(base_list) BOOST_PARAMETER_TEMPLATE_KEYWORD(held_type) BOOST_PARAMETER_TEMPLATE_KEYWORD(copyable) template <class B = int> struct bases {}; }}''') -->
+</div>
+<div class="section">
+<h4><a class="toc-backref" href="#id48" id="argument-packs-and-parameter-extraction" name="argument-packs-and-parameter-extraction"><span id="binding-intro"></span>2.4.1.4&nbsp;&nbsp;&nbsp;Argument
+Packs and Parameter Extraction 参数包(Argument Packs)和参变量(Parameter)提取</a></h4>
+<p>Next, within the body of <tt class="docutils literal"><span class="pre">class_</span></tt> , we use the <span class="concept">ParameterSpec</span>'s nested <tt class="docutils literal"><span class="pre">::bind&lt;</span>
+<span class="pre">…</span> <span class="pre">&gt;</span></tt>
+template to
+bundle the actual arguments
+into an <a class="reference" href="reference.html#argumentpack"><span class="concept">ArgumentPack</span></a>
+type, and then use the library's <tt class="docutils literal"><span class="pre">binding&lt;</span>
+<span class="pre">…</span> <span class="pre">&gt;</span></tt>
+metafunction to
+extract “logical parameters”. Note that
+defaults are specified by supplying an optional third argument to
+<tt class="docutils literal"><span class="pre">binding&lt;</span>
+<span class="pre">…</span> <span class="pre">&gt;</span></tt>:
+</p>
+<p>接下来，在<tt class="docutils literal"><span class="pre">class_</span></tt>的定义体中，我们使用<span class="concept">ParameterSpec</span>内部
+的 <tt class="docutils literal"><span class="pre">::bind&lt;</span>
+<span class="pre">…</span> <span class="pre">&gt;</span></tt>模
+板将
+真实的参数绑定到一个<a class="reference" href="reference.html#argumentpack"><span class="concept">ArgumentPack</span></a>类
+型，并且使用库中的
+<tt class="docutils literal"><span class="pre">binding&lt;</span>
+<span class="pre">…</span> <span class="pre">&gt;</span></tt>元
+函数
+(metafunction)来提取“逻辑参变量(logical parameters)”。注意，默认值是通过在<tt class="docutils literal"><span class="pre">binding&lt;</span>
+<span class="pre">…</span> <span class="pre">&gt;</span></tt>中
+提供可选的第三个参数来给定的：
+</p>
+<pre class="literal-block">namespace boost { namespace python {<br /><br />template &lt;<br /> class A0<br /> , class A1 = parameter::void_<br /> , class A2 = parameter::void_<br /> , class A3 = parameter::void_<br />&gt;<br />struct class_<br />{<br /> // Create ArgumentPack<br /> typedef typename<br /> class_signature::bind&lt;A0,A1,A2,A3&gt;::type<br /> args;<br /><br /> // Extract first logical parameter.<br /> typedef typename parameter::binding&lt;<br /><br /> args, tag::class_type&gt;::type class_type;<br /><br /> typedef typename parameter::binding&lt;<br /> args, tag::base_list, bases&lt;&gt; &gt;::type base_list;<br /><br /> typedef typename parameter::binding&lt;<br /> args, tag::held_type, class_type&gt;::type held_type;<br /><br /> typedef typename parameter::binding&lt;<br /> args, tag::copyable, void&gt;::type copyable;<br />};<br /><br />}}<br /></pre>
+</div>
+</div>
+<div class="section">
+<h3><a class="toc-backref" href="#id49" id="exercising-the-code-so-far" name="exercising-the-code-so-far">2.4.2&nbsp;&nbsp;&nbsp;Exercising
+the Code So Far 练习</a></h3>
+<div class="compound">
+<p class="compound-first">Revisiting our original
+examples,
+</p>
+<p class="compound-first">复习我们最开始的例子，
+</p>
+<pre class="compound-middle literal-block">typedef boost::python::class_&lt;<br /> class_type&lt;B&gt;, copyable&lt;boost::noncopyable&gt;<br />&gt; c1;<br /><br />typedef boost::python::class_&lt;<br /> D, held_type&lt;std::auto_ptr&lt;D&gt; &gt;, base_list&lt;bases&lt;B&gt; &gt;<br />&gt; c2;<br /></pre>
+<!-- @example.prepend(''' using boost::python::class_type; using boost::python::copyable; using boost::python::held_type; using boost::python::base_list; using boost::python::bases; struct B {}; struct D {};''') -->
+<p class="compound-middle">we can now examine the intended
+parameters: </p>
+<p class="compound-middle">我们现在可以检验参变量的预期值：
+</p>
+<pre class="compound-last literal-block">BOOST_MPL_ASSERT((boost::is_same&lt;c1::class_type, B&gt;));<br />BOOST_MPL_ASSERT((boost::is_same&lt;c1::base_list, bases&lt;&gt; &gt;));<br />BOOST_MPL_ASSERT((boost::is_same&lt;c1::held_type, B&gt;));<br />BOOST_MPL_ASSERT((<br /> boost::is_same&lt;c1::copyable, boost::noncopyable&gt;<br />));<br /><br />BOOST_MPL_ASSERT((boost::is_same&lt;c2::class_type, D&gt;));<br />BOOST_MPL_ASSERT((boost::is_same&lt;c2::base_list, bases&lt;B&gt; &gt;));<br />BOOST_MPL_ASSERT((<br /> boost::is_same&lt;c2::held_type, std::auto_ptr&lt;D&gt; &gt;<br /><br />));<br />BOOST_MPL_ASSERT((boost::is_same&lt;c2::copyable, void&gt;));<br /></pre>
+</div>
+<!-- @test('compile', howmany='all') -->
+</div>
+<div class="section">
+<h3><a class="toc-backref" href="#id50" id="deduced-template-parameters" name="deduced-template-parameters">2.4.3&nbsp;&nbsp;&nbsp;Deduced
+Template Parameters 推导的模板参变量</a></h3>
+<p>To apply a deduced parameter interface here, we need only make
+the
+type requirements a bit tighter so the <tt class="docutils literal"><span class="pre">held_type</span></tt> and
+<tt class="docutils literal"><span class="pre">copyable</span></tt>
+parameters can be crisply distinguished from the
+others. <a class="reference" href="../../../python/doc/index.html">Boost.Python</a>
+does this by requiring that <tt class="docutils literal"><span class="pre">base_list</span></tt> be
+a specialization of its <tt class="docutils literal"><span class="pre">bases&lt;</span> <span class="pre">…</span>
+<span class="pre">&gt;</span></tt>
+template (as opposed to
+being any old MPL sequence) and by requiring that <tt class="docutils literal"><span class="pre">copyable</span></tt>,
+if
+explicitly supplied, be <tt class="docutils literal"><span class="pre">boost::noncopyable</span></tt>. One
+easy way of
+identifying specializations of <tt class="docutils literal"><span class="pre">bases&lt;</span> <span class="pre">…</span>
+<span class="pre">&gt;</span></tt> is to
+derive them all
+from the same class, as an implementation detail:
+</p>
+<p>为了在这里使用推导的参变量接口，我们只需要让类型约束的条件更严格一些，这样 <tt class="docutils literal"><span class="pre">held_type</span></tt>
+和 <tt class="docutils literal"><span class="pre">copyable</span></tt>
+参变量就可以清晰地和其他的参变量区分开来。
+<a class="reference" href="../../../python/doc/index.html">Boost.Python</a>库
+做到这一点，它要求
+<tt class="docutils literal"><span class="pre">base_list</span></tt>是
+<tt class="docutils literal"><span class="pre">bases&lt;</span>
+<span class="pre">…</span> <span class="pre">&gt;</span></tt>的
+一个偏特化模板
+（这和一些旧的MPL序列相对应）并且要求<tt class="docutils literal"><span class="pre">copyable</span></tt>为<tt class="docutils literal"><span class="pre">boost::noncopyable</span></tt>（如
+果显式提供的话）。一种简单的识别<tt class="docutils literal"><span class="pre">bases&lt;</span> <span class="pre">…</span>
+<span class="pre">&gt;</span></tt>偏特化的方式是让它
+们都从同一个基类集成，实现细节：
+</p>
+<pre class="literal-block">namespace boost { namespace python {<br /><br />namespace detail { struct bases_base {}; }<br /><br />template &lt;class A0 = void, class A1 = void, class A2 = void <em>…</em> &gt;<br />struct bases <strong>: detail::bases_base</strong><br />{};<br />}}<br /></pre>
+<!-- @example.replace_emphasis('') -->
+<!-- @example.prepend(''' #include <boost/parameter.hpp> #include <boost/mpl/is_sequence.hpp> #include <boost/noncopyable.hpp> #include <memory> using namespace boost::parameter; using boost::mpl::_; namespace boost { namespace python { BOOST_PARAMETER_TEMPLATE_KEYWORD(class_type) BOOST_PARAMETER_TEMPLATE_KEYWORD(base_list) BOOST_PARAMETER_TEMPLATE_KEYWORD(held_type) BOOST_PARAMETER_TEMPLATE_KEYWORD(copyable) }}''') -->
+<p>Now we can rewrite our signature to make all three optional
+parameters deducible: </p>
+<p>现在我们可以重写我们的函数签名，使得所有的三个可选参变量都是可推导的：
+</p>
+<pre class="literal-block">typedef parameter::parameters&lt;<br /><br /> required&lt;tag::class_type, is_class&lt;_&gt; &gt;<br /><br /> , optional&lt;<br /> deduced&lt;tag::base_list&gt;<br /> , is_base_and_derived&lt;detail::bases_base,_&gt;<br /><br /> &gt;<br /><br /> , optional&lt;<br /> deduced&lt;tag::held_type&gt;<br /> , mpl::not_&lt;<br /> mpl::or_&lt;<br /> is_base_and_derived&lt;detail::bases_base,_&gt;<br /><br /> , is_same&lt;noncopyable,_&gt;<br /> &gt;<br /> &gt;<br /> &gt;<br /><br /> , optional&lt;deduced&lt;tag::copyable&gt;, is_same&lt;noncopyable,_&gt; &gt;<br /><br />&gt; class_signature;<br /></pre>
+<!-- @example.prepend(''' namespace boost { namespace python {''') -->
+<!-- @example.append(''' template < class A0 , class A1 = parameter::void_ , class A2 = parameter::void_ , class A3 = parameter::void_ > struct class_ { // Create ArgumentPack typedef typename class_signature::bind<A0,A1,A2,A3>::type args; // Extract first logical parameter. typedef typename parameter::binding< args, tag::class_type>::type class_type; typedef typename parameter::binding< args, tag::base_list, bases<> >::type base_list; typedef typename parameter::binding< args, tag::held_type, class_type>::type held_type; typedef typename parameter::binding< args, tag::copyable, void>::type copyable; }; }}''') -->
+<p>It may seem like we've added a great deal of complexity, but
+the
+benefits to our users are greater. Our original examples can now
+be written without explicit parameter names:
+</p>
+<p>看上去似乎我们加入了大量的复杂性，但是给用户带来的便利却更大。我们最开始的例子现在可以不需要显式的参变量名了，重写如下：
+</p>
+<pre class="literal-block">typedef boost::python::class_&lt;<strong>B</strong>, <strong>boost::noncopyable</strong>&gt; c1;<br /><br />typedef boost::python::class_&lt;<strong>D</strong>, <strong>std::auto_ptr&lt;D&gt;</strong>, <strong>bases&lt;B&gt;</strong> &gt; c2;<br /></pre>
+<!-- @example.prepend(''' struct B {}; struct D {}; using boost::python::bases;''') -->
+<!-- @example.append(''' BOOST_MPL_ASSERT((boost::is_same<c1::class_type, B>)); BOOST_MPL_ASSERT((boost::is_same<c1::base_list, bases<> >)); BOOST_MPL_ASSERT((boost::is_same<c1::held_type, B>)); BOOST_MPL_ASSERT(( boost::is_same<c1::copyable, boost::noncopyable> )); BOOST_MPL_ASSERT((boost::is_same<c2::class_type, D>)); BOOST_MPL_ASSERT((boost::is_same<c2::base_list, bases<B> >)); BOOST_MPL_ASSERT(( boost::is_same<c2::held_type, std::auto_ptr<D> > )); BOOST_MPL_ASSERT((boost::is_same<c2::copyable, void>));''') --><!-- @test('compile', howmany='all') -->
+</div>
+</div>
+</div>
+<div class="section">
+<h1><a class="toc-backref" href="#id51" id="advanced-topics" name="advanced-topics">3&nbsp;&nbsp;&nbsp;Advanced
+Topics 高级话题</a></h1>
+<p>At this point, you should have a good grasp of the basics. In
+this
+section we'll cover some more esoteric uses of the library.
+</p>
+<p>到目前为止，你应该很好地掌握了基本知识。在这一节中，我们将讲到这个库的一些更加细节的使用。
+</p>
+<div class="section">
+<h2><a class="toc-backref" href="#id52" id="fine-grained-name-control" name="fine-grained-name-control">3.1&nbsp;&nbsp;&nbsp;Fine-Grained
+Name Control 细粒度的名字控制</a></h2>
+<p>If you don't like the leading-underscore naming convention
+used
+to refer to keyword objects, or you need the name <tt class="docutils literal"><span class="pre">tag</span></tt>
+for
+something other than the keyword type namespace, there's another
+way to use <tt class="docutils literal"><span class="pre">BOOST_PARAMETER_NAME</span></tt>:
+</p>
+<p>如果你不喜欢使用下划线开头的命名规范来指代关键字对象，或者你想要<tt class="docutils literal"><span class="pre">tag</span></tt>
+这个名字表示其他的东西，而不是关键字类型的名字空间，也又另外一种使用<tt class="docutils literal"><span class="pre">BOOST_PARAMETER_NAME</span></tt>宏的方法：
+</p>
+<pre class="literal-block">BOOST_PARAMETER_NAME(<strong>(</strong><em>object-name</em><strong>,</strong> <em>tag-namespace</em><strong>)</strong> <em>parameter-name</em>)<br /><br /></pre>
+<!-- @ignore() -->
+<p>Here is a usage example:
+</p>
+<p>这里是使用的例子：
+</p>
+<pre class="literal-block">BOOST_PARAMETER_NAME((<strong>pass_foo</strong>, <strong>keywords</strong>) <strong>foo</strong>)<br /><br />BOOST_PARAMETER_FUNCTION(<br /> (int), f,<br /> <strong>keywords</strong>, (required (<strong>foo</strong>, *)))<br />{<br /> return <strong>foo</strong> + 1;<br />}<br /><br />int x = f(<strong>pass_foo</strong> = 41);<br /></pre>
+<!-- @example.prepend('#include <boost/parameter.hpp>') -->
+<!-- @example.append(''' int main() {}''') --><!-- @test('run') -->
+<p>Before you use this more verbose form, however, please read
+the
+section on <a class="reference" href="#keyword-naming">best
+practices for keyword object naming</a>.
+</p>
+<p>在你使用更细节的形式之前，请读下关于
+<a class="reference" href="#keyword-naming">关键字对象命名最
+佳实践(best practices for keyword object naming)</a> 的章节。
+</p>
+</div>
+<div class="section">
+<h2><a class="toc-backref" href="#id53" id="more-argumentpacks" name="more-argumentpacks">3.2&nbsp;&nbsp;&nbsp;More
+<span class="concept">ArgumentPack</span>s 更多关于<span class="concept">参数包(ArgumentPack)</span></a></h2>
+<p>We've already seen <span class="concept">ArgumentPack</span>s
+when we looked at
+<a class="reference" href="#parameter-enabled-constructors">parameter-enabled
+constructors</a> and <a class="reference" href="#binding-intro">class templates</a>. As you
+might have guessed, <span class="concept">ArgumentPack</span>s
+actually lie at the heart of
+everything this library does; in this section we'll examine ways to
+build and manipulate them more effectively.
+</p>
+<p>在我们查看 <a class="reference" href="#parameter-enabled-constructors">参变量允许的构造函数(parameter-
+enabled constructors)</a> 和 <a class="reference" href="#binding-intro">类模板(class templates)</a>
+章节时，我们已经了解过<span class="concept">参数包(ArgumentPack)</span>。
+你可能已经猜到了，<span class="concept">参数包(ArgumentPack)</span>
+事实上就是这个类所做一切的核心；在这一节中，我们将讲解一些构建以及更有效操作它们的不同方法。
+</p>
+<div class="section">
+<h3><a class="toc-backref" href="#id54" id="building-argumentpacks" name="building-argumentpacks">3.2.1&nbsp;&nbsp;&nbsp;Building
+<span class="concept">ArgumentPack</span>s 构建<span class="concept">参数包(ArgumentPack)</span></a></h3>
+<p>The simplest <span class="concept">ArgumentPack</span>
+is the result of assigning into a
+keyword object:
+</p>
+<p>最简单的<span class="concept">参数包(ArgumentPack)</span>就
+是给一个关键字对象赋值：
+</p>
+<pre class="literal-block">BOOST_PARAMETER_NAME(index)<br /><br />template &lt;class ArgumentPack&gt;<br />int print_index(ArgumentPack const&amp; args)<br />{<br /> std::cout &lt;&lt; "index = " &lt;&lt; args[_index] &lt;&lt; std::endl;<br /> return 0;<br />}<br /><br />int x = print_index(_index = 3); // prints "index = 3"<br /></pre>
+<!-- @example.prepend(''' #include <boost/parameter.hpp> #include <iostream>''') -->
+<p>Also, <span class="concept">ArgumentPack</span>s
+can be composed using the comma operator.
+The extra parentheses below are used to prevent the compiler from
+seeing two separate arguments to <tt class="docutils literal"><span class="pre">print_name_and_index</span></tt>:
+</p>
+<p><span class="concept">参数包(ArgumentPack)</span>也
+可以是逗号分割的（元素）组合。下面多余的圆括号是用来防止编译器认为
+传入了两个参数给 <tt class="docutils literal"><span class="pre">print_name_and_index</span></tt>
+函数：
+</p>
+<pre class="literal-block">BOOST_PARAMETER_NAME(name)<br /><br />template &lt;class ArgumentPack&gt;<br />int print_name_and_index(ArgumentPack const&amp; args)<br />{<br /> std::cout &lt;&lt; "name = " &lt;&lt; args[_name] &lt;&lt; "; ";<br /> return print_index(args);<br />}<br /><br />int y = print_name_and_index((_index = 3, _name = "jones"));<br /></pre>
+<p>To build an <span class="concept">ArgumentPack</span>
+with positional arguments, we can use a
+<a class="reference" href="reference.html#parameterspec"><span class="concept">ParameterSpec</span></a>. As
+introduced described in the section on <a class="reference" href="#class-template-signatures">Class
+Template Signatures</a>, a <span class="concept">ParameterSpec</span>
+describes the positional
+order of parameters and any associated type requirements. Just as
+we can build an <span class="concept">ArgumentPack</span>
+<em>type</em> with its nested <tt class="docutils literal"><span class="pre">::bind&lt;</span>
+<span class="pre">…</span>
+<span class="pre">&gt;</span></tt>
+template, we can build an <span class="concept">ArgumentPack</span>
+<em>object</em> by invoking
+its function call operator:
+</p>
+<p>为了构建带有位置相关参数(positional arguments)的<span class="concept">参
+数包(ArgumentPack)</span>，
+我们使用<a class="reference" href="reference.html#parameterspec"><span class="concept">ParameterSpec</span></a>。
+在 <a class="reference" href="#class-template-signatures">类
+模板签名(Class Template Signatures)</a> 这一节中介绍过，
+<span class="concept">ParameterSpec</span>
+描述了参变量的位置顺序以及与它们相关的类型约束信息。就像我们可以使用内嵌
+的<tt class="docutils literal"><span class="pre">::bind&lt;</span>
+<span class="pre">…</span> <span class="pre">&gt;</span></tt>
+来构建 <span class="concept">参数包(ArgumentPack)</span>
+一样，我们也可以通过调用它的仿函数操作符来构建一个
+<span class="concept">参数包(ArgumentPack)</span> <em>对
+象(object)</em>：
+</p>
+<pre class="literal-block">parameter::parameters&lt;<br /> required&lt;tag::name, is_convertible&lt;_,char const*&gt; &gt;<br /> , optional&lt;tag::index, is_convertible&lt;_,int&gt; &gt;<br />&gt; spec;<br /><br />char const sam[] = "sam";<br />int twelve = 12;<br /><br />int z0 = print_name_and_index( <strong>spec(</strong>sam, twelve<strong>)</strong> );<br /><br />int z1 = print_name_and_index(<br /> <strong>spec(</strong>_index=12, _name="sam"<strong>)</strong><br />);<br /></pre>
+<!-- @example.prepend(''' namespace parameter = boost::parameter; using parameter::required; using parameter::optional; using boost::is_convertible; using boost::mpl::_;''') -->
+<!-- @example.append(''' int main() {}''') --><!-- @test('run', howmany='all') -->
+<p>Note that because of the <a class="reference" href="http://std.dkuug.dk/jtc1/sc22/wg21/docs/papers/2002/n1385.htm">forwarding
+problem</a>, <tt class="docutils literal"><span class="pre">parameter::parameters::operator()</span></tt>
+can't accept non-const rvalues.
+</p>
+<p>注意，由于 <a class="reference" href="http://std.dkuug.dk/jtc1/sc22/wg21/docs/papers/2002/n1385.htm">转
+接问题(forwarding problem)</a>，
+仿函数操作符 <tt class="docutils literal"><span class="pre">parameter::parameters::operator()</span></tt>
+不能接受非常量(non-const)的右值(rvalue)。
+</p>
+</div>
+<div class="section">
+<h3><a class="toc-backref" href="#id55" id="extracting-parameter-types" name="extracting-parameter-types">3.2.2&nbsp;&nbsp;&nbsp;Extracting
+Parameter Types 提取参变量类型</a></h3>
+<p>If we want to know the types of the arguments passed to
+<tt class="docutils literal"><span class="pre">print_name_and_index</span></tt>,
+we have a couple of options. The
+simplest and least error-prone approach is to forward them to a
+function template and allow <em>it</em> to do type
+deduction:
+</p>
+<p>如果我们希望知道传递给 <tt class="docutils literal"><span class="pre">print_name_and_index</span></tt>
+函数的参数的类型信息，
+我们有很多的方法。最简单并且最不容易出错的办法就是将他们转交给一个函数模板，并且允许<em>它</em>做类型推导
+(type deduction)：
+</p>
+<pre class="literal-block">BOOST_PARAMETER_NAME(name)<br />BOOST_PARAMETER_NAME(index)<br /><br />template &lt;class Name, class Index&gt;<br />int deduce_arg_types_impl(Name&amp; name, Index&amp; index)<br />{<br /> Name&amp; n2 = name; // we know the types 我们知道了类型<br /> Index&amp; i2 = index;<br /> return index;<br />}<br /><br />template &lt;class ArgumentPack&gt;<br />int deduce_arg_types(ArgumentPack const&amp; args)<br />{<br /> return deduce_arg_types_impl(args[_name], args[_index|42]);<br />}<br /></pre>
+<!-- @example.prepend(''' #include <boost/parameter.hpp> #include <cassert>''') -->
+<!-- @example.append(''' int a1 = deduce_arg_types((_name = "foo")); int a2 = deduce_arg_types((_name = "foo", _index = 3)); int main() { assert(a1 == 42); assert(a2 == 3); }''') --><!-- @test('run') -->
+<p>Occasionally one needs to deduce argument types without an
+extra
+layer of function call. For example, suppose we wanted to return
+twice the value of the <tt class="docutils literal"><span class="pre">index</span></tt> parameter? In that
+case we can use the <tt class="docutils literal"><span class="pre">binding&lt;</span> <span class="pre">…</span> <span class="pre">&gt;</span></tt>
+metafunction introduced
+<a class="reference" href="#binding-intro">earlier</a>:
+</p>
+<p>有时候，我们需要推导函数的类型信息而不引入额外的函数调用。比如，假如我们希望返回参变量 <tt class="docutils literal"><span class="pre">index</span></tt>
+值的两倍呢？
+在这种情况下，我们可以使用在 <a class="reference" href="#binding-intro">早
+些时候</a> 介绍过的
+<tt class="docutils literal"><span class="pre">binding&lt;</span>
+<span class="pre">…</span> <span class="pre">&gt;</span></tt>
+元函数(metafunction)：
+</p>
+<pre class="literal-block">BOOST_PARAMETER_NAME(index)<br /><br />template &lt;class ArgumentPack&gt;<br />typename remove_reference&lt;<br /> typename parameter::binding&lt;ArgumentPack, tag::index, int&gt;::type<br />&gt;::type<br />twice_index(ArgumentPack const&amp; args)<br />{<br /> return 2 * args[_index|42];<br />}<br /><br />int six = twice_index(_index = 3);<br /></pre>
+<!-- @example.prepend(''' #include <boost/parameter.hpp> #include <boost/type_traits/remove_reference.hpp> #include <cassert> namespace parameter = boost::parameter; using boost::remove_reference;''') -->
+<p>Note that the <tt class="docutils literal"><span class="pre">remove_reference&lt;</span> <span class="pre">…</span> <span class="pre">&gt;</span></tt>
+dance is necessary because
+<tt class="docutils literal"><span class="pre">binding&lt;</span>
+<span class="pre">…</span> <span class="pre">&gt;</span></tt>
+will return a
+reference type when the argument
+is bound in the argument pack. If we don't strip the reference we
+end up returning a reference to the temporary created in the <tt class="docutils literal"><span class="pre">2*…</span></tt>
+expression. A convenient shortcut would be to use the <tt class="docutils literal"><span class="pre">value_type&lt;</span>
+<span class="pre">…</span> <span class="pre">&gt;</span></tt>
+metafunction:
+</p>
+<p>注意，这里 <tt class="docutils literal"><span class="pre">remove_reference&lt;</span> <span class="pre">…</span> <span class="pre">&gt;</span></tt>
+的技巧
+是必要的，因为当参数在参数包(ArgumentPack)里面的
+时候 <tt class="docutils literal"><span class="pre">binding&lt;</span>
+<span class="pre">…</span> <span class="pre">&gt;</span></tt>
+会
+返回一个引用的类型。如果我们不将这个引用去除掉，我们最后就会返回一个指向由 <tt class="docutils literal"><span class="pre">2*…</span></tt> 表达式创建的临时值的引用。
+一种方便的简单方式就是使用 <tt class="docutils literal"><span class="pre">value_type&lt;</span> <span class="pre">…</span> <span class="pre">&gt;</span></tt>
+元函数(metafunction)：
+</p>
+<pre class="literal-block">template &lt;class ArgumentPack&gt;<br />typename <strong>parameter::value_type&lt;ArgumentPack, tag::index, int&gt;</strong>::type<br />twice_index(ArgumentPack const&amp; args)<br />{<br /> return 2 * args[_index|42];<br />}<br /></pre>
+<!-- @example.wrap('namespace with_value_type {', ''' int six = twice_index(_index = 3); }''') -->
+<!-- @example.append(''' int main() { assert(six == 6); assert(with_value_type::six == 6); }''') --><!-- @test('run', howmany='all') -->
+<div class="section">
+<h3><a class="toc-backref" href="#id56" id="lazy-default-computation" name="lazy-default-computation">3.2.3&nbsp;&nbsp;&nbsp;Lazy
+Default Computation 延迟的默认值计算</a></h3>
+<p>When a default value is expensive to compute, it would be
+preferable to avoid it until we're sure it's absolutely necessary.
+<tt class="docutils literal"><span class="pre">BOOST_PARAMETER_FUNCTION</span></tt>
+takes care of that problem for us, but
+when using <span class="concept">ArgumentPack</span>s
+explicitly, we need a tool other than
+<tt class="docutils literal"><span class="pre">operator|</span></tt>:
+</p>
+<p>当一个默认值表达式可以被计算的时候，最好是等到我们确定真的需要它的时候才进行计算。
+宏 <tt class="docutils literal"><span class="pre">BOOST_PARAMETER_FUNCTION</span></tt>
+已经为我们解决了这个问题，
+但是在显式使用 <span class="concept">ArgumentPack</span>
+时，我们需要一个工具而不仅仅是 <tt class="docutils literal"><span class="pre">"|"操作符</span></tt>：
+</p>
+<pre class="literal-block">BOOST_PARAMETER_NAME(s1)<br />BOOST_PARAMETER_NAME(s2)<br />BOOST_PARAMETER_NAME(s3)<br /><br />template &lt;class ArgumentPack&gt;<br />std::string f(ArgumentPack const&amp; args)<br />{<br /> std::string const&amp; s1 = args[_s1];<br /> std::string const&amp; s2 = args[_s2];<br /> typename parameter::binding&lt;<br /> ArgumentPack,tag::s3,std::string<br /> &gt;::type s3 = args[_s3|(s1+s2)]; // always constructs s1+s2 总是会构造 s1+s2<br /> return s3;<br />}<br /><br />std::string x = f((_s1="hello,", _s2=" world", _s3="hi world"));<br /></pre>
+<!-- @example.prepend(''' #include <boost/parameter.hpp> #include <string> namespace parameter = boost::parameter;''') -->
+<!-- @example.append(''' int main() {}''') --><!-- @test('run') -->
+<p>In the example above, the string <tt class="docutils literal"><span class="pre">"hello,</span>
+<span class="pre">world"</span></tt> is
+constructed
+despite the fact that the user passed us a value for <tt class="docutils literal"><span class="pre">s3</span></tt>.
+To
+remedy that, we can compute the default value <em>lazily</em>
+(that is,
+only on demand), by using <tt class="docutils literal"><span class="pre">boost::bind()</span></tt> to create
+a function
+object.
+</p>
+<p>在上面的这个例子中，即使用户给 <tt class="docutils literal"><span class="pre">s3</span></tt> 传入了一个
+值，<tt class="docutils literal"><span class="pre">"hello,</span>
+<span class="pre">world"</span></tt> 字符串
+也会被构造出来。为了弥补这个不足，我们可以通过使用 <tt class="docutils literal"><span class="pre">boost::bind()</span></tt> 创建
+一个函数对象来 <em>延迟地(lazily)</em> 计算它的值（也就是说只有在需要使用到的时候）。
+</p>
+<!-- danielw: I'm leaving the text below in the source, because we might -->
+<!-- want to change back to it after 1.34, and if I remove it now we --><!-- might forget about it. -->
+<!-- by combining the logical-or (“``||``”) operator --><!-- with a function object built by the Boost Lambda_ library: [#bind]_ -->
+<pre class="literal-block">using boost::bind;<br />using boost::ref;<br /><br />typename parameter::binding&lt;<br /> ArgumentPack, tag::s3, std::string<br />&gt;::type s3 = args[_s3 <strong>|| bind(std::plus&lt;std::string&gt;(), ref(s1), ref(s2))</strong> ];<br /></pre>
+<!-- @example.prepend(''' #include <boost/bind.hpp> #include <boost/ref.hpp> #include <boost/parameter.hpp> #include <string> #include <functional> namespace parameter = boost::parameter; BOOST_PARAMETER_NAME(s1) BOOST_PARAMETER_NAME(s2) BOOST_PARAMETER_NAME(s3) template <class ArgumentPack> std::string f(ArgumentPack const& args) { std::string const& s1 = args[_s1]; std::string const& s2 = args[_s2];''') -->
+<!-- @example.append(''' return s3; } std::string x = f((_s1="hello,", _s2=" world", _s3="hi world")); int main() {}''') --><!-- @test('run') -->
+<!-- .. _Lambda: ../../../lambda/index.html -->
+<div class="sidebar">
+<p class="first sidebar-title">Mnemonics</p>
+<p class="last">To remember the difference between <tt class="docutils literal"><span class="pre">|</span></tt>
+and <tt class="docutils literal"><span class="pre">||</span></tt>,
+recall that
+<tt class="docutils literal"><span class="pre">||</span></tt>
+normally uses short-circuit evaluation: its second
+argument is only evaluated if its first argument is <tt class="docutils literal"><span class="pre">false</span></tt>.
+Similarly, in <tt class="docutils literal"><span class="pre">color_map[param||f]</span></tt>, <tt class="docutils literal"><span class="pre">f</span></tt>
+is only invoked if
+no <tt class="docutils literal"><span class="pre">color_map</span></tt>
+argument was supplied.
+</p>
+<p class="last">要记住 <tt class="docutils literal"><span class="pre">|</span></tt> 和 <tt class="docutils literal"><span class="pre">||</span></tt>
+的区别，
+请回忆下， <tt class="docutils literal"><span class="pre">||</span></tt>
+通常使用了最短路求值(short-circuit evaluation)：它的第二个参数只有当它的
+第一个参数被计算为 <tt class="docutils literal"><span class="pre">false</span></tt> 的时候才会被计算。同样的，
+在 <tt class="docutils literal"><span class="pre">color_map[param||f]</span></tt>
+中，函数 <tt class="docutils literal"><span class="pre">f</span></tt>
+仅仅只有在没有提供 <tt class="docutils literal"><span class="pre">color_map</span></tt> 参数的时候才会被调用到。
+</p>
+</div>
+<p>The expression <tt class="docutils literal"><span class="pre">bind(std::plus&lt;std::string&gt;(),</span>
+<span class="pre">ref(s1),</span> <span class="pre">ref(s2))</span></tt> yields
+a <em>function object</em> that, when invoked, adds the
+two strings together.
+That function will only be invoked if no <tt class="docutils literal"><span class="pre">s3</span></tt>
+argument is supplied by
+the caller.
+</p>
+<p>表达式 <tt class="docutils literal"><span class="pre">bind(std::plus&lt;std::string&gt;(),</span>
+<span class="pre">ref(s1),</span> <span class="pre">ref(s2))</span></tt> 生成
+了一个<em>函数对象(function object)</em>，当被调用的时候，将这两个字符串连接在一起。这个函数只
+有在用户没有传入 <tt class="docutils literal"><span class="pre">s3</span></tt>
+参数
+的时候才会被调用。
+</p>
+<!-- The expression ``lambda::var(s1)+lambda::var(s2)`` yields a -->
+<!-- *function object* that, when invoked, adds the two strings --><!-- together. That function will only be invoked if no ``s3`` argument -->
+<!-- is supplied by the caller. --></div>
+</div>
+<div class="section">
+<h1><a class="toc-backref" href="#id57" id="best-practices" name="best-practices">4&nbsp;&nbsp;&nbsp;Best
+Practices 最佳实践</a></h1>
+<p>By now you should have a fairly good idea of how to use the
+Parameter library. This section points out a few more-marginal
+issues that will help you use the library more effectively.
+</p>
+<p>到目前为止，你应该对如何使用 Parameter
+库有了很好的掌握。这一节会指出一些更加边缘的问题，这会帮助你更高效地使用这个库。
+</p>
+<div class="section">
+<h2><a class="toc-backref" href="#id58" id="keyword-naming" name="keyword-naming">4.1&nbsp;&nbsp;&nbsp;Keyword
+Naming 关键字命名</a></h2>
+<p><tt class="docutils literal"><span class="pre">BOOST_PARAMETER_NAME</span></tt>
+prepends a leading underscore to the names
+of all our keyword objects in order to avoid the following
+usually-silent bug:
+</p>
+<p>宏 <tt class="docutils literal"><span class="pre">BOOST_PARAMETER_NAME</span></tt>
+会在关键字对象的名字前面加入一个下划线
+来避免下面这样的通常悄无声息的臭虫(bug)：
+</p>
+<pre class="literal-block">namespace people<br />{<br /> namespace tag { struct name; struct age; }<br /><br /> namespace // unnamed 无名的<br /> {<br /> boost::parameter::keyword&lt;tag::name&gt;&amp; <strong>name</strong><br />= boost::parameter::keyword&lt;tag::name&gt;::instance;<br />boost::parameter::keyword&lt;tag::age&gt;&amp; <strong>age</strong><br />= boost::parameter::keyword&lt;tag::age&gt;::instance;<br />}<br />BOOST_PARAMETER_FUNCTION(<br />(void), g, tag, (optional (name, *, "bob")(age, *, 42)))<br />{<br />std::cout &lt;&lt; name &lt;&lt; ":" &lt;&lt; age;<br />}<br />void f(int age)<br />{<br /><span class="vellipsis"> .<br /> </span><br />g(<strong>age</strong> = 3); // whoops! 糟糕！<br /> }<br />}<br /></pre>
+<!-- @ignore() -->
+<p>Although in the case above, the user was trying to pass the
+value
+<tt class="docutils literal"><span class="pre">3</span></tt>
+as the <tt class="docutils literal"><span class="pre">age</span></tt>
+parameter to <tt class="docutils literal"><span class="pre">g</span></tt>, what happened instead
+was that <tt class="docutils literal"><span class="pre">f</span></tt>'s
+<tt class="docutils literal"><span class="pre">age</span></tt>
+argument got reassigned the value 3,
+and was then passed as a positional argument to <tt class="docutils literal"><span class="pre">g</span></tt>.
+Since
+<tt class="docutils literal"><span class="pre">g</span></tt>'s
+first positional parameter is <tt class="docutils literal"><span class="pre">name</span></tt>, the default value
+for <tt class="docutils literal"><span class="pre">age</span></tt>
+is used, and g prints <tt class="docutils literal"><span class="pre">3:42</span></tt>. Our leading
+underscore naming convention that makes this problem less likely
+to occur.
+</p>
+<p>在上面的这个例子中，尽管用户尝试着给函数 <tt class="docutils literal"><span class="pre">g</span></tt> 的 <tt class="docutils literal"><span class="pre">age</span></tt>
+参
+变量传入 <tt class="docutils literal"><span class="pre">3</span></tt>
+这个值，可是最终的发生的事情却是给函数 <tt class="docutils literal"><span class="pre">f</span></tt> 的
+参数 <tt class="docutils literal"><span class="pre">age</span></tt>
+重新赋值到了 <tt class="docutils literal"><span class="pre">3</span></tt>
+这个值，并且
+接着作为一个位置相关参数(positional argument)传给了函数 <tt class="docutils literal"><span class="pre">g</span></tt>。由于
+函数 <tt class="docutils literal"><span class="pre">g</span></tt>
+的第一个位置相关(positional)参数是 <tt class="docutils literal"><span class="pre">name</span></tt>，
+参变量 <tt class="docutils literal"><span class="pre">age</span></tt>
+就会使用它的默认值，这样函数 <tt class="docutils literal"><span class="pre">g</span></tt> 就会打印
+出 <tt class="docutils literal"><span class="pre">3:42</span></tt>。
+我们的下划线开头的命名规范就可以减少这种问题发生的可能性。
+</p>
+<p>In this particular case, the problem could have been detected
+if
+f's <tt class="docutils literal"><span class="pre">age</span></tt>
+parameter had been made <tt class="docutils literal"><span class="pre">const</span></tt>, which is always a
+good idea whenever possible. Finally, we recommend that you use
+an enclosing namespace for all your code, but particularly for
+names with leading underscores. If we were to leave out the
+<tt class="docutils literal"><span class="pre">people</span></tt>
+namespace above, names in the global namespace
+beginning with leading underscores—which are reserved to your
+C++
+compiler—might become irretrievably ambiguous with those in
+our
+unnamed namespace.
+</p>
+<p>在这个特殊情况下，如果函数 <tt class="docutils literal"><span class="pre">f</span></tt> 的 <tt class="docutils literal"><span class="pre">age</span></tt>
+参变量
+被声明为 <tt class="docutils literal"><span class="pre">const</span></tt>
+的（这在任何可能的时候都是一个好的办法），这样的问题可能已经被检测到了。
+最后，我们建议你把你所有的代码包装在一个名字空间中，特别是对那些带有下划线开头的名字。如果我们离开了上面
+的 <tt class="docutils literal"><span class="pre">people</span></tt>
+名字空间，那些在全局名字空间中以下划线开头的名字——这样的名字是保留给C++编译器的——可能和我们
+的无名名字空间中的名字相混淆。
+</p>
+</div>
+<div class="section">
+<h2><a class="toc-backref" href="#id59" id="namespaces" name="namespaces">4.2&nbsp;&nbsp;&nbsp;Namespaces
+名字空间</a></h2>
+<p>In our examples we've always declared keyword objects in (an
+unnamed namespace within) the same namespace as the
+Boost.Parameter-enabled functions using those keywords:</p>
+<p>在我们的例子中，我们总是将关键字对象声明在（以无名名字空间的形式）使用它们的参变量允许的(Boost.Parameter-
+enabled)函数所在的名字空间：
+</p>
+<pre class="literal-block">namespace lib<br />{<br /> <strong>BOOST_PARAMETER_NAME(name)<br /> BOOST_PARAMETER_NAME(index)</strong><br />BOOST_PARAMETER_FUNCTION(<br />(int), f, tag,<br />(optional (name,*,"bob")(index,(int),1))<br />)<br />{<br />std::cout &lt;&lt; name &lt;&lt; ":" &lt;&lt; index &lt;&lt; std::endl;<br />return index;<br />}<br />}<br /></pre>
+<!-- @example.prepend(''' #include <boost/parameter.hpp> #include <iostream>''') -->
+<!-- @namespace_setup = str(example) --><!-- @ignore() -->
+<p>Users of these functions have a few choices:</p>
+<p>使用这些函数的用户有以下几种选择：
+</p>
+<ol class="arabic simple">
+<li>Full qualification: 全名称：</li>
+</ol>
+<blockquote>
+<pre class="literal-block">int x = <strong>lib::</strong>f(<strong>lib::</strong>_name = "jill", <strong>lib::</strong>_index = 1);<br /></pre>
+<p>This approach is more verbose than many users would like. </p>
+<p>这种方式太繁琐了，大多数用户都不喜欢这样。</p>
+</blockquote>
+<!-- @example.prepend(namespace_setup) -->
+<!-- @example.append('int main() {}') --><!-- @test('run') -->
+<ol class="arabic simple" start="2">
+<li>
+<p>Make keyword objects available through <em>using-declarations</em>:
+</p>
+<p>通过使用 <em>using-declarations</em> 来使关键字对象可用：</p>
+</li>
+</ol>
+<blockquote>
+<pre class="literal-block"><strong>using lib::_name;<br />using lib::_index;</strong><br />int x = lib::f(_name = "jill", _index = 1);<br /></pre>
+<p>This version is much better at the actual call site, but the
+<em>using-declarations</em> themselves can be verbose and
+hard-to
+manage.</p>
+<p>这个版本在实际使用的时候要好多了，但是 <em>using-declarations</em>
+本身也可能变得很繁琐，并且难以维护。
+</p>
+</blockquote>
+<!-- @example.prepend(namespace_setup) -->
+<!-- @example.append('int main() {}') --><!-- @test('run') -->
+<ol class="arabic simple" start="3">
+<li>
+<p> Bring in the entire namespace with a <em>using-directive</em>:
+</p>
+<p>使用 <em>using-directive</em> 来引入整个名字空间：</p>
+</li>
+</ol>
+<blockquote>
+<pre class="literal-block"><strong>using namespace lib;</strong><br />int x = <strong>f</strong>(_name = "jill", _index = 3);<br /></pre>
+<p>This option is convenient, but it indiscriminately makes the
+<em>entire</em> contents of <tt class="docutils literal"><span class="pre">lib</span></tt>
+available without qualification.</p>
+<p>这个方法很方便，但是它却不加选择地将整个 <tt class="docutils literal"><span class="pre">lib</span></tt> 名字空间中的内容导入进来。
+</p>
+</blockquote>
+<!-- @example.prepend(namespace_setup) -->
+<!-- @example.append('int main() {}') --><!-- @test('run') -->
+<p>If we add an additional namespace around keyword declarations,
+though, we can give users more control:</p>
+<p>如果我们在关键字声明的外面加入一个额外的名字空间，我们就可以给用户更多的控制方式：
+</p>
+<pre class="literal-block">namespace lib<br />{<br /> <strong>namespace keywords<br /> {</strong><br />BOOST_PARAMETER_NAME(name)<br />BOOST_PARAMETER_NAME(index)<br /><strong>}</strong><br />BOOST_PARAMETER_FUNCTION(<br />(int), f, <strong>keywords::</strong>tag,<br /> (optional (name,*,"bob")(index,(int),1))<br /> )<br /> {<br /> std::cout &lt;&lt; name &lt;&lt; ":" &lt;&lt; index &lt;&lt; std::endl;<br /> return index;<br /> }<br />}<br /></pre>
+<!-- @example.prepend(''' #include <boost/parameter.hpp> #include <iostream>''') -->
+<p>Now users need only a single <em>using-directive</em>
+to bring in just the
+names of all keywords associated with <tt class="docutils literal"><span class="pre">lib</span></tt>:</p>
+<p>现在用户只需要一个单独的 <em>using-directive</em> 就可以将所有与 <tt class="docutils literal"><span class="pre">lib</span></tt>
+相关的
+名字关键字对象导入了。
+</p>
+<pre class="literal-block"><strong>using namespace lib::keywords;</strong><br />int y = lib::f(_name = "bob", _index = 2);<br /></pre>
+<!-- @example.append('int main() {}') -->
+<!-- @test('run', howmany='all') --></div>
+<div class="section">
+<h2><a class="toc-backref" href="#id60" id="documentation" name="documentation">4.3&nbsp;&nbsp;&nbsp;Documentation
+文档</a></h2>
+<p>The interface idioms enabled by Boost.Parameter are completely
+new
+(to C++), and as such are not served by pre-existing documentation
+conventions.</p>
+<p>Boost.Parameter 库所创造的接口风格对C++来说是全新的，并且因此不能沿用已有的文档规范。
+</p>
+<div class="note">
+<p class="first admonition-title">Note 注意</p>
+<p class="last">This space is empty because we haven't
+settled on any
+best practices yet. We'd be very pleased to link to your
+documentation if you've got a style that you think is worth
+sharing.</p>
+<p>这一小节是留空的，因为我们还没有找到一个最好的实践方式。如果你有一种你认为值得分享的文档样式，我们非常乐意链接到你的文档。
+</p>
+</div>
+</div>
+</div>
+<div class="section">
+<h1><a class="toc-backref" href="#id61" id="portability-considerations" name="portability-considerations">5&nbsp;&nbsp;&nbsp;Portability
+Considerations 可移植性的考虑</a></h1>
+<p>Use the <a class="reference" href="http://www.boost.org/regression/release/user/parameter.html">regression
+test results</a> for the latest Boost release of
+the Parameter library to see how it fares on your favorite
+compiler. Additionally, you may need to be aware of the following
+issues and workarounds for particular compilers.</p>
+<p>利用 <a class="reference" href="http://www.boost.org/regression/release/user/parameter.html">regression
+测试结果</a> 来查看 Parameter 库最新的 Boost 发布版
+能多好的支持你最喜欢的编译器。进一步讲，你可能需要注意下面这些问题以及对特定编译器的一些迂回工作。
+</p>
+<div class="section">
+<h2><a class="toc-backref" href="#id62" id="no-sfinae-support" name="no-sfinae-support">5.1&nbsp;&nbsp;&nbsp;No
+SFINAE Support 不支持 SFINAE</a></h2>
+<p>Some older compilers don't support SFINAE. If your compiler
+meets
+that criterion, then Boost headers will <tt class="docutils literal"><span class="pre">#define</span></tt> the preprocessor
+symbol <tt class="docutils literal"><span class="pre">BOOST_NO_SFINAE</span></tt>,
+and parameter-enabled functions won't be
+removed from the overload set based on their signatures.</p>
+<p>一些老的编译器不支持 SFINAE。如果你的编译器有这个问题，Boost 的头文件就会 <tt class="docutils literal"><span class="pre">定义<br />(#define)</span></tt> 一个
+预处理符号 <tt class="docutils literal"><span class="pre">BOOST_NO_SFINAE</span></tt>，
+并且参变量允许的函数(parameter-enabled function)将不会根据它们的签名
+从重载集(overload set)中被移除。
+</p>
+</div>
+<div class="section">
+<h2><a id="no-support-for-result-of" name="no-support-for-result-of">5.2&nbsp;&nbsp;&nbsp;No
+Support for 不支持 </a><a class="reference" href="../../../utility/utility.htm#result_of"><tt class="docutils literal"><span class="pre">result_of</span></tt></a></h2>
+<p><a class="reference" href="#lazy-default-computation">Lazy
+default computation</a> relies on the <tt class="docutils literal"><span class="pre">result_of</span></tt>
+class
+template to compute the types of default arguments given the type
+of the function object that constructs them. On compilers that
+don't support <tt class="docutils literal"><span class="pre">result_of</span></tt>, <tt class="docutils literal"><span class="pre">BOOST_NO_RESULT_OF</span></tt>
+will be
+<tt class="docutils literal"><span class="pre">#define</span></tt>d,
+and the compiler will expect the function object to
+contain a nested type name, <tt class="docutils literal"><span class="pre">result_type</span></tt>, that
+indicates its
+return type when invoked without arguments. To use an ordinary
+function as a default generator on those compilers, you'll need to
+wrap it in a class that provides <tt class="docutils literal"><span class="pre">result_type</span></tt> as a <tt class="docutils literal"><span class="pre">typedef</span></tt>
+and invokes the function via its <tt class="docutils literal"><span class="pre">operator()</span></tt>.
+</p>
+<p><a class="reference" href="#lazy-default-computation">延
+迟的默认值计算(Lazy default computation)</a> 是依赖
+于 <tt class="docutils literal"><span class="pre">result_of</span></tt>
+类模板来计算默认参数值（给定了创建它们的函数对象的类型）的。
+在那些不支持 <tt class="docutils literal"><span class="pre">result_of</span></tt>
+的编译器上面，<tt class="docutils literal"><span class="pre">BOOST_NO_RESULT_OF</span></tt>
+宏
+就会被 <tt class="docutils literal"><span class="pre">定<br />义(#define)</span></tt>，并且编译器会期望这个函数对象包含一个内嵌的类型
+名 <tt class="docutils literal"><span class="pre">result_type</span></tt>，
+它表示不带参数被调用时的返回值类型。
+</p>
+<!-- Can't Declare |ParameterSpec| via ``typedef`` ============================================= In principle you can declare a |ParameterSpec| as a ``typedef`` for a specialization of ``parameters<…>``, but Microsoft Visual C++ 6.x has been seen to choke on that usage. The workaround is to use inheritance and declare your |ParameterSpec| as a class: .. parsed-literal:: **struct dfs_parameters :** parameter::parameters< tag::graph, tag::visitor, tag::root_vertex , tag::index_map, tag::color_map > **{};** Default Arguments Unsupported on Nested Templates ================================================= As of this writing, Borland compilers don't support the use of default template arguments on member class templates. As a result, you have to supply ``BOOST_PARAMETER_MAX_ARITY`` arguments to every use of ``parameters<…>::match``. Since the actual defaults used are unspecified, the workaround is to use |BOOST_PARAMETER_MATCH|_ to declare default arguments for SFINAE. .. |BOOST_PARAMETER_MATCH| replace:: ``BOOST_PARAMETER_MATCH`` -->
+</div>
+<div class="section">
+<h2><a class="toc-backref" href="#id64" id="compiler-can-t-see-references-in-unnamed-namespace" name="compiler-can-t-see-references-in-unnamed-namespace">5.3&nbsp;&nbsp;&nbsp;Compiler
+Can't See References In Unnamed Namespace 编译器看不见无名空间里面的引用</a></h2>
+<p>If you use Microsoft Visual C++ 6.x, you may find that the
+compiler
+has trouble finding your keyword objects. This problem has been
+observed, but only on this one compiler, and it disappeared as the
+test code evolved, so we suggest you use it only as a last resort
+rather than as a preventative measure. The solution is to add
+<em>using-declarations</em> to force the names to be
+available in the
+enclosing namespace without qualification:</p>
+<p>如果你使用 Microsoft Visual C++
+6.x，你可能会发现编译器在查找你的关键字对象的时候遇到了困难。这个问题已经被观察到了，但是只在这一个编译器上面，
+并且在测试代码更新之后这个问题消失了，因此我们建议你将其作为最后一个手段而不是预先的方式进行使用。解决方法就是加入 <em>using-declarations</em>
+来
+强制使这些名字在其所在的名字空间中无条件的可用。
+</p>
+<pre class="literal-block">namespace graphs<br />{<br /> using graphs::graph;<br /> using graphs::visitor;<br /> using graphs::root_vertex;<br /> using graphs::index_map;<br /> using graphs::color_map;<br />}<br /></pre>
+</div>
+</div>
+<div class="section">
+<h1><a class="toc-backref" href="#id65" id="python-binding" name="python-binding">6&nbsp;&nbsp;&nbsp;Python
+Binding Python 绑定</a></h1>
+<p>Follow <a class="reference" href="python.html">this
+link</a> for documentation on how to expose
+Boost.Parameter-enabled functions to Python with <a class="reference" href="../../../python/doc/index.html">Boost.Python</a>.
+</p>
+<p>查看 <a class="reference" href="python.html">这
+个链接</a> 指向的文档来找到如何使
+用 <a class="reference" href="../../../python/doc/index.html">Boost.Python</a>
+库暴露参变量允许的函数(Boost.Parameter-enabled function)给 Python。
+</p>
+</div>
+<div class="section">
+<h1><a class="toc-backref" href="#id66" id="reference" name="reference">7&nbsp;&nbsp;&nbsp;Reference
+参考文档</a></h1>
+<p>Follow <a class="reference" href="reference.html">this
+link</a> to the Boost.Parameter reference
+documentation.</p>
+<p>到 <a class="reference" href="reference.html">这
+里</a> 查看 Boost.Parameter 的参考文档。
+</p>
+</div>
+<div class="section">
+<h1><a class="toc-backref" href="#id67" id="glossary" name="glossary">8&nbsp;&nbsp;&nbsp;Glossary
+词汇表</a></h1>
+<table class="docutils field-list" id="arguments" frame="void" rules="none">
+<col class="field-name" /> <col class="field-body" /><tbody valign="top">
+<tr class="field">
+<th class="field-name" colspan="2">Argument
+(or “actual argument”): 参数(Argument)（或者 “实参(actual argument)”）：</th>
+</tr>
+<tr>
+<td>&nbsp;</td>
+<td class="field-body">
+<p> the value actually passed to a function or class
+template</p>
+<p> 传递给一个函数或者类模板的实际值</p>
+</td>
+</tr>
+</tbody>
+</table>
+<table class="docutils field-list" id="parameter" frame="void" rules="none">
+<col class="field-name" /> <col class="field-body" /><tbody valign="top">
+<tr class="field">
+<th class="field-name" colspan="2">Parameter
+(or “formal parameter”): 参变量(Parameter)（或者 “形参(formal parameter)”）</th>
+</tr>
+<tr>
+<td>&nbsp;</td>
+<td class="field-body">
+<p class="first">the name used to refer to an
+argument within a function or class template. For example, the
+value of <tt class="docutils literal"><span class="pre">f</span></tt>'s
+<em>parameter</em> <tt class="docutils literal"><span class="pre">x</span></tt> is given by the <em>argument</em>
+<tt class="docutils literal"><span class="pre">3</span></tt>:
+</p>
+<p class="first">
+用来在函数或者类模板里面引用参数(argument)的名字。比如说，函数 <tt class="docutils literal"><span class="pre">f</span></tt> 的 <em>参变量
+(Parameter)</em> 的值就是由 <em>参数(argument)</em> <tt class="docutils literal"><span class="pre">3</span></tt>
+给定的： </p>
+<pre class="last literal-block">int f(int x) { return x + 1 }<br />int y = f(3);<br /></pre>
+</td>
+</tr>
+</tbody>
+</table>
+</div>
+<div class="section">
+<h1><a class="toc-backref" href="#id68" id="acknowledgements" name="acknowledgements">9&nbsp;&nbsp;&nbsp;Acknowledgements
+致谢</a></h1>
+<p>The authors would like to thank all the Boosters who
+participated
+in the review of this library and its documentation, most
+especially our review manager, Doug Gregor.</p>
+<p>本库的作者在这里要感谢所有参与库的评审和文档撰写工作的Boost人(Booster)，特别要感谢我们的评审负责人 Doug
+Gregor。
+</p>
+<hr class="docutils" />
+<table class="docutils footnote" id="old-interface" frame="void" rules="none">
+<colgroup><col class="label" /><col /></colgroup>
+<tbody valign="top">
+<tr>
+<td class="label"><a class="fn-backref" href="#id2" name="old-interface">[1]</a></td>
+<td>
+<p> As of Boost 1.33.0 the Graph library was still
+using an <a class="reference" href="../../../graph/doc/bgl_named_params.html">older named
+parameter mechanism</a>, but there are
+plans to change it to use Boost.Parameter (this library) in an
+upcoming release, while keeping the old interface available for
+backward-compatibility.
+</p>
+<p>我们知道 Boost 1.33.0 的 Graph 库仍然在使
+用 <a class="reference" href="../../../graph/doc/bgl_named_params.html">旧式的参数命名机制
+(older named parameter mechanism)</a>，并且
+计划在即将到来的发行版中将他们改为使用 Boost.Parameter
+库（本库），同时为了后向兼容性(backward-compatibility)，旧的接口会保持不变。</p>
+</td>
+</tr>
+</tbody>
+</table>
+<table class="docutils footnote" id="odr" frame="void" rules="none">
+<colgroup><col class="label" /><col /></colgroup>
+<tbody valign="top">
+<tr>
+<td class="label"><a class="fn-backref" href="#id4" name="odr">[2]</a></td>
+<td>
+<p> The <strong>One Definition Rule</strong>
+says that any given entity in
+a C++ program must have the same definition in all translation
+units (object files) that make up a program.
+</p>
+<p><strong>一处定义规则(One Definition Rule)</strong>
+说的是，在一个 C++ 程序中任何一个给定的实体在组成这个程序的
+所有的翻译单元(translation unit)（或者目标文件(object file)）中都必须有相同的定义。</p>
+</td>
+</tr>
+</tbody>
+</table>
+<table class="docutils footnote" id="vertex-descriptor" frame="void" rules="none">
+<colgroup><col class="label" /><col /></colgroup>
+<tbody valign="top">
+<tr>
+<td class="label"><a name="vertex-descriptor">[3]</a></td>
+<td>
+<p> If you're not familiar with the Boost Graph
+Library, don't worry about the meaning of any
+Graph-library-specific details you encounter. In this case you
+could replace all mentions of vertex descriptor types with <tt class="docutils literal"><span class="pre">int</span></tt>
+in the text, and your understanding of the Parameter
+library wouldn't suffer.
+</p>
+<p>如果你不熟悉 Boost Graph 库，不用担心你碰到的任何 Graph
+库相关的细节。在这里，你可以将文本中提到的所有顶点描述符类型(vertex descriptor type)替换
+成 <tt class="docutils literal"><span class="pre">int</span></tt>，
+这样你理解起 Parameter 库来就不会有困难了。
+</p>
+</td>
+</tr>
+</tbody>
+</table>
+<table class="docutils footnote" id="conceptcpp" frame="void" rules="none">
+<colgroup><col class="label" /><col /></colgroup>
+<tbody valign="top">
+<tr>
+<td class="label"><a class="fn-backref" href="#id6" name="conceptcpp">[4]</a></td>
+<td>
+<p>This is a major motivation behind <a class="reference" href="http://www.generic-programming.org/software/ConceptGCC/">ConceptC++</a>.
+</p>
+<p> 这是 <a class="reference" href="http://www.generic-programming.org/software/ConceptGCC/">ConceptC++</a>
+背后的一个主要动机。</p>
+</td>
+</tr>
+</tbody>
+</table>
+<!-- .. [#bind] The Lambda library is known not to work on `some -->
+<!-- less-conformant compilers`__. When using one of those you could --><!-- use `Boost.Bind`_ to generate the function object:: -->
+<!-- boost::bind(std::plus<std::string>(),s1,s2) -->
+<table class="docutils footnote" id="is-keyword-expression" frame="void" rules="none">
+<colgroup><col class="label" /><col /></colgroup>
+<tbody valign="top">
+<tr>
+<td class="label"><a name="is-keyword-expression">[5]</a></td>
+<td>
+<p> <em>(<a class="fn-backref" href="#id12">1</a>,
+<a class="fn-backref" href="#id13">2</a>)</em>
+Here we're assuming there's a predicate
+metafunction <tt class="docutils literal"><span class="pre">is_keyword_expression</span></tt>
+that can be used to
+identify models of Boost.Python's KeywordExpression concept.
+</p>
+<p><em>(<a class="fn-backref" href="#id12">1</a>,
+<a class="fn-backref" href="#id13">2</a>)</em>
+这里，我们假设存在一个谓词元函数(predicate metafunction) <tt class="docutils literal"><span class="pre">is_keyword_expression</span></tt>，
+它可以用来标识 Boost.Python 的 KeywordExpression 概念模型。</p>
+</td>
+</tr>
+</tbody>
+</table>
+<!-- .. __ http://www.boost.org/regression/release/user/lambda.html -->
+<table class="docutils footnote" id="using" frame="void" rules="none">
+<colgroup><col class="label" /><col /></colgroup>
+<tbody valign="top">
+<tr>
+<td class="label"><a class="fn-backref" href="#id7" name="using">[6]</a></td>
+<td>
+<p class="first">You can always give the illusion
+that the function lives in an outer namespace by applying a <em>using-declaration</em>:
+</p>
+<p class="first">你可以使用 <em>using-declaration</em>
+来表示这个函数是存在于一个外部的命名空间中的：
+</p>
+<pre class="last literal-block"> namespace foo_overloads<br /> {<br /> // foo declarations here<br /> void foo() { ... }<br /> ...<br /> }<br /> using foo_overloads::foo;<br /><br />This technique for avoiding unintentional argument-dependent lookup is due to Herb Sutter.<br />这个避免无意的参数依赖查找(Argument-Dependent Lookup)技术是由 Herb Sutter 提出的。<br /></pre>
+</td>
+</tr>
+</tbody>
+</table>
+<table class="docutils footnote" id="sfinae" frame="void" rules="none">
+<colgroup><col class="label" /><col /></colgroup>
+<tbody valign="top">
+<tr>
+<td class="label"><a name="sfinae">[7]</a></td>
+<td>
+<p> This capability depends on your compiler's support for
+SFINAE. <strong>SFINAE</strong>: <strong>S</strong>ubstitution
+<strong>F</strong>ailure <strong>I</strong>s
+<strong>N</strong>ot <strong>A</strong>n
+<strong>E</strong>rror. If type substitution during
+the
+instantiation of a function template results in an invalid type,
+no compilation error is emitted; instead the overload is removed
+from the overload set. By producing an invalid type in the
+function signature depending on the result of some condition,
+we can decide whether or not an overload is considered during overload
+resolution. The technique is formalized in
+the <a class="reference" href="../../../utility/enable_if.html"><tt class="docutils literal"><span class="pre">enable_if</span></tt></a>
+utility. Most recent compilers support SFINAE;
+on compilers that don't support it, the Boost config library
+will <tt class="docutils literal"><span class="pre">#define</span></tt>
+the symbol <tt class="docutils literal"><span class="pre">BOOST_NO_SFINAE</span></tt>.
+See <a class="reference" href="http://www.semantics.org/once_weakly/w02_SFINAE.pdf">http://www.semantics.org/once_weakly/w02_SFINAE.pdf</a>
+for more
+information on SFINAE.
+</p>
+<p>这种能力取决于你到编译器是否支持 SFINAE。替换失败不是一种错
+误(<strong>S</strong>ubstitution <strong>F</strong>ailure
+<strong>I</strong>s <strong>N</strong>ot
+<strong>A</strong>n <strong>E</strong>rror)。
+如果在实例化函数模板的过程中，类型替换导致了一个不正确的类型，编译器不是报出编译错误；而是将这个重载函数(overload)移出重载集
+(overload set)。
+通过在依赖某些条件结果的函数签名中生成一个不正确的类型，我们可以决定一个重载函数(overload)在重载解析(overload
+resolution)的过程中是否会被
+考虑到（译注：加入到重载集(overload set)中去）。
+</p>
+</td>
+</tr>
+</tbody>
+</table>
+</div>
+</div>
+<div class="footer">
+<hr class="footer" />Generated on: 2009-05-31 01:40 UTC. Generated by <a class="reference external" href="http://docutils.sourceforge.net/">Docutils</a> from <a class="reference external" href="http://docutils.sourceforge.net/rst.html">reStructuredText</a> source. 本文档是由来自于 <a class="reference" href="http://docutils.sourceforge.net/rst.html">reStructuredText</a>
+的 <a class="reference" href="http://docutils.sourceforge.net/">Docutils</a>
+从源代码生成的。
+</div>
+</div>
+</div>
+</div>
+</div>
+</div>
+</body></html>

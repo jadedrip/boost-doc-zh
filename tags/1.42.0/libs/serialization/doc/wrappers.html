@@ -1,0 +1,175 @@
+<!DOCTYPE HTML PUBLIC "-//W3C//DTD HTML 4.01 Transitional//EN" "http://www.w3.org/TR/html4/loose.dtd">
+<html>
+<head>
+<!--
+(C) Copyright 2002-4 Robert Ramey - http://www.rrsd.com . 
+Use, modification and distribution is subject to the Boost Software
+License, Version 1.0. (See accompanying file LICENSE_1_0.txt or copy at
+http://www.boost.org/LICENSE_1_0.txt)
+-->
+
+  
+  <meta http-equiv="Content-Type" content="text/html; charset=UTF-8">
+
+
+  
+  <link rel="stylesheet" type="text/css" href="../../../boost.css">
+
+
+  
+  <link rel="stylesheet" type="text/css" href="style.css">
+
+
+  
+  <title>Serialization - Serialization Wrappers</title>
+</head>
+
+
+<body link="#0000ff" vlink="#800080">
+
+
+<table summary="header" border="0" cellpadding="7" cellspacing="0" width="100%">
+
+
+  <tbody>
+
+    <tr>
+
+ 
+    <td valign="top" width="300"> 
+      
+      
+      <h3><a href="../../../index.htm"><img alt="C++ Boost" src="../../../boost.png" border="0" height="86" width="277"></a></h3>
+
+
+    </td>
+
+
+    <td valign="top"> 
+      
+      
+      <h1 align="center">Serialization序列化</h1>
+
+
+      
+      
+      <h2 align="center">序列化的包装</h2>
+
+
+    </td>
+
+
+  </tr>
+
+
+  
+  </tbody>
+</table>
+
+
+<hr>
+<dl class="page-index">
+
+
+  <dt><a href="#binaryobjects">二进制对象</a>
+  </dt>
+
+  <dt><a href="#strong_type"><code style="white-space: normal;">BOOST_STRONG_TYPEDEF</code></a>
+  </dt>
+
+  <dt><a href="#nvp">名字-值对</a>
+  </dt>
+
+  <dt><a href="#composition">组合</a>
+  </dt>
+
+</dl>
+
+有时候，创建一个临时对象可以更好地支持某些底层数据的序列化。这样允许存档类可以为这些类型定义特别的处理。本库包含了几种这样的类型，分别对应于不同的目的。
+<h3><a name="binaryobjects">二进制对象</a></h3>
+
+二进制对象是一串字节，以原始二进制数据方式保存。它常用于保存大量的 "轻量级" 数据，如一个像素图或内嵌的二进制文件。头文件 
+<a href="../../../boost/serialization/binary_object.hpp" target="binary_object_hpp">
+binary_object.hpp
+</a>包含以下构造函数：
+<pre><code>
+boost::serialization::binary_object(void * t, size_t size);
+boost::serialization::make_binary_object(void * t, size_t size);
+</code></pre>
+
+用于构造一个可以象其它对象一样被序列化的临时二进制对象。缺省的序列化是使用存档类中原始的 
+<code style="white-space: normal;">save_binary</code> 和 <code>load_binary</code>.  
+注意，它不分配任何存储或创建任何对象。其唯一的效果是将数据大小和地址组对后传给存档类。  
+
+<h3><a name="strong_type"><code style="white-space: normal;">BOOST_STRONG_TYPEDEF</code></a></h3>
+
+
+<a name="strong_type">序列化包装的另一个例子是 
+</a><a href="strong_typedef.html"><code style="white-space: normal;">BOOST_STRONG_TYPEDEF</code></a>
+模板。序列化库用它来传递特定类型的整数，如 object_id, version, 等等给存档类。由于这些整数现在可以根据其类型来区别，XML
+存档可以对这些类型进行特殊的处理。例如，一个版本号被表示为形如 "version=12" 的 XML
+属性。如果没有特定的覆写，这些类型会自动转换为底层的整数类型，因此 XML 存档所用的特定覆写对于其它存档类来说是不必要的。
+
+<h3><a name="nvp">名字-值对</a></h3>
+
+
+<a name="nvp">XML 存档有些特殊。XML 格式有一个嵌套结构，可以很好地映射到本序列化系统所用的 "recursive
+class member visitor" 模式。但是，XML
+与其它格式有所不同，它要求为类的每个数据成员对应一个名字。我们的目标是将这个信息加到类的序列化规范中，同时仍然允许序列化代码可以被其它存档使用。
+</a>
+<p>
+<a name="nvp">我们的解决方案是，将类的成员包装为一个<span style="font-weight: bold;">名字-值对</span>来进行序列取消。该结构的定义位于
+</a><a href="../../../boost/serialization/nvp.hpp" target="nvp_hpp">nvp.hpp</a>.
+它只不过是一个对数据成员的引用外加一个表示XML名字的 <code style="white-space: normal;">const char *</code>
+指针。它实现了名字-值对的缺省序列化函数。缺省的行为是忽略项目名字而以普通方式对数据值进行序列化。对于那些对名字-值对没有特殊处理的存档类来说，
+这就是对名字-值对进行序列化的行为。因此，把一个数据值包装在名字值对之中不会影响那些对该包装不进行特殊处理的存档的序列化行为。
+</p>
+
+<p>xml 存档类包含类似于以下的代码：
+</p>
+
+<pre><code>
+// 对名字-值对的特殊处理
+template&lt;class T&gt;
+xml_oarchive &amp; operator&amp;(const boost::serialization::nvp<t> &amp; t)<br>{<br>    // 写入一个 xml 开始标志<br>    start_tag(t.name());<br><br>    // 如常地进行数据序列化<br>    *this &amp; t.value();<br><br>    // 写入一个 xml 结束标志<br>    end_tag(t.name());<br>}<br></t></code></pre>
+作为XML数据项的最明显和最方便的名字正是该C++数据成员的名字 - 奇怪吗？因此我们的序列化代码应该看起来象这样：
+<pre><code>
+ar &amp; make_nvp("my_variable", my_variable);
+</code></pre>
+为了简化代码和增强可读性，系统定义了一个宏，因此我们可以这样写：
+<pre><code>
+ar &amp; BOOST_SERIALIZATION_NVP(my_variable);
+</code></pre>
+类似地，还定义了另一个宏，让我们可以这样写：
+<pre><code>
+BOOST_SERIALIZATION_BASE_OBJECT_NVP(my_base_class)
+</code></pre>
+
+
+<p>在 
+<a href="../example/demo_xml.hpp" target="demo_xml_hpp">demo_xml.hpp</a><a>
+中就是将数据成员包装为<strong>名字-值对</strong>且在
+</a><a href="../example/demo_xml.cpp" target="demo_xml_cpp">demo_xml.cpp</a><a>
+中将数据保存为XML存档以及从XML存档中导入。</a><a href="../example/demo_save.xml" target="demo_save_xml">这里</a>
+是我们的例子所对应的 XML 存档。
+
+</p>
+
+<h3><a name="composition">组合</a></h3>
+
+
+<a name="composition">以上各种包装被设计为在需要的时候可以进行组合。例如，将二进制数据以名字-值对的方式传递，可以这样写：
+</a>
+<pre><code>
+<a name="composition">ar &amp; make_nvp("named_binary_object", make_binary_object(address, size));<br></a></code></pre>
+
+
+<hr>
+<p><a name="composition"><i>&copy; Copyright </i></a><i><a href="http://www.rrsd.com">Robert Ramey</a> 2002-2004. 
+Distributed under the Boost Software License, Version 1.0. (See
+accompanying file LICENSE_1_0.txt or copy at http://www.boost.org/LICENSE_1_0.txt)
+</i></p>
+
+
+</body>
+</html>

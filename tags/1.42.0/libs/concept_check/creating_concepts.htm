@@ -1,0 +1,138 @@
+<!DOCTYPE html PUBLIC "-//W3C//DTD XHTML 1.0 Transitional//EN" "http://www.w3.org/TR/xhtml1/DTD/xhtml1-transitional.dtd">
+<html xmlns="http://www.w3.org/1999/xhtml">
+<head>
+<!-- Copyright (c) Jeremy Siek and Andrew Lumsdaine 2000 --><!-- Distributed under the Boost --><!-- Software License, Version 1.0. (See accompanying --><!-- file LICENSE_1_0.txt or copy at http://www.boost.org/LICENSE_1_0.txt) -->
+  
+  <meta http-equiv="Content-Type" content="text/html; charset=utf-8" />
+
+  
+  <meta name="generator" content="HTML Tidy for Linux/x86 (vers 1 September 2005), see www.w3.org" />
+
+
+  
+  
+  <title>Creating Concept Checking Classes</title>
+  <link rel="stylesheet" href="../../rst.css" type="text/css" />
+</head>
+
+
+
+
+
+
+
+
+<body alink="#ff0000" bgcolor="#ffffff" link="#0000ee" text="#000000" vlink="#551a8b">
+
+  <img src="../../boost.png" alt="C++ Boost" height="86" width="277" /><br clear="none" />
+
+
+  
+<h2><a name="creating-concept-checks" id="creating-concept-checks">Creating
+  Concept Checking Classes 创建概念检查类</a></h2>
+
+
+  
+<p>作为关于如何创建概念检查类模板的例子，我们来看看如何为 <a href="http://www.sgi.com/tech/stl/InputIterator.html">InputIterator</a> 概念创建一个概念检查类。完整的定义如下：</p>
+
+  
+<pre>template &lt;class X&gt;<br />struct InputIterator<br />  : Assignable&lt;X&gt;, EqualityComparable&lt;X&gt;<br />{<br /> private:<br />    typedef std::iterator_traits&lt;X&gt; t;<br /> public:<br />    typedef typename t::value_type value_type;<br />    typedef typename t::difference_type difference_type;<br />    typedef typename t::reference reference;<br />    typedef typename t::pointer pointer;<br />    typedef typename t::iterator_category iterator_category;<br /><br />    BOOST_CONCEPT_ASSERT((SignedInteger&lt;difference_type&gt;));<br />    BOOST_CONCEPT_ASSERT((Convertible&lt;iterator_category, std::input_iterator_tag&gt;));<br />        <br />    BOOST_CONCEPT_USAGE(InputIterator)<br />    {<br />        X j(i);             <font color="green">// 要求复制构造</font>
+        same_type(*i++,v);  <font color="green">// 要求后缀递增提领返回 value_type</font>
+        X&amp; x = ++j;         <font color="green">// 要求前缀递增返回 X&amp;</font>
+    }
+    
+ private:
+    X i;
+    value_type v;
+
+    <font color="green">// 类型推导会失败，除非参数具有相同类型</font>
+    template &lt;typename T&gt;
+    void same_type(T const&amp;, T const&amp;);
+};
+</pre>
+
+
+  
+<h3>Walkthrough 预演</h3>
+
+
+  
+<p>首先，作为一种惯例，我们以概念名来命名概念检查类。接着，由于 InputIterator 是 Assignable 和
+  EqualityComparable 的精化，所以我们从这两个概念的检查类派生新的概念检查类。本库会在检查 InputIterator 概念时自动检查 Assignable 和 EqualityComparable 的符合性。</p>
+
+
+  
+<p>再接着，我们将概念的 <a href="http://www.boost.org/more/generic_programming.html#associated_type">相关类型</a>
+  声明为成员 typedefs. 相关的距离类型要求是有符号整数，且迭代器的类别必须可转换为 std::input_iterator_tag, 所以我们对这些关系进行断言。通过概念检查模板访问相关类型的语法借鉴了在C++0x中访问相关类型的 <a href="http://www.generic-programming.org/languages/conceptcpp/">建议</a>
+  语法。最后，我们用
+  <code>BOOST_CONCEPT_USAGE</code> 宏来声明一个函数，对概念的有效表达式进行测试。注意，在这里你可能需要一点创意：例如，为了检查
+  <code>*i++</code> 是否返回迭代器的值类型，我们将这两个值传给 <code>same_type</code> 成员函数模板，后者要求两个参数具有相同类型，包括引用和cv限定符。这是一个有漏洞的检查，但总比没有任何东西好一点。</p>
+
+
+  
+<h3>Values for Usage Patterns Should Be Data Members 用法模式所需的值应为数据成员</h3>
+
+
+  
+<p>你可能觉得奇怪，为什么在上例中将 <code>i</code> 和 <code>v</code>
+  声明为数据成员。为什么我们不象以下这样写？</p>
+
+  
+<pre>BOOST_CONCEPT_USAGE(InputIterator)<br />{<br />    X i;                <font color="green">// 创建我们需要的值</font>
+    value_type v;
+
+    X j(i);             <font color="green">// 要求复制构造</font>
+    same_type(*i++,v);  <font color="green">// </font><font color="green">要求后缀递增提领返回 value_type</font><font color="green"></font>
+    X&amp; x = ++j;         <font color="green">// </font><font color="green">要求前缀递增返回</font><font color="green"> X&amp;</font>
+}
+</pre>
+
+
+  
+<p>不幸的是，这段代码不能很好地工作，因为它无意中强制要求了 <code>X</code> 及其值类型都必须是可缺省构造的。另一方面，因为 <code>InputIterator</code> 模板的实例永远不会被构造，编译器无需检查其数据成员需要如何构造(C++标准第14.7.1 9节)。为此，你应该总是<span style="font-weight: bold;">将用法模式所需的值声明为数据成员</span>。</p>
+
+
+  
+<p>在概念定义中的这类错误可以通过使用 <a href="concept_covering.htm">概念原型</a> 检测出来，但是提前避免它们都是更好些的。</p>
+
+
+  
+<h3>Similarity to Proposed C++0x Language Support for Concepts 与C++0x对概念的语言支持的相似点</h3>
+
+
+  
+<p>本库中对于概念精化以及访问相关类型的语法，都借鉴了在C++0x中相应的 <a href="http://www.generic-programming.org/languages/conceptcpp/">建议</a> 语法。不过，C++0x 会使用 &ldquo;signatures签名&rdquo; 而不是用法模式来描述一个概念中的类型所参与的有效操作，所以将你的概念检查类转换为语言支持的概念时，你需要将你的用法函数转换为一系列签名。</p>
+
+
+  
+<p><a href="./concept_covering.htm">Next: Concept Covering and
+  Archetypes 概念的充分性和原型</a><br />
+
+  <a href="./using_concept_check.htm">Prev: Using Concept
+  Checks 使用概念检查</a><br />
+</p>
+
+  
+<hr />
+
+  
+<table>
+
+    <tbody>
+    <tr valign="top">
+
+      <td nowrap="nowrap">Copyright &copy; 2000</td>
+
+
+      <td><a href="http://www.boost.org/people/jeremy_siek.htm">Jeremy Siek</a>(<a href="mailto:jsiek@osl.iu.edu">jsiek@osl.iu.edu</a>) Andrew
+      Lumsdaine(<a href="mailto:lums@osl.iu.edu">lums@osl.iu.edu</a>),
+        2007 <a href="mailto:dave@boost-consulting.com">David Abrahams</a>.
+    </td>
+    </tr>
+
+  
+  </tbody>
+</table>
+
+</body>
+</html>

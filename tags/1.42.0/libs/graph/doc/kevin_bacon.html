@@ -1,0 +1,112 @@
+<!DOCTYPE HTML PUBLIC "-//W3C//DTD HTML 4.01 Transitional//EN">
+<html><head><meta content="text/html; charset=UTF-8" http-equiv="content-type"><!--
+  -- Copyright (c) Jeremy Siek 2000
+  --
+  -- Distributed under the Boost Software License, Version 1.0.
+  -- (See accompanying file LICENSE_1_0.txt or copy at
+  -- http://www.boost.org/LICENSE_1_0.txt)
+  -->
+<title>Kevin Bacon Example</title></head>
+<body alink="#ff0000" bgcolor="#ffffff" link="#0000ee" text="#000000" vlink="#551a8b"> 
+<img src="../../../boost.png" alt="C++ Boost" height="86" width="277"> 
+
+<br clear="">
+
+<h1>Six Degrees of Kevin Bacon 六度分离理论</h1>
+
+<p>图论的一个有趣的应用出现在一个名为"Kevin Bacon 六度理论"的流行游戏中。这个游戏的思路是这样的，通过追溯两个在同一部电影中出现的演员，可以将任一演员与 Kevin Bacon 联系起来，最多不超过六步。例如，Theodore
+Hesburgh(Notre Dame 大学的名誉主席)在电影 ``Rudy'' 中和演员 Gerry Becker 一起出现，后者又在电影
+``Sleepers'' 中与 Kevin Bacon 一起出现。为什么要用 Kevin Bacon? 由于某些原因，发明这个游戏的的三名学生，Mike Ginelli, Craig Fass, 和
+Brian Turtle 认为 Kevin Bacon 是娱乐世界的中心。这个 Kevin Bacon 游戏很象 <a href="http://www.oakland.edu/%7Egrossman/erdoshp.html">Erdös
+Number</a>，它已经"是多年以来世界各地的数学家的传统活动的一部分"。
+
+</p><p>这个"Kevin Bacon
+六度理论"游戏其实就是一个图论问题。如果你将每个演员对应为一个顶点，如果两个演员曾在同一部电影中出现就在他们之间增加一条边，这样你就得到了这个游
+戏的一个数据表示。然后，这个查找从某个演员到 Kevin Bacon 的联系就变为一个经典的图论问题：查找两个顶点间的<i>路径</i>。因为我们要找到一条长度短于六步的路径，最好就是找出两点间的<i>最短路径</i>。
+你可能想对这个问题应用Dijkstra最短路径算法，但是这样有点大材小用，因为Dijkstra算法是用于那些每条边带有长度(或权重)的情形的，其
+目标是找到总长度最短的路径。因为我们只需要按边数来查找最短路径，所以广度优先搜索算法就可以解决这个问题了(并且它的用时要少于Dijkstra算
+法)。
+</p><h2>Input File and Graph Setup 输入文件与图的建立</h2>
+
+<p>在这个例子中，我们将使用一个比所有电影和所有演员小得多的图。该例子的完整源代码在 <a href="../example/kevin-bacon.cpp"><tt>examples/kevin-bacon.cpp</tt></a> 中。我们还提供了一个名为 <tt>kevin-bacon.dat</tt> 的文件，其中包含有一个列表，记录了哪些演员在同一部电影中出现的演员对。该文件的每一行包含一个演员名字、一部电影和在该电影中的另一位演员。以";"字符作为分隔符。以下是一个例子。</p><pre>Patrick Stewart;Prince of Egypt, The (1998);Steve Martin<br></pre>
+
+<p>我们第一个任务是读入这个文件并从它创建一个图。我们用一个 <tt>std::ifstream</tt> 来输入这个文件。</p><pre>  std::ifstream datafile("./kevin-bacon.dat");<br>  if (!datafile) {<br>    std::cerr &lt;&lt; "No ./kevin-bacon.dat file" &lt;&lt; std::endl;<br>    return EXIT_FAILURE;<br>  }<br></pre>
+
+<p>我们想把演员的名字关联到图中的顶点上，把电影的名字关联到边上。我们用 <tt>property</tt> 类来指定这些附加到图上的顶点属性和边属性。我们选择使用无向图，因为演员在同一部电影中出现的关系是对称的。</p><pre>  using namespace boost;<br>  typedef adjacency_list&lt;vecS, vecS, undirectedS, <br>    property&lt;vertex_name_t, string&gt;,<br>    property&lt;edge_name_t, string &gt; &gt;<br>  &gt; Graph;<br></pre>
+
+<p>要访问这些属性，我们需要从图中获得属性映射无明。以下代码示范了该怎么做。</p><pre>  property_map&lt;Graph, vertex_name_t&gt;::type actor_name = get(vertex_name, g);<br>  property_map&lt;Graph, edge_name_t&gt;::type connecting_movie = get(edge_name, g);<br></pre>
+
+<p>接下来我们就可以开始遍历输入文件，使用 <a href="../../tokenizer/index.html">Boost
+Tokenizer 库</a> 对每一行进行分析，存入一个记号序列。
+
+</p><pre>  for (std::string line; std::getline(datafile, line);) {<br>    char_delimiters_separator&lt;char&gt; sep(false, "", ";");<br>    tokenizer&lt;&gt; line_toks(line, sep);<br>    ...<br>  }<br></pre>
+
+<p>输入的每一行对应图中的一条边，两个演员作为该边的顶点，而电影名则是附着到这条边上的一个属性。从这种输入格式创建相关图的一个挑战是，边是用一
+对演员名来指定的。由于我们是把顶点加到图中，所以我们需要创建一个从演员名到其对应顶点的映射，这样才可能在同一个演员(在另一条边上)再次出现时，把
+它链接到图中正确的顶点上。<a href="http://www.sgi.com/tech/stl/Map.html"><tt>std::map</tt></a>
+可以用于实现这个映射。
+
+</p><pre>  typedef graph_traits&lt;Graph&gt;::vertex_descriptor Vertex;<br>  typedef std::map&lt;string, Vertex&gt; NameVertexMap;<br>  NameVertexMap actors;<br></pre>
+
+<p>每行的第一个记号是一个演员名。如果该演员尚未存在于我们的演员映射中，我们将往图中增加一个顶点，设置该顶点的名字属性，并将该顶点描述符记录在这个map中。如果该演员已经在图中，我们就从这个map的 <tt>pos</tt> 迭代器取出这个顶点的描述符。
+
+</p><pre>  NameVertexMap::iterator pos; <br>  bool inserted;<br>  Vertex u, v;<br><br>  tokenizer&lt;&gt;::iterator i = line_toks.begin();<br>  std::string actors_name = *i++;<br><br>  tie(pos, inserted) = actors.insert(std::make_pair(actors_name, Vertex()));<br>  if (inserted) {<br>    u = add_vertex(g);<br>    actor_name[u] = actors_name;<br>    pos-&gt;second = u;<br>  } else<br>    u = pos-&gt;second;<br></pre>
+
+<p>第二个记号是电影名，第三个记号则是另一位演员。我们使用同样的技术将第二个演员插入到图中。
+
+</p><pre>  std::string movie_name = *i++;<br>      <br>  tie(pos, inserted) = actors.insert(std::make_pair(*i, Vertex()));<br>  if (inserted) {<br>    v = add_vertex(g);<br>    actor_name[v] = *i;<br>    pos-&gt;second = v;<br>  } else<br>    v = pos-&gt;second;<br></pre>
+
+<p>最后一步是增加一条连接这两个演员的边，并记下形成这个连接的电影名。 
+
+</p><pre>  graph_traits&lt;Graph&gt;::edge_descriptor e;<br>  tie(e, inserted) = add_edge(u, v, g);<br>  if (inserted)<br>    connecting_movie[e] = movie_name;<br></pre>
+
+<h2>A Custom Visitor Class 定制的遍历器类</h2>
+
+<p>现在我们创建一个定制的遍历器类来记录 Kevin Bacon
+数。Kevin Bacon 数是指从一个演员到 Kevin Bacon 的最短距离。这个距离也被称为"Bacon 数"，记得"Erdos 数"就被用于按照数学家与
+Paul Erdos 相差的出版物数量来对数学家进行排名。从 Kevin Bacon 到每个演员的最短距离符合广度优先树。BFS算法可以标识出属于广度优先树的边，并调用我们的遍历器的
+<tt>tree_edge</tt> 函数。我们把到目标顶点的距离记录为到源顶点的距离加一。
+
+
+</p><pre>  template &lt;typename DistanceMap&gt;<br>  class bacon_number_recorder : public default_bfs_visitor<br>  {<br>  public:<br>    bacon_number_recorder(DistanceMap dist) : d(dist) { }<br><br>    template &lt;typename Edge, typename Graph&gt;<br>    void tree_edge(Edge e, const Graph&amp; g) const<br>    {<br>      typename graph_traits&lt;Graph&gt;::vertex_descriptor<br>	u = source(e, g), v = target(e, g);<br>	d[v] = d[u] + 1;<br>    }<br>  private:<br>      DistanceMap d;<br>  };<br>  // 便利函数<br>  template &lt;typename DistanceMap&gt;<br>  bacon_number_recorder&lt;DistanceMap&gt;<br>  record_bacon_number(DistanceMap d)<br>  {<br>    return bacon_number_recorder&lt;DistanceMap&gt;(d);<br>  }<br></pre>
+
+<p>我们用一个 vector 来保存 bacon 数。
+
+</p><pre>  std::vector&lt;int&gt; bacon_number(num_vertices(g));<br></pre>
+
+<h2>Apply the Breadth-First Search 使用广度优先搜索</h2>
+
+<p>BFS算法要求用一个源顶点作为输入；当然就是 Kevin Bacon 了。现在我们调用 BGL BFS 算法，传入该图、源顶点和遍历器。
+
+</p><pre>  Vertex src = actors["Kevin Bacon"];<br>  bacon_number[src] = 0;<br><br>  breadth_first_search(g, src, visitor(record_bacon_number(&amp;bacon_number[0])));<br></pre>
+
+<p>我们只需遍历图中的所有顶点并以它们作为
+<tt>bacon_number</tt> 向量的下标，就可以对每个演员输出 Bacon 数。
+
+</p><pre>  graph_traits&lt;Graph&gt;::vertex_iterator i, end;<br>  for (boost::tie(i, end) = vertices(g); i != end; ++i)<br>    std::cout &lt;&lt; actor_name[*i] &lt;&lt; "'s bacon number is " <br>              &lt;&lt; bacon_number[*i] &lt;&lt; std::endl;<br></pre>
+
+<p>请注意，顶点描述符对象并不总是可以被用作象 <tt>bacon_number</tt> 这样的向量或数组的下标。对于指定了 <tt>VertexList=vecS</tt> 的 <tt>adjacency_list</tt> 类是可以的，但对于其它 <tt>adjacency_list</tt> 就不可以。基于顶点来索引的更为通用的方法是使用ID属性映射(<tt>vertex_index_t</tt>)和 <a href="../../property_map/doc/iterator_property_map.html"><tt>iterator_property_map</tt></a>。
+
+</p><p>以下是该程序输出中的一部分。
+</p><pre>William Shatner's bacon number is 2<br>Denise Richards's bacon number is 1<br>Kevin Bacon's bacon number is 0<br>Patrick Stewart's bacon number is 2<br>Steve Martin's bacon number is 1    <br>...<br></pre>
+
+
+
+
+<br>
+<hr>
+<table>
+<tbody><tr valign="top">
+<td nowrap="nowrap">Copyright © 2000-2001</td><td>
+<a href="http://www.boost.org/people/jeremy_siek.htm">Jeremy Siek</a>, Indiana University (<a href="mailto:jsiek@osl.iu.edu">jsiek@osl.iu.edu</a>)
+</td></tr></tbody></table>
+
+<!--  LocalWords:  gif Hesburgh Ginelli Fass Erd vertices cerr namespace vecS
+ -->
+<!--  LocalWords:  undirectedS Tokenizer sep tokenizer toks NameVertexMap pos
+ -->
+<!--  LocalWords:  bool Erdos BFS typename DistanceMap bfs const num BGL src
+ -->
+<!--  LocalWords:  indices Shatner's Richards's siek htm
+ -->
+</body></html>

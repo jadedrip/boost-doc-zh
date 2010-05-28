@@ -1,0 +1,692 @@
+<!DOCTYPE HTML PUBLIC "-//W3C//DTD HTML 4.01 Transitional//EN">
+<html><head>
+<meta http-equiv="Content-Type" content="text/html; charset=UTF-8">
+
+<title>Design Rationale</title><link rel="stylesheet" href="../boostbook.css" type="text/css">
+<meta name="generator" content="DocBook XSL Stylesheets V1.74.3">
+<link rel="home" href="../index.html" title="The Boost C++ Libraries BoostBook Documentation Subset">
+<link rel="up" href="../signals2.html" title="Chapter 17. Boost.Signals2">
+<link rel="prev" href="faq.html" title="Frequently Asked Questions">
+<link rel="next" href="porting.html" title="Porting from Boost.Signals to Boost.Signals2"></head>
+<body alink="#0000ff" bgcolor="white" link="#0000ff" text="black" vlink="#840084">
+<table cellpadding="2" width="100%"><tbody><tr>
+<td valign="top"><img alt="Boost C++ Libraries" src="../../../boost.png" height="86" width="277"></td>
+<td align="center"><a href="../../../index.html">Home</a></td>
+<td align="center"><a href="../../../libs/libraries.htm">Libraries</a></td>
+<td align="center"><a href="http://www.boost.org/users/people.html">People</a></td>
+<td align="center"><a href="http://www.boost.org/users/faq.html">FAQ</a></td>
+<td align="center"><a href="../../../more/index.htm">More</a></td>
+</tr></tbody></table>
+<hr>
+<div class="spirit-nav">
+<a accesskey="p" href="faq.html"><img src="../../../doc/html/images/prev.png" alt="Prev"></a><a accesskey="u" href="../signals2.html"><img src="../../../doc/html/images/up.png" alt="Up"></a><a accesskey="h" href="../index.html"><img src="../../../doc/html/images/home.png" alt="Home"></a><a accesskey="n" href="porting.html"><img src="../../../doc/html/images/next.png" alt="Next"></a>
+</div>
+<div class="section" lang="en">
+<div class="titlepage"><div><div><h2 class="title" style="clear: both;">
+<a name="signals2.rationale"></a>Design Rationale</h2></div></div></div>
+
+<div class="titlepage"><div><div><h2 class="title" style="clear: both;">
+<a name="signals2.rationale"></a>设计原理</h2></div></div></div>
+
+<div class="toc"><dl>
+<dt><span class="section"><a href="rationale.html#id3385960">User-level Connection Management</a></span></dt>
+<dt><span class="section"><a href="rationale.html#id3386133">Automatic Connection Management</a></span></dt>
+<dt><span class="section"><a href="rationale.html#id3386287">optional_last_value as the Default Combiner</a></span></dt>
+<dt><span class="section"><a href="rationale.html#id3386348">Combiner Interface</a></span></dt>
+<dt><span class="section"><a href="rationale.html#id3386428">Connection Interfaces: +=  operator</a></span></dt>
+<dt><span class="section"><a href="rationale.html#id3386600">Signals2 Mutex Classes</a></span></dt>
+<dt><span class="section"><a href="rationale.html#id3386712">Comparison with other Signal/Slot implementations</a></span></dt>
+</dl></div>
+
+<div class="toc"><dl>
+<dt><span class="section"><a href="rationale.html#id3385960">用户层连接管理</a></span></dt>
+<dt><span class="section"><a href="rationale.html#id3386133">自动连接管理</a></span></dt>
+<dt><span class="section"><a href="rationale.html#id3386287">默认合并器为 optional_last_value</a></span></dt>
+<dt><span class="section"><a href="rationale.html#id3386348">合并器接口</a></span></dt>
+<dt><span class="section"><a href="rationale.html#id3386428">连接的接口：+= 运算符</a></span></dt>
+<dt><span class="section"><a href="rationale.html#id3386600">Signals2 互斥类</a></span></dt>
+<dt><span class="section"><a href="rationale.html#id3386712">与其他信号/插槽实现的比较</a></span></dt>
+</dl></div>
+
+<div class="section" lang="en">
+<div class="titlepage"><div><div><h3 class="title">
+<a name="id3385960"></a>User-level Connection Management</h3></div></div></div>
+
+<div class="titlepage"><div><div><h3 class="title">
+<a name="id3385960"></a>用户层连接管理</h3></div></div></div>
+
+<p> Users need to have fine control over the connection of
+    signals to slots and their eventual disconnection. The primary approach
+    taken by Boost.Signals2 is to return a
+    <code class="computeroutput"><a class="link" href="../boost/signals2/connection.html" title="Class connection">connection</a></code> object that enables
+    connected/disconnected query, manual disconnection, and an
+    automatic disconnection on destruction mode (<code class="computeroutput"><a class="link" href="../boost/signals2/scoped_connection.html" title="Class scoped_connection">scoped_connection</a></code>).
+    In addition, two other interfaces are supported by the
+    <code class="computeroutput"><a class="link" href="../boost/signalN.html#id1242363-bb">signal::disconnect</a></code> overloaded method:</p>
+
+<p> 用户需要精确控制信号到插槽的连接和它们最后的断开。
+
+    Boost.Signals2 所采用的主要方法是，
+    返回一个
+    <code class="computeroutput"><a class="link" href="../boost/signals2/connection.html" title="Class connection">connection</a></code>
+    对象，让人能够进行已连接/已断开查询、手工断开，
+    以及在析构模式
+    （<code class="computeroutput"><a class="link" href="../boost/signals2/scoped_connection.html" title="Class scoped_connection">scoped_connection</a></code>）
+    下自动断开。
+
+    另外，
+    <code class="computeroutput"><a class="link" href="../boost/signalN.html#id1242363-bb">signal::disconnect</a></code>
+    重载方法还支持其他两个接口：</p>
+
+<div class="itemizedlist"><ul type="disc">
+<li><p><span class="bold"><strong>Pass slot to
+        disconnect</strong></span>: in this interface model, the
+        disconnection of a slot connected with
+        <code class="computeroutput">sig.<a class="link" href="../boost/signals2/signalN.html#id1284885-bb">connect</a>(typeof(sig)::slot_type(slot_func))</code> is
+        performed via
+        <code class="computeroutput">sig.<a class="link" href="../boost/signals2/signalN.html#id1280164-bb">disconnect</a>(slot_func)</code>. Internally,
+        a linear search using slot comparison is performed and the
+        slot, if found, is removed from the list. Unfortunately,
+        querying connectedness ends up as a
+        linear-time operation.</p>
+
+        <p><span class="bold"><strong>断开时传递插槽</strong></span>：
+        在这个接口模型下，
+        通过
+        <code class="computeroutput">sig.<a class="link" href="../boost/signals2/signalN.html#id1284885-bb">connect</a>(typeof(sig)::slot_type(slot_func))</code>
+        连接的插槽，
+        断开时是通过
+        <code class="computeroutput">sig.<a class="link" href="../boost/signals2/signalN.html#id1280164-bb">disconnect</a>(slot_func)</code>
+        进行的。
+
+        在内部，将利用插槽比较，执行一个线性搜索， 如果找到该插槽，就从链表中删除。 
+
+        不幸的是，连接查询是线性时间的操作。
+        </p>
+        </li>
+<li>
+<p><span class="bold"><strong>Pass a token to
+        disconnect</strong></span>: this approach identifies slots with a
+        token that is easily comparable (e.g., a string), enabling
+        slots to be arbitrary function objects. While this approach is
+        essentially equivalent to the connection approach taken by Boost.Signals2,
+        it is possibly more error-prone for several reasons:</p>
+
+<p><span class="bold"><strong>断开时传递一个标记</strong></span>：
+        这个方法用一个容易比较的标记来标识插槽（例如用字符串），
+        插槽可以是任意的函数对象。
+
+        虽然这个方法本质上等效于 Boost.Signals2
+        所采用的方法，
+        但是因为以下几个原因，它更容易出错：
+        </p>
+
+<div class="itemizedlist"><ul type="circle">
+<li><p>Connections and disconnections must be paired, so
+            the problem becomes similar to the problems incurred when
+            pairing <code class="computeroutput">new</code> and <code class="computeroutput">delete</code> for
+            dynamic memory allocation. While errors of this sort would
+            not be catastrophic for a signals and slots
+            implementation, their detection is generally
+            nontrivial.</p>
+
+            <p>连接与断开必须配对，
+            因此问题变得类似于动态内存分配中的
+            <code class="computeroutput">new</code>
+            和 <code class="computeroutput">delete</code>
+            配对时所产生的问题。
+
+            虽然这种错误对于信号插槽库实现来说并不是灾难性的，
+            但是要检测它们通常并不简单。 
+            </p>
+            </li>
+<li><p>If tokens are not unique, two slots may have
+            the same name and be indistinguishable. In
+            environments where many connections will be made
+            dynamically, name generation becomes an additional task
+            for the user.</p>
+
+            <p>如果标记不唯一，
+            两个插槽可能会具有相同的名字而不可区分。
+
+            在动态产生许多连接的环境下，名字生成将成为用户的额外负担。
+            </p>
+            </li>
+</ul></div>
+<p> This type of interface is supported in Boost.Signals2
+        via the slot grouping mechanism, and the overload of
+        <code class="computeroutput"><a class="link" href="../boost/signalN.html#id1242363-bb">signal::disconnect</a></code>
+        which takes an argument of the signal's <code class="computeroutput">Group</code> type.</p>
+
+<p>Boost.Signals2 支持此类接口是通过插槽编组机制，
+        以及以信号的 <code class="computeroutput">Group</code>
+        类型为参数的
+        <code class="computeroutput"><a class="link" href="../boost/signalN.html#id1242363-bb">signal::disconnect</a></code>
+        重载。
+        </p>
+
+</li>
+</ul></div>
+</div>
+<div class="section" lang="en">
+<div class="titlepage"><div><div><h3 class="title">
+<a name="id3386133"></a>Automatic Connection Management</h3></div></div></div>
+
+<div class="titlepage"><div><div><h3 class="title">
+<a name="id3386133"></a>自动连接管理</h3></div></div></div>
+
+<p>Automatic connection management in Signals2
+      depends on the use of <code class="computeroutput">boost::shared_ptr</code> to
+      manage the lifetimes of tracked objects.  This is differs from
+      the original Boost.Signals library, which instead relied on derivation
+      from the <code class="computeroutput"><a class="link" href="../boost/signals/trackable.html" title="Class trackable">boost::signals::trackable</a></code> class.
+      The library would be
+      notified of an object's destruction by the
+      <code class="computeroutput"><a class="link" href="../boost/signals/trackable.html" title="Class trackable">boost::signals::trackable</a></code> destructor.
+    </p>
+
+<p>Signals2 的自动连接管理利用了
+      <code class="computeroutput">boost::shared_ptr</code>
+      来管理可跟踪对象的生命期。
+
+      这不同于原 Boost.Signals 库，
+      Boost.Signals 库是通过派生
+      <code class="computeroutput"><a class="link" href="../boost/signals/trackable.html" title="Class trackable">boost::signals::trackable</a></code>
+      类实现的。
+
+      对象析构时，
+      <code class="computeroutput"><a class="link" href="../boost/signals/trackable.html" title="Class trackable">boost::signals::trackable</a></code>
+      的析构函数会通知库。
+    </p>
+
+<p>Unfortunately, the <code class="computeroutput"><a class="link" href="../boost/signals/trackable.html" title="Class trackable">boost::signals::trackable</a></code>
+      scheme cannot be made thread safe due
+      to destructor ordering.  The destructor of an class derived from
+      <code class="computeroutput"><a class="link" href="../boost/signals/trackable.html" title="Class trackable">boost::signals::trackable</a></code> will always be
+      called before the destructor of the base <code class="computeroutput"><a class="link" href="../boost/signals/trackable.html" title="Class trackable">boost::signals::trackable</a></code>
+      class.  However, for thread-safety the connection between the signal and object
+      needs to be disconnected before the object runs its destructors.
+      Otherwise, if an object being destroyed
+      in one thread is connected to a signal concurrently
+      invoking in another thread, the signal may call into
+      a partially destroyed object.
+    </p>
+
+<p>不幸的是，<code class="computeroutput"><a class="link" href="../boost/signals/trackable.html" title="Class trackable">boost::signals::trackable</a></code>
+      方案因为析构函数的次序问题，不能做成线程安全的。
+
+      <code class="computeroutput"><a class="link" href="../boost/signals/trackable.html" title="Class trackable">boost::signals::trackable</a></code>
+      派生类的析构函数总是在其基类
+      <code class="computeroutput"><a class="link" href="../boost/signals/trackable.html" title="Class trackable">boost::signals::trackable</a></code>
+      的析构函数之前被调用。
+
+      然而，为了线程安全性，
+      信号和对象之间的连接需要在对象运行它的析构函数之前断开。
+
+      否则，如果对象在一个线程中被销毁，
+      而在另一个线程中，并发调用它所连接的信号，
+      该信号可能会调用到部份销毁的对象。
+    </p>
+
+<p>We solve this problem by requiring that tracked objects be
+      managed by <code class="computeroutput">shared_ptr</code>.  Slots keep a
+      <code class="computeroutput">weak_ptr</code> to every object the slot depends
+      on.  Connections to a slot are disconnected when any of its tracked
+      <code class="computeroutput">weak_ptr</code>s expire.  Additionally, signals
+      create their own temporary <code class="computeroutput">shared_ptr</code>s to
+      all of a slot's tracked objects prior to invoking the slot.  This
+      insures none of the tracked objects destruct in mid-invocation.
+    </p>
+
+<p>我们通过要求可跟踪对象由<code class="computeroutput">shared_ptr</code>
+      管理，来解决这个问题。
+
+      插槽持有它所依赖的每个对象的
+      <code class="computeroutput">weak_ptr</code>。
+
+      当插槽跟踪的任一
+      <code class="computeroutput">weak_ptr</code>
+      到期，该插槽的所有连接都会被断开。
+
+      此外，在触发插槽之前，信号会为所有的插槽跟踪对象
+      创建它们自己的临时
+      <code class="computeroutput">shared_ptr</code>。
+
+      这保证了在调用过程中，被跟踪对象不会被析构。
+    </p>
+
+<p>The new connection management scheme has the advantage of being
+      non-intrusive.  Objects of any type may be tracked using the
+      <code class="computeroutput">shared_ptr/weak_ptr</code> scheme.  The old
+      <code class="computeroutput"><a class="link" href="../boost/signals/trackable.html" title="Class trackable">boost::signals::trackable</a></code>
+      scheme requires the tracked objects to be derived from the <code class="computeroutput">trackable</code>
+      base class, which is not always practical when interacting
+      with classes from 3rd party libraries.
+    </p>
+
+<p>新的连接管理方案的优点在于它是非侵入性的。
+
+      任何类型的对象都可使用
+      <code class="computeroutput">shared_ptr/weak_ptr</code>
+      方案来跟踪。
+
+      旧的
+      <code class="computeroutput"><a class="link" href="../boost/signals/trackable.html" title="Class trackable">boost::signals::trackable</a></code>
+      方案要求被跟踪对象派生自
+      <code class="computeroutput">trackable</code>
+      基类，
+      当使用来自第3方库的类时，这并不总是可行。
+    </p>
+
+</div>
+<div class="section" lang="en">
+<div class="titlepage"><div><div><h3 class="title">
+<a name="id3386287"></a><code class="computeroutput">optional_last_value</code> as the Default Combiner</h3></div></div></div>
+
+<div class="titlepage"><div><div><h3 class="title">
+<a name="id3386287"></a>默认合并器为 <code class="computeroutput">optional_last_value</code></h3></div></div></div>
+
+<p>
+      The default combiner for Boost.Signals2 has changed from the <code class="computeroutput">last_value</code>
+      combiner used by default in the original Boost.Signals library.
+      This is because <code class="computeroutput">last_value</code> requires that at least 1 slot be
+      connected to the signal when it is invoked (except for the <code class="computeroutput">last_value&lt;void&gt;</code> specialization).
+      In a multi-threaded environment where signal invocations and slot connections
+      and disconnections may be happening concurrently, it is difficult
+      to fulfill this requirement.  When using <code class="computeroutput"><a class="link" href="../boost/signals2/optional_last_value.html" title="Class template optional_last_value">optional_last_value</a></code>,
+      there is no requirement for slots to be connected when a signal
+      is invoked, since in that case the combiner may simply return an empty
+      <code class="computeroutput">boost::optional</code>.
+    </p>
+
+<p>
+      Boost.Signals2 的默认合并器已经改了，
+      不再是原 Boost.Signals 所默认使用的
+      <code class="computeroutput">last_value</code>
+      合并器。
+
+      这是因为 <code class="computeroutput">last_value</code>
+      要求信号调用时，至少有1个插槽连接到信号
+      （除非是 <code class="computeroutput">last_value&lt;void&gt;</code> 特化）。
+
+      在多线程环境下，信号调用与插槽的连接和断开可能同时发生，
+      很难满足这一要求。
+      
+      当使用
+      <code class="computeroutput"><a class="link" href="../boost/signals2/optional_last_value.html" title="Class template optional_last_value">optional_last_value</a></code>，
+      不要求信号调用时已连接插槽，
+      因为在这种情况下，合并器可以只是返回一个空的
+      <code class="computeroutput">boost::optional</code>。
+    </p>
+
+</div>
+<div class="section" lang="en">
+<div class="titlepage"><div><div><h3 class="title">
+<a name="id3386348"></a>Combiner Interface</h3></div></div></div>
+
+<div class="titlepage"><div><div><h3 class="title">
+<a name="id3386348"></a>合并器接口</h3></div></div></div>
+
+<p> The Combiner interface was chosen to mimic a call to an
+    algorithm in the C++ standard library. It is felt that by viewing
+    slot call results as merely a sequence of values accessed by input
+    iterators, the combiner interface would be most natural to a
+    proficient C++ programmer. Competing interface design generally
+    required the combiners to be constructed to conform to an
+    interface that would be customized for (and limited to) the
+    Signals2 library. While these interfaces are generally enable more
+    straighforward implementation of the signals &amp; slots
+    libraries, the combiners are unfortunately not reusable (either in
+    other signals &amp; slots libraries or within other generic
+    algorithms), and the learning curve is steepened slightly to learn
+    the specific combiner interface.</p>
+
+<p> 合并器（Combiner）接口模仿了对C++标准库算法的调用。 对熟练的C++程序员来说，合并器是感觉最自然的接口，
+因为它把插槽调用的结果看作仅仅是一系列通过输入迭代器访问的值。 与之匹敌的接口设计一般要求合并器构造成符合一定的接口，
+使之可以为 Signals2 库定制（并局限于库）。 虽然这些接口通常使信号插槽库的实现更简单，
+但可惜这种合并器不可重用（在其他信号插槽库或在其他通用算法中）， 并且学习特殊的合并器接口的学习曲线有点陡。 </p>
+
+<p> The Signals2 formulation of combiners is based on the
+    combiner using the "pull" mode of communication, instead of the
+    more complex "push" mechanism. With a "pull" mechanism, the
+    combiner's state can be kept on the stack and in the program
+    counter, because whenever new data is required (i.e., calling the
+    next slot to retrieve its return value), there is a simple
+    interface to retrieve that data immediately and without returning
+    from the combiner's code. Contrast this with the "push" mechanism,
+    where the combiner must keep all state in class members because
+    the combiner's routines will be invoked for each signal
+    called. Compare, for example, a combiner that returns the maximum
+    element from calling the slots. If the maximum element ever
+    exceeds 100, no more slots are to be called.</p>
+
+<p> Signals2 库的合并器设计方案基于使用“拉（pull）”模式通讯的合并器， 而不是更复杂的“推（push）”机制。
+用“拉”机制，合并器的状态可以保存在栈上，并保持程序计数器寄存器， 因为无论何时需要新数据时（即调用下一插槽来提取其返回值），
+有一个简单的接口来立即提取那个数据， 而不必从合并器的代码中返回。 “推”机制与此相反，它的合并器必须在类成员中保存所有的状态，
+因为每次调用信号都会引起合并器函数的调用。
+比较下例合并器的两种实现，
+该合并器返回插槽调用的最大元素。
+如果最大元素超过 100，就不再调用以后的插槽。 </p>
+
+<div class="informaltable"><table class="table">
+<colgroup><col><col></colgroup>
+<thead><tr>
+<th align="left"><p>Pull</p></th>
+<th align="left"><p>Push</p></th>
+</tr></thead>
+<tbody><tr>
+<td align="left">
+<pre xmlns:rev="http://www.cs.rpi.edu/~gregod/boost/tools/doc/revision" class="table-programlisting">struct pull_max {<br>  typedef int result_type;<br><br>  template&lt;typename InputIterator&gt;<br>  result_type operator()(InputIterator first,<br>                         InputIterator last)<br>  {<br>    if (first == last)<br>      throw std::runtime_error("Empty!");<br><br>    int max_value = *first++;<br>    while(first != last &amp;&amp; *first &lt;= 100) {<br>      if (*first &gt; max_value)<br>        max_value = *first;<br>      ++first;<br>    }<br><br>    return max_value;<br>  }<br>};<br></pre>
+</td>
+<td align="left">
+<pre xmlns:rev="http://www.cs.rpi.edu/~gregod/boost/tools/doc/revision" class="table-programlisting">struct push_max {<br>  typedef int result_type;<br><br>  push_max() : max_value(), got_first(false) {}<br><br>  // returns false when we want to stop<br>  bool operator()(int result) {<br>    if (result &gt; 100)<br>      return false;<br><br>    if (!got_first) {<br>      got_first = true;<br>      max_value = result;<br>      return true;<br>    }<br><br>    if (result &gt; max_value)<br>      max_value = result;<br><br>    return true;<br>  }<br><br>  int get_value() const<br>  {<br>    if (!got_first)<br>      throw std::runtime_error("Empty!");<br>    return max_value;<br>  }<br><br>private:<br>  int  max_value;<br>  bool got_first;<br>};<br></pre>
+</td>
+</tr></tbody>
+</table></div>
+<p>There are several points to note in these examples. The
+    "pull" version is a reusable function object that is based on an
+    input iterator sequence with an integer <code class="computeroutput">value_type</code>,
+    and is very straightforward in design. The "push" model, on the
+    other hand, relies on an interface specific to the caller and is
+    not generally reusable. It also requires extra state values to
+    determine, for instance, if any elements have been
+    received. Though code quality and ease-of-use is generally
+    subjective, the "pull" model is clearly shorter and more reusable
+    and will often be construed as easier to write and understand,
+    even outside the context of a signals &amp; slots library.</p>
+
+<p>该例中要注意几点。 “拉”的版本是个可重用的函数对象， 基于 <code class="computeroutput">value_type</code> 为整数的输入迭代器序列，
+并且设计上非常简单。 另一方面，“推”的版本依赖于调用者专有的接口，一般不是可重用的。 它同时要求额外的状态值，例如，是否已经接收过元素。
+尽管代码质量和易用性是主观性的， “拉”模式明显更短并且重用性更好，并且往往更容易编写和理解， 即使是脱离信号插槽库的上下文。 </p>
+
+<p> The cost of the "pull" combiner interface is paid in the
+    implementation of the Signals2 library itself. To correctly handle
+    slot disconnections during calls (e.g., when the dereference
+    operator is invoked), one must construct the iterator to skip over
+    disconnected slots. Additionally, the iterator must carry with it
+    the set of arguments to pass to each slot (although a reference to
+    a structure containing those arguments suffices), and must cache
+    the result of calling the slot so that multiple dereferences don't
+    result in multiple calls. This apparently requires a large degree
+    of overhead, though if one considers the entire process of
+    invoking slots one sees that the overhead is nearly equivalent to
+    that in the "push" model, but we have inverted the control
+    structures to make iteration and dereference complex (instead of
+    making combiner state-finding complex).</p>
+
+<p> “拉”合并器接口的代价支付于 Signals2 库本身的实现中。
+为了正确处理在调用中的插槽断开（例如当调用解引用运算符时）， 你必须让迭代器跳过已断开的插槽。 另外，迭代器必须携带一组参数以传送到每个插槽
+（尽管一个包含那些参数的结构的引用就足够了）， 并且必须缓存插槽调用的结果， 这样多次解引用才不会导致多次调用。 这显然需要很大的开销，
+尽管如果考虑调用插槽整个过程，该开销几乎等同于“推”模型的开销， 但是我们颠倒了控制结构， 让迭代和解引用变复杂了
+（替代了合并器状态查找的复杂性）。 </p>
+
+</div>
+<div class="section" lang="en">
+<div class="titlepage"><div><div><h3 class="title">
+<a name="id3386428"></a>Connection Interfaces: +=  operator</h3></div></div></div>
+
+<div class="titlepage"><div><div><h3 class="title">
+<a name="id3386428"></a>连接的接口：+= 运算符</h3></div></div></div>
+
+<p> Boost.Signals2 supports a connection syntax with the form
+    <code class="computeroutput">sig.<a class="link" href="../boost/signals2/signalN.html#id1284885-bb">connect</a>(slot)</code>, but a
+    more terse syntax <code class="computeroutput">sig += slot</code> has been suggested (and
+    has been used by other signals &amp; slots implementations). There
+    are several reasons as to why this syntax has been
+    rejected:</p>
+
+<p> Boost.Signals2 支持形如
+<code class="computeroutput">sig.<a class="link" href="../boost/signals2/signalN.html#id1284885-bb">connect</a>(slot)</code>
+的连接语法， 但是有人建议用更简洁的语法
+<code class="computeroutput">sig += slot</code>
+（并已被其他信号插槽实现所用）。 为什么拒绝这个语法有以下几个原因： </p>
+
+<div class="itemizedlist"><ul type="disc">
+<li><p><span class="bold"><strong>It's unnecessary</strong></span>: the
+        connection syntax supplied by Boost.Signals2 is no less
+        powerful that that supplied by the <code class="computeroutput">+=</code>
+        operator. The savings in typing (<code class="computeroutput">connect()</code>
+        vs. <code class="computeroutput">+=</code>) is essentially negligible. Furthermore,
+        one could argue that calling <code class="computeroutput">connect()</code> is more
+        readable than an overload of <code class="computeroutput">+=</code>.</p>
+
+<p><span class="bold"><strong>没必要</strong></span>：
+Boost.Signals2 提供的连接语法并不比 <code class="computeroutput">+=</code>
+运算符差。 少打几个字符（<code class="computeroutput">connect()</code>
+vs. <code class="computeroutput">+=</code>）根本是可以忽略的。
+另外，有人主张调用 <code class="computeroutput">connect()</code>
+比 <code class="computeroutput">+=</code> 重载可读性更好。</p>
+
+        </li>
+<li><p><span class="bold"><strong>Ambiguous return type</strong></span>:
+        there is an ambiguity concerning the return value of the
+        <code class="computeroutput">+=</code> operation: should it be a reference to the
+        signal itself, to enable <code class="computeroutput">sig += slot1 += slot2</code>,
+        or should it return a
+        <code class="computeroutput"><a class="link" href="../boost/signals2/connection.html" title="Class connection">connection</a></code> for the
+        newly-created signal/slot connection?</p>
+        
+<p><span class="bold"><strong>返回类型二义性</strong></span>：
+<code class="computeroutput">+=</code>
+运算符的返回值存在二义性。 它应该是返回信号本身的引用，可以
+<code class="computeroutput">sig += slot1 += slot2</code>，
+还是返回新建的信号/插槽连接的一个
+<code class="computeroutput"><a class="link" href="../boost/signals2/connection.html" title="Class connection">connection</a></code>
+？</p>
+
+        </li>
+<li>
+<p><span class="bold"><strong>Gateway to operators -=,
+        +</strong></span>: when one has added a connection operator
+        <code class="computeroutput">+=</code>, it seems natural to have a disconnection
+        operator <code class="computeroutput">-=</code>. However, this presents problems when
+        the library allows arbitrary function objects to implicitly
+        become slots, because slots are no longer comparable.  </p>
+
+<p><span class="bold"><strong>通往运算符 -=、+</strong></span>：
+当添加一个连接运算符 <code class="computeroutput">+=</code>，
+好像自然地要有一个断开运算符 <code class="computeroutput">-=</code>。
+然而， 当库允许任意的函数对象隐式地变成插槽时， 这里出现了问题， 因为插槽不再具有比较性。 </p>
+
+<p> The second obvious addition when one has
+        <code class="computeroutput">operator+=</code> would be to add a <code class="computeroutput">+</code>
+        operator that supports addition of multiple slots, followed by
+        assignment to a signal. However, this would require
+        implementing <code class="computeroutput">+</code> such that it can accept any two
+        function objects, which is technically infeasible.</p>
+
+<p> 当具有 <code class="computeroutput">operator+=</code>
+时，第二个明显会添加的是 <code class="computeroutput">+</code>
+运算符，以支持多个插槽相加，然后再赋值到信号。 然而，这要求实现
+<code class="computeroutput">+</code>
+可以接收任意两个函数对象， 这在技术上是不可行的。 </p>
+
+</li>
+</ul></div>
+</div>
+<div class="section" lang="en">
+<div class="titlepage"><div><div><h3 class="title">
+<a name="id3386600"></a>Signals2 Mutex Classes</h3></div></div></div>
+
+<div class="titlepage"><div><div><h3 class="title">
+<a name="id3386600"></a>Signals2 互斥类</h3></div></div></div>
+
+<p>
+      The Boost.Signals2 library provides 2 mutex classes: <code class="computeroutput"><a class="link" href="../boost/signals2/mutex.html" title="Class mutex">boost::signals2::mutex</a></code>,
+      and <code class="computeroutput"><a class="link" href="../boost/signals2/dummy_mutex.html" title="Class dummy_mutex">boost::signals2::dummy_mutex</a></code>.  The motivation for providing
+      <code class="computeroutput"><a class="link" href="../boost/signals2/mutex.html" title="Class mutex">boost::signals2::mutex</a></code> is simply that the <code class="computeroutput">boost::mutex</code>
+      class provided by the Boost.Thread library currently requires linking to libboost_thread.
+      The <code class="computeroutput"><a class="link" href="../boost/signals2/mutex.html" title="Class mutex">boost::signals2::mutex</a></code> class allows Signals2 to remain
+      a header-only library.  You may still choose to use <code class="computeroutput">boost::mutex</code>
+      if you wish, by specifying it as the <code class="computeroutput">Mutex</code> template type for your signals.
+    </p>
+
+<p>
+      Boost.Signals2 库提供了两个互斥类：
+      <code class="computeroutput"><a class="link" href="../boost/signals2/mutex.html" title="Class mutex">boost::signals2::mutex</a></code>，
+      和 <code class="computeroutput"><a class="link" href="../boost/signals2/dummy_mutex.html" title="Class dummy_mutex">boost::signals2::dummy_mutex</a></code>。
+
+      提供
+      <code class="computeroutput"><a class="link" href="../boost/signals2/mutex.html" title="Class mutex">boost::signals2::mutex</a></code>
+      类的动机只是因为 Boost.Thread 库当前的
+      <code class="computeroutput">boost::mutex</code>
+      类要求链接 libboost_thread。
+
+      <code class="computeroutput"><a class="link" href="../boost/signals2/mutex.html" title="Class mutex">boost::signals2::mutex</a></code>
+      类让 Signals2 保持为纯头文件库。
+
+      如果您愿意，您仍然可以选择使用
+      <code class="computeroutput">boost::mutex</code>，
+      只要将它指定为信号的
+      <code class="computeroutput">Mutex</code>
+      模板类型。
+    </p>
+
+<p>
+      The <code class="computeroutput"><a class="link" href="../boost/signals2/dummy_mutex.html" title="Class dummy_mutex">boost::signals2::dummy_mutex</a></code> class is provided to allow
+      performance sensitive single-threaded applications to minimize overhead by avoiding unneeded
+      mutex locking.
+    </p>
+
+<p>
+      提供 <code class="computeroutput"><a class="link" href="../boost/signals2/dummy_mutex.html" title="Class dummy_mutex">boost::signals2::dummy_mutex</a></code>
+      类允许性能敏感的单线程应用避免不必要的互斥锁，
+      尽量减少开销。
+    </p>
+
+</div>
+<div class="section" lang="en">
+<div class="titlepage"><div><div><h3 class="title">
+<a name="id3386712"></a>Comparison with other Signal/Slot implementations</h3></div></div></div>
+
+<div class="titlepage"><div><div><h3 class="title">
+<a name="id3386712"></a>与其他信号/插槽实现的比较</h3></div></div></div>
+
+<div class="toc"><dl>
+<dt><span class="section"><a href="rationale.html#id3386718">libsigc++</a></span></dt>
+<dt><span class="section"><a href="rationale.html#id3386790">.NET delegates</a></span></dt>
+</dl></div>
+
+<div class="toc"><dl>
+<dt><span class="section"><a href="rationale.html#id3386718">libsigc++</a></span></dt>
+<dt><span class="section"><a href="rationale.html#id3386790">.NET 委托</a></span></dt>
+</dl></div>
+
+<div class="section" lang="en">
+<div class="titlepage"><div><div><h4 class="title">
+<a name="id3386718"></a>libsigc++</h4></div></div></div>
+
+<div class="titlepage"><div><div><h4 class="title">
+<a name="id3386718"></a>libsigc++</h4></div></div></div>
+
+<p> <a href="http://libsigc.sourceforge.net" target="_top">libsigc++</a> is a C++
+      signals &amp; slots library that originally started as part of
+      an initiative to wrap the C interfaces to <a href="http://www.gtk.org" target="_top">GTK</a> libraries in C++, and has
+      grown to be a separate library maintained by Karl Nelson. There
+      are many similarities between libsigc++ and Boost.Signals2, and
+      indeed the original Boost.Signals was strongly influenced by
+      Karl Nelson and libsigc++. A cursory inspection of each library will find a
+      similar syntax for the construction of signals and in the use of
+      connections. There
+      are some major differences in design that separate these
+      libraries:</p>
+
+<p><a href="http://libsigc.sourceforge.net" target="_top">libsigc++</a>
+是个C++信号插槽库， 最初开始于一个项目的一部分，
+用C++封装 <a href="http://www.gtk.org" target="_top">GTK</a>
+库的C接口， 并且发展成为一个独立的库，由 Karl Nelson 维护。
+libsigc++ 和 Boost.Signals2
+之间有很多相同之处， 其实原 Boost.Signals 受 Karl Nelson 和 libsigc++ 影响很大。
+粗略地检查这两个库就会发现相似的语法， 如信号的构造
+和连接的使用。 这两个库在设计上的主要区别是： </p>
+
+<div class="itemizedlist"><ul type="disc">
+<li><p><span class="bold"><strong>Slot definitions</strong></span>:
+          slots in libsigc++ are created using a set of primitives
+          defined by the library. These primitives allow binding of
+          objects (as part of the library), explicit adaptation from
+          the argument and return types of the signal to the argument
+          and return types of the slot (libsigc++ is, by default, more
+          strict about types than Boost.Signals2).</p>
+
+<p><span class="bold"><strong>插槽定义</strong></span>：
+libsigc++ 中的插槽用一套库定义的原语创建。
+这些原语允许对象绑定（作为库的一部分），
+显式地把信号的参数和返回类型适配为插槽的参数和返回类型
+（相比 Boost.Signals2，libsigc++ 在默认情况下对类型更严格）。
+</p>
+
+          </li>
+<li><p><span class="bold"><strong>Combiner/Marshaller
+          interface</strong></span>: the equivalent to Boost.Signals2
+          combiners in libsigc++ are the marshallers. Marshallers are
+          similar to the "push" interface described in Combiner
+          Interface, and a proper treatment of the topic is given
+          there.</p>
+
+<p><span class="bold"><strong>合并器/集结器接口</strong></span>：
+libsigc++ 中与 Boost.Signals 的合并器等效的是集结器（marshaller）。
+集结器类似于“合并器接口”一节中描述的“推”接口， 那里对该主题进行了适当的分析。 </p>
+
+          </li>
+</ul></div>
+</div>
+<div class="section" lang="en">
+<div class="titlepage"><div><div><h4 class="title">
+<a name="id3386790"></a>.NET delegates</h4></div></div></div>
+
+<div class="titlepage"><div><div><h4 class="title">
+<a name="id3386790"></a>.NET 委托</h4></div></div></div>
+
+<p> <a href="http://www.microsoft.com" target="_top">Microsoft</a>
+      has introduced the .NET Framework and an associated set of
+      languages and language extensions, one of which is the
+      delegate. Delegates are similar to signals and slots, but they
+      are more limited than most C++ signals and slots implementations
+      in that they:</p>
+
+<p><a href="http://www.microsoft.com" target="_top">微软</a>
+引入了 .NET 框架，并关联了一组语言和语言扩展，
+其中之一就是委托（delegate）。 委托类似于信号插槽，
+但是它比大多数C++信号插槽的实现具有更多的限制， 表现在： </p>
+
+<div class="itemizedlist"><ul type="disc">
+<li><p>Require exact type matches between a delegate and what
+          it is calling.</p>
+
+<p>在委托和它的调用之间，要求精确的类型匹配。</p>
+
+</li>
+<li><p>Only return the result of the last target called, with no option for customization.</p>
+
+<p>仅返回最后调用目标的结果，无法定制。</p>
+
+</li>
+<li><p>Must call a method with <code class="computeroutput">this</code> already
+          bound.</p>
+
+<p>必须调用一个 <code class="computeroutput">this</code>
+已绑定的方法。 </p>
+
+</li>
+</ul></div>
+</div>
+</div>
+</div>
+<table xmlns:rev="http://www.cs.rpi.edu/~gregod/boost/tools/doc/revision" width="100%"><tbody><tr>
+<td align="left"><p><small>Last revised: June 12, 2007 at 14:01:23 -0400</small></p></td>
+<td align="right"><div class="copyright-footer">Copyright © 2001-2004 Douglas Gregor<br>Copyright © 2007-2009 Frank Mori Hess
+
+    <p>翻译：<a href="http://blog.csdn.net/jq0123">金庆</a></p>
+    <p>译文更新：2009.6.19</p>
+
+    <p>Distributed under the Boost
+    Software License, Version 1.0. (See accompanying file
+    <code class="filename">LICENSE_1_0.txt</code> or copy at <a href="http://www.boost.org/LICENSE_1_0.txt" target="_top">http://www.boost.org/LICENSE_1_0.txt</a>)</p>
+</div></td>
+</tr></tbody></table>
+<hr>
+<div class="spirit-nav">
+<a accesskey="p" href="faq.html"><img src="../../../doc/html/images/prev.png" alt="Prev"></a><a accesskey="u" href="../signals2.html"><img src="../../../doc/html/images/up.png" alt="Up"></a><a accesskey="h" href="../index.html"><img src="../../../doc/html/images/home.png" alt="Home"></a><a accesskey="n" href="porting.html"><img src="../../../doc/html/images/next.png" alt="Next"></a>
+</div>
+</body></html>

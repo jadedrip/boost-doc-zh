@@ -1,0 +1,313 @@
+<!DOCTYPE HTML PUBLIC "-//W3C//DTD HTML 4.01 Transitional//EN">
+<html><head>
+<meta content="text/html; charset=UTF-8" http-equiv="content-type"><!-- -- Copyright (c) Jeremy Siek 2000 -- -- Distributed under the Boost Software License, Version 1.0. -- (See accompanying file LICENSE_1_0.txt or copy at -- http://www.boost.org/LICENSE_1_0.txt) -->
+<title>Boost Graph Library: Graph Theory Review</title></head>
+<body style="color: rgb(0, 0, 0); background-color: rgb(255, 255, 255);" alink="#ff0000" link="#0000ee" vlink="#551a8b">
+<img src="../../../boost.png" alt="C++ Boost" height="86" width="277"> <br clear="">
+<h1>图论基础回顾<br>
+</h1>
+<p>本章将回顾一下图论的基本理论。如果读者以前接触过图算法，那么可以便可以马上开始本章的学习；如果读者以前没有相关图算法背景知识，
+我们建议最好还是对其有一个了解，可以去看Cormen, Leiserson, 和Rivest写的<a href="http://toc.lcs.mit.edu/%7Eclr/">Introduction to
+Algorithms</a>(《算法导论》)。</p>
+<h1>图抽象<br>
+</h1>
+图是用来解决各种实际问题的数学抽象。从根本上说，一个图是由一组顶点集合和一组边集合组成的，其中，一条边连接图中两个顶点。更准确的描述是，一个图是
+一个（V，E）对，V是一个有限集，e是表示V的二元关系。V被称作顶点集,其中的元素统称为vertices。E是边的集合，一条边是一个(u,v)
+对，u,v分别是顶点集V中的元素。在一个有向图中，边是一个连接源点和目标点的有序对。在一个无向图中，边是一个无序对，仅仅连接两个顶点，因此在无向
+图
+中（u，v）和（v，u）是相同的。<br>
+<br>
+以上对于图的定义在某些方面有点含糊不清，例如，没有说清顶点和边到底表示什么。他们可能是城市和连接城市的公路；亦或是网页和链接网页的超链接。这些细
+节不被考虑到定义中是有原因的，它们不属于图抽象的部分。通过省略这些细节，我们能够建立一个可复用的原理，它能够帮我们解决各种不同的问题。<br>
+<br>
+回到我们的定义：图是一组顶点和边的集合。演示一下，我们来建立一个图，该图顶点已经用字母标好，因此边可以简单的写成一个字母对。现在我们可以写出一个
+有向图，如下：<br>
+<div align="center">
+<table>
+<tbody>
+<tr>
+<td><tt>V = {v, b, x, z, a, y } <br>
+E = { (b,y), (b,y), (y,v), (z,a), (x,x), (b,x), (x,v), (a,z) } <br>
+G = (V, E) </tt></td>
+</tr>
+</tbody>
+</table>
+</div>
+<br>
+<p>
+<a href="#fig:directed-graph">图一</a>
+是该图的图示版。边（x，x）叫做自环。边（b，y）和另一条（b，y）边是平行边，平行边仅仅出现在多重图中（一般有向图和无向图是不允许出现的）。</p>
+<div align="center"><a name="fig:directed-graph"></a><a name="1509"></a>
+<table>
+<caption align="bottom"><strong>图 1:</strong>
+一个有向图的例子</caption> <tbody>
+<tr>
+<td><img src="./figs/digraph.gif" height="163" width="124"></td>
+</tr>
+</tbody>
+</table>
+</div>
+<p>下面我们将演示一个与图一相似的图，不过这次是无向的。<a href="graph_theory_review.html#fig:undirected-graph">图二</a>是
+该图的图示。自环是不允许出现在无向图中的。该图是边（b，y）的无向版本，相同的顶点和去除方向的边。相同的边被删除，有些边被合并，比如（a，z）和
+（z，a）。无向图的有向版本是把其中每条边换成两条，每一条指向一个方向。<br>
+</p>
+<div align="center">
+<table>
+<tbody>
+<tr>
+<td><tt>V = {v, b, x, z, a, y }<br>
+E = { (b,y), (y,v), (z,a), (b,x), (x,v) }<br>
+G = (V, E) </tt></td>
+</tr>
+</tbody>
+</table>
+</div>
+<a name="def:directed-version"><br clear="all">
+</a>
+<div align="center"><a name="fig:undirected-graph"></a><a name="1524"></a>
+<table>
+<caption align="bottom"><strong>图 2:</strong>
+一个无向图的例子</caption> <tbody>
+<tr>
+<td><img src="./figs/undigraph.gif" height="163" width="103"></td>
+</tr>
+</tbody>
+</table>
+</div>
+<p></p>
+现在开始讲讲图的专业术语吧。如果边（u，v）属于一个图，那么顶点v是顶点u的邻接点。在一个有向图中，边（u，v）是顶点u的出边、顶点v的入边。在
+一个无向图中，边（u，v）是与u，v关联的。<br>
+<p>在<a href="graph_theory_review.html#fig:directed-graph">图
+一</a>中，顶点y是顶点b的邻接点（但是b不是y的邻接）。边（b，y）是b的出边，是y的入边。在&nbsp;<a href="graph_theory_review.html#fig:undirected-graph">图二</a>中，
+y是b的邻接点，反之亦然。边（y，b）是与y和b关联的。<br>
+</p>
+在有向图中，一个顶点出边的数量叫做该点的出度，入边的数量叫做该点的入度。无向图中，点关联的边的数量叫做该点的度。在<a href="graph_theory_review.html#fig:directed-graph">图一</a>中，
+顶点b的出度是3，入度是0。在<a href="graph_theory_review.html#fig:undirected-graph">图二</a>中，
+顶点b的度仅为2。<br>
+<br>
+路径是图中边的序列，该序列中，每条边的目标顶点是下一条边的源顶点。如果一条路径起始于顶点u终止于顶点v，那么我们便说v是从u可到达的。如果一条路
+径中没有重复顶点，我们便称该路径是简单的。路径&lt;(b,x),(x,v)&gt;是简单的，但是&lt;(a,z),
+(z,a)&gt;不是。路
+径&lt;(a,z),(z,a)&gt;叫做环，因为路径中起点和终点是同一个点。一个没有环的图被称作无环的。<br>
+<br>
+可平面图是指一个图能够被画到一个平面上，并且其中没有边相互交叉。能够用上面方法画出的图叫做平面图。一个平面图的面是指被边环绕的平面的连通区域。可
+平面
+图的一个重要性质是：面、边和顶点的数量关系遵循欧拉公式：|F|-|E|+|V|=2。这意味着简单的可平面图最多有O(|V|)条边。
+<h1>图的数据结构<br>
+</h1>
+在图中，考虑使用什么数据结构时，最重要的一个属性是稀疏性，稀疏性是指边的数量相对于点的数量。一个图中，边的数量接近于顶点平方，该图就是稠密图，反
+之，
+一个图中E=α×V，并且α比V小得多的时候称该图为稀疏图。表示稠密图，邻接矩阵表示法是最佳选择；邻接列表表示
+法是稀疏图的最佳选择。某些情况下，对于稀疏图，边-列表的表示法在空间效率选择上更加合适。<br>
+<h2>邻接矩阵表示法<br>
+</h2>
+<p>图的邻接矩阵表示的就是一个V×V的2维数组。数组中的每一个元素auv存储一个布尔值，该值表示边（u，v）是否出现在图中。<a href="graph_theory_review.html#fig:adj-matrix">图三</a>表示
+的是<a href="graph_theory_review.html#fig:directed-graph">图一</a>的
+邻接矩阵（删除了平行边（b，y））。存储一个邻接矩阵需要的空间是O(V2)。访问、增加、删除一条边的复杂度是O(1)。增加或者删除一个顶点需要重
+新分配空间并且拷贝整张图到新的空间，负责度是O(V2)。&nbsp;<a href="adjacency_matrix.html"><tt>adjacency_matrix</tt></a>
+类实现了按照BGL的图接口规范实现了邻接矩阵数据结构。<br>
+</p>
+<div align="center"><a name="fig:adj-matrix"></a><a name="1701"></a>
+<table>
+<caption align="bottom"><strong>图 3:</strong>
+图的邻接矩阵表示法</caption> <tbody>
+<tr>
+<td><img src="./figs/adj_matrix.gif" height="135" width="136"></td>
+</tr>
+</tbody>
+</table>
+</div>
+<h2><a name="sec:adjacency-list-representation"></a>&amp;
+nbsp;邻接表表示法
+</h2>
+<p>图的邻接列表表示的是每个顶点的出边序列。对于一个稀疏图来讲，该表示法节省了空间，因为仅需了O(V +
+E)大小的内存。而且，访问顶点出边更加有效率。边得插入操作复杂度是O(1)，但是访问制定边的效率是O(α)，α表示矩阵的
+稀疏因子（稀疏因子等于最大的顶点出度）。<a href="graph_theory_review.html#fig:adj-list">图
+四</a>表示的是<a href="graph_theory_review.html#fig:directed-graph">图
+一</a>的邻接列表。
+<a href="adjacency_list.html"><tt>adjacency_list</tt></a>
+类是邻接列表表示法的一个实现。</p>
+<div align="center"><a name="fig:adj-list"></a><a name="1713"></a>
+<table>
+<caption align="bottom"><strong>图 4:</strong>
+图的邻接表表示法</caption> <tbody>
+<tr>
+<td><img src="./figs/adj_list.gif" height="122" width="108"></td>
+</tr>
+</tbody>
+</table>
+</div>
+<h2>边列表表示法<br>
+</h2>
+<p>图的边列表表示就是一个边的序列，其中每条边使用一个顶点ID对来表示的。该表示法仅需要O(E)大小的内存。边插入复杂度是O
+(1)，但是访问一个指定边的复杂度是O(E)（效率低下）。<a href="graph_theory_review.html#fig:edge-list">图五</a>表示了
+&nbsp;<a href="graph_theory_review.html#fig:directed-graph">图
+一</a>的边列表表示。
+<a href="edge_list.html"><tt>edge_list</tt></a>适
+配器类内被用来实现边列表表示。<br>
+</p>
+<div align="center"><a name="fig:edge-list"></a><a name="1724"></a>
+<table>
+<caption align="bottom"><strong>图 5:</strong>
+图的边列表表示法</caption> <tbody>
+<tr>
+<td><img src="./figs/edge_list.gif" height="22" width="322"></td>
+</tr>
+</tbody>
+</table>
+</div>
+<h1>图相关算法<br>
+</h1>
+<h2>图搜索算法<br>
+</h2>
+<p>
+树边是指通过图搜索算法遍历一个图时(隐式或显式地)建立的搜索树(或森林)中的边。如果在遍历（对应于<a href="visitor_concepts.html"> visitor </a>的explore
+()方法）边（u，v）时，点v首先被遍历到，那么边（u，v）就是一条树边。后向边将顶点连接到他们在搜索树中的祖先。因此对于反向边（u，v），点v
+一定是点u的祖先。自环被认为是反向边。前向边是指将点u连接到它在搜索树中的后代节点v的一条非树边（u，v）。交叉边为不属于前面定义的三种边之一的
+边。<br>
+</p>
+<h2><a name="sec:bfs-algorithm"></a> 广度优先搜索</h2>
+<p>广度优先搜索（BFS）是指从某点开始遍历整张图，到达所有可以到达的点。遍历的顺序满足以下条件，在遍历了某点的所有邻接结点后，才
+开始处理其邻接节点的邻接节点图。可以把广度优先遍历想像成石子落入水中时激起的涟漪。在同一个"波"中的顶点和源点的距离是相同的。顶点在被算法首次遇
+到时被"发现"。顶点在其所
+有邻接点被遍历完后称为"结束"。下面的例子可以让你弄明白。<a href="graph_theory_review.html#fig:bfs-example">图六</a>中
+展示了一幅图，并且在图下面列出了BFS（广度优先搜索）的算法中顶点的发现和结束顺序。</p>
+<div align="center"><a name="fig:bfs-example"></a><a name="1826"></a>
+<table>
+<caption align="bottom"><strong>图 6:</strong>
+图遍历的广度优先搜索</caption> <tbody>
+<tr>
+<td><img src="./figs/bfs_example.gif" height="143" width="242"></td>
+</tr>
+</tbody>
+</table>
+</div>
+<pre> 发现顺序：s r w v t x u y <br> 结束顺序：s r w v t x u y<br></pre>
+我们从s点开始，首先访问的是r和w（s的两个邻居）。它的两个邻居都被访问过后，我们将访问r的邻居（顶点v），然后访问w的邻居（r和w的发现顺序无
+所谓）t和x。最后，我们访问t和x的邻居u和y。
+<p>为了让算法跟踪在图中的位置以及哪个顶点将要访问下一个点，BFS算法需要对顶点进行着色（color）（请参考 <a href="using_property_maps.html">Property Maps</a>一节来了解更
+多关于图属性的细节）。颜色值既可以放在图结构的内部，也可以作为参数传入到算法中。<br>
+</p>
+<h2><a name="sec:dfs-algorithm"></a> 深度优先搜索
+</h2>
+深度优先搜索（DFS）访问图中所有的顶点。在选择接下来要遍历哪条边时，该算法会始终选择图中"较深"的边来遍历。也就是说，DFS会在一个顶点已没有
+未被访
+问的邻接顶点时，才会选择下一个未访问邻接顶点。该算法会回溯到前面顶点继续沿着未被访问的边来遍历顶点。DFS算法从一点遍历
+完所有能够到达的顶点后，将选择仍未被发现的顶点来继续进行搜索。搜索的过程将建立了一组深度优先树（depth-first
+trees），这些树合起来就成了深度优先森林（depth-first
+forest）。一次DFS会把图中的边分为三类：树边，反向边，正向边或交叉边（不能确定是哪一种）。一个给定的图可以有多个有效的深度优先森林，所以
+对于图的边也有多种不同的(也是同样有效的)分类方法。<br>
+<p>DFS一个比较有意思的特性是每个点的发现和结束时间会形成对称结构。如果我们在发现一个顶点时加一个左括号，在结束一个顶点时加一个
+右括号，那么结果就是一个正确嵌套的括号集。<a href="graph_theory_review.html#fig:dfs-example">图七</a>示
+范了将DFS应用于一个无向图，该图边上已经标记了遍历的顺序。下面我们按照发现和结束的顺序列出图的顶点，以及嵌套的括号结构。DFS是其他一些算法的
+核心，比如拓朴排序和连通分量算法。DFS算法还能检测是图中是否存在环（参考文件依赖例子中的<a href="file_dependency_example.html#sec:cycles">Cylic
+Dependencies</a>（循环依赖）一节）。<br>
+</p>
+<div align="center"><a name="fig:dfs-example"></a><a name="1841"></a>
+<table>
+<caption align="bottom"><strong>图 7:</strong>
+无向图的深度优先搜索</caption> <tbody>
+<tr>
+<td><img src="./figs/dfs.gif" height="204" width="141"></td>
+</tr>
+</tbody>
+</table>
+</div>
+<pre> order of discovery: a b e d c f g h i<br> order of finish: d f c e b a<br> parenthesis: (a (b (e (d d) (c (f f) c) e) b) a) (g (h (i i) h) g)<br></pre>
+<h2><a name="sec:minimum-spanning-tree">最小生成树问题</a></h2>
+最小生成树（minimum-spanning-tree）的定义如下：从E中找到一个无环子集T，E连接图中的所有顶点，且T的总权值最小，权值给定如
+下：<br>
+<div align="left">
+<div align="left"><i>w(T)</i> = 对 <i>T</i>
+中所有 <i>(u,v)</i> 的 <i>w(u,v)</i> 总和,
+其中 <i>w(u,v)</i> 为边 <i>(u,v)</i> 的权重
+</div>
+</div>
+<br clear="all">
+这样的T称为最小生成树。&nbsp;<!-- <P> Kruskal's algorithm&nbsp;[<A HREF="bibliography.html#kruskal56">18</A>] for solving the minimum spanning tree problem. This is a greedy algorithm to calculate the minimum spanning tree for an undirected graph with weighted edges. <P> This is Prim's algorithm&nbsp;[<A HREF="bibliography.html#prim57:_short">25</A>] for solving the minimum spanning tree problem for an undirected graph with weighted edges. The implementation is simply a call to <a href="./dijkstra_shortest_paths.html"><TT>dijkstra_shortest_paths()</TT></a> with the appropriate choice of comparison and combine functors. -->
+<h2><a name="sec:shortest-paths-algorithms">最短路径算法</a></h2>
+图论中的一个经典问题是找出两点之间的最短路径。在图G中，一条路径是一个顶点序列&lt;v0,v1,....,Vk&gt;，使得序
+列中的每个顶点都
+和下一个顶点相连(边（vi，vi+1）i=0,1,....k-1属于边集E)。在最短路径问题中，每条边都会给定一个实数值作为权值。因此，我们可以
+说一条路
+径的权值是：<br>
+<div align="left">
+<i>w(p) = sum from i=1..k of w(v<sub>i-1</sub>,v<sub>i</sub>)</i>
+</div>
+<br clear="all">
+顶点u到v的最短路径权值是：
+<div align="left"><i>delta (u,v) = min { w(p) : u
+--&gt; v }</i> if there is a path from
+<i>u</i> to <i>v</i> <br>
+<i>delta (u,v) = infinity</i> otherwise.
+</div>
+<br clear="all">
+最短路径是权值等于最短路径权值的任何一条路径。<br>
+<br>
+还有一些最短路径的衍生问题。上面我们定义了单-点对single-pair问题，但是还有一个单-源single-source问题(求图中从一个顶点
+出发到所有其它顶点的最短路径)，同样还有单-目标single-destination问题和全-点对all-pairs问题。已知单-点对问题没有比
+单-源问题更快的算法。<br>
+<br>
+在图G=(V,E)中，以某点为根的最短路径树是该图的一个有向子图G'=(V',E')，其中V'是V的子集，E'是E的子集，而且V'是该点能够
+到达的顶点的集合。G'形成是一棵带根的有根树，从V'中一点v到G'中一点u的唯一简单路径就是G中从v到u的最短路径。单-源算法的结果就是一棵最短
+路径树。<br>
+<h2><a name="sec:network-flow-algorithms">网络流算法</a></h2>
+<p>
+<a name="sec:network-flow-algorithms">一个流网络是指一个以顶点s为源点，以顶点t
+为接受点的有向图G=(V,E)。每条边e均具有一个非负实数值的容量函数c，而且每个顶点对还有一个流函数f。流函数要满足以下三个约束条件：
+</a></p>
+<p>
+<a name="sec:network-flow-algorithms"><i>容量约束
+(Capacity constraint)：对于V*V中所有顶点对(u, v)有：f(u,v) &lt;= c(u,v)<br>
+斜对称性(Skew symmetry):对于V*V中所有顶点对(u, v)有：f(u,v) = - f(v,u)<br>
+流守恒(Flow conservation)：对于V -
+{s,t}中的所有u，sum<sub>v
+in V</sub> f(u,v) = 0<br>
+</i>
+</a></p>
+<p>
+<a name="sec:network-flow-algorithms">该网络的流量是指流向接收点t的净流量（等效于流出源点
+s的净流量）。</a></p>
+<p>
+<a name="sec:network-flow-algorithms"><i>|f| = sum<sub>u
+in V</sub> f(u,t) = sum<sub>v in V</sub> f(s,v)</i>
+</a></p>
+<p>
+<a name="sec:network-flow-algorithms">一条边的剩余容量为：r(u,v) =
+c(u,v) -
+f(u,v)。如果r(u,v)&gt;0则称该边为剩余边，剩余边组成的图为剩余图。如果r(u,v)=0，则称该边是饱和的。
+</a></p>
+<p>
+<a name="sec:network-flow-algorithms">最大流问题是指确定|f|的最大值以及图中每个
+顶点对的相应流量是多少。
+</a></p>
+
+<p>
+<a name="sec:network-flow-algorithms"> </a><a href="graph_theory_review.html#fig:max-flow">图八</a><a name="sec:network-flow-algorithms">表示一个流网络，顶点A为源点，顶点H为终点。</a></p>
+<div align="center"><a name="fig:max-flow"></a><a name="1509"></a>
+<table>
+<caption align="bottom"><strong>Figure 8:</strong>&amp;
+nbsp;一个最大流网络<br>
+边已经被标上流和容量值</caption> <tbody>
+<tr>
+<td><img src="./figs/max-flow.gif" height="240" width="578"></td>
+</tr>
+</tbody>
+</table>
+</div>
+
+<p>解决最大流问题的算法已经有很长历史了，最早的算法来自于 <a href="bibliography.html#ford56:_maxim">Ford 和 Fulkerson</a>。而最通用的算法则是<a href="bibliography.html#goldberg85:_new_max_flow_algor">Goldberg</a>提
+出的push-relabel算法，该算法基于<a href="bibliography.html#karzanov74:_deter">Karzanov</a>提
+出的预流量(preflow)概念。</p>
+<hr>
+<table>
+<tbody>
+<tr valign="top">
+<td nowrap="nowrap">Copyright © 2000-2001</td>
+<td> <a href="../../../people/jeremy_siek.htm">Jeremy
+Siek</a>, Indiana University (<a href="mailto:jsiek@osl.iu.edu">jsiek@osl.iu.edu</a>)
+</td>
+</tr>
+</tbody>
+</table>
+</body></html>

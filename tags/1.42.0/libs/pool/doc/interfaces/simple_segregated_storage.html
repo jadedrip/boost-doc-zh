@@ -1,0 +1,404 @@
+<!DOCTYPE HTML PUBLIC "-//W3C//DTD HTML 4.01 Transitional//EN" "http://www.w3.org/TR/html4/loose.dtd">
+<html><head>
+  <meta http-equiv="Content-Language" content="en-us">
+  <meta http-equiv="Content-Type" content="text/html; charset=UTF-8">
+  <link href="../pool.css" rel="stylesheet" type="text/css">
+
+  <title>Simple Segregated Storage</title></head>
+<body>
+  <img src="../../../../boost.png" alt="C++ Boost" height="86" width="276">
+
+  <h1 align="center">Simple Segregated Storage 简单分隔存储</h1>
+
+  <h2>Introduction 简介</h2>
+
+  <p>simple_segregated_storage.hpp provides a template class <span class="code">simple_segregated_storage</span> that controls access to a <em>free
+  list</em> of memory chunks. Please note that this is a
+  <strong>very</strong> simple class, with preconditions on almost all its
+  functions. It is intended to be the fastest and smallest possible quick
+  memory allocator — e.g., something to use in embedded systems. This
+  class delegates many difficult preconditions to the user (i.e., alignment
+  issues). For more general usage, see <a href="../interfaces.html">the other
+  pool interfaces</a>.<br>simple_segregated_storage.hpp 提供了一个模板类 <span class="code">simple_segregated_storage</span>，它控制了对内存区块的 <em>空闲列表</em> 的访问。请注意，它是一个<strong>非常</strong>简单的类，几乎所有函数都有前置条件。其目的是成为最快、最小的快速内存分配器 — 例如，被用于嵌入式系统。这个类将许多困难的前置条件托管给了用户(如对齐问题)。对于更为通用的用法，请见 <a href="../interfaces.html">其它内存池接口</a>。</p>
+
+  <h2>Synopsis 摘要</h2>
+  <pre class="code">template &lt;typename SizeType = std::size_t&gt;<br>class simple_segregated_storage<br>{<br>  private:<br>    simple_segregated_storage(const simple_segregated_storage &amp;);<br>    void operator=(const simple_segregated_storage &amp;);<br><br>  public:<br>    typedef SizeType size_type;<br><br>    simple_segregated_storage();<br>    ~simple_segregated_storage();<br><br>    static void * segregate(void * block,<br>        size_type nsz, size_type npartition_sz,<br>        void * end = 0);<br>    void add_block(void * block,<br>        size_type nsz, size_type npartition_sz);<br>    void add_ordered_block(void * block,<br>        size_type nsz, size_type npartition_sz);<br><br>    bool empty() const;<br><br>    void * malloc();<br>    void free(void * chunk);<br>    void ordered_free(void * chunk);<br>    void * malloc_n(size_type n, size_type partition_sz);<br>    void free_n(void * chunks, size_type n,<br>        size_type partition_sz);<br>    void ordered_free_n(void * chunks, size_type n,<br>        size_type partition_sz);<br>};<br></pre>
+
+  <h2>Semantics 语义</h2>
+
+  <p>An object of type <span class="code">simple_segregated_storage&lt;SizeType&gt;</span> is <em>empty</em>
+  if its free list is empty. If it is not empty, then it is <em>ordered</em>
+  if its free list is ordered. A free list is ordered if repeated calls to
+  <span class="code">malloc()</span> will result in a constantly-increasing
+  sequence of values, as determined by <span class="code">std::less&lt;void
+  *&gt;</span>. A member function is <em>order-preserving</em> if the free
+  list maintains its order orientation (that is, an ordered free list is
+  still ordered after the member function call).<br>一个类型为 <span class="code">simple_segregated_storage&lt;SizeType&gt;</span> 的对象为<em>空</em>，如果其空闲列表为空。如果它非空，则它是<em>有序的</em>，如果其空闲列表是有序的。空闲列表有序是指，重复调用 <span class="code">malloc()</span> 会得到一个由 <span class="code">std::less&lt;void
+  *&gt;</span> 确定顺序的单调递增的值序列。一个成员函数被称为<em>保序的</em>，如果空闲列表保持其顺序(即在该成员函数被调用后，有序的空闲列表仍然保持有序)。</p>
+
+  <table summary="" align="center" border="1">
+    <caption>
+      <em>Symbol Table</em>
+    </caption>
+
+    <tbody><tr>
+      <th>Symbol</th>
+
+      <th>Meaning</th>
+    </tr>
+
+    <tr>
+      <td class="code">Store</td>
+
+      <td class="code">simple_segregated_storage&lt;SizeType&gt;</td>
+    </tr>
+
+    <tr>
+      <td class="code">t</td>
+
+      <td>value of type <span class="code">Store</span></td>
+    </tr>
+
+    <tr>
+      <td class="code">u</td>
+
+      <td>value of type <span class="code">const Store</span></td>
+    </tr>
+
+    <tr>
+      <td class="code">block, chunk, end</td>
+
+      <td>values of type <span class="code">void *</span></td>
+    </tr>
+
+    <tr>
+      <td class="code">partition_sz, sz, n</td>
+
+      <td>values of type <span class="code">Store::size_type</span></td>
+    </tr>
+  </tbody></table><br>
+
+  <table summary="" align="center" border="1">
+    <caption>
+      <em>Template Parameters</em>
+    </caption>
+
+    <tbody><tr>
+      <th>Parameter</th>
+
+      <th>Default</th>
+
+      <th>Requirements</th>
+    </tr>
+
+    <tr>
+      <td class="code">SizeType</td>
+
+      <td class="code">std::size_t</td>
+
+      <td>An unsigned integral type</td>
+    </tr>
+  </tbody></table><br>
+
+  <table summary="" align="center" border="1">
+    <caption>
+      <em>Typedefs</em>
+    </caption>
+
+    <tbody><tr>
+      <th>Symbol</th>
+
+      <th>Type</th>
+    </tr>
+
+    <tr>
+      <td class="code">size_type</td>
+
+      <td class="code">SizeType</td>
+    </tr>
+  </tbody></table><br>
+
+  <table summary="" align="center" border="1">
+    <caption>
+      <em>Constructors, Destructors, and State</em>
+    </caption>
+
+    <tbody><tr>
+      <th>Expression</th>
+
+      <th>Return Type</th>
+
+      <th>Post-Condition</th>
+
+      <th>Notes</th>
+    </tr>
+
+    <tr>
+      <td class="code">Store()</td>
+
+      <td>not used</td>
+
+      <td class="code">empty()</td>
+
+      <td>Constructs a new <span class="code">Store<br>构造一个新的 Store</span></td>
+    </tr>
+
+    <tr>
+      <td class="code">(&amp;t)-&gt;~Store()</td>
+
+      <td>not used</td>
+
+      <td></td>
+
+      <td>Destructs the <span class="code">Store<br>析构该 Store</span></td>
+    </tr>
+
+    <tr>
+      <td class="code">u.empty()</td>
+
+      <td class="code">bool</td>
+
+      <td></td>
+
+      <td>Returns <span class="code">true</span> if <span class="code">u</span> is empty. Order-preserving.<br>如果 u 为空则返回 true. 保持顺序。</td>
+    </tr>
+  </tbody></table><br>
+
+  <table summary="" align="center" border="1">
+    <caption>
+      <em>Segregation</em>
+    </caption>
+
+    <tbody><tr>
+      <th>Expression</th>
+
+      <th>Return Type</th>
+
+      <th>Pre-Condition</th>
+
+      <th>Post-Condition</th>
+
+      <th>Semantic Equivalence</th>
+
+      <th>Notes</th>
+    </tr>
+
+    <tr>
+      <td class="code">Store::segregate(block, sz, partition_sz, end)</td>
+
+      <td class="code">void *</td>
+
+      <td><span class="code">partition_sz &gt;= sizeof(void *)</span><br>
+      <span class="code">partition_sz = sizeof(void *) * i</span>, for some
+      integer <span class="code">i</span><br>
+      <span class="code">sz &gt;= partition_sz</span><br>
+      <span class="code">block</span> is properly aligned for an array of
+      objects of size <span class="code">partition_sz</span><br>
+      <span class="code">block</span> is properly aligned for an array of
+      <span class="code">void *</span></td>
+
+      <td></td>
+
+      <td></td>
+
+      <td>Interleaves a free list through the memory block specified by
+      <span class="code">block</span> of size <span class="code">sz</span>
+      bytes, partitioning it into as many <span class="code">partition_sz</span>-sized chunks as possible. The last chunk is
+      set to point to <span class="code">end</span>, and a pointer to the
+      first chunck is returned (this is always equal to <span class="code">block</span>). This interleaved free list is ordered.
+      O(sz).<br>将一个由 <span class="code">block</span> 指定的、大小为 <span class="code">sz</span> 字节的内存块生成空闲列表，并将它尽可能分割为多个大小为 <span class="code">partition_sz</span>&nbsp; 的区块。最后一个区块设置为指向 <span class="code">end</span>, 且返回指向第一个区块的指针(它总是等于 <span class="code">block</span>)。该交错空闲列表是有序的。复杂度为 O(sz)。</td>
+    </tr>
+
+    <tr>
+      <td class="code">Store::segregate(block, sz, partition_sz)</td>
+
+      <td class="code">void *</td>
+
+      <td>Same as above</td>
+
+      <td></td>
+
+      <td class="code">Store::segregate(block, sz, partition_sz, 0)</td>
+
+      <td></td>
+    </tr>
+
+    <tr>
+      <td class="code">t.add_block(block, sz, partition_sz)</td>
+
+      <td class="code">void</td>
+
+      <td>Same as above</td>
+
+      <td class="code">!t.empty()</td>
+
+      <td></td>
+
+      <td>Segregates the memory block specified by <span class="code">block</span> of size <span class="code">sz</span> bytes into
+      <span class="code">partition_sz</span>-sized chunks, and adds that free
+      list to its own. If <span class="code">t</span> was empty before this
+      call, then it is ordered after this call. O(sz).<br>将一个由 <span class="code">block</span> 指定的、大小为 <span class="code">sz</span> 字节的内存块分隔为大小为
+      <span class="code">partition_sz</span>&nbsp; 的区块，并添加到空闲列表中。如果调用之前 <span class="code">t</span> 为空，则在调用后它是有序的。O(sz).</td>
+    </tr>
+
+    <tr>
+      <td class="code">t.add_ordered_block(block, sz, partition_sz)</td>
+
+      <td class="code">void</td>
+
+      <td>Same as above</td>
+
+      <td class="code">!t.empty()</td>
+
+      <td></td>
+
+      <td>Segregates the memory block specified by <span class="code">block</span> of size <span class="code">sz</span> bytes into
+      <span class="code">partition_sz</span>-sized chunks, and merges that
+      free list into its own. Order-preserving. O(sz).<br>将一个由 <span class="code">block</span> 指定的、大小为 <span class="code">sz</span> 字节的内存块分隔为大小为
+      <span class="code">partition_sz</span>&nbsp; 的区块，并合并到空闲列表中。保持原序。O(sz).</td>
+    </tr>
+  </tbody></table><br>
+
+  <table summary="" align="center" border="1">
+    <caption>
+      <em>Allocation and Deallocation</em>
+    </caption>
+
+    <tbody><tr>
+      <th>Expression</th>
+
+      <th>Return Type</th>
+
+      <th>Pre-Condition</th>
+
+      <th>Post-Condition</th>
+
+      <th>Semantic Equivalence</th>
+
+      <th>Notes</th>
+    </tr>
+
+    <tr>
+      <td class="code">t.malloc()</td>
+
+      <td class="code">void *</td>
+
+      <td class="code">!t.empty()</td>
+
+      <td></td>
+
+      <td></td>
+
+      <td>Takes the first available chunk from the free list and returns it.
+      Order-preserving. O(1).<br>从空闲列表中取出第一个可用的区块。保持原序。O(1)。</td>
+    </tr>
+
+    <tr>
+      <td class="code">t.free(chunk)</td>
+
+      <td class="code">void</td>
+
+      <td><span class="code">chunk</span> was previously returned from a call
+      to <span class="code">t.malloc()</span></td>
+
+      <td class="code">!t.empty()</td>
+
+      <td></td>
+
+      <td>Places <span class="code">chunk</span> back on the free list. Note
+      that <span class="code">chunk</span> may not be <span class="code">0</span>. O(1).<br>将 <span class="code">chunk</span> 放回空闲列表中。留意 <span class="code">chunk</span> 可能非 <span class="code">0</span>. O(1).</td>
+    </tr>
+
+    <tr>
+      <td class="code">t.ordered_free(chunk)</td>
+
+      <td class="code">void</td>
+
+      <td>Same as above</td>
+
+      <td class="code">!t.empty()</td>
+
+      <td></td>
+
+      <td>Places <span class="code">chunk</span> back on the free list. Note
+      that <span class="code">chunk</span> may not be <span class="code">0</span>. Order-preserving. O(N) with respect to the size of the
+      free list.<br>将&nbsp;<span class="code">chunk</span> 放回空闲列表中。留意 <span class="code">chunk</span> 可能非 <span class="code">0</span>. 保持原序。O(N)，视乎空闲列表的大小。</td>
+    </tr>
+
+    <tr>
+      <td class="code">t.malloc_n(n, partition_sz)</td>
+
+      <td class="code">void *</td>
+
+      <td></td>
+
+      <td></td>
+
+      <td></td>
+
+      <td>Attempts to find a contiguous sequence of <span class="code">n</span> <span class="code">partition_sz</span>-sized chunks. If
+      found, removes them all from the free list and returns a pointer to the
+      first. If not found, returns <span class="code">0</span>. It is
+      strongly recommended (but not required) that the free list be ordered,
+      as this algorithm will fail to find a contiguous sequence unless it is
+      contiguous in the free list as well. Order-preserving. O(N) with
+      respect to the size of the free list.<br>尝试找出 <span class="code">n</span> <span class="code">个大小 为 partition_sz</span> 的连续区块。如果找到，则将它们从空闲列表中移除并返回指向第一个区块的指针。如果找不到，则返回 <span class="code">0</span>. 强烈建议(但并非强制要求)空闲列表是有序的，因为如果连续区块不是在空闲列表中连续存放的话，该算法会查找失败。保持原序。O(N)，视乎空闲列表的大小。</td>
+    </tr>
+
+    <tr>
+      <td class="code">t.free_n(chunk, n, partition_sz)</td>
+
+      <td class="code">void</td>
+
+      <td><span class="code">chunk</span> was previously returned from a call
+      to <span class="code">t.malloc_n(n, partition_sz)</span></td>
+
+      <td class="code">!t.empty()</td>
+
+      <td class="code">t.add_block(chunk, n * partition_sz,
+      partition_sz)</td>
+
+      <td>Assumes that <span class="code">chunk</span> actually refers to a
+      block of chunks spanning <span class="code">n * partition_sz</span>
+      bytes; segregates and adds in that block. Note that <span class="code">chunk</span> may not be <span class="code">0</span>. O(n).<br>拟定 <span class="code">chunk</span> 实际上指向一个 <span class="code">n * partition_sz</span> 字节的区块组；将它分隔并加入到内存块中。留意 <span class="code">chunk</span> 可能非 <span class="code">0</span>. O(n).</td>
+    </tr>
+
+    <tr>
+      <td class="code">t.ordered_free_n(chunk, n, partition_sz)</td>
+
+      <td class="code">void</td>
+
+      <td>same as above</td>
+
+      <td>same as above</td>
+
+      <td class="code">t.add_ordered_block(chunk, n * partition_sz,
+      partition_sz)</td>
+
+      <td>Same as above, except it merges in the free list. Order-preserving.
+      O(N + n) where N is the size of the free list.<br>同上，但将它合并至空闲列表中。保持原序。O(N + n) 其中 N 为空闲列表的大小。</td>
+    </tr>
+  </tbody></table>
+
+  <h2>Symbols 符号</h2>
+
+  <ul>
+    <li>boost::simple_segregated_storage</li>
+  </ul>
+
+  <h2><a href="../implementation/simple_segregated_storage.html">Implementation
+  Details 实现细节</a></h2>
+  <hr>
+
+  <p><a href="http://validator.w3.org/check?uri=referer"><img style="border: 0px solid ; width: 88px; height: 31px;" src="../../../../valid-html401.png" alt="Valid HTML 4.01 Transitional"></a></p>
+
+  <p>Revised 
+  <!--webbot bot="Timestamp" s-type="EDITED" s-format="%d %B, %Y" startspan -->05 December, 2006<!--webbot bot="Timestamp" endspan i-checksum="38516" --></p>
+
+  <p><i>Copyright © 2000, 2001 Stephen Cleary (scleary AT jerviswebb DOT
+  com)</i></p>
+
+  <p><i>Distributed under the Boost Software License, Version 1.0. (See
+  accompanying file <a href="../../../../LICENSE_1_0.txt">LICENSE_1_0.txt</a>
+  or copy at <a href="http://www.boost.org/LICENSE_1_0.txt">http://www.boost.org/LICENSE_1_0.txt</a>)</i></p>
+</body></html>

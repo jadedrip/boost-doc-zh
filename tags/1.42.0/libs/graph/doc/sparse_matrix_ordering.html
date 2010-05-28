@@ -1,0 +1,154 @@
+<!DOCTYPE HTML PUBLIC "-//W3C//DTD HTML 4.01 Transitional//EN">
+<html><head><meta content="text/html; charset=UTF-8" http-equiv="content-type"><!--
+  -- Copyright (c) Jeremy Siek 2000
+  --
+  -- Distributed under the Boost Software License, Version 1.0.
+  -- (See accompanying file LICENSE_1_0.txt or copy at
+  -- http://www.boost.org/LICENSE_1_0.txt)
+  -->
+<title>Sparse Matrix Ordering Example</title></head>
+<body alink="#ff0000" bgcolor="#ffffff" link="#0000ee" text="#000000" vlink="#551a8b"> 
+<img src="../../../boost.png" alt="C++ Boost" height="86" width="277"> 
+
+<br clear="">
+
+<h1><a name="sec:sparse-matrix-ordering"></a>
+Sparse Matrix Ordering 稀疏矩阵排序
+</h1>
+
+<p>当 Seymour Parter 在30年前使用无向图来为对称高斯消除法建模[<a href="bibliography.html#parter61:_gauss">28</a>]时，
+图论就是认为是稀疏矩阵计算的一个有力工具。图可以用于模拟对称矩阵、非对称矩阵的分解和算法，如在高斯消除法中填充路径，矩阵不可还原性的强连通部分，
+双向匹配，以及线性相关和结构奇异中的交替路径。使用图不仅更易于理解和分析稀疏矩阵算法，还可以扩大至用已有的图算法和技术[<a href="bibliography.html#george93:graphtheory">13</a>]来处理稀疏矩阵。在本节中，我们将说明如何在稀疏矩阵计算中使用BGL，如排序算法。在进一步深入到稀疏矩阵算法之前，我们先退后一步，回顾一些东西。
+
+</p><h2>Graphs and Sparse Matrices 图与稀疏矩阵</h2>
+
+<p>从根本上说，图是对象间某种二元关系的一种表示法。而稀疏矩阵的非零模式也是某些未知对象间的二元关系。因此，一个线性系统的稀疏矩阵的非零模式可以用一个图
+<i>G(V,E)</i> 来建模，其中 <i>V</i> 的 <i>n</i> 个顶点表示<i></i>
+<i>n</i> 个未知物，当 <i>A<sub>ij</sub></i> 为非零时，从顶点 <i>i</i> 到顶点 <i>j</i> 之间有一条边。<i><sub></sub></i>因此，当一个矩阵具有对称非零模式时，对应的图就是无向的。
+
+</p><h2>Sparse Matrix Ordering Algorithms 稀疏矩阵排序算法</h2>
+
+<p>一个稀疏对称正定线性系统 <i>Ax=b</i> 的解答过程，可以分为以下四个阶段：
+</p><dl>
+<dt><strong>排序：</strong></dt>
+<dd>找到矩阵 <i>A</i> 的一个排列 <i>P</i><i></i>,
+</dd>
+<dt><strong>符号分解：</strong></dt>
+<dd>为 <i>PAP<sup>T</sup></i> 的  Cholesky 因子 <i>L</i>&nbsp;建立一个数据结构，
+</dd>
+<dt><strong>数字分解：</strong></dt>
+<dd>将 <i>PAP<sup>T</sup></i> 分解至 <i>LL<sup>T</sup></i>,
+</dd>
+<dt><strong>三角系统求解：</strong></dt>
+<dd>对 <i>x</i> 求解 <i>LL<sup>T</sup>Px=Pb</i>&nbsp;<i></i>.
+</dd>
+</dl>因为排列 <i>P</i> 的选择会直接决定注入元素(在非零结构 <i>L</i> 中而不在非零结构
+<i>A</i> 中的元素)的数量，其顺序对于后面阶段的内存及计算需求有着重大的影响。但是，找到 <i>A</i> 的优化顺序(即最小注入)已被证明是 NP-完全的[<a href="bibliography.html#garey79:computers-and-intractability">30</a>]，除了简单的(或特殊构造的)情况外，都需要使用启发法。
+
+<p>一个广泛使用而非简单排序的算法是
+Cuthill-McKee 排序的一个变体，反 Cuthill-McKee 排序算法。该算法可以被用作预排序方法，来改进更高一级方法的排序，如最小度数算法[<a href="bibliography.html#LIU:MMD">21</a>]。
+
+</p><h3><a name="SECTION001032100000000000000">
+Reverse Cuthill-McKee Ordering Algorithm 反Cuthill-McKee排序算法</a>
+</h3>原本的 Cuthill-McKee 排序算法主要是为降低矩阵的规模[<a href="bibliography.html#george81:__sparse_pos_def">14</a>]而设计的。在1971年，George 发现它的反序常常比原序更优。下面我们按图论的方法给出反 Cuthill-McKee 算法的描述：
+
+<ol>
+<li><i>找出开始顶点</i>: 确定一个开始顶点
+ <i>r</i> 并将 <i>r</i> 赋给 <i>x<sub>1</sub></i>.
+</li>
+<li><i>主要部分</i>: 对于 <i>i=1,...,N</i>, 找出顶点 <i>x<sub>i</sub></i> 的所有未标数邻居，<i><sub></sub></i>以递增的度数对它们标数。
+</li>
+<li><i>反序</i>: 反 Cuthill-McKee 序由 <i>y<sub>1</sub>,...,y<sub>N</sub></i> 给出，其中
+ <i>y<sub>i</sub></i> 为 <i>x<sub>N-i+1</sub></i>，<i>i = 1,...,N</i>.
+</li>
+</ol>在第一步中需要确定一个好的开始顶点。George 和 Liu&nbsp;[<a href="bibliography.html#george81:__sparse_pos_def">14</a>]的研究表明，一对最远或接近最远"距离"的顶点是不错的选择。他们还建议了一个算法来找出这样的一个开始顶点[<a href="bibliography.html#george81:__sparse_pos_def">14</a>]，我们在 <a href="#fig:ggcl_find_starting_vertex">图
+1</a> 中给出了用BGL接口的实现。
+<div align="center"><a name="fig:ggcl_find_starting_vertex"></a>
+<table border="1"><tbody><tr><td>
+<pre>namespace boost {<br>  template &lt;class Graph, class Vertex, class Color, class Degree&gt;<br>  Vertex <br>  pseudo_peripheral_pair(Graph&amp; G, const Vertex&amp; u, int&amp; ecc,<br>                         Color color, Degree degree)<br>  {<br>    typename property_traits&lt;Color&gt;::value_type c = get(color, u);<br><br>    rcm_queue&lt;Vertex, Degree&gt; Q(degree);<br>    <br>    typename boost::graph_traits&lt;Graph&gt;::vertex_iterator ui, ui_end;<br>    for (tie(ui, ui_end) = vertices(G); ui != ui_end; ++ui)<br>      put(color, *ui, white(c));<br>    breadth_first_search(G, u, Q, bfs_visitor&lt;&gt;(), color);<br><br>    ecc = Q.eccentricity(); <br>    return Q.spouse();<br>  }<br>  <br>  template &lt;class Graph, class Vertex, class Color, class Degree&gt; <br>  Vertex find_starting_node(Graph&amp; G, Vertex r, Color c, Degree d) {<br>    int eccen_r, eccen_x;<br>    Vertex x = pseudo_peripheral_pair(G, r, eccen_r, c, d);<br>    Vertex y = pseudo_peripheral_pair(G, x, eccen_x, c, d);<br><br>    while (eccen_x &gt; eccen_r) {<br>      r = x;<br>      eccen_r = eccen_x;<br>      x = y;<br>      y = pseudo_peripheral_pair(G, x, eccen_x, c, d);<br>    }<br>    return x;<br>  }<br>} // namespace boost<br></pre>
+</td></tr></tbody></table>
+
+<table><tbody><tr><td>
+<strong>图 1:</strong>&nbsp;<tt>find_starting_node</tt> 的BGL实现。关键部分 <tt>pseudo_peripheral_pair</tt> 实际上是带有定制队列类型的BFS.
+</td></tr></tbody></table>
+</div>
+<p>第一步的关键部分是BFS的定制队列类型，如 <a href="#fig:ggcl_find_starting_vertex">图
+1</a> 中所示的。在&nbsp;<a href="sparse_matrix_ordering.html#fig:cuthill-mckee">图 2</a> 中所示的主 Cuthill-McKee 算法是一个带通用BFS的被保护的优先队列。如果
+<tt>inverse_permutation</tt> 是一个普通的迭代器，则所保存的结果是原 Cuthill-McKee 序的反排列。另一方面，如果 <tt>inverse_permutation</tt> 是一个反向迭代器，则所保存的结果是反向 Cuthill-McKee
+序的反向排列。我们的实现十分简单，因为可以重用BGL中的许多组件。
+
+
+</p>
+<div align="center"><a name="fig:cuthill-mckee"></a><a name="6261"></a>
+<table border="1"><tbody><tr><td>
+<pre>  template &lt; class Graph, class Vertex, class OutputIterator, <br>             class Color, class Degree &gt;<br>  inline void <br>  cuthill_mckee_ordering(Graph&amp; G, <br>                         Vertex s,<br>                         OutputIterator inverse_permutation, <br>                         Color color, Degree degree)<br>  {<br>    typedef typename property_traits&lt;Degree&gt;::value_type DS;<br>    typename property_traits&lt;Color&gt;::value_type c = get(color, s);<br>    typedef indirect_cmp&lt;Degree, std::greater&lt;DS&gt; &gt; Compare;<br>    Compare comp(degree);<br>    fenced_priority_queue&lt;Vertex, Compare &gt; Q(comp);<br><br>    typedef cuthill_mckee_visitor&lt;OutputIterator&gt;  CMVisitor;<br>    CMVisitor cm_visitor(inverse_permutation);<br>    <br>    typename boost::graph_traits&lt;Graph&gt;::vertex_iterator ui, ui_end;<br>    for (tie(ui, ui_end) = vertices(G); ui != ui_end; ++ui)<br>      put(color, *ui, white(c));<br>    breadth_first_search(G, s, Q, cm_visitor, color);<br>  }  <br></pre>
+</td></tr></tbody></table>
+
+<table>
+<tbody><tr><td> <span style="font-weight: bold;">图</span><strong>&nbsp;2:</strong> Cuthill-McKee 算法的BGL实现。  </td></tr> </tbody></table> </div><br><h3>Minimum Degree Ordering Algorithm 最小度数排序算法</h3>
+
+<p>另一类广泛使用的高质量排序算法的模式是基于贪心法，即所选的顺序是在模拟对称高斯消去过程中的每一步令某些数量最小化。使用这种方法的算法通常以它们的贪心法所针对的最小化目标来命名[<a href="bibliography.html#ng-raghavan">34</a>]。
+
+</p><p>用图论的术语来说，多数贪心算法所使用的基本排序过程如下：
+
+</p><ol>
+<li><em>开始：</em>构造与矩阵 <i>A</i> 对应的无向图 <i>G<sup>0</sup></i>&nbsp;<i></i>
+ 
+</li>
+<li><em>迭代：</em>对于&nbsp;<i>k = 1, 2, ... </i> 做以下操作，直至 <i>G<sup>k</sup> = { }</i>&nbsp;：
+    
+<ul>
+<li>依据某个标准从 <i>G<sup>k</sup></i> 中选出一个顶点 <i>v<sup>k</sup></i>&nbsp;<i><sup></sup></i>&nbsp;
+</li>
+<li>从 <i>G<sup>k</sup></i> 中消去 <i>v<sup>k</sup></i>&nbsp;<i><sup></sup></i>以形成 
+  <i>G<sup>k+1</sup></i>
+ 
+</li>
+</ul>
+</li>
+</ol>得到的顺序是由该算法选出的一个顶点序列 <i>{v<sup>0</sup>,
+v<sup>1</sup>,...}</i>。
+
+<p>这类算法的一个最重要的例子是
+<i>最小度数</i> 算法。该算法在每一步选出对应图中具有最小度数的顶点，作为 <i>v<sup>k</sup></i>。目前已开发出基本最小度数算法的多个增强版，如使用商数图表示法、大规模消去法、不完整度数更新、多道消去法和外部度。有关最小度数算法的发展历史，请参见&nbsp;[<a href="bibliography.html#George:evolution">35</a>]。
+
+</p><p>最小度数算法的BGL实现与[<a href="bibliography.html#LIU:MMD">21</a>]中描述的算法非常相近。目前的实现包括了大规模消去、不完整度数更新、多道消去和外部度。
+
+</p><p>特别是，我们创建一个图表示法，来提高该算法的性能。它基于模板化的"vector of
+vectors"。所用的vector容器是一个适配器类，它构建于 STL <tt>std::vector</tt> 类之上。这个适配器类的具体特点包括：
+
+</p><ul>
+<li>元素删除不会缩减相关内存。在删除后加入新的元素不需要分配额外内存。
+</li>
+<li>在加入新元素时，按需高效地分配额外内存(每次增加内存时将容量番翻)。该特性来自于 STL vector。
+</li>
+</ul>
+
+<p>注意，这种表示法类似于在Liu的
+实现中所使用的方法，但有一些在动态内存分配上的重要差异。有了动态内存分配，我们就不需要为图的已消去部分过份关注，从而可以更高效地进行图遍历。更重
+要的是，保留了关于消去图的信息，允许小的符号分解。因为符号分解是整个解答过程中代价较高的部分，提高其性能可以显著减少计算量。
+</p><p>在某些情形下，可以把动态内存分配的开销想象为性能折衷。不过在实践中，内存分配的开销对于我们的实现并不占主要的运行时间，因为它并不是经常运行，成本得到了分摊。
+
+</p><h2>Proper Self-Avoiding Walk 正确的自回避行走</h2>
+
+<p>有限元法(FEM)是求解偏微分方程的一种灵活且具有吸引力的方法，因为它直接明了地处理复杂的几何领域。但是，FEM所生成的非结构化网格不能提
+供未知物的一个明确标记(编号)，而对于基本代数方程的矩阵矢量符号来说，有明确标记是很重要的。已开发出特殊的编号技术以优化这类算法的内存使用和局部
+性。一种新型的技术就是自回避行走[]。
+</p><p>如果我们把网格想象为图，那么在任意一个非结构化二维网格上的自回避行走(SAW)就是这个网格的所有三角形的一个枚举，满足两个相连的
+三角形共享一条边或一个顶点。一个正确的SAW是这样一个SAW，对于行走中的三个连续三角形，不能跳过同一个顶点两次。它可以被用于改进几个非常规算法
+的并行效率，尤其是与降低运行期内存访问(提高局部性)以及进程间通信相关的问题。参考资料[]已证明，对于任意三角形网格都存在一个PSAW，通过对一
+小片网格的PSAW进行扩展，可以得到更大的部分。该证明还有效地提供了一套规则来构造一个 PSAW。
+</p><p>在网格上构造PSAW的算法族是从网格中任一随机三角形开始，选择一个与当前子网格共享一条边的新三角形，并以这个新三角形扩展已有的部分PSAW。
+
+</p><p>我们来定义一个网格的偶图。令网格中每个三角形作为顶点，网格中有共享边的两个三角形表示在偶图中的两个对应顶点间有一条边。通过使用网格
+的偶图，实现构造PSAW的算法族的一个方法就是，重用BFS和DFS这样的BGL算法，给定一个定制的遍历器以提供遍历期间的操作。定制的遍历器应带有
+函数 <tt>tree_edge()</tt>，用于按具体情况扩展部分PSAW，还有函数
+<tt>start_vertex()</tt>，用于为开始顶点设置PSAW。<br>
+</p><hr>
+<table>
+<tbody><tr valign="top">
+<td nowrap="nowrap">Copyright © 2000-2001</td><td>
+<a href="http://www.boost.org/people/jeremy_siek.htm">Jeremy Siek</a>, Indiana University (<a href="mailto:jsiek@osl.iu.edu">jsiek@osl.iu.edu</a>)
+</td></tr></tbody></table>
+
+</body></html>

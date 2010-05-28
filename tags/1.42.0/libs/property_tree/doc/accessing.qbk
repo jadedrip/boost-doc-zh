@@ -1,0 +1,126 @@
+[/
+ / Copyright (c) 2008 Marcin Kalicinski (kalita <at> poczta dot onet dot pl)
+ / Copyright (c) 2009 Sebastian Redl (sebastian dot redl <at> getdesigned dot at)
+ /
+ / Distributed under the Boost Software License, Version 1.0. (See accompanying
+ / file LICENSE_1_0.txt or copy at http://www.boost.org/LICENSE_1_0.txt)
+ /]
+[section:accessing How to Access Data in a Property Tree 如何访问属性树中的数据]
+[/ __ptree_*__ macros expected from property_tree.qbk]
+[def __pi__ ['pi]] [/ mathematical constant]
+
+Property tree resembles (almost is) a standard container with value type of `pair<string, ptree>`. It has the usual member functions, such as __ptree_insert__, __ptree_push_back__, __ptree_find__, __ptree_erase__, etc. These can of course be used to populate and access the tree. For example the following code adds key `"pi"` with data (almost) equal to mathematical __pi__ value:
+
+属性树类似于(几乎就是)一个值类型为 `pair<string, ptree>` 的标准容器。它具有通常的成员函数，
+如 __ptree_insert__, __ptree_push_back__, __ptree_find__, __ptree_erase__, 等等。
+这些函数当然都可以用于填充和访问树中的数据。例如以下代码增加一个键值 `"pi"`，
+所带的数据(几乎)等于数学的 __pi__ 值：
+
+ __ptree__ pt;
+ pt.__ptree_push_back__(__ptree__::__ptree_value_type__("pi", __ptree__("3.14159")));
+
+To find the value of `pi` we might do the following:
+
+要查找 `pi` 的值，我们可以这样做：
+
+ __ptree__::__ptree_const_iterator__ it = pt.__ptree_find__("pi");
+ double pi = boost::lexical_cast<double>(it->second._ptree_data__());
+
+This looks quite cumbersome, and would be even more so if `pi` value was not stored so near the top of the tree, and we cared just a little bit more about errors. Fortunately, there is another, correct way of doing it:
+
+这看起来非常笨重，而且如果 `pi` 值不是被存储在靠近树的顶端位置则更是如此，
+而我们关心的只比错误多一点。幸好，我们有另一个正确的方法来做这件事：
+
+ ptree pt;
+ pt.__ptree_put__("pi", 3.14159);                // put double
+ double pi = pt.__ptree_get__<double>("pi");     // get double
+
+It doesn't get simpler than that. Basically, there are 2 families of member functions, __ptree_get__ and __ptree_put__, which allow intuitive access to data stored in the tree (direct children or not).
+
+没有什么比这更简单了。基本上，我们有2个成员函数族，__ptree_get__ 和 __ptree_put__, 
+它们可以直观地访问树中的数据(直接或非直接的子节点)。
+
+[heading Three Ways of Getting Data 获取数据的三种方法]
+
+There are three versions of get: get, get (default-value version), and get_optional, which differ by failure handling strategy. All versions take path specifier, which determines in which key to search for a value. It can be a single key, or a path to key, where path elements are separated with a special character (a '.' if not specified differently). For example debug.logging.errorlevel might be a valid path with dot as a separator.
+
+有三个版本的 get: get, get (缺省值版本), 以及 get_optional, 它的失败处理策略有所不同。
+所有版本均接受路径指定符，用于确定在哪个键中查找值。它可以是单个键值，或是到键值的路径，
+路径中的各元素用一个特定字符(若未特别指定就是'.')分隔。例如 debug.logging.errorlevel
+就可能是一个以点号作为分隔符的有效路径。
+
+# The throwing version (__ptree_get__) 抛出版本的(__ptree_get__):
+``
+__ptree__ pt;
+/* ... */
+float v = pt.__ptree_get__<float>("a.path.to.float.value");
+``
+This call locates the proper node in the tree and tries to translate its data string to a float value. If that fails, exception is thrown. If path does not exist, it will be __ptree_bad_path__ exception. If value could not be translated, it will be __ptree_bad_data__. Both of them derive from __ptree_error__ to make common handling possible.[br]
+这个调用定位至树中的正确节点，并尝试将其数据字符串翻译为浮点值。如果失败则抛出异常。
+如果路径不存在，则是 __ptree_bad_path__ 异常。如果值不能被翻译，则是 __ptree_bad_data__ 异常。
+这两个异常均派生自 __ptree_error__，可以一同处理。
+# The default-value version (__ptree_get_defaulted__) 缺省值版本的(__ptree_get_defaulted__):
+``
+__ptree__ pt;
+/* ... */
+float v = pt.__ptree_get_defaulted__("a.path.to.float.value", -1.f);
+``
+It will do the same as above, but if it fails, it will return the default value specified by second parameter (here -1.f) instead of throwing. This is very useful in common situations where one wants to allow omitting of some keys. Note that type specification needed in throwing version is normally not necessary here, because type is determined by the default value parameter.[br]
+其作用与上一个版本相同，不过如果操作失败将返回由第二个参数所指定的缺省值(在这里是-1.f)，
+而非抛出异常。在那些允许忽略某些键的一般情况下，这个版本非常有用。
+注意，在抛出版本中必须指定类型而在此版本中则不必，因为类型可以通过缺省值参数来推断。
+# The optional version (__ptree_get_optional__) 可选版本的(__ptree_get_optional__):
+``
+__ptree__ pt;
+/* ... */
+boost::optional<float> v = pt.__ptree_get_optional__<float>("a.path.to.float.value");
+``
+This version uses boost::optional class to handle extraction failure. On successful extraction, it will return boost::optional initialized with extracted value. Otherwise, it will return uninitialized boost::optional.[br]
+这个版本使用 boost::optional 类来处理获取数据的失败。当成功获取时，
+它将返回由获得值初始化的 boost::optional。否则，它将返回未初始化的 boost::optional。
+
+To retrieve value from this tree (not some subkey), use __ptree_get_value__, __ptree_get_value__ (default-value version), and __ptree_get_value_optional__. They have identical semantics to __ptree_get__ functions, except they don't take the __path__ parameter. Don't call __ptree_get__ with and empty __path__ to do this as it will try to extract contents of subkey with empty name.
+
+要从树中(不是某个子键)获取值，请用 __ptree_get_value__, __ptree_get_value__ (缺省值版本)，
+和 __ptree_get_value_optional__。它们具有与 __ptree_get__ 函数相同的语义，除了一点，
+它们不接受 __path__ 参数。不要用空的 __path__ 来调用 __ptree_get__，这样做将会取出带有空名的子键的内容。
+
+To use separator character other than default '[^.]', each of the __ptree_get__ versions has another form, which takes an additional parameter in front of path. This parameter of type `char/wchar_t` specifies the separating character. This is a lifesaving device for those who may have dots in their keys:
+
+要使用缺省分隔符 '[^.]' 以外的其它分隔符，则每个 __ptree_get__ 版本都有一个其它的格式，
+它在路径之前接受多一个参数。该参数的类型为 `char/wchar_t`，给定用于分隔的字符。
+以下适用于那些在键名中带有点号的情况：
+
+ pt.get<float>('/', "p.a.t.h/t.o/v.a.l.u.e");
+ pt.get('/', "p.a.t.h/t.o/v.a.l.u.e", 0, NULL);
+ pt.get_optional<std::string>('/', "p.a.t.h/t.o/v.a.l.u.e");
+
+[heading One Way of Putting Data 写入数据的一种方法]
+
+To complement __ptree_get__, there is a __ptree_put__ function. Contrary to __ptree_get__, it has only one variant. The reason is, there is no need to handle put failures so often (normally, __ptree_put__ will only fail if conversion of the supplied value to __ptree_data_type__ fails or the system runs out of memory.  In the former case, __ptree_put__ will throw __ptree_bad_data__). Sample usage of __ptree_put__ might appear as:
+
+相对于 __ptree_get__，有一个 __ptree_put__ 函数。与 __ptree_get__ 相比，它只有一个版本。
+原因是，通常没有必要处理写入的失败(通常，__ptree_put__ 仅当从给定值到 __ptree_data_type__
+的转换失败，或系统内存溢出时才会失败。对于前一种情况，__ptree_put__ 将抛出 __ptree_bad_data__)。
+以下为 __ptree_put__ 的使用例子：
+
+ __ptree__ pt;
+ pt.__ptree_put__("a.path.to.float.value", 3.14f);
+
+Calling __ptree_put__ will insert a new value at specified path, so that a call to __ptree_get__ specifying the same path will retrieve it.  Further, __ptree_put__ will insert any missing path elements during path traversal. For example, calling `__ptree_put__("key1.key2.key3", 3.14f)` on an empty tree will insert three new children: `key1`, `key1.key2` and `key1.key2.key3`. The last one will receive a string `"3.14"` as data, while the two former ones will have empty data strings. __ptree_put__ always inserts new keys at the back of the existing sequences.
+
+调用 __ptree_put__ 将在指定路径插入一个新值，此后对同一路径调用 __ptree_get__ 将取回该值。
+而且，__ptree_put__ 会在路径遍历期间插入所有不存在的路径。例如，对一棵空树调用
+`__ptree_put__("key1.key2.key3", 3.14f)` 将插入三个新的子节点：`key1`, `key1.key2`
+和 `key1.key2.key3`。最后一个子节点将接收一个字符串 `"3.14"` 作为数据，而前两个则为空数据串。
+__ptree_put__ 总是将新的键插入到已有序列的末端。
+
+Similar to __ptree_get_value__, there is also a __ptree_put_value__ function.  It does the same for this property tree what __ptree_put__ does for its children. Thus, it does not require __path__:
+
+类似于 __ptree_get_value__，也有一个 __ptree_put_value__ 函数。
+它对于属性树的作用与 __ptree_put__ 对于子节点的作用一样。因此，它不需要 __path__：
+
+ __ptree__ pt;
+ pt.__ptree_put_own__(3.14f);
+
+[endsect]

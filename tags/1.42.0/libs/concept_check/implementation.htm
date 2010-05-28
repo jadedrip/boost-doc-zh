@@ -1,0 +1,189 @@
+<!DOCTYPE html PUBLIC "-//W3C//DTD XHTML 1.0 Transitional//EN" "http://www.w3.org/TR/xhtml1/DTD/xhtml1-transitional.dtd">
+<html xmlns="http://www.w3.org/1999/xhtml">
+<head>
+<!-- Copyright (c) Jeremy Siek and Andrew Lumsdaine 2000, David Abrahams 2007 --><!-- Distributed under the Boost --><!-- Software License, Version 1.0. (See accompanying --><!-- file LICENSE_1_0.txt or copy at http://www.boost.org/LICENSE_1_0.txt) -->
+  
+  <meta name="generator" content="HTML Tidy for Linux/x86 (vers 1 September 2005), see www.w3.org" />
+
+  
+  <meta http-equiv="Content-Type" content="text/html; charset=utf-8" />
+
+  
+  <link rel="stylesheet" href="../../rst.css" type="text/css" />
+
+
+  
+  <title>Concept Checking Implementation</title>
+</head>
+
+
+
+
+
+
+
+
+<body alink="#ff0000" bgcolor="#ffffff" link="#0000ee" text="#000000" vlink="#551a8b">
+
+  <img src="../../boost.png" alt="C++ Boost" height="86" width="277" /><br clear="none" />
+
+
+  
+<h2><a name="warning" id="warning"><font color="red">Warning 警告</font></a></h2>
+
+
+  
+<p><font color="red">本文档已过期：现在使用的是相似但更新的实现技术。本文档还引用了本库的旧接口中的组件和协议，如 <code>BOOST_CLASS_REQUIRES</code> 和 <code>constraints()</code> 函数，它们仍被支持但已反对使用。</font></p>
+
+
+  
+<h2><a name="implementation" id="implementation">Implementation 实现</a></h2>
+
+
+  
+<p>我们的最终目标是在模板实例化的位置上捕捉并指出违反概念的错误。正如D&amp;E[<a href="bibliography.htm#stroustrup94:_design_evolution">2</a>]所指出的，可以通过在函数模板上测试所有要求来捕获错误。实际上如何测试要求(特定的有效表达式)是一件微妙的事情，因为我们希望代码被编译 
+--- 
+<i>但不执行</i>。我们的方法是在一个单独的函数中测试这些要求，这个函数被赋值给一个函数指针。这种情形下，编译器将实例化这个函数，但不会真正
+调用它。此外，一个优化的编译器还会将指针赋值作为"死代码"而删掉(虽然这个赋值操作在运行期的代价是非常微不足道的)。你可能会想编译器会不会一开始
+就跳过语义分析和约束函数的编译，从而使我们的函数指针技术不起作用。这是不可能的，由于删除无用代码和函数是编译器最后一步的工作。我们已经在
+GNU C++, Microsoft Visual C++, 和多个基于 EDG 的编译器(KAI C++, SGI
+MIPSpro)上验证了函数指针的技术。以下代码示范了如何把这种技术应用于 <tt>std::stable_sort()</tt> 函数：&nbsp;</p>
+
+  
+<pre>  template &lt;class RandomAccessIterator&gt;<br />  void stable_sort_constraints(RandomAccessIterator i)<br />  {<br />    typename std::iterator_traits&lt;RandomAccessIterator&gt;<br />      ::difference_type n;<br />    i += n;  // 检查 RandomAccessIterator 的要求<br />    ...<br />  }<br />  template &lt;class RandomAccessIterator&gt;<br />  void stable_sort(RandomAccessIterator first, RandomAccessIterator last)<br />  {<br />    typedef void (*fptr_type)(RandomAccessIterator);<br />    fptr_type x = &amp;stable_sort_constraints;<br />    ...<br />  }<br /></pre>
+
+
+  
+<p>通常会有一大堆要求需要检查，对于程序库的作者来说，为每一个公有函数编写象 <tt>stable_sort_constraints()</tt> 
+一样的约束函数是一件很烦琐的事情。为此，我们按照相应的概念的定义，将一组有效表达式集合起来。对于每个概念，定义一个概念检查类模板，以要检查的类型作为模板参数。这些类含有一个 
+<tt>contraints()</tt> 成员函数，负责测试概念所要求的所有有效表达式。约束函数中使用到的对象，如 <tt>n</tt> 和 
+<tt>i</tt>, 则声明为概念检查类的数据成员。&nbsp;</p>
+
+  
+<pre>  template &lt;class Iter&gt;<br />  struct RandomAccessIteratorConcept<br />  {<br />    void constraints()<br />    {<br />      i += n;<br />      ...<br />    }<br />    typename std::iterator_traits&lt;RandomAccessIterator&gt;<br />      ::difference_type n;<br />    Iter i;<br />    ...<br />  };<br /></pre>
+
+
+  
+<p>我们还可以用这种函数指针机制来引起约束函数的实例化，只不过现在换成了成员函数指针。为了库更加易于执行概念检查，我们将成员函数指针机制包装在一个名为 
+<tt>function_requires()</tt> 的函数中。以下代码片断示范了如何使用 <tt>function_requires()</tt> 
+来确认迭代器是一个 <a href="http://www.sgi.com/tech/stl/RandomAccessIterator.html">RandomAccessIterator随机迭代器</a>。&nbsp;</p>
+
+  
+<pre>  template &lt;class Iter&gt;<br />  void stable_sort(Iter first, Iter last)<br />  {<br />    function_requires&lt; RandomAccessIteratorConcept&lt;Iter&gt; &gt;();<br />    ...<br />  }<br /></pre>
+
+
+  
+<p><tt>function_requires()</tt> 的定义如下。<tt>其中 Concept</tt> 
+为已实例化的概念检查类。我们将约束成员函数的地址赋值给函数指针 <tt>x</tt>, 这将引起约束函数的实例化，并检查概念的有效表达式。然后我们通过将 
+<tt>x</tt> 赋值给 <tt>x</tt> 来避免编译器的无用变量警告，并将这些都包装在一个 do-while 循环中以防止名字冲突。&nbsp;</p>
+
+  
+<pre>  template &lt;class Concept&gt;<br />  void function_requires()<br />  {<br />    void (Concept::*x)() = BOOST_FPTR Concept::constraints;<br />    ignore_unused_variable_warning(x);<br />  }<br /></pre>
+
+
+  
+<p>为了检查类模板的类型参数，我们提供了 <tt>BOOST_CLASS_REQUIRE</tt> 宏，它可以用在类定义体内(而 
+<tt>function_requires()</tt> 
+只能用于函数体内)。这个宏声明了一个嵌套类模板，其模板参数是一个函数指针。我们将这个嵌套类用于一个typedef，并以约束函数的函数指针类型作为模板参数。我们把 
+<tt>type_var</tt> 和 <tt>concept</tt> 的名字用在嵌套类和typedef中，有助于防止名字冲突。&nbsp;</p>
+
+  
+<pre>#define BOOST_CLASS_REQUIRE(type_var, ns, concept) \<br />  typedef void (ns::concept &lt;type_var&gt;::* func##type_var##concept)(); \<br />  template &lt;func##type_var##concept _Tp1&gt; \<br />  struct concept_checking_##type_var##concept { }; \<br />  typedef concept_checking_##type_var##concept&lt; \<br />    BOOST_FPTR ns::concept&lt;type_var&gt;::constraints&gt; \<br />    concept_checking_typedef_##type_var##concept<br /></pre>
+
+
+  
+<p>此外，<tt>BOOST_CLASS_REQUIRE</tt> 
+还有其它一些版本，带有更多的参数，以处理那些包含两个或多个类型相互作用的概念。<tt>BOOST_CLASS_REQUIRE</tt> 并没有用于 BCCL 
+实现的概念检查中，因为有些编译器还不能实现以函数指针类型作为模板参数。 <!-- We decided not to go with this version since it is easier to misuse
+
+To check the type parameters of class templates, we provide the
+<tt>class_requires</tt> class which can be used inside the body of a
+class definition (whereas <tt>function_requires()</tt> can only be
+used inside of a function body).  <tt>class_requires</tt> declares a
+nested class template, where the template parameter is a function
+pointer. We then use the nested class type in a typedef with the
+function pointer type of the constraint function as the template
+argument.
+
+<pre>
+  template &lt;class Concept&gt;
+  class class_requires
+  {
+    typedef void (Concept::* function_pointer)();
+
+    template &lt;function_pointer Fptr&gt;
+    struct dummy_struct { };
+  public:
+    typedef dummy_struct&lt; BOOST_FPTR Concept::constraints &gt; check;
+  };
+</pre>
+
+<tt>class_requires</tt> was not used in the implementation of the
+Boost Concept Checking Library concept checks because several
+compilers do not implement template parameters of function pointer
+type.
+
+--> 
+  <!-- We decided not to go with this version since it is easier to misuse
+
+To check the type parameters of class templates, we provide the
+<tt>class_requires</tt> class which can be used inside the body of a
+class definition (whereas <tt>function_requires()</tt> can only be
+used inside of a function body).  <tt>class_requires</tt> declares a
+nested class template, where the template parameter is a function
+pointer. We then use the nested class type in a typedef with the
+function pointer type of the constraint function as the template
+argument.
+
+<pre>
+  template &lt;class Concept&gt;
+  class class_requires
+  {
+    typedef void (Concept::* function_pointer)();
+
+    template &lt;function_pointer Fptr&gt;
+    struct dummy_struct { };
+  public:
+    typedef dummy_struct&lt; BOOST_FPTR Concept::constraints &gt; check;
+  };
+</pre>
+
+<tt>class_requires</tt> was not used in the implementation of the
+Boost Concept Checking Library concept checks because several
+compilers do not implement template parameters of function pointer
+type.
+
+--></p>
+
+
+  
+<p><a href="./reference.htm">Next: Reference 参考</a><br />
+
+  <a href="prog_with_concepts.htm">Prev: Programming With
+  Concepts 用概念编程</a><br />
+</p>
+
+  
+<hr />
+
+  
+<table>
+
+    <tbody>
+    <tr valign="top">
+
+      <td nowrap="nowrap">Copyright &copy; 2000</td>
+
+
+      <td><a href="http://www.boost.org/people/jeremy_siek.htm">Jeremy Siek</a>(<a href="mailto:jsiek@osl.iu.edu">jsiek@osl.iu.edu</a>) Andrew
+      Lumsdaine(<a href="mailto:lums@osl.iu.edu">lums@osl.iu.edu</a>),
+        2007 <a href="mailto:dave@boost-consulting.com">David Abrahams</a>.
+    </td>
+    </tr>
+
+  
+  </tbody>
+</table>
+
+</body>
+</html>

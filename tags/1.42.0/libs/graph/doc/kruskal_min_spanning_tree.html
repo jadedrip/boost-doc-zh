@@ -1,0 +1,123 @@
+<!DOCTYPE HTML PUBLIC "-//W3C//DTD HTML 4.01 Transitional//EN">
+<html><head><meta content="text/html; charset=UTF-8" http-equiv="content-type"><!--
+  -- Copyright (c) Jeremy Siek 2000
+  --
+  -- Distributed under the Boost Software License, Version 1.0.
+  -- (See accompanying file LICENSE_1_0.txt or copy at
+  -- http://www.boost.org/LICENSE_1_0.txt)
+  -->
+<title>Boost Graph Library: Kruskal Minimum Spanning Tree</title></head>
+<body alink="#ff0000" bgcolor="#ffffff" link="#0000ee" text="#000000" vlink="#551a8b"> 
+<img src="../../../boost.png" alt="C++ Boost" height="86" width="277"> 
+
+<br clear="">
+
+
+<h1><a name="sec:kruskal">
+<img src="figs/python.gif" alt="(Python)">
+<tt>kruskal_minimum_spanning_tree</tt>
+</a></h1>
+
+<pre><a name="sec:kruskal">template &lt;class Graph, class OutputIterator, class P, class T, class R&gt;<br>OutputIterator<br>kruskal_minimum_spanning_tree(Graph&amp; g, OutputIterator tree_edges, <br>    const bgl_named_params&lt;P, T, R&gt;&amp; params = <i>all defaults</i>);<br></a></pre>
+
+<p>
+<a name="sec:kruskal">函数 <tt>kruskal_minimum_spanning_tree()</tt> 用于寻找一个有权边无向图的最小生成树(MST)。MST是一个边集，其中的边连接了图中所有顶点，且树中各边的权重之和为最小化。更多细节，请见 </a><a href="graph_theory_review.html#sec:minimum-spanning-tree">最小生成树问题</a>。MST中的边被输出至
+<tt>tree_edges</tt> 输出迭代器。该函数使用 Kruskal
+算法来计算 MST&nbsp;[<a href="bibliography.html#kruskal56">18</a>,<a href="bibliography.html#clr90">8</a>,<a href="bibliography.html#tarjan83:_data_struct_network_algo">27</a>,<a href="bibliography.html#graham85">15</a>]。
+</p>
+<p>
+Kruskal 算法开始时只有树中各个顶点，不带最小生成树 <i>T</i> 中的任何边。然后该算法按边的权重的非递增顺序检查图中各边。如果某条边连接的两个顶点位于两棵不同的树，则该算法将这两棵树合并为一棵树，并将该边加入至
+<i>T</i>。我们用"按秩合并"以及"路径压缩"两种启发式策略来提供不相交集合操作(<tt>MAKE-SET</tt>, <tt>FIND-SET</tt>, 和
+<tt>UNION-SET</tt>)的快速实现。算法如下：
+</p>
+
+<pre>KRUSKAL-MST(<i>G</i>, <i>w</i>) <br>  <i>T := Ø</i> <br>  <b>for</b> each vertex <i>u in V</i> <br>    MAKE-SET(<i>DS</i>, <i>u</i>) <br>  <b>end for</b>
+  <b>for</b> each edge <i>(u,v) in E</i> in order of nondecreasing weight <br>    <b>if</b> FIND-SET(<i>DS</i>, <i>u</i>) != FIND-SET(<i>DS</i>, <i>v</i>) <br>      UNION-SET(<i>DS</i>, <i>u</i>, <i>v</i>) <br>      <i>T := T U {(u,v)}</i> <br>  <b>end for</b>
+  <b>return</b> <i>T</i>
+</pre>
+
+
+<h3>Where Defined 定义于</h3>
+
+<p>
+<a href="../../../boost/graph/kruskal_min_spanning_tree.hpp"><tt>boost/graph/kruskal_min_spanning_tree.hpp</tt></a>
+
+</p><p>
+
+</p><h3>Parameters 参数</h3>
+
+IN: <tt>const Graph&amp; g</tt> 
+<blockquote>一个无向图。图类型必须符合 <a href="./VertexListGraph.html">点列表图Vertex List Graph</a> 和 <a href="./EdgeListGraph.html">边列表图Edge List Graph</a>。<br>
+
+  <b>Python</b>: 该参数名为 <tt>graph</tt>.
+</blockquote>
+
+IN: <tt>OutputIterator spanning_tree_edges</tt>
+<blockquote>最小生成树的边被输出至该 <a href="http://www.sgi.com/tech/stl/OutputIterator.html">输出迭代器</a>。<br>
+
+   <b>Python</b>: 在Python中未使用该参数。而是用一个包含生成树所有边的
+   Python <tt>list</tt> 返回。
+</blockquote>
+
+
+<h3>Named Parameters 命名参数</h3>
+
+IN: <tt>weight_map(WeightMap w_map)</tt> 
+<blockquote>图中每条边的权重或"长度"。类型 <tt>WeightMap</tt> 必须符合
+  <a href="../../property_map/doc/ReadablePropertyMap.html">可读属性映射</a> 且其值类型必须符合 <a href="http://www.sgi.com/tech/stl/LessThanComparable.html">可小于比较</a>。这个映射的键类型必须可以是图的边描述符类型。<br>
+  <b>缺省值：</b><tt>get(edge_weight, g)</tt><br>
+
+  <b>Python</b>: 必须为该图的一个 <tt>edge_double_map</tt>。<br>
+  <b>Python 缺省值：</b><tt>graph.get_edge_double_map("weight")</tt><tt></tt>
+</blockquote>
+
+UTIL: <tt>rank_map(RankMap r_map)</tt> 
+<blockquote>由不相交集合数据结构使用。类型 <tt>RankMap</tt> 必须符合 <a href="../../property_map/doc/ReadWritePropertyMap.html">读/写属性映射</a>。图的顶点描述符类型必须可用作这个秩映射的键类型。秩映射的值类型必须为整数类型。<br>
+  <b>缺省值：</b>一个 <a href="../../property_map/doc/iterator_property_map.html">
+  <tt>iterator_property_map</tt></a>，创建自一个值大小为
+  <tt>num_vertices(g)</tt> 的整数
+  <tt>std::vector</tt><span style="font-family: monospace;">，</span>且以 <tt>i_map</tt> 作为索引映射。<br>
+
+  <b>Python</b>: 不支持该参数。
+</blockquote>
+
+UTIL: <tt>predecessor_map(PredecessorMap p_map)</tt> 
+<blockquote>用于不相交集合数据结构，而不是用于保存生成树中的前趋。生成树的前趋可以从生成树边的输出获得。类型 <tt>PredecessorMap</tt> 必须符合 <a href="../../property_map/doc/ReadWritePropertyMap.html">读/写属性映射</a>。这个前趋映射的键类型必须是图的顶点描述符类型。<br>
+  <b>缺省值：</b>一个 <a href="../../property_map/doc/iterator_property_map.html">
+  <tt>iterator_property_map</tt></a><tt>，</tt>创建自一个值大小为
+  <tt>num_vertices(g)</tt> 的顶点描述符
+  <tt>std::vector</tt><span style="font-family: monospace;">，</span>且以 <tt>i_map</tt> 作为索引映射。<br>
+
+  <b>Python</b>: 不支持该参数。
+</blockquote>
+
+IN: <tt>vertex_index_map(VertexIndexMap i_map)</tt> 
+<blockquote>它将每个顶点映射至位于区间 <tt>[0,
+  num_vertices(g))</tt> 中的一个整数。仅当秩映射或前趋映射使用缺省值时需要。类型 <tt>VertexIndexMap</tt>
+  必须符合 <a href="../../property_map/doc/ReadablePropertyMap.html">可读属性映射</a>。该映射的值类型必须是一个整数类型。图的顶点描述符类型需要可以被用作该映射的键类型。<br>
+  
+
+  <b>缺省值：</b><tt>get(vertex_index, g)</tt>.
+    注意：如果你使用该缺省值，请确认你的图具有一个内部的 <tt>vertex_index</tt> 属性。例如，带 <tt>VertexList=listS</tt> 的
+    <tt>adjacenty_list</tt> 并不具有内部的 <tt>vertex_index</tt> 属性。<br>
+
+  <b>Python</b>: 不支持该参数。
+</blockquote>
+
+
+<h3>Complexity 复杂度</h3>
+
+<p>时间复杂度为 <i>O(E log E)</i>
+
+</p><h3>Example 示例</h3>
+
+<p>文件 <a href="../example/kruskal-example.cpp"><tt>examples/kruskal-example.cpp</tt></a>
+包含了一个使用 Kruskal 算法的例子。<br>
+</p><hr>
+<table>
+<tbody><tr valign="top">
+<td nowrap="nowrap">Copyright © 2000-2001</td><td>
+<a href="http://www.boost.org/people/jeremy_siek.htm">Jeremy Siek</a>, Indiana University (<a href="mailto:jsiek@osl.iu.edu">jsiek@osl.iu.edu</a>)
+</td></tr></tbody></table>
+
+</body></html>

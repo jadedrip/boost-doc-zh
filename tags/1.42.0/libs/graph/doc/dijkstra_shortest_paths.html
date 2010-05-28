@@ -1,0 +1,244 @@
+<!DOCTYPE HTML PUBLIC "-//W3C//DTD HTML 4.01 Transitional//EN">
+<html><head><meta content="text/html; charset=UTF-8" http-equiv="content-type"><!--
+  -- Copyright (c) Jeremy Siek 2000
+  --
+  -- Distributed under the Boost Software License, Version 1.0.
+  -- (See accompanying file LICENSE_1_0.txt or copy at
+  -- http://www.boost.org/LICENSE_1_0.txt)
+  -->
+<title>Boost Graph Library: Dijkstra's Shortest Paths</title></head>
+<body alink="#ff0000" bgcolor="#ffffff" link="#0000ee" text="#000000" vlink="#551a8b"> 
+<img src="../../../boost.png" alt="C++ Boost" height="86" width="277"> 
+
+<br clear="">
+
+<h1><a name="sec:dijkstra"></a><img src="figs/python.gif" alt="(Python)">
+<tt>dijkstra_shortest_paths</tt>
+</h1>
+
+
+<p>
+</p><pre><i>// 命名参数版本</i>
+template &lt;typename Graph, typename P, typename T, typename R&gt;
+void
+dijkstra_shortest_paths(Graph&amp; g,
+  typename graph_traits&lt;Graph&gt;::vertex_descriptor s,
+  const bgl_named_params&lt;P, T, R&gt;&amp; params);
+
+<i>// 非命名参数版本</i>
+template &lt;typename Graph, typename <a href="DijkstraVisitor.html">DijkstraVisitor</a>, <br>	  typename PredecessorMap, typename DistanceMap,<br>	  typename WeightMap, typename VertexIndexMap, typename <a href="http://www.sgi.com/tech/stl/BinaryPredicate.html">CompareFunction</a>, typename <a href="http://www.sgi.com/tech/stl/BinaryFunction.html">CombineFunction</a>, <br>	  typename DistInf, typename DistZero, typename ColorMap = <i>default</i>&gt;<br>void dijkstra_shortest_paths<br>  (const Graph&amp; g,<br>   typename graph_traits&lt;Graph&gt;::vertex_descriptor s, <br>   PredecessorMap predecessor, DistanceMap distance, WeightMap weight, <br>   VertexIndexMap index_map,<br>   CompareFunction compare, CombineFunction combine, DistInf inf, DistZero zero,<br>   DijkstraVisitor vis, ColorMap color = <i>default</i>)<br><br><i>// 不对属性映射(除了缺省的颜色映射)进行初始化的版本</i><br>template &lt;class Graph, class DijkstraVisitor,<br>          class PredecessorMap, class DistanceMap,<br>          class WeightMap, class IndexMap, class Compare, class Combine,<br>          class DistZero, class ColorMap&gt;<br>void<br>dijkstra_shortest_paths_no_init<br>  (const Graph&amp; g,<br>   typename graph_traits&lt;Graph&gt;::vertex_descriptor s,<br>   PredecessorMap predecessor, DistanceMap distance, WeightMap weight,<br>   IndexMap index_map,<br>   Compare compare, Combine combine, DistZero zero,<br>   DijkstraVisitor vis, ColorMap color = <i>default</i>);<br></pre>
+
+<p>该算法[<a href="bibliography.html#dijkstra59">10</a>,<a href="bibliography.html#clr90">8</a>]用于解决非负权重的有向或无向图上的单源最短路径问题。如果含有负权重，则需要使用 Bellman-Ford 算法。如果所有的边权重都等于一，可以使用广度优先搜索代替 Dijkstra 算法。有关最短路径问题的定义及其背景，请见 <a href="graph_theory_review.html#sec:shortest-paths-algorithms">最短路径算法</a> 一节。
+</p>
+
+<p>从
+<tt>dijkstra_shortest_paths()</tt> 函数获得输出，有两个主要选项。如果你通过 <tt>distance_map()</tt> 参数提供一个距离属性映射，则从源顶点到图中每个顶点的最短距离将被记录在这个距离映射中。你也可以将最短路径树记录在一个前趋映射中：对于<i> V</i> 中的每个顶点
+<i>u</i>，<i>p[u]</i> 为顶点 <i>u</i> 在最短路径树中的前趋(除非 <i>p[u] = u</i>，此时 <i>u</i> 为源顶点或某个不能从源顶点到达的顶点)。除了这两个选项，用户还可以提供他们自己定制的遍历器，在算法中的某些事件点上执行动作。</p>
+
+<p>
+Dijkstra 算法找出从源顶点到其它各个顶点的最短路径，其方法是重复"增长"已得知最短路径的顶点集合<i>S</i>。在算法的每一步中，下一个被增加至 <i>S</i> 中的顶点是由一个优先队列来决定的。这个队列包含了 <i>V - S</i><a href="#1">[1]</a> 中的所有顶点，并以它们的距离标号来排列成优先队列，距离标号即是每个顶点当前可以估到的最短路径长度。位于优先队列顶部的顶点
+<i>u</i> 被增加至 <i>S</i>，且它的每条出边被松驰：如果到 <i>u</i> 的距离加上出边 <i>(u,v)</i> 的权重的和，小于 <i>v</i> 的距离标号，则对顶点 <i>v</i> 的距离估算被减小。然后该算法循环，处理优先队列顶点的下一个顶点。当优先队列为空时，算法结束。
+</p>
+<p>该算法使用颜色标记(白色、灰色和黑色)来跟踪每个顶点属于哪个集合。黑色顶点属于<i>S</i>。白色和灰色顶点属于<i>V-S</i>。白色顶点尚未被发现，而灰色顶点则位于优先队列中。缺省情况下，该算法会分配一个数组来保存图中每个顶点的颜色。你可以提供你自己的存储，并用 <tt>color_map()</tt> 参数来访问颜色。
+</p>
+<p>以下是 Dijkstra 单源最短路径算法的伪代码。<i>w</i> 为边权重，<i>d</i> 为距离标号，<i>p</i> 为每个顶点的前趋，用于编码最短路径树。<i>Q</i> 是一个优先队列，支持
+DECREASE-KEY 操作。该算法的遍历器事件点由右侧的标号列出。
+</p>
+
+<table>
+<tbody><tr>
+<td valign="top">
+<pre>DIJKSTRA(<i>G</i>, <i>s</i>, <i>w</i>)<br>  <b>for</b> each vertex <i>u in V </i><b>(该循环在 dijkstra_shortest_paths_no_init 中不运行)</b>
+    <i>d[u] := infinity</i> <br>    <i>p[u] := u</i> <br>    <i>color[u] :=</i> WHITE<br>  <b>end for</b>
+  <i>color[s] := </i>GRAY <br>  <i>d[s] := 0</i> <br>  INSERT(<i>Q</i>, <i>s</i>)<br>  <b>while</b> (<i>Q != Ø</i>)<br>    <i>u :=</i> EXTRACT-MIN(<i>Q</i>)<br>    <i>S := S U { u }</i>
+    <b>for</b> each vertex <i>v in Adj[u]</i>
+      <b>if</b> (<i>w(u,v) + d[u] &lt; d[v]</i>)<br>        <i>d[v] := w(u,v) + d[u]</i>
+        <i>p[v] := u</i> <br>        <b>if</b> (<i>color[v] =</i> WHITE) <br>          <i>color[v] :=</i> GRAY<br>          INSERT(<i>Q</i>, <i>v</i>) <br>        <b>else if</b> (<i>color[v] =</i> GRAY)<br>          DECREASE-KEY(<i>Q</i>, <i>v</i>)<br>      <b>else</b>
+        <i>...</i>
+    <b>end for</b>
+    <i>color[u] :=</i> BLACK<br>  <b>end while</b>
+  return (<i>d</i>, <i>p</i>)<br></pre>
+</td>
+<td valign="top">
+<pre>初始化顶点 <i>u</i>
+
+
+
+
+
+
+发现顶点 <i>s</i>
+
+检查顶点 <i>u</i>
+
+检查边 <i>(u,v)</i>
+
+边 <i>(u,v)</i> 被松驰<br><br><br><br>发现顶点 <i>v</i>
+
+
+
+边 <i>(u,v)</i> 未被松驰<br><br>结束顶点 <i>u</i>
+</pre>
+</td>
+</tr>
+</tbody></table>
+
+<h3>Where Defined 定义于</h3>
+
+<a href="../../../boost/graph/dijkstra_shortest_paths.hpp"><tt>boost/graph/dijkstra_shortest_paths.hpp</tt></a>
+
+<h3>Parameters 参数</h3>
+
+IN: <tt>const Graph&amp; g</tt> 
+<blockquote>应用该算法的图对象。类型 <tt>Graph</tt> 必须符合 
+  <a href="./VertexListGraph.html">点列表图Vertex List Graph</a> 和 <a href="./IncidenceGraph.html">关联图Incidence Graph</a>。<br>
+
+  
+
+  <b>Python</b>: 该参数被命名为 <tt>graph</tt>.&nbsp;
+</blockquote>
+
+IN: <tt>vertex_descriptor s</tt> 
+<blockquote>源顶点。所有距离都是从这个顶点开始计算，且最短路径树以此点为根。<br>
+
+  
+
+  <b>Python</b>: 该参数被命名为 <tt>root_vertex</tt>.
+
+</blockquote>
+
+<h3>Named Parameters 命名参数</h3>
+
+IN: <tt>weight_map(WeightMap w_map)</tt>   
+<blockquote>图中每条边的权重或"长度"。这些权重必须为非负的，如果有某条边的权重为负，该算法将抛出一个 <a href="./exception.html#negative_edge"><tt>negative_edge</tt></a> 
+  异常。类型 <tt>WeightMap</tt> 必须符合
+  <a href="../../property_map/doc/ReadablePropertyMap.html">可读属性映射</a>。图的边描述符类型必须可用作这个权重映射的键类型。该映射的值类型必须与距离映射的值类型相同。<br>
+  <b>缺省值：</b><tt>get(edge_weight, g)</tt><br>
+
+  <b>Python</b>: 必须为该图的一个 <tt>edge_double_map</tt>。<br>
+  <b>Python 缺省值：</b><tt>graph.get_edge_double_map("weight")</tt>
+</blockquote>
+
+IN: <tt>vertex_index_map(VertexIndexMap i_map)</tt> 
+<blockquote>它将每个顶点映射至位于区间 <tt>[0,
+  num_vertices(g))</tt> 中的一个整数。当某条边被松驰时，堆数据结构[<a href="bibliography.html#driscoll88">61</a>]必须可以高效地更新。类型 <tt>VertexIndexMap</tt>
+  必须符合 <a href="../../property_map/doc/ReadablePropertyMap.html">可读属性映射</a>。该映射的值类型必须是一个整数类型。图的顶点描述符类型需要可以被用作该映射的键类型。<br>
+  
+
+  <b>缺省值：</b><tt>get(vertex_index, g)</tt>.
+    注意：如果你使用该缺省值，请确认你的图具有一个内部的 <tt>vertex_index</tt> 属性。例如，带 <tt>VertexList=listS</tt> 的
+    <tt>adjacenty_list</tt> 并不具有内部的 <tt>vertex_index</tt> 属性。<br>
+
+  <b>Python</b>: 不支持该参数。&nbsp;
+</blockquote>
+
+OUT: <tt>predecessor_map(PredecessorMap p_map)</tt> 
+<blockquote>这个前趋映射用于记录最小生成树中的边。当该算法结束后，对于<i> V</i> 中的所有 <i>u</i>，边 <i>(p[u],u)</i>&nbsp;<span style="font-style: italic;"></span><i></i>均属于最小生成树。如果 <i>p[u] =
+  u</i> 则 <i>u</i> 为源顶点或某个不能从源顶点到达的顶点。类型 <tt>PredecessorMap</tt> 必须符合 <a href="../../property_map/doc/ReadWritePropertyMap.html">读/写属性映射</a>，且其键类型和值类型均与图的顶点描述符类型相同。<br>
+  <b>缺省值：</b><tt>dummy_property_map</tt><br>
+
+  <b>Python</b>: 必须为该图的一个 <tt>vertex_vertex_map</tt>。<br>
+</blockquote>
+
+UTIL/OUT: <tt>distance_map(DistanceMap d_map)</tt> 
+<blockquote>从源顶点 <tt>s</tt> 到图 <tt>g</tt> 中每个顶点的最短路径权重被记录在这个属性映射中。最短路径权重为最短路径上各边权重之和。类型 <tt>DistanceMap</tt> 必须符合 <a href="../../property_map/doc/ReadWritePropertyMap.html">读/写属性映射</a>。图的顶点描述符类型必须可被用作这个距离映射的键类型。距离映射的值类型是一个 <a href="./Monoid.html">Monoid</a> 的元素类型，它是由组合函数对象和 identity 元素的"零"对象形成的。此外，距离值类型还必须具有由 <tt>compare</tt> 函数对象提供的一个 <a href="http://www.sgi.com/tech/stl/StrictWeakOrdering.html">
+  严格弱序</a>。<br>
+  <b>缺省值：</b><a href="../../property_map/doc/iterator_property_map.html"><tt>iterator_property_map</tt></a> 创建自一个值类型为 <tt>WeightMap</tt>，大小为
+  <tt>num_vertices(g)</tt> 的
+  <tt>std::vector</tt><span style="font-family: monospace;">，</span>且以 <tt>i_map</tt> 作为索引映射。<br>
+
+  <b>Python</b>: 必须为该图的一个 <tt>vertex_double_map</tt>。<br>
+</blockquote>
+
+IN: <tt>distance_compare(CompareFunction cmp)</tt> 
+<blockquote>该函数用于比较距离，以决定哪个顶点更接近于源顶点。类型 <tt>CompareFunction</tt> 必须符合 <a href="http://www.sgi.com/tech/stl/BinaryPredicate.html">二元谓词</a> 且其参数类型要与 <tt>DistanceMap</tt> 属性映射的值类型相匹配。<br>
+
+  <b>缺省值：</b><tt>std::less&lt;D&gt;</tt> 其中 <tt>D=typename
+  property_traits&lt;DistanceMap&gt;::value_type</tt><br>
+
+  <b>Python</b>:&nbsp;不支持该参数。
+</blockquote>
+
+IN: <tt>distance_combine(CombineFunction cmb)</tt> 
+<blockquote>该函数用于将距离相加，以计算一条路径的距离。类型 <tt>CombineFunction</tt> 必须符合 <a href="http://www.sgi.com/tech/stl/BinaryFunction.html">二元谓词</a>。该二元函数的第一个参数类型必须与 <tt>DistanceMap</tt> 属性映射的值类型相匹配，第二个参数类型必须与
+  <tt>WeightMap</tt> 属性映射的值类型相匹配。结果类型必须与距离值类型相同。<br>
+
+  <b>缺省值：</b><tt>closed_plus&lt;D&gt;</tt> 其中
+   <tt>D=typename property_traits&lt;DistanceMap&gt;::value_type</tt><br>
+
+  <b>Python</b>:&nbsp;不支持该参数。
+</blockquote>
+
+IN: <tt>distance_inf(D inf)</tt> 
+<blockquote>
+  <tt>inf</tt> 对象必须是任意 <tt>D</tt> 对象中的最大值。即，<tt>compare(d, inf) == true</tt> 对于任意 <tt>d != inf</tt> 成立。类型 <tt>D</tt> 为 <tt>DistanceMap</tt> 的值类型。<br>
+  <b>缺省值：</b><tt>std::numeric_limits&lt;D&gt;::max()</tt><br>
+
+  <b>Python</b>:&nbsp;不支持该参数。
+</blockquote>
+
+IN: <tt>distance_zero(D zero)</tt> 
+<blockquote>这个"零"值必须是
+  <a href="Monoid.html">Monoid</a> 的 identity 元素，<a href="./Monoid.html">Monoid</a> 由距离值和组合函数对象形成。类型 <tt>D</tt> 为 <tt>DistanceMap</tt> 的值类型。<br>
+  <b>缺省值：</b><tt>D()</tt> 其中
+   <tt>D=typename property_traits&lt;DistanceMap&gt;::value_type</tt><br>
+
+  <b>Python</b>:&nbsp;不支持该参数。
+</blockquote>
+
+UTIL/OUT: <tt>color_map(ColorMap c_map)</tt> 
+<blockquote>用于在算法的执行期间对顶点进行标记。各顶点在开始时为白色，当被插入队列时变为灰色。当被从队列中移出时变为黑色。在算法结束时，可以从源顶点到达的所有顶点均变为黑色。其它所有顶点仍为白色。类型 <tt>ColorMap</tt> 必须符合
+  <a href="../../property_map/doc/ReadWritePropertyMap.html">读/写属性映射</a>。顶点描述符必须可被用作该映射的键类型，且该映射的值类型必须符合
+  <a href="./ColorValue.html">颜色值Color Value</a>。<br>
+  <b>缺省值：</b>一个 <a href="../../property_map/doc/iterator_property_map.html">
+  <tt>iterator_property_map</tt></a>，创建自一个大小为 <tt>num_vertices(g)</tt> 的 <tt>default_color_type</tt> 的 <tt>std::vector</tt>，且以 <tt>i_map</tt> 作为索引映射。<br>
+
+  <b>Python</b>: 颜色映射必须是该图的一个 <tt>vertex_color_map</tt>。
+</blockquote>
+  
+OUT: <tt>visitor(DijkstraVisitor v)</tt>  
+<blockquote>用于指定你想在算法内某些特定事件点上执行的动作。类型 <tt>DijkstraVisitor</tt> 必须符合
+  <a href="./DijkstraVisitor.html">Dijkstra 遍历器</a> 概念。该遍历器对象是以值方式传递的<a href="#2">[2]</a>。<br>
+  <b>缺省值：</b><tt>dijkstra_visitor&lt;null_visitor&gt;</tt><br>
+
+  <b>Python</b>: 该参数应为派生自该图的&nbsp;<a href="DijkstraVisitor.html#python"><tt>DijkstraVisitor</tt></a> 类型的一个对象。
+</blockquote>
+
+
+<h3>Complexity 复杂度</h3>
+
+<p>时间复杂度为 <i>O(V log V)</i>。
+
+
+</p><h3>Visitor Event Points 遍历器事件点</h3>
+
+<ul>
+<li><b><tt>vis.initialize_vertex(</tt></b><b><tt>u</tt></b><b><tt>, g)</tt></b> 在算法开始前对图中每个顶点调用。 
+
+</li><li><b><tt>vis.examine_vertex(u, g)</tt></b> 当各顶点被移出优先队列并加入集合 <i>S</i> 时被调用。在此点上，我们知道 <i>(p[u],u)</i>
+  是最短路径树的一条边，因此 <i>d[u] = delta(s,u) = d[p[u]] + w(p[u],u)</i>。另外，已被检查的顶点的距离是单调递增的，<i>d[u<sub>1</sub>] &lt;= d[u<sub>2</sub>] &lt;= d[u<sub>n</sub>]</i>.
+
+</li><li><b><tt>vis.examine_edge(e, g)</tt></b> 在某顶点被加入至集合 <i>S</i> 后，立即对其每条出边调用。</li><li><b><tt>vis.edge_relaxed(e, g)</tt></b>
+  对满足 <i>d[u] + w(u,v) &lt; d[v]</i> 的边 <i>(u,v)</i> 调用。参与顶点 <i>v</i> 最后一次松驰的边 <i>(u,v)</i> 为最短路径树的一条边。</li><li><b><tt>vis.discover_vertex(v, g)</tt></b> 当边 <i>(u,v)</i> 被检查且 <i>v</i> 为 WHITE 时对顶点 <i>v</i> 调用。由于顶点在被发现时着色为 GRAY，所以每个可到达顶点只会被发现一次。亦即在顶点被插入优先队列时。</li><li><b><tt>vis.edge_not_relaxed(e, g)</tt></b>
+  当某条边未能被松驰时调用(见上)。</li><li><b><tt>vis.finish_vertex(u, g)</tt></b> 当某个顶点的所有出边都完成检查后调用。</li></ul>
+
+<h3>Example 示例</h3>
+
+<p> Dijkstra 算法的用例请见 <a href="../example/dijkstra-example.cpp">
+<tt>example/dijkstra-example.cpp</tt></a>。</p><h3>See also 参见</h3><a href="dijkstra_shortest_paths_no_color_map.html">dijkstra_shortest_paths_no_color_map</a> 
+是一个不使用颜色映射的 dijkstra 最短路径算法的版本。 <h3>Notes 备注</h3>
+
+<a name="1">[1]</a>
+以前本算法为了节省一点空间，并不一次性将所有 <i>V -
+S</i> 个顶点放入优先队列，而是只将 <i>V - S</i> 中已被发现的、距离小于无限远的顶点放入队列。
+
+<p><a name="2">[2]</a> 
+  由于 visitor 参数是以值方式传递的，所以如果你的遍历器含有状态，则在算法中对该状态的所有修改都是针对该遍历器对象的一个拷贝，而不对传入的遍历器对象进行的。因此你应该让该遍历器以指针或引用的方式保存该状态。<br>
+</p><hr>
+<table>
+<tbody><tr valign="top">
+<td nowrap="nowrap">Copyright © 2000-2001</td><td>
+<a href="http://www.boost.org/people/jeremy_siek.htm">Jeremy Siek</a>, Indiana University (<a href="mailto:jsiek@osl.iu.edu">jsiek@osl.iu.edu</a>)
+</td></tr></tbody></table>
+
+</body></html>

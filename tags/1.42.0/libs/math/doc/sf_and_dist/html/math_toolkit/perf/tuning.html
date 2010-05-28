@@ -1,0 +1,674 @@
+<!DOCTYPE HTML PUBLIC "-//W3C//DTD HTML 4.01 Transitional//EN">
+<html><head>
+<meta http-equiv="Content-Type" content="text/html; charset=UTF-8">
+
+<title>Performance Tuning Macros</title><link rel="stylesheet" href="../../../../../../../doc/html/boostbook.css" type="text/css">
+<meta name="generator" content="DocBook XSL Stylesheets Vsnapshot_2006-12-17_0120">
+<link rel="start" href="../../index.html" title="Math Toolkit">
+<link rel="up" href="../perf.html" title="Performance">
+<link rel="prev" href="comp_compilers.html" title="Comparing Compilers">
+<link rel="next" href="comparisons.html" title="Comparisons to Other Open Source Libraries"></head>
+<body alink="#0000ff" bgcolor="white" link="#0000ff" text="black" vlink="#840084">
+<table cellpadding="2" width="100%"><tbody><tr>
+<td valign="top"><img alt="Boost C++ Libraries" src="../../../../../../../boost.png" height="86" width="277"></td>
+<td align="center"><a href="../../../../../../../index.html">Home</a></td>
+<td align="center"><a href="../../../../../../../libs/libraries.htm">Libraries</a></td>
+<td align="center"><a href="http://www.boost.org/users/people.html">People</a></td>
+<td align="center"><a href="http://www.boost.org/users/faq.html">FAQ</a></td>
+<td align="center"><a href="../../../../../../../more/index.htm">More</a></td>
+</tr></tbody></table>
+<hr>
+<div class="spirit-nav">
+<a accesskey="p" href="comp_compilers.html"><img src="../../../../../../../doc/html/images/prev.png" alt="Prev"></a><a accesskey="u" href="../perf.html"><img src="../../../../../../../doc/html/images/up.png" alt="Up"></a><a accesskey="h" href="../../index.html"><img src="../../../../../../../doc/html/images/home.png" alt="Home"></a><a accesskey="n" href="comparisons.html"><img src="../../../../../../../doc/html/images/next.png" alt="Next"></a>
+</div>
+<div class="section" lang="en">
+<div class="titlepage"><div><div>
+  <h3 class="title">
+<a name="math_toolkit.perf.tuning"></a><a href="tuning.html" title="Performance Tuning Macros"> 性能调整宏(Performance Tuning Macros)</a>
+</h3>
+</div></div></div>
+<p>
+        有一些由配置宏(configuration macros)来决定的性能调整选项。这些宏在boost/math/tools/user.hpp中设置；
+      或者报告到Boost开发邮件列表(Boost-development mailing list)， 以便对于一个特定的编译器和OS平台的的配置选项可以在我们的配置安排中自动设定。</p>
+<div class="informaltable"><table class="table">
+<colgroup><col><col></colgroup>
+<thead><tr>
+<th>
+              <p>
+                宏</p>
+          </th>
+<th>
+              <p>
+                含义</p>
+          </th>
+</tr></thead>
+<tbody>
+<tr>
+<td>
+              <p>
+                BOOST_MATH_POLY_METHOD
+              </p>
+          </td>
+<td>
+              <p>
+              决定如何计算多项式和大多数的有理函数。定义为 0, 1, 2 或 3：参考下面每个值的含义。</p>
+          </td>
+</tr>
+<tr>
+<td>
+              <p>
+                BOOST_MATH_RATIONAL_METHOD
+              </p>
+          </td>
+<td>
+              <p>
+                决定对称有理函数如何计算：很大程度上这只影响 兰克泽斯逼近(Lanczos approximation)，以及函数<code class="computeroutput"><span class="identifier">evaluate_rational</span></code>
+                如何工作。定义为 0, 1, 2 或 3： 参考下面每个值的含义。</p>          </td>
+</tr>
+<tr>
+<td>
+              <p>
+                BOOST_MATH_MAX_POLY_ORDER
+              </p>
+          </td>
+<td>
+              <p>
+                一种算法所计算的多项式或有理函数的最大的次数，除了0之外 (一个简单的"for" 循环)。</p>
+          </td>
+</tr>
+<tr>
+<td>
+              <p>
+                BOOST_MATH_INT_TABLE_TYPE(RT, IT)
+              </p>
+          </td>
+<td>
+              <p>
+              这个库中所使用的多项式的系数和有理函数的系数大部分都是整数。通常它们存储为一个整数表，但是如果混合的整数/浮点算术比正规的浮点算术更慢，那么这些系数作为一个浮点数表来存储。如果混合算术更慢，那么添加：</p>
+              <p>
+                #define BOOST_MATH_INT_TABLE_TYPE(RT, IT) RT
+              </p>
+              <p>
+              在 boost/math/tools/user.hpp中，否则缺省的</p>
+              <p>
+                #define BOOST_MATH_INT_TABLE_TYPE(RT, IT) IT
+              </p>
+              <p>
+              在 boost/math/config.hpp 已经是很好，并且可能生成更少的代码。</p>
+          </td>
+</tr>
+</tbody>
+</table></div>
+<p>        <code class="computeroutput"><span class="identifier">BOOST_MATH_POLY_METHOD</span></code>
+        和<code class="computeroutput"><span class="identifier">BOOST_MATH_RATIONAL_METHOD</span></code>
+        可以设置为以下值：</p>
+<div class="informaltable"><table class="table">
+<colgroup><col><col></colgroup>
+<thead><tr>
+<th>
+              <p>
+                值</p>
+          </th>
+<th>
+              <p>
+                作用</p>
+          </th>
+</tr></thead>
+<tbody>
+<tr>
+<td>
+              <p>
+                0
+              </p>
+          </td>
+<td>
+              <p>
+              多项式和有理函数使用霍纳法则( Horner's method)，和一个简单的for循环。</p>
+              <p>
+                注意，如果多项多和有理函数的次数是一个运行时的值，或者次数大于<code class="computeroutput"><span class="identifier">BOOST_MATH_MAX_POLY_ORDER</span></code>，那么就会一直使用这种方法，而不管<code class="computeroutput"><span class="identifier">BOOST_MATH_POLY_METHOD</span></code> 或 <code class="computeroutput"><span class="identifier">BOOST_MATH_RATIONAL_METHOD</span></code>的值。</p>
+          </td>
+</tr>
+<tr>
+<td>
+              <p>
+                1
+              </p>
+          </td>
+<td>
+              <p>
+                多项式和有理函数不使用循环来计算而使用霍纳法则( Horner's method)。这仅当次数在编译时是已知的且次数小于或等于<code class="computeroutput"><span class="identifier">BOOST_MATH_MAX_POLY_ORDER</span></code>时发生。</p>
+          </td>
+</tr>
+<tr>
+<td>
+              <p>
+                2
+              </p>
+          </td>
+<td>
+              <p>
+          多项式和有理函数不使用循环来计算而使用一个二阶的霍纳法则 (second Horner's method)。在理论上，这可以使得多项式中的两个操作并行，有理函数中的四个操作可以并行。这仅当次数在编译时是已知的且次数小于或等于<code class="computeroutput"><span class="identifier">BOOST_MATH_MAX_POLY_ORDER</span></code>时发生。</p>          </td>
+</tr>
+<tr>
+<td>
+              <p>
+                3
+              </p>
+          </td>
+<td>
+              <p> 多项式和有理函数不使用循环来计算而使用一个二阶的霍纳法则 (second Horner's
+method)。在理论上，这可以使得多项式中的两个操作并行，有理函数中的四个操作可以并行。与方法“2”中的区别在于，在方法“2”中代码被认真地进
+行了排序使得并行操作对于编译器更明显一些：而不依赖于编译器的优化器。这仅当次数在编译时是已知的且次数小于或等于<code class="computeroutput"><span class="identifier">BOOST_MATH_MAX_POLY_ORDER</span></code>时发生。</p>          </td>
+</tr>
+</tbody>
+</table></div>
+<p>
+  为了判定哪一种选择更适合你的编译器/操作系统，使用一般的编译选项来编译这些性能测试程序，并使用--tune 命令行选项来运行这些程序。</p>
+<p>
+  在实际中，这些方法之间的差别很小，如同下面的表显示的那样。然而，并行/In practice在将来将会变得越来越重要： 很有可能当前所支持的算法将需要被更适合于highly vectorisable processors的方法所取代。</p>
+<div class="table">
+<a name="id854871"></a>
+<p class="title"><b>多项式计算方法的比较</b>
+</p><p class="title"></p>
+<div class="table-contents">
+<table class="table" summary="A Comparison of Polynomial Evaluation Methods">
+<colgroup><col><col><col><col><col></colgroup>
+<thead>
+<tr><th>
+            <p>
+              编译器/平台</p>
+            </th><th>
+            <p>
+              方法 0
+            </p>
+            </th><th>
+            <p>
+              方法 1
+            </p>
+            </th><th>
+            <p>
+              方法 2
+            </p>
+            </th><th>
+            <p>
+              方法 3
+            </p>
+            </th></tr></thead>
+<tbody>
+<tr>
+<td>
+<p>Microsoft C++ 9.0,&nbsp;多项式计算 </p></td>
+<td>
+<p></p>
+<p>1.26</p>
+<p></p>
+<p>(7.421e-008s)</p>
+<p></p></td>
+<td>
+<p></p>
+<p>1.22</p>
+<p></p>
+<p>(7.226e-008s)</p>
+<p></p></td>
+<td>
+<p></p>
+<p><span class="bold"><strong>1.00</strong></span></p>
+<p></p>
+<p>(5.901e-008s)</p>
+<p></p></td>
+<td>
+<p></p>
+<p>1.04</p>
+<p></p>
+<p>(6.115e-008s)</p>
+<p></p></td></tr>
+<tr>
+<td>
+<p>Microsoft C++ 9.0,&nbsp;有理函数计算 </p></td>
+<td>
+<p></p>
+<p><span class="bold"><strong>1.00</strong></span></p>
+<p></p>
+<p>(1.008e-007s)</p>
+<p></p></td>
+<td>
+<p></p>
+<p><span class="bold"><strong>1.00</strong></span></p>
+<p></p>
+<p>(1.008e-007s)</p>
+<p></p></td>
+<td>
+<p></p>
+<p>1.43</p>
+<p></p>
+<p>(1.445e-007s)</p>
+<p></p></td>
+<td>
+<p></p>
+<p>1.40</p>
+<p></p>
+<p>(1.409e-007s)</p>
+<p></p></td></tr>
+<tr>
+<td>
+<p>Intel C++ 11.1 (Windows),&nbsp;多项式计算 </p></td>
+<td>
+<p></p>
+<p>1.18</p>
+<p></p>
+<p>(6.517e-008s)</p>
+<p></p></td>
+<td>
+<p></p>
+<p>1.18</p>
+<p></p>
+<p>(6.505e-008s)</p>
+<p></p></td>
+<td>
+<p></p>
+<p><span class="bold"><strong>1.00</strong></span></p>
+<p></p>
+<p>(5.516e-008s)</p>
+<p></p></td>
+<td>
+<p></p>
+<p><span class="bold"><strong>1.00</strong></span></p>
+<p></p>
+<p>(5.516e-008s)</p>
+<p></p></td></tr>
+<tr>
+<td>
+<p>Intel C++ 11.1 (Windows),&nbsp;有理函数计算 </p></td>
+<td>
+<p></p>
+<p><span class="bold"><strong>1.00</strong></span></p>
+<p></p>
+<p>(8.947e-008s)</p>
+<p></p></td>
+<td>
+<p></p>
+<p>1.02</p>
+<p></p>
+<p>(9.130e-008s)</p>
+<p></p></td>
+<td>
+<p></p>
+<p>1.49</p>
+<p></p>
+<p>(1.333e-007s)</p>
+<p></p></td>
+<td>
+<p></p>
+<p>1.04</p>
+<p></p>
+<p>(9.325e-008s)</p>
+<p></p></td></tr>
+<tr>
+<td>
+<p>GNU G++ 4.2 (Linux),&nbsp;多项式计算 </p></td>
+<td>
+<p></p>
+<p>1.61</p>
+<p></p>
+<p>(1.220e-007s)</p>
+<p></p></td>
+<td>
+<p></p>
+<p>1.68</p>
+<p></p>
+<p>(1.269e-007s)</p>
+<p></p></td>
+<td>
+<p></p>
+<p>1.23</p>
+<p></p>
+<p>(9.275e-008s)</p>
+<p></p></td>
+<td>
+<p></p>
+<p><span class="bold"><strong>1.00</strong></span></p>
+<p></p>
+<p>(7.566e-008s)</p>
+<p></p></td></tr>
+<tr>
+<td>
+<p>GNU G++ 4.2 (Linux),&nbsp;有理函数计算 </p></td>
+<td>
+<p></p>
+<p>1.26</p>
+<p></p>
+<p>(1.660e-007s)</p>
+<p></p></td>
+<td>
+<p></p>
+<p>1.33</p>
+<p></p>
+<p>(1.758e-007s)</p>
+<p></p></td>
+<td>
+<p></p>
+<p><span class="bold"><strong>1.00</strong></span></p>
+<p></p>
+<p>(1.318e-007s)</p>
+<p></p></td>
+<td>
+<p></p>
+<p>1.15</p>
+<p></p>
+<p>(1.513e-007s)</p>
+<p></p></td></tr>
+<tr>
+<td>
+<p>Intel C++ 10.0 (Linux),&nbsp;多项式计算 </p></td>
+<td>
+<p></p>
+<p>1.15</p>
+<p></p>
+<p>(9.154e-008s)</p>
+<p></p></td>
+<td>
+<p></p>
+<p>1.15</p>
+<p></p>
+<p>(9.154e-008s)</p>
+<p></p></td>
+<td>
+<p></p>
+<p><span class="bold"><strong>1.00</strong></span></p>
+<p></p>
+<p>(7.934e-008s)</p>
+<p></p></td>
+<td>
+<p></p>
+<p><span class="bold"><strong>1.00</strong></span></p>
+<p></p>
+<p>(7.934e-008s)</p>
+<p></p></td></tr>
+<tr>
+<td>
+<p>Intel C++ 10.0 (Linux),&nbsp;有理函数计算 </p></td>
+<td>
+<p></p>
+<p><span class="bold"><strong>1.00</strong></span></p>
+<p></p>
+<p>(1.245e-007s)</p>
+<p></p></td>
+<td>
+<p></p>
+<p><span class="bold"><strong>1.00</strong></span></p>
+<p></p>
+<p>(1.245e-007s)</p>
+<p></p></td>
+<td>
+<p></p>
+<p>1.35</p>
+<p></p>
+<p>(1.684e-007s)</p>
+<p></p></td>
+<td>
+<p></p>
+<p>1.04</p>
+<p></p>
+<p>(1.294e-007s)</p></td></tr></tbody></table></div>
+<div class="table-contents"><br></div>
+</div>
+<br class="table-break">
+<p>
+        最后有一个性能调整选项可以作为一个编译时的<a href="../policy.html" title="Policies">策略</a>。通常，当以double计算一个函数时，在内部实现中是以long double来计算的：这是为了确保完整的double精度，但在一些环境下可能减慢计算速度。缺省的策略可以通过<a href="../policy/pol_ref/policy_defaults.html" title="Using macros to Change the Policy Defaults">定义宏<code class="computeroutput"><span class="identifier">BOOST_MATH_PROMOTE_DOUBLE_POLICY</span></code></a>
+        为<code class="computeroutput"><span class="keyword">false</span></code>， 或者在调用一个特殊函数或分布时 <a href="../policy/pol_ref/internal_promotion.html" title="Internal Promotion Policies">通过指定一个特定的策略</a> 来改变缺省策略。参考<a href="../policy/pol_tutorial.html" title="Policy Tutorial">策略手册</a>。</p>
+<div class="table">
+<a name="id855626"></a>
+<p class="title"><b>进行从double到long double和不进行从double到long double的类型提升的性能比较 </b></p>
+<div class="table-contents"><table class="table" summary="Performance Comparison with and Without Internal
+      Promotion to long double">
+<colgroup><col><col><col></colgroup>
+<thead><tr>
+<th>
+            <p>
+              函数</p>
+            </th>
+<th>
+            <p>
+              GCC 4.2 , Linux
+            </p>
+            <p>
+              (使用从 double 到 long double的提升).
+            </p>
+            </th>
+<th>
+            <p>
+              GCC 4.2, Linux
+            </p>
+            <p>
+              (不使用从double到long double的提升).
+            </p>
+            </th>
+</tr></thead>
+<tbody>
+<tr>
+<td>
+            <p>
+              <a href="../special/sf_erf/error_function.html" title="Error Functions">erf</a>
+            </p>
+            </td>
+<td>
+            <p>
+              </p>
+<p>1.48</p>
+<p> </p>
+<p>(1.387e-007s)</p>
+<p>
+            </p>
+            </td>
+<td>
+            <p>
+              </p>
+<p><span class="bold"><strong>1.00</strong></span></p>
+<p> </p>
+<p>(9.377e-008s)</p>
+<p>
+            </p>
+            </td>
+</tr>
+<tr>
+<td>
+            <p>
+              <a href="../special/sf_erf/error_inv.html" title="Error Function Inverses">erf_inv</a>
+            </p>
+            </td>
+<td>
+            <p>
+              </p>
+<p>1.11</p>
+<p> </p>
+<p>(4.009e-007s)</p>
+<p>
+            </p>
+            </td>
+<td>
+            <p>
+              </p>
+<p><span class="bold"><strong>1.00</strong></span></p>
+<p> </p>
+<p>(3.598e-007s)</p>
+<p>
+            </p>
+            </td>
+</tr>
+<tr>
+<td>
+            <p>
+              <a href="../special/sf_beta/ibeta_function.html" title="Incomplete Beta Functions">ibeta</a>
+              和<a href="../special/sf_beta/ibeta_function.html" title="Incomplete Beta Functions">ibetac</a>
+            </p>
+            </td>
+<td>
+            <p>
+              </p>
+<p>1.29</p>
+<p> </p>
+<p>(5.354e-006s)</p>
+<p>
+            </p>
+            </td>
+<td>
+            <p>
+              </p>
+<p><span class="bold"><strong>1.00</strong></span></p>
+<p> </p>
+<p>(4.137e-006s)</p>
+<p>
+            </p>
+            </td>
+</tr>
+<tr>
+<td>
+            <p>
+              <a href="../special/sf_beta/ibeta_inv_function.html" title="The Incomplete Beta Function Inverses">ibeta_inv</a>
+              和<a href="../special/sf_beta/ibeta_inv_function.html" title="The Incomplete Beta Function Inverses">ibetac_inv</a>
+            </p>
+            </td>
+<td>
+            <p>
+              </p>
+<p>1.44</p>
+<p> </p>
+<p>(2.220e-005s)</p>
+<p>
+            </p>
+            </td>
+<td>
+            <p>
+              </p>
+<p><span class="bold"><strong>1.00</strong></span></p>
+<p> </p>
+<p>(1.538e-005s)</p>
+<p>
+            </p>
+            </td>
+</tr>
+<tr>
+<td>
+            <p>
+              <a href="../special/sf_beta/ibeta_inv_function.html" title="The Incomplete Beta Function Inverses">ibeta_inva</a>,
+              <a href="../special/sf_beta/ibeta_inv_function.html" title="The Incomplete Beta Function Inverses">ibetac_inva</a>,
+              <a href="../special/sf_beta/ibeta_inv_function.html" title="The Incomplete Beta Function Inverses">ibeta_invb</a>
+              和<a href="../special/sf_beta/ibeta_inv_function.html" title="The Incomplete Beta Function Inverses">ibetac_invb</a>
+            </p>
+            </td>
+<td>
+            <p>
+              </p>
+<p>1.25</p>
+<p> </p>
+<p>(7.009e-005s)</p>
+<p>
+            </p>
+            </td>
+<td>
+            <p>
+              </p>
+<p><span class="bold"><strong>1.00</strong></span></p>
+<p> </p>
+<p>(5.607e-005s)</p>
+<p>
+            </p>
+            </td>
+</tr>
+<tr>
+<td>
+            <p>
+              <a href="../special/sf_gamma/igamma.html" title="Incomplete Gamma Functions">gamma_p</a>
+              和<a href="../special/sf_gamma/igamma.html" title="Incomplete Gamma Functions">gamma_q</a>
+            </p>
+            </td>
+<td>
+            <p>
+              </p>
+<p>1.26</p>
+<p> </p>
+<p>(3.116e-006s)</p>
+<p>
+            </p>
+            </td>
+<td>
+            <p>
+              </p>
+<p><span class="bold"><strong>1.00</strong></span></p>
+<p> </p>
+<p>(2.464e-006s)</p>
+<p>
+            </p>
+            </td>
+</tr>
+<tr>
+<td>
+            <p>
+              <a href="../special/sf_gamma/igamma_inv.html" title="Incomplete Gamma Function Inverses">gamma_p_inv</a>
+              和<a href="../special/sf_gamma/igamma_inv.html" title="Incomplete Gamma Function Inverses">gamma_q_inv</a>
+            </p>
+            </td>
+<td>
+            <p>
+              </p>
+<p>1.27</p>
+<p> </p>
+<p>(1.178e-005s)</p>
+<p>
+            </p>
+            </td>
+<td>
+            <p>
+              </p>
+<p><span class="bold"><strong>1.00</strong></span></p>
+<p> </p>
+<p>(9.291e-006s)</p>
+<p>
+            </p>
+            </td>
+</tr>
+<tr>
+<td>
+            <p>
+              <a href="../special/sf_gamma/igamma_inv.html" title="Incomplete Gamma Function Inverses">gamma_p_inva</a>
+              和<a href="../special/sf_gamma/igamma_inv.html" title="Incomplete Gamma Function Inverses">gamma_q_inva</a>
+            </p>
+            </td>
+<td>
+            <p>
+              </p>
+<p>1.20</p>
+<p> </p>
+<p>(2.765e-005s)</p>
+<p>
+            </p>
+            </td>
+<td>
+            <p>
+              </p>
+<p><span class="bold"><strong>1.00</strong></span></p>
+<p> </p>
+<p>(2.311e-005s)</p>
+<p>
+            </p>
+            </td>
+</tr>
+</tbody>
+</table></div>
+</div>
+<br class="table-break">
+</div>
+<table xmlns:rev="http://www.cs.rpi.edu/~gregod/boost/tools/doc/revision" width="100%"><tbody><tr>
+<td align="left"></td>
+<td align="right"><div class="copyright-footer">Copyright ?2006 , 2007, 2008 John Maddock, Paul A. Bristow, Hubert
+      Holin, Xiaogang Zhang and Bruno Lalande<p>
+        Distributed under the Boost Software License, Version 1.0. (See accompanying
+        file LICENSE_1_0.txt or copy at <a href="http://www.boost.org/LICENSE_1_0.txt" target="_top">http://www.boost.org/LICENSE_1_0.txt</a>)
+      </p>
+</div></td>
+</tr></tbody></table>
+<hr>
+<div class="spirit-nav">
+<a accesskey="p" href="comp_compilers.html"><img src="../../../../../../../doc/html/images/prev.png" alt="Prev"></a><a accesskey="u" href="../perf.html"><img src="../../../../../../../doc/html/images/up.png" alt="Up"></a><a accesskey="h" href="../../index.html"><img src="../../../../../../../doc/html/images/home.png" alt="Home"></a><a accesskey="n" href="comparisons.html"><img src="../../../../../../../doc/html/images/next.png" alt="Next"></a>
+</div>
+</body></html>

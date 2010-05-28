@@ -1,0 +1,350 @@
+<!DOCTYPE html PUBLIC "-//W3C//DTD HTML 4.01 Transitional//EN">
+
+<html>
+<head>
+  <meta http-equiv="Content-Type" content="text/html; charset=utf-8">
+
+  <title>Boost 随机数库：概念</title>
+</head>
+
+<body bgcolor="#FFFFFF" text="#000000">
+  <h2>随机数生成库：概念</h2>
+
+  <h2>简介</h2>
+
+  <p>许多应用领域都需要用到随机数，例如：</p>
+
+  <ul>
+    <li>数字控制 (模拟, Monte-Carlo 算法)
+
+    <li>游戏 (敌人的行为应该是不确定的)</li>
+
+    <li>安全 (秘匙生成)</li>
+
+    <li>测试 (白盒测试中的随机覆盖)</li>
+  </ul>
+  Boost 随机数生成库框架中的随机数生成器具有良好的性质，因此它们可以用于数字控制和安全领域。关于数字控制中随机数应用的介绍，参看：
+
+  <blockquote>
+    "Numerical Recipes in C: The art of scientific computing", William H.
+    Press, Saul A. Teukolsky, William A. Vetterling, Brian P. Flannery, 2nd
+    ed., 1992, pp. 274-328
+  </blockquote>
+  以下几种随机数生成器对应于不同的应用领域：
+
+  <ul>
+    <li>不确定随机数生成器</li>
+
+    <li>伪随机数生成器</li>
+
+    <li>拟随机数生成器</li>
+  </ul>
+  所有的变体都具有一些共同的性质，这些 (STL) 概念叫做 NumberGenerator 和 UniformRandomNumberGenerator。每一种概念都将在相应节中予以定义。
+
+  <p>本库的目标是：</p>
+
+  <ul>
+    <li>简化第三方随机数生成器的集成</li>
+
+    <li>定义生成器的检验接口</li>
+
+    <li>为常见分布提供易用的前端类</li>
+
+    <li>提供尽可能高的效率</li>
+
+    <li>控制前端处理中的量子化 (quantization) 问题 (未完成)</li>
+  </ul>
+
+  <h2><a name="number_generator" id="number_generator">数字生成器 (Number Generator)</a></h2>
+
+  <p>数字生成器是取 0 个参数的 <em>函数对象</em> (std:20.3 [lib.function.objects])。调用 <code>operator()</code> 返回一个数字。下表中，<code>X</code> 是返回类型 <code>T</code> 的数字生成器类，<code>u</code> 是 <code>X</code> 的实例。</p>
+
+  <table border="1">
+    <tr>
+      <th colspan="3" align="center"><code>NumberGenerator</code>
+      需求</th>
+    </tr>
+
+    <tr>
+      <td>表达式</td>
+
+      <td>返回类型</td>
+
+      <td>前/后条件</td>
+    </tr>
+
+    <tr>
+      <td><code>X::result_type</code></td>
+
+      <td>T</td>
+
+      <td><code>std::numeric_limits&lt;T&gt;::is_specialized</code> 为真；<code>T</code> 为 <code>LessThanComparable</code></td>
+    </tr>
+
+    <tr>
+      <td><code>u.operator()()</code></td>
+
+      <td>T</td>
+
+      <td>-</td>
+    </tr>
+  </table>
+
+  <p><em>注意：</em>NumberGenerator 需求并未对返回值的性质作任何限定。</p>
+
+  <h2><a name="uniform-rng" id="uniform-rng">均匀随机数生成器 (Uniform Random Number Generator)</a></h2>
+
+  <p>一个均匀随机数生成器是一个 NumberGenerator，它能提供在给定值域内均匀分布的随机数序列。这一值域可以是编译时就确定的；也可以是 (仅) 在运行时生成器构建之后才可知的。</p>
+
+  <p>有穷集 S 的 <em>紧下界</em> 是 S 中的唯一元素 l，满足：对 S 中的任意元 v，l &lt;= v 成立。类似地，有穷集 S 的 <em>紧上界</em> 是 S 中的唯一元素 u，满足：对 S 中的任意元 v，v &lt;= u 成立。</p>
+
+  <p>下表中，<code>X</code> 是返回类型 <code>T</code> 的均匀随机数生成器类，<code>v</code> 是 <code>X</code> 的 <code>const</code> 实例。</p>
+
+  <table border="1">
+    <tr>
+      <th colspan="3" align="center">
+      <code>UniformRandomNumberGenerator</code> 需求</th>
+    </tr>
+
+    <tr>
+      <td>表达式</td>
+
+      <td>返回类型</td>
+
+      <td>前/后条件</td>
+    </tr>
+
+    <tr>
+      <td><code>X::has_fixed_range</code></td>
+
+      <td><code>bool</code></td>
+
+      <td>编译时常量；若为 <code>true</code>，随机数均匀分布的值域在编译时是可知的，成员 <code>min_value</code> 和 <code>max_value</code> 存在。<em>注意：</em>由于编译器的限制，这一标志可能为 <code>false</code>。</td>
+    </tr>
+
+    <tr>
+      <td><code>X::min_value</code></td>
+
+      <td><code>T</code></td>
+
+      <td>编译时常量；<code>min_value</code> 等于 <code>v.min()</code></td>
+    </tr>
+
+    <tr>
+      <td><code>X::max_value</code></td>
+
+      <td><code>T</code></td>
+
+      <td>编译时常量；<code>max_value</code> 等于 <code>v.max()</code></td>
+    </tr>
+
+    <tr>
+      <td><code>v.min()</code></td>
+
+      <td><code>T</code></td>
+
+      <td><code>operator()</code> 可能返回的值的紧下界。此函数的返回值在 v 的生存期内不会改变。</td>
+    </tr>
+
+    <tr>
+      <td><code>v.max()</code></td>
+
+      <td><code>T</code></td>
+
+      <td>若 <code>std::numeric_limits&lt;T&gt;::is_integer</code> 为真，则为 <code>operator()</code> 可能返回的值的紧上界；否则为大于该紧上界的最小可表示数字。此函数的返回值在 v 的生存期内不会改变。</td>
+    </tr>
+  </table>
+
+  <p>成员函数 <code>min</code>, <code>max</code>, 和 <code>operator()</code> 的均摊时间复杂度应当是常数。</p>
+
+  <p><em>注意：</em>对于整数生成器 (即 <code>T</code> 为整数类型)，生成的值 <code>x</code> 满足 <code>min() &lt;= x &lt;= max()</code>；对非整数生成器 (即 <code>T</code> 为非整数类型)，生成的值 <code>x</code> 满足 <code>min() &lt;= x &lt; max()</code>。<br>
+  <em>理论注记：</em><code>min</code> 和 <code>max</code> 所描述的值域有两个用途。首先，借助它可以把生成的值缩放到某个“正规”的值域内，如 [0..1)。其次，它描述了生成值的有效位数，后者在进一步处理过程中可能会有用。<br>
+  对于整数，值域是闭区间 [min,max]，因为现有的整数类型可能无法表示半开区间 [min,max+1) (译注：即 max+1 可能超出某一整数类型的上限)。对于非整数，值域是半开区间 [min, max)，因为作此规定在处理连续分布的边界情况时更为方便。</p>
+
+  <p><em>注意：</em>UniformRandomNumberGenerator 概念并不需要 <code>operator()(long)</code> 因此不满足  RandomNumberGenerator (std:25.2.11 [lib.alg.random.shuffle]) 需求。如果需要，应该使用 <a href="random-misc.html#random_number_generator"><code>random_number_generator</code></a>。<br>
+  <em>理论注记：</em>没有提供 <code>operator()(long)</code>，因为把某些生成器产生的结果从一个整数值域映射到另一个整数值域会带来开销。</p>
+
+  <h2><a name="nondet-rng" id="nondet-rng">不确定均匀随机数生成器 (Non-deterministic uniform random number generator)</a></h2>
+
+  <p>一个不确定均匀随机数生成器是一个 UniformRandomNumberGenerator，它基于某种随机过程，因此能提供“真正随机的”的随机数序列。随机过程包括原子核衰变、Zehner 二极管的噪音、量子隧道效应、投掷骰子、罐中取物、投掷硬币等等。网络数据包到达的间隔、键盘事件有时也可以被看作随机过程。</p>
+
+  <p><code><a href="nondet_random.html#random_device">random_device</a></code> 类是不确定随机数生成器的一个模型。</p>
+
+  <p><em>注意：</em>这种随机数生成器可以用于安全应用，从而避免入侵者“猜出”程序所生成的随机数，从而窃取密码或者认证密钥。因此，这一概念的模型必须小心设计，不能泄露与环境有关的任何信息。例如，及时清除临时数据可能是很恰当的。</p>
+
+  <h2><a name="pseudo-rng" id="pseudo-rng">伪随机数生成器 (Pseudo-random Number Generator)</a></h2>
+
+  <p>一个伪随机数生成器是一个 UniformRandomNumberGenerator，它根据某一算法和内部状态提供确定的伪随机数序列。线性同余和反向同余生成器 (linear congruential and inversive congruential generators) 属于此类生成器。此类生成器的行为往往在很大程度上取决于其参数。为检查出错误的实现，应该提供一个外部测试套件来检查所产生的序列和验证值相符。</p>
+
+  <p>Donald E. Knuth 在其著作 "The Art of Computer Programming, Vol. 2, 3rd edition, Addison-Wesley, 1997" 中给出了伪随机数生成的综述。对各个生成器的描述将分别指出其参考资料。</p>
+
+  <p><em>注意：</em>因为伪随机数生成器的状态是有穷的，生成器返回的数字序列最终总会陷入循环。</p>
+
+  <p>伪随机数生成器的需求是 UniformRandomNumberGenerator 需求的超集。下表中，<code>X</code> 是返回类型 <code>T</code> 的伪随机数生成器类，<code>x</code> 是 <code>T</code> 的实例，<code>u</code> 是 <code>X</code> 的实例，<code>v</code> 是 <code>X</code> 的 <code>const</code> 实例。</p>
+
+  <table border="1">
+    <tr>
+      <th colspan="3" align="center"><code>PseudoRandomNumberGenerator</code>
+      需求</th>
+    </tr>
+
+    <tr>
+      <td>表达式</td>
+
+      <td>返回类型</td>
+
+      <td>前/后条件</td>
+    </tr>
+
+    <tr>
+      <td><code>X()</code></td>
+
+      <td>-</td>
+
+      <td>创建一个生成器，其初始状态取决于实现。
+      <em>注意：</em>用这种方法创建的多个生成器实例可能产生有关或者相同的随机数序列。</td>
+    </tr>
+
+    <tr>
+      <td><code>explicit X(...)</code></td>
+
+      <td>-</td>
+
+      <td>创建一个生成器，其初始状态由用户提供；构造函数的参数由实现确定。</td>
+    </tr>
+
+    <tr>
+      <td><code>u.seed(...)</code></td>
+
+      <td>void</td>
+
+      <td>根据参数设置当前状态；至少要提供一个与非默认构造函数签名式相同的 <code>seed</code> 函数。</td>
+    </tr>
+
+    <tr>
+      <td><code>X::validation(x)</code></td>
+
+      <td><code>bool</code></td>
+
+      <td>把 <code>x</code> 和随机数序列的第 10001 个元素相比，后者是预先计算出来并硬编码的。生成器必须使用默认构造函数构建，并且没有调用 <code>seed</code>，以确保验证是有意义的。</td>
+    </tr>
+  </table>
+
+  <p><em>注意：</em><code>seed</code> 成员函数与 STL 容器的 <code>assign</code> 成员函数类似，尽管后者的命名不太恰当。</p>
+
+  <p>伪随机数生成器的模型类也必须是 EqualityComparable 的模型，即实现 <code>operator==</code>。若从给定状态出发，两伪随机数生成器返回相同的数字序列，则称它们 <em>等价</em>。</p>
+
+  <p>伪随机数生成器的模型类也应当是 Streamable 概念的模型，即实现 <code>operator&lt;&lt;</code> 和 <code>operator&gt;&gt;</code>。若实现，<code>operator&lt;&lt;</code> 把伪随机数生成器的当前全部状态写入给定的 <code>ostream</code> 中；<code>operator&gt;&gt;</code> 用于其后恢复状态。状态应该以平台无关的方式写入；但可以假设读写时 <code>locale</code>s 是相同的。恢复后的伪随机数生成器和原生成器应等价。</p>
+
+  <p>伪随机数生成器的模型类也可以是 CopyConstructible 和 Assignable 概念的模型。但请注意，原生成器和其副本是完全相同的，因此对于有些应用领域可能会不恰当。因此，不鼓励复制伪随机数生成器；它们总应以 (非 <code>const</code>) 引用传递。</p>
+
+  <p><code><a href="random-generators.html#rand48">rand48</a></code>, <code><a href="random-generators.html#linear_congruential">minstd_rand</a></code> 和 <code><a href="random-generators.html#mersenne_twister">mt19937</a></code> 类是伪随机数生成器的模型。</p>
+
+  <p><em>注意：</em>此类伪随机数生成器可用于数字控制、游戏和测试。取不少于一个参数的构造函数和 <code>seed()</code> 成员函数可以让用户设定状态；在调试 Monte-Carlo 算法、分析特定的测试场景 (test scenario) 时这是很有用的。Streamable 概念允许保存和恢复生成器的状态，例如隔一段时间后重新运行某一测试套件。</p>
+
+  <h2><a name="random-dist" id="random-dist">随机分布 (Random Distribution)</a></h2>
+
+  <p>随机分布取均匀分布的随机值作为输入，输出符合某一分布的随机数。下表中，<code>X</code> 是返回 <code>T</code> 类型的随机分布类，<code>u</code> 是 <code>X</code> 的实例，<code>x</code> 是 <code>X</code> 的实例 (可为 const)，<code>e</code> 是任一均匀随机数生成器类型的左值，返回类型是 <code>U</code>。</p>
+
+  <table border="1">
+    <tr>
+      <th colspan="4" align="center">Random distribution 需求 (以下，加上 Number Generator, <code>CopyConstructible</code> 和 <code>Assignable</code>)</th>
+    </tr>
+
+    <tr>
+      <td>表达式</td>
+
+      <td>返回类型</td>
+
+      <td>前/后条件</td>
+
+      <td>复杂度</td>
+    </tr>
+
+    <tr>
+      <td><code>X::input_type</code></td>
+
+      <td>U</td>
+
+      <td>-</td>
+
+      <td>编译时求值</td>
+    </tr>
+
+    <tr>
+      <td><code>u.reset()</code></td>
+
+      <td><code>void</code></td>
+
+      <td>此后对 <code>u</code> 的使用将不受调用 <code>reset</code> 前 <code>e</code> 产生的数字序列的影响。</td>
+
+      <td>常数</td>
+    </tr>
+
+    <tr>
+      <td><code>u(e)</code></td>
+
+      <td><code>T</code></td>
+
+      <td>使用同一对象 <code>e</code> 反复调用产生的随机数序列将按某一概率密度函数 p(x) 随机分布。</td>
+
+      <td>(均摊) 对 <code>e</code> 的调用的复杂度的常数倍</td>
+    </tr>
+
+    <tr>
+      <td><code>os &lt;&lt; x</code></td>
+
+      <td><code>std::ostream&amp;</code></td>
+
+      <td>把分布 <code>x</code> 的参数内部状态的文本表示写入到 <code>os</code> 中。<br>
+      后：<code>os.<em>fmtflags</em></code> 和填充字符 (fill character) 不变。</td>
+
+      <td>O(状态大小)</td>
+    </tr>
+
+    <tr>
+      <td><code>is &gt;&gt; u</code></td>
+
+      <td><code>std::istream&amp;</code></td>
+
+      <td>恢复分布 <code>u</code> 的参数和内部状态。<br>
+      前：<code>is</code> 提供之前由 <code>operator&lt;&lt;</code> 写入的文本表示。<br>
+      后：<code>is.<em>fmtflags</em></code> 不变。</td>
+
+      <td>O(状态大小)</td>
+    </tr>
+  </table>
+
+  <p>附加需求：反复调用 <code>x(e)</code> 产生的序列不应因调用 <code>os &lt;&lt; x</code> 而改变；用 <code>os &lt;&lt; x</code> 保存，并用 <code>is &gt;&gt; y</code> 恢复到同一或另一对象 <code>y</code> 后，反复调用 <code>y(e)</code> 产生的序列应该和原序列相同。</p>
+
+  <h2><a name="quasi-rng" id="quasi-rng">拟随机数生成器 (Quasi-Random Number Generators)</a></h2>
+
+  <p>一个拟随机数生成器是一个 NumberGenerator，它根据某一算法和内部状态提供确定的数字序列。产生的数字不具有统计学性质 (例如正态分布或各值互相独立)。</p>
+
+  <p><em>注意：</em>拟随机数生成器可以用于 Monte-Carlo 算法；在 Monte-Carlo 算法中，具有特殊性质的随机数序列会使得估计结果较快地聚集。</p>
+
+  <p><em>[尚无模型]</em></p>
+  <hr>
+
+  <p><a href="http://validator.w3.org/check?uri=referer"><img border="0" src=
+  "http://www.w3.org/Icons/valid-html401" alt="Valid HTML 4.01 Transitional"
+  height="31" width="88"></a></p>
+
+  <p>Revised 
+  <!--webbot bot="Timestamp" s-type="EDITED" s-format="%d %B, %Y" startspan -->05
+  December, 2006<!--webbot bot="Timestamp" endspan i-checksum="38516" --></p>
+
+  <p><i>Copyright &copy; 2000-2003 <a href=
+  "http://www.boost.org/people/jens_maurer.htm">Jens Maurer</a></i></p>
+
+  <p><i>Distributed under the Boost Software License, Version 1.0. (See
+  accompanying file <a href="../../LICENSE_1_0.txt">LICENSE_1_0.txt</a> or
+  copy at <a href=
+  "http://www.boost.org/LICENSE_1_0.txt">http://www.boost.org/LICENSE_1_0.txt</a>)</i></p>
+  <p>中文版修订：2008/1/21</p>
+
+  <p><i>Copyright &copy; 2008 <a href="http://wiki.woodpecker.org.cn/moin/XiaoQi">xiaq</a></i></p>
+
+  <p><i>在 Boost Software License, Version 1.0 的条款下发布。(参看文件 <a href="../../LICENSE_1_0.txt">LICENSE_1_0.txt</a> 或在线副本 <a href="http://www.boost.org/LICENSE_1_0.txt"> http://www.boost.org/LICENSE_1_0.txt</a>)</i></p>
+</body>
+</html>

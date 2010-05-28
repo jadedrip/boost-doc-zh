@@ -1,0 +1,696 @@
+<!DOCTYPE HTML PUBLIC "-//W3C//DTD HTML 4.0.1 Transitional//EN">
+<html><head>
+
+
+
+  
+  
+  <meta http-equiv="Content-Type" content="text/html; charset=UTF-8">
+
+
+
+
+  
+  
+  
+  
+  
+  <title>Boost.MultiIndex Documentation - Index reference</title><link rel="stylesheet" href="../style.css" type="text/css">
+
+
+
+  
+  
+  <link rel="start" href="../index.html">
+
+
+
+  
+  
+  <link rel="prev" href="multi_index_container.html">
+
+
+
+  
+  
+  <link rel="up" href="index.html">
+
+
+
+  
+  
+  <link rel="next" href="ord_indices.html"></head>
+
+<body>
+
+
+
+<h1><img src="../../../../boost.png" alt="boost.png (6897 bytes)" align="middle" height="86" width="277">Boost.MultiIndex 索引参考</h1>
+
+
+
+
+<div class="prev_link"><a href="multi_index_container.html"><img src="../prev.gif" alt="multi_index_container reference" border="0"><br>
+
+
+
+<code>multi_index_container</code> 参考
+</a></div>
+
+
+
+<div class="up_link"><a href="index.html"><img src="../up.gif" alt="Boost.MultiIndex reference" border="0"><br>
+
+
+
+Boost.MultiIndex 参考
+</a></div>
+
+
+
+<div class="next_link"><a href="ord_indices.html"><img src="../next.gif" alt="ordered indices" border="0"><br>
+
+
+有序索引
+</a></div>
+
+
+<br style="" clear="all">
+
+
+
+
+<hr>
+
+<h2>Contents目录</h2>
+
+
+
+
+<ul>
+
+
+
+  <li><a href="#index_concepts">Index concepts索引概念</a></li>
+
+
+
+  <li><a href="#complexity_signature">Complexity signature复杂度署名</a></li>
+
+
+
+  <li><a href="#index_specification">Index specification索引规格</a></li>
+
+
+
+  <li><a href="#indexed_by_synopsis">头文件 <code>"boost/multi_index/indexed_by.hpp"</code> 摘要</a>
+    
+    
+    
+    <ul>
+
+
+
+      <li><a href="#indexed_by">类模板 <code>indexed_by</code></a></li>
+
+
+
+    
+    
+    
+    </ul>
+
+
+
+  </li>
+
+
+
+  <li><a href="#tags">Tags标志</a></li>
+
+
+
+  <li><a href="#tag_synopsis">头&nbsp;<code>"boost/multi_index/tag.hpp"</code> 摘要</a>
+    
+    
+    
+    <ul>
+
+
+
+      <li><a href="#tag">类模板 <code>tag</code></a></li>
+
+
+
+    
+    
+    
+    </ul>
+
+
+
+  </li>
+
+
+
+  <li><a href="#index_catalog">Boost.MultiIndex 提供的索引</a>
+    
+    
+    
+    <ul>
+
+
+
+      <li><a href="#key_based_indices">Key-based indices基于键的索引</a></li>
+
+
+
+      <li><a href="#other_indices">Other types其它类型</a></li>
+
+
+
+    
+    
+    
+    </ul>
+
+
+
+  </li>
+
+
+
+  <li><a href="#views">Index views索引视图</a></li>
+
+
+
+</ul>
+
+
+
+
+<h2><a name="index_concepts">Index concepts索引概念</a></h2>
+
+
+
+
+<p>
+<code>multi_index_container</code> 的实例化需要在编译期指定一个名多个索引。每个索引允许以特定的方式对容器中的元素进行读/写访问。例如，<a href="ord_indices.html">ordered indices有序索引</a>
+提供类似于 set 的接口来访问元素，而
+<a href="seq_indices.html">sequenced indices序列索引</a> 则接近于 <code>std::list</code>.
+</p>
+
+
+
+
+<p>索引并不是孤立的对象，因此不能由它们自己来构造。它们被嵌入在一个 <code>multi_index_container</code> 中，以一个 <a href="#index_specification">index specifier索引说明</a> 来指定。索引类的名字不会直接让用户访问，用户只能访问相关的索引说明。
+</p>
+
+
+
+
+<p>对元素的插入和删除操作总是通过 <code>multi_index_container</code>
+的某个索引的适当接口来执行；但是这些操作会对所有索引产生影响：例如，通过某个给定的索引进行插入，可能会由于另一个索引的限制而失败(如元素的唯一
+性)。这种情形并不是障碍，而是 Boost.MultiIndex
+的能力：基于标准容器的手工构造的等价物会不得不增加大量的代码来确保每个容器的不变式，需要在各个容器间进行同步。对于各个索引的全局操作可以归纳为六种原语：
+</p>
+
+
+<ul>
+
+
+
+  <li>复制,</li>
+
+
+
+  <li>插入一个元素,</li>
+
+
+
+  <li>带提示的插入，插入时给定一个已有元素以提高操作的效率,</li>
+
+
+
+  <li>删除一个元素,</li>
+
+
+
+  <li>替换一个元素的值，可能会引起该元素在一个或多个索引上的重排，或者不能替换,</li>
+
+
+
+  <li>修改一个元素，各个索引都需要重排或者都可能禁止修改。
+  </li>
+
+
+</ul>
+后两个原语需要进一步解释：为了保证每个索引的不变式(即某个既定的顺序)，<code>multi_index_container 的元素是不可变的。为了克服这个限制，索引提供了成员函数来更新和修改，这些成员函数允许元素在可控的环境下进行修改。元素的不可变性对于有序索引而言并不奇怪，实际上它是基于</code>
+<code>std::set</code> 和 <code>std:multiset的，而这些容器的元素原本就是不可变的；但是对于序列索引来说则有些怪异，因为它是依照 std::list 功能来设计的。</code> 
+
+
+<p>这些全局操作并不直接暴露给用户，而是对每个索引进行了适当的包装(例如，有序索引提供了一组类似-set的插入成员函数，而序列索引和随机访问索引则有 <code>push_back</code> 和 <code>push_front</code> 操作)。Boost.MultiIndex 对于索引的接口没有特定的条件，它们只要符合
+<a href="http://www.sgi.com/tech/stl/Container.html">
+<code>Container容器</code></a> 概念即可(不要求符合
+<a href="http://www.sgi.com/tech/stl/Assignable.html">
+<code>Assignable可赋值</code></a>)。
+</p>
+
+
+
+
+<h2><a name="complexity_signature">Complexity signature复杂度署名</a></h2>
+
+
+
+
+<p>索引接口的某些成员函数是通过前文所列的全局原语实现的。这些操作的复杂度依赖于给定 multi_index_container 的所有索引，而不仅仅是当前所用的索引。
+</p>
+
+
+
+
+<p>为了进行复杂度的评估，一个索引将以其<span style="font-style: italic;">复杂度署名</span>作为其特性，它包含了以下相关函数，n 为元素数量：
+</p>
+
+
+<ul>
+
+
+
+  <li><code>c(n)</code>: 复制,
+  </li>
+
+
+  <li><code>i(n)</code>: 插入,
+  </li>
+
+
+  <li><code>h(n)</code>: 带提示的插入,
+  </li>
+
+
+  <li><code>d(n)</code>: 删除,
+  </li>
+
+
+  <li><code>r(n)</code>: 替换,
+  </li>
+
+
+  <li><code>m(n)</code>: 修改.
+  </li>
+
+
+</ul>
+各个索引所贡献的复杂度构成了函数所对应原全局原语的复杂度。我们来考虑一个 multi_index_container 的实例，它有N个索引，分别记为 <code>0</code>,...,<code>N-1</code>，各自的复杂度署名为
+(<code>c<sub>i</sub></code>,<code>i<sub>i</sub></code>,<code>h<sub>i</sub></code>,<code>d<sub>i</sub></code>,<code>r<sub>i</sub></code>,<code>m<sub>i</sub></code>);
+向这个容器插入一个元素的复杂度为
+<code>O(i<sub>0</sub>(n)+···+i<sub>N-1</sub>(n))，其中</code> <code>n</code>
+为元素的数量。为简化起见，我们定义如下：
+<ul>
+
+
+
+  <li><code>C(n)=c<sub>0</sub>(n)+···+c<sub>N-1</sub>(n)</code>,</li>
+
+
+
+  <li><code>I(n)=i<sub>0</sub>(n)+···+i<sub>N-1</sub>(n)</code>,</li>
+
+
+
+  <li><code>H(n)=h<sub>0</sub>(n)+···+h<sub>N-1</sub>(n)</code>,</li>
+
+
+
+  <li><code>D(n)=d<sub>0</sub>(n)+···+d<sub>N-1</sub>(n)</code>,</li>
+
+
+
+  <li><code>R(n)=r<sub>0</sub>(n)+···+r<sub>N-1</sub>(n)</code>,</li>
+
+
+
+  <li><code>M(n)=m<sub>0</sub>(n)+···+m<sub>N-1</sub>(n)</code>.</li>
+
+
+
+</ul>
+例如，考虑一个带两个有序索引的 <code>multi_index_container</code>，其 <code>i(n)=log(n)</code>, 它还有一个序列索引，其 <code>i(n)=1</code>
+(插入操作为常量时间)。向该 <code>multi_index_container</code>
+插入一个元素的复杂度为：
+<blockquote>
+  <code>O(I(n))=O(2*log(n)+1)=O(log(n))</code>.
+</blockquote>
+
+
+
+
+
+<h2><a name="index_specification">Index specification索引规格</a></h2>
+
+
+
+
+<p>索引说明被作为实例化参数传递给
+<code>multi_index_container</code>，并提供了相关索引的信息。未来版本的 Boost.MultiIndex 可能会允许用户自定义索引规格。目前来说，只允许使用实现所定义的索引说明。当前的 Boost.MultiIndex 提供了以下索引说明：
+</p>
+
+
+<ul>
+
+
+
+  <li><a href="ord_indices.html#unique_non_unique"><code>ordered_unique</code> 和
+    <code>ordered_non_unique</code></a>，作为
+    <a href="ord_indices.html">ordered indices有序索引</a>,</li>
+
+
+
+  <li><a href="hash_indices.html#unique_non_unique"><code>hashed_unique</code> 和
+    <code>hashed_non_unique</code></a> 作为
+    <a href="hash_indices.html">hashed indices散列索引</a>,</li>
+
+
+
+  <li><a href="seq_indices.html#sequenced"><code>sequenced</code></a> 作为
+    <a href="seq_indices.html">sequenced indices序列索引</a></li>
+
+
+
+  <li>以及 <a href="rnd_indices.html#random_access"><code>random_access</code></a> 作为
+    <a href="rnd_indices.html">random access indices随机访问索引</a>.</li>
+
+
+
+</ul>
+
+
+
+
+
+<h2>
+<a name="indexed_by_synopsis">头文件 </a><a href="../../../../boost/multi_index/indexed_by.hpp"><code>"boost/multi_index/indexed_by.hpp"</code></a> 摘要</h2>
+
+
+
+
+<blockquote>
+  
+  
+  <pre><span class="keyword">namespace</span> <span class="identifier">boost</span><span class="special">{</span>
+
+<span class="keyword">namespace</span> <span class="identifier">multi_index</span><span class="special">{</span>
+
+<span class="keyword">template</span><span class="special">&lt;</span><span class="keyword">typename</span> <span class="identifier">T0</span><span class="special">,...,</span><span class="keyword">typename</span> <span class="identifier">Tn</span><span class="special">&gt;</span>
+<span class="keyword">struct</span> <span class="identifier">indexed_by</span><span class="special">;</span>
+
+<span class="special">}</span> <span class="comment">// namespace boost::multi_index</span> <br><br><span class="special">}</span> <span class="comment">// namespace boost</span>
+  </pre>
+
+
+</blockquote>
+
+
+
+
+<h3><a name="indexed_by">类模板 <code>indexed_by</code></a></h3>
+
+
+
+
+<p>
+<code>indexed_by</code> 依照了
+<a href="../../../../libs/mpl/doc/refmanual/random-access-sequence.html">
+<code>MPL Random Access Sequence</code></a> 和
+<a href="../../../../libs/mpl/doc/refmanual/extensible-sequence.html">
+<code>MPL Extensible Sequence</code></a>，用于指定索引的编译期列表，作为
+<code>multi_index_container</code> 的 <code>IndexSpecifierList</code>.
+</p>
+
+
+
+
+<blockquote>
+  
+  
+  <pre><span class="keyword">template</span><span class="special">&lt;</span><span class="keyword">typename</span> <span class="identifier">T0</span><span class="special">,...,</span><span class="keyword">typename</span> <span class="identifier">Tn</span><span class="special">&gt;</span>
+<span class="keyword">struct</span> <span class="identifier">indexed_by</span><span class="special">;</span>
+  </pre>
+
+
+</blockquote>
+
+
+
+
+<p>每一个用户提供的 <code>indexed_list</code> 都必须是一个索引说明，至少要提供一个。<code>indexed_by</code> 序列中可容纳的最大元素数量由实现定义。
+</p>
+
+
+
+
+<h2><a name="tags">Tags标志</a></h2>
+
+
+
+
+<p>标志只是一个普通的类型，用于标识
+<code>multi_index_container</code> 的索引以便于记忆，比如在成员函数 get 中使用。每个索引可以没有、或者有一个或多个相关的标志。将标志指定给一个索引的方法是使用特定的索引说明。但是为方便起见，Boost.MultiIndex 的所有索引都支持通过类模板 <a href="#tag"><code>tag</code></a> 进行标记。
+</p>
+
+
+
+
+<h2>
+<a name="tag_synopsis">头文件 </a><a href="../../../../boost/multi_index/tag.hpp"><code>"boost/multi_index/tag.hpp"</code></a> 摘要</h2>
+
+
+
+
+<blockquote>
+  
+  
+  <pre><span class="keyword">namespace</span> <span class="identifier">boost</span><span class="special">{</span>
+
+<span class="keyword">namespace</span> <span class="identifier">multi_index</span><span class="special">{</span>
+
+<span class="keyword">template</span><span class="special">&lt;</span><span class="keyword">typename</span> <span class="identifier">T0</span><span class="special">,...,</span><span class="keyword">typename</span> <span class="identifier">Tn</span><span class="special">&gt;</span>
+<span class="keyword">struct</span> <span class="identifier">tag</span><span class="special">;</span>
+
+<span class="special">}</span> <span class="comment">// namespace boost::multi_index</span> <br><br><span class="special">}</span> <span class="comment">// namespace boost</span>
+  </pre>
+
+
+</blockquote>
+
+
+
+
+<h3><a name="tag">类模板 <code>tag</code></a></h3>
+
+
+
+
+<p>
+<code>tag</code> 是一个 typelist 结构，用于指定标志的编译期序列，在实例化时指定给相应的索引。
+</p>
+
+
+
+
+<blockquote>
+  
+  
+  <pre><span class="keyword">template</span><span class="special">&lt;</span><span class="keyword">typename</span> <span class="identifier">T0</span><span class="special">,...,</span><span class="keyword">typename</span> <span class="identifier">Tn</span><span class="special">&gt;</span><br><span class="keyword">struct</span> <span class="identifier">tag</span><br><span class="special">{</span><br>  <span class="keyword">typedef</span> <b>implementation defined</b> <span class="identifier">type</span><span class="special">;</span><br><span class="special">};</span><span class="special"></span>
+  </pre>
+
+
+</blockquote>
+
+
+
+
+<p><code>tag</code> 的元素可以是任意类型，用户应提供一个有易于记忆的名字的类型。不允许使用重复的元素。<code>tag</code> 实例化时的最大元素数量取决于实现定义。嵌套的 <code>type</code> 符合 <a href="../../../../libs/mpl/doc/refmanual/random-access-sequence.html"><code>MPL 
+随机访问序列</code></a> 和 <a href="../../../../libs/mpl/doc/refmanual/extensible-sequence.html"><code>MPL 
+可扩展序列</code></a>，以给定的序列包含了类型 <code>T0</code>, ... , 
+<code>Tn</code>。 
+</p>
+
+
+
+
+<h2><a name="index_catalog">Boost.MultiIndex提供的索引</a></h2>
+
+
+
+
+
+<h3><a name="key_based_indices">Key-based indices基于键的索引</a></h3>
+
+
+
+
+<p>这一类索引由来自于元素的<span style="font-style: italic;">键</span>组成，请见 <a href="key_extraction.html">key extraction
+reference键提取参考</a> 一节中的描述。
+</p>
+
+
+<ul>
+
+
+
+  <li><a href="ord_indices.html">Ordered indices有序索引</a> 按键值对元素排序，并提供快速查找的能力。</li>
+
+
+
+  <li><a href="hash_indices.html">Hashed indices散列索引</a> 通过散列技术提供高效的访问。</li>
+
+
+
+</ul>
+
+
+
+
+
+<h3><a name="other_indices">Other types其它类型</a></h3>
+
+
+
+
+<p>
+</p>
+
+
+<ul>
+
+
+
+  <li><a href="seq_indices.html">Sequenced indices序列索引</a> 允许以双向链表的方式安排元素。</li>
+
+
+
+  <li><a href="rnd_indices.html">Random access indices随机访问索引</a> 提供了常量时间的位置访问和元素的任意顺序。</li>
+
+
+
+</ul>
+
+
+
+
+
+<h2><a name="views">Index views索引视图</a></h2>
+
+
+
+
+<p>以下概念用于非基于键的索引的重排工具。给定类型为 Index 的一个索引 i，<span style="font-style: italic;">i 的视图</span>是指任意的一个区间 [<code>first</code>,<code>last</code>)，其中 <code>first</code> 和 <code>last</code> 为类型
+<code>Iterator</code> 的对象，Iterator 为
+<a href="http://www.sgi.com/tech/stl/InputIterator.html">
+<code>Input Iterator输入迭代器</code></a>，满足：
+</p>
+
+
+<ol>
+
+
+
+  <li><code>Iterator</code> 的关联值类型可以转换为 <code>const Index::value_type&amp;</code>
+  </li>
+
+
+
+  <li>并且 i 的每一个元素在
+    [<code>first</code>,<code>last</code>) 刚好出现一次
+  </li>
+
+
+
+</ol>
+注意，视图是 i 的真实元素的引用，而不是拷贝。另外，一个视图被称为 <i>free自由的</i>，如果它的遍历顺序不受 i 的遍历顺序的影响。自由视图的例子如下：
+<ul>
+
+
+
+  <li>[<code>c.begin()</code>,<code>c.end()</code>), 其中 <code>c</code> 为 i 的元素的引用包装(来自于
+    <a href="../../../../doc/html/ref.html">Boost.Ref</a>)的任意容器，且每个元素的引用刚好出现一次。
+  </li>
+
+
+
+  <li>[<code>i'.begin()</code>,<code>i'.end()</code>), 其中 <code>i'</code> 为同一个 <code>multi_index_container</code>
+    的索引，但不是 <code>i。</code>
+  </li>
+
+
+
+  <li>上述两种情况的任意一个排列，例如 [<code>c.rbegin()</code>,<code>c.rend()</code>), 或者是通过 Boost.Iterator 的
+    <a href="../../../iterator/doc/permutation_iterator.html">
+    <code>permutation_iterator</code></a> 从上述情况获得的任意区间。
+  </li>
+
+
+
+</ul>
+
+
+
+
+
+<hr>
+
+<div class="prev_link"><a href="multi_index_container.html"><img src="../prev.gif" alt="multi_index_container reference" border="0"><br>
+
+
+
+<code>multi_index_container</code> 参考
+</a></div>
+
+
+
+<div class="up_link"><a href="index.html"><img src="../up.gif" alt="Boost.MultiIndex reference" border="0"><br>
+
+
+
+Boost.MultiIndex 参考
+</a></div>
+
+
+
+<div class="next_link"><a href="ord_indices.html"><img src="../next.gif" alt="ordered indices" border="0"><br>
+
+
+
+Ordered indices有序索引
+</a></div>
+
+
+<br style="" clear="all">
+
+
+
+
+<br>
+
+
+
+
+<p>Revised July 21st 2009</p>
+
+
+
+
+<p>© Copyright 2003-2009 Joaquín M López Muñoz.
+Distributed under the Boost Software 
+License, Version 1.0. (See accompanying file <a href="../../../../LICENSE_1_0.txt">
+LICENSE_1_0.txt</a> or copy at <a href="http://www.boost.org/LICENSE_1_0.txt">
+http://www.boost.org/LICENSE_1_0.txt</a>)
+</p>
+
+
+
+
+</body></html>

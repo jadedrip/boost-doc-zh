@@ -1,0 +1,153 @@
+<!DOCTYPE HTML PUBLIC "-//W3C//DTD HTML 4.01 Transitional//EN">
+<html><head><meta content="text/html; charset=UTF-8" http-equiv="content-type"><!--
+  -- Copyright 2005 Aaron Windsor
+  --
+  -- Use, modification and distribution is subject to the Boost Software
+  -- License, Version 1.0. (See accompanying file LICENSE_1_0.txt or copy at
+  -- http://www.boost.org/LICENSE_1_0.txt)
+  --
+  --  Author: Aaron Windsor
+  --><title>Boost Graph Library: Maximum Cardinality Matching</title></head>
+<body alink="#ff0000" bgcolor="#ffffff" link="#0000ee" text="#000000" vlink="#551a8b">
+<img src="../../../boost.png" alt="C++ Boost" height="86" width="277">
+<br clear="">
+<h1>
+<a name="sec:maximum_cardinality_matching">Maximum Cardinality Matching 最大基数匹配</a>
+</h1>
+<pre>template &lt;typename Graph, typename MateMap&gt;<br>void edmonds_maximum_cardinality_matching(const Graph&amp; g, MateMap mate);<br><br>template &lt;typename Graph, typename MateMap, typename VertexIndexMap&gt;<br>void edmonds_maximum_cardinality_matching(const Graph&amp; g, MateMap mate, VertexIndexMap vm);<br><br>template &lt;typename Graph, typename MateMap&gt;<br>bool checked_edmonds_maximum_cardinality_matching(const Graph&amp; g, MateMap mate);<br><br>template &lt;typename Graph, typename MateMap, typename VertexIndexMap&gt;<br>bool checked_edmonds_maximum_cardinality_matching(const Graph&amp; g, MateMap mate, VertexIndexMap vm);<br></pre>
+<p>
+<a name="sec:articulation_points">一个 <i>匹配matching</i> 是指，图的一个边子集，其中没有两条边共享同一个顶点。下图示范了同一个图中的两个不同的匹配(匹配中的边以蓝色表示)。左边的匹配是一个 <i>最大匹配maximal matching</i>，即不能通过增加边来增加它的大小。右边的匹配则是一个 <i>最大基数匹配maximum cardinality matching</i>，即在该图所有可能的匹配中，它的大小是最大的。</a></p><center>
+<table border="0">
+<tbody><tr>
+<td><a name="sec:articulation_points"><img src="figs/maximal-match.png"></a></td>
+<td width="150"></td>
+<td><a name="sec:articulation_points"><img src="figs/maximum-match.png"></a></td>
+</tr>
+</tbody></table>
+</center>
+
+<p>
+<tt>edmonds_maximum_cardinality_matching</tt> 和 
+<tt>checked_edmonds_maximum_cardinality_matching</tt> 都可在任意无向图中查找最大基数匹配。匹配在一个
+<tt>MateMap</tt> 中返回，它是一个 
+<a href="../../property_map/ReadWritePropertyMap.html">读写属性映射</a>，从顶点映射至顶点。在所返回的映射中，每个顶点要么映射至它所匹配的顶点，要么映射至 <tt>graph_traits&lt;Graph&gt;::null_vertex()</tt>，如果它不在该匹配中。如果没有给定 <tt>VertexIndexMap</tt>，则两个函数均假定 <tt>VertexIndexMap</tt> 是一个可通过调用 <tt>get(vertex_index,g)</tt> 来进行访问的一个图内部属性。<tt>edmonds_maximum_cardinality_matching</tt> 与 
+<tt>checked_edmonds_maximum_cardinality_matching</tt> 的唯一差别在于最后的步骤，后一个算法对计算得到的匹配运行一次简单的校验，当且仅当该匹配的确是一个最大基数匹配时，返回 <tt>true</tt>。
+
+</p><p>给定一个匹配M，未被M中的边所覆盖的顶点被称为<i>自由的</i>。任意一条恰好有 <i>2n + 1</i> 条边、以自由顶点开始及结束、包含M中 
+<i>n</i> 条边的简单路径，被称为 <i>交替路径alternating path</i>。给定一条交替路径 <i>p</i>，<i>p</i> 中的匹配边和非匹配边可以交换，从而得到一个恰好比原匹配多一条边的新匹配。这个增量法可以递增匹配的大小，加上以下事实，形成了 Edmonds 匹配算法的基础：
+
+</p><blockquote>
+<i>匹配M存在一条交替路径，当且仅当M不是最大基数匹配。</i>
+</blockquote>当然，难点在于，当存在一条增广路径时，如何找到它。我们用于查找最大基数匹配的算法包含以下三个基本步骤：
+<ol>
+<li>创建一个初始匹配。
+</li><li>重复查找一条增广路径，并用它来递增匹配的大小，直至增广路径不存在。
+</li><li>校验所找到的匹配是最大基数匹配。
+</li></ol>如果你使用 <tt>checked_edmonds_maximum_cardinality_matching</tt> 或
+<tt>edmonds_maximum_cardinality_matching</tt>，则以上三步均为你选中，不过也很容易将它们插入其它算法中，因为这三个步骤使用了下面将要讨论的通用匹配函数 - 事实上，<tt>checked_edmonds_maximum_cardinality_matching</tt> 和 <tt>edmonds_maximum_cardinality_matching</tt> 只是这个函数的内联特化版本。 
+
+<p>在引用这个算法时，我们假定 <tt>VertexIndexMap</tt> 是一个属性映射，它可以在常量时间内，在顶点和索引间进行映射(这很容易实现，例如，顶点被保存在连续的内存中)。我们用 <i>n</i> 和 <i>m</i> 来分别表示输入图的顶点集和边集大小。
+
+</p><h4>创建一个初始匹配的算法</h4>
+
+<ul>
+<li><b><tt>empty_matching</tt></b>: 用 <i>O(n)</i> 的时间初始化一个空的匹配。
+</li><li><b><tt>greedy_matching</tt></b>: 通过对边进行迭代，如果某条边与匹配中的已有边不冲突，则加入该边，从而得到一个匹配。该匹配是最大的，因此保证至少包含了最大匹配所具有的一半边。花费的时间为 <i>O(m log n)</i>。
+</li><li><b><tt>extra_greedy_matching</tt></b>: 按每条边所含顶点的度数的递增序对边进行排序，然后从这些边构造一个贪心匹配。这也是一个最大匹配，并且有时会比简单的 <tt>greedy_matching</tt> 更加接近于最大基数匹配。花费的时间为 <i>O(m log n)</i>，但其常量系数令此算法慢于 
+<tt>greedy_matching</tt>。
+</li></ul>
+
+<h4>查找一个增广路径的算法</h4>
+
+<ul>
+<li><b><tt>edmonds_augmenting_path_finder</tt></b>: 在 <i>O(m alpha(m,n))</i> 时间内查找一个增广路径，其中 <i>alpha(m,n)</i> 是一个逆 Ackerman 函数。<i>alpha(m,n)</i> 是计算机科学中自然发生的增长最慢的函数之一；基本上，对于我们准备对其运行该算法的任意图来说，<i>alpha(m,n)</i> ≤ 4。由于我们会在 <i>O(n)</i> 次匹配增广后得到最大基数匹配，所以整个算法的时间为 <i>O(mn alpha(m,n))</i>。Edmonds 的原算法在[<a href="bibliography.html#edmonds65">64</a>]中，但我们的 
+Edmonds' 算法实现更接近于[<a href="bibliography.html#tarjan83:_data_struct_network_algo">27</a>]中的 Tarjan 对该算法的描述。
+</li><li><b><tt>no_augmenting_path_finder</tt></b>: 如果初始匹配不需要增广时，可以用它。
+</li></ul>
+
+<h4>校验算法</h4>
+
+<ul>
+<li><b><tt>maximum_cardinality_matching_verifier</tt></b>: 当且仅当找到的匹配为最大基数匹配时，返回 true。花费的时间为 <i>O(m alpha(m,n))</i>，与 Edmonds' 算法的单次迭代相同。
+</li><li><b><tt>no_matching_verifier</tt></b>: 总是返回 true
+</li></ul>为何需要一个校验算法？Edmonds' 算法相当复杂，没有几天的时间，几乎没有可能指出 
+<tt>edmonds_matching</tt> 在一个，比如说有100个点和500条边的图上，所产生的匹配是否确是最大基数匹配。校验算法可以自动来做这个工作，而且验证这个校验算法是否正确实现，比验证 
+Edmonds' 算法是否正确实现，要容易得多。Boost Graph 库使得执行校验器所需的子程序(如查找一个图中所有奇基数的连通分支，或是创建带有特定标签的所有顶点的导出图)相当地简单，只需要短短几行代码。
+
+<p>要了解校验器如何工作，需要一点图论知识。令 <i>m(G)</i> 为图 <i>G</i> 中最大基数匹配的大小。<i>o(G)</i> 表示 <i>G</i> 中奇基数的连通分支数量，且对于点集 <i>X</i>，<i>G - X</i> 表示点集 <i>V(G) - X</i> 的导出图。Tutte-Berge 公式表明
+</p><blockquote>
+<i>2 * m(G) = min ( |V(G)| + |X| - o(G-X) )</i>
+</blockquote>其中的最小值是从顶点集 <i>V(G)</i> 的所有子集 <i>X</i> 中得到的。Edmonds
+Blossom-Shrinking 算法的一个副作用是，它计算了一个图的所谓 Edmonds-Gallai
+分解：它将图分解为三个不相交的顶点集，其中一个实现了 Tutte-Berge 公式中的最小值。我们的校验程序的概况是：给定一个 <tt>Graph g</tt> 和一个 <tt>MateMap mate</tt>,
+<ol>
+<li>检查以确认 <tt>mate</tt> 是 <tt>g</tt> 上的一个有效匹配。
+</li><li>对 <tt>g</tt> 和 <tt>mate</tt> 运行一次 <tt>edmonds_augmenting_path_finder</tt>。如果它找到一条增广路径，则该匹配不是最大基数匹配。否则，我们取一份 <tt>edmonds_augmenting_path_finder</tt> 所用的 <tt>vertex_state</tt>
+映射的拷贝。Edmonds-Gallai 分解告诉我们，被 <tt>vertex_state</tt> 映射标记为 <tt>V_ODD</tt> 的顶点集可以作为集合 X 以达到 Tutte-Berge 公式中的最小值。</li><li>计算标记为 <tt>V_ODD</tt> 的顶点数量，保存于 <tt>num_odd_vertices</tt>。
+</li><li>创建一个 <a href="filtered_graph.html"><tt>filtered_graph</tt></a>，包含未被标记为 <tt>V_ODD</tt> 的所有顶点。计算该图中奇连通分支的数量，将结果保存于 <tt>num_odd_connected_components</tt>。
+</li><li>用 |X| = <tt>num_odd_vertices</tt> and o(G-X) = <tt>num_odd_connected_components</tt> 来测试在 Tutte-Berge 公式中的相等性是否保持。如果是，则返回 true，否则返回 false。
+</li></ol>假设这些步骤都正确地实现，则校验器不可能返回 false positive，只会在 <tt>edmonds_augmenting_path_finder</tt> 未能正确计算
+<tt>vertex_state</tt> 映射时返回 false negative，在这种情况下，<tt>edmonds_augmenting_path_finder</tt>
+工作不正常。 
+
+
+<h4>创建你自己的匹配算法</h4>创建一个匹配算法和将上述算法插入到泛型匹配函数中同样简单，匹配算法具有以下签名：
+<pre>template &lt;typename Graph, <br>	  typename MateMap,<br>	  typename VertexIndexMap,<br>	  template &lt;typename, typename, typename&gt; class AugmentingPathFinder, <br>	  template &lt;typename, typename&gt; class InitialMatchingFinder,<br>	  template &lt;typename, typename, typename&gt; class MatchingVerifier&gt;<br>  bool matching(const Graph&amp; g, MateMap mate, VertexIndexMap vm)<br></pre>为你提供的匹配函数只是这个函数的内联特化版本：<tt>edmonds_maximum_cardinality_matching</tt> 使用 <tt>edmonds_augmenting_path_finder</tt> 作为 <tt>AugmentingPathFinder</tt>，用 <tt>extra_greedy_matching</tt> 作为 <tt>InitialMatchingFinder</tt>，用 <tt>no_matching_verifier</tt> 作为 <tt>MatchingVerifier</tt>。 
+<tt>checked_edmonds_maximum_cardinality_matching</tt>&nbsp;使用了相同的参数，除了用
+<tt>maximum_cardinality_matching_verifier</tt> 作为 <tt>MatchingVerifier</tt>。
+
+<p>这些不一定是任意情况下的最好选择 - 例如，已有文献声称，对于稀疏图，如果不提供一个初始匹配，Edmonds' 算法可以更快地收敛至最大基数匹配。这样的一个算法可以很容易地通过用以下参数调用 <tt>matching</tt> 来组装得到：
+</p><ul>
+<li><tt>AugmentingPathFinder = edmonds_augmenting_path_finder</tt>
+</li><li><tt>InitialMatchingFinder = empty_matching</tt>
+</li></ul>并根据你觉得要多小心，来选择 <tt>MatchingVerifier</tt>。
+
+<p>假如你想快点得到一个较大的匹配，而不关心是不是精确的最大匹配。extra_greedy_matching 和 greedy_matching 都能找出最大匹配，这意味着它们保证至少有最大基数匹配一半的大小，所以你可以用以下参数调用 <tt>matching</tt>：
+</p><ul>
+<li><tt>AugmentingPathFinder = no_augmenting_path_finder</tt>
+</li><li><tt>InitialMatchingFinder = extra_greedy_matching</tt>
+</li><li><tt>MatchingVerifier = maximum_cardinality_matching_verifier</tt>
+</li></ul>这样所得到的算法会在 <i>O(m log n)</i> 时间内找到一个额外贪心匹配，它不查找增广路径。作为额外的奖励，当且仅当这个额外贪心匹配刚好是一个最大基数匹配时，该函数返回 true。
+
+<p></p><h3>Where Defined 定义于</h3>
+
+<p>
+<a href="../../../boost/graph/max_cardinality_matching.hpp"><tt>boost/graph/max_cardinality_matching.hpp</tt></a>
+
+
+</p><h3>Parameters 参数</h3>
+
+IN: <tt>const Graph&amp; g</tt>
+<blockquote>一个无向图。图的类型必须符合
+<a href="VertexAndEdgeListGraph.html">点边列表图Vertex and Edge List Graph</a> 和
+<a href="IncidenceGraph.html">关联图Incidence Graph</a>。<br>
+</blockquote>
+
+IN: <tt>VertexIndexMap vm</tt>
+<blockquote>必须符合 <a href="../../property_map/doc/ReadablePropertyMap.html">可读属性映射</a>，从顶点映射至整数索引。
+</blockquote>
+
+OUT: <tt>MateMap mate</tt>
+<blockquote>必须符合 <a href="../../property_map/doc/ReadWritePropertyMap.html">读写属性映射</a>，从顶点映射至顶点。对于图中任一顶点 v，<tt>get(mate,v)</tt> 为 v 所匹配的顶点，或
+<tt>graph_traits<graph>::null_vertex()</graph></tt> 如果 v 未被匹配。
+</blockquote>
+
+<h3>Complexity 复杂度</h3>
+
+<p>令 <i>m</i> 和 <i>n</i> 分别为输入图的边数和顶点数。假定 
+<tt>VertexIndexMap</tt> 提供常量时间的查找，则 
+<tt>edmonds_matching</tt> 和 <tt>checked_edmonds_matching</tt> 的时间复杂度均为 <i>O(mn alpha(m,n))</i>。<i>alpha(m,n)</i> 是一个慢速增长的函数，对于所有可能的输入，至多为4。
+</p><p>
+
+</p><h3>Example 示例</h3>
+
+<p>文件 <a href="../example/matching_example.cpp"><tt>example/matching_example.cpp</tt></a>
+包含了一个例子。<br>
+</p><hr>
+<table>
+<tbody><tr valign="top">
+<td nowrap="nowrap">Copyright © 2005</td><td>
+Aaron Windsor (<a href="mailto:aaron.windsor@gmail.com">aaron.windsor@gmail.com</a>)<br>
+</td></tr></tbody></table>
+
+</body></html>

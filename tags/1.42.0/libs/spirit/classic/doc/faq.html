@@ -1,0 +1,510 @@
+<!DOCTYPE HTML PUBLIC "-//W3C//DTD HTML 4.01 Transitional//EN">
+<html><head>
+
+<title>FAQ</title><meta http-equiv="Content-Type" content="text/html; charset=UTF-8">
+<link rel="stylesheet" href="theme/style.css" type="text/css"></head>
+<body>
+<table background="theme/bkd2.gif" border="0" cellspacing="2" width="100%">
+  <tbody><tr>
+    <td width="10">
+    </td>
+    <td width="85%"> <font face="Verdana, Arial, Helvetica, sans-serif" size="6"><b>FAQ 常见问题</b></font></td>
+    <td width="112"><a href="http://spirit.sf.net"><img src="theme/spirit.gif" align="right" border="0" height="48" width="112"></a></td>
+  </tr>
+</tbody></table>
+<br>
+<table border="0">
+  <tbody><tr>
+    <td width="10"></td>
+    <td width="30"><a href="../index.html"><img src="theme/u_arr.gif" border="0"></a></td>
+    <td width="30"><a href="techniques.html"><img src="theme/l_arr.gif" border="0"></a></td>
+    <td width="30"><a href="rationale.html"><img src="theme/r_arr.gif" border="0"></a></td>
+  </tr>
+</tbody></table>
+<ul>
+  <li><a href="#scanner_business">The Scanner Business 扫描器事务</a></li>
+  <li><a href="#left_recursion">Eliminating Left Recursion 消除左递归</a> </li>
+  <li><a href="#right_associativity">Implementing Right Associativity 实现右关联</a></li>
+  <li><a href="#lexeme_and_rules">The lexeme_d directive and rules &nbsp; lexeme_d指示符和规则</a></li>
+  <li><a href="#kleene_star">Kleene Star infinite loop 克林星无限循环</a></li>
+  <li><a href="#CVS">Boost CVS and Spirit CVS</a></li>
+  <li><a href="#compilation_times">How to reduce compilation times with complex
+    Spirit grammars 如何减少复杂Spirit语法的编译时间</a></li>
+  <li><strong><a href="#frame_assertion">Closure frame assertion 闭包帧断言</a></strong></li>
+  <li><strong><a href="#greedy_rd">Greedy RD 贪心RD</a></strong></li>
+  <li><strong><a href="#referencing_a_rule_at_construction">Referencing a rule
+    at construction time 在构造期引用规则</a></strong></li>
+  <li><strong><a href="#storing_rules">Storing Rules 保存规则</a></strong></li>
+  <li><strong><a href="#parsing_ints_and_reals">Parsing ints and reals 分析整数和实数</a> </strong></li>
+  <li><strong><a href="#output_operator">BOOST_SPIRIT_DEBUG and missing <tt>operator&lt;&lt;</tt></a></strong></li>
+  <li><strong><a href="#repository">Applications that used to be part of spirit 以前作为spirit一部分的应用程序</a></strong></li>
+</ul>
+<p><b> <a name="scanner_business" id="scanner_business"></a> The Scanner Business 扫描器事务</b></p>
+<p><font color="#ff0000">Question:</font> Why doesn't this compile?<br><font color="#ff0000">问题：</font>为什么以下程序不能编译？</p>
+<pre><code><font color="#000000"><span class="special">    </span><span class="identifier">rule</span><span class="special">&lt;&gt; </span><span class="identifier">r </span><span class="special">= /*...*/;<br></span>    <span class="identifier">parse</span><span class="special">(</span><span class="string">"hello world"</span><span class="special">, </span><span class="identifier">r</span><span class="special">, </span><span class="identifier">space_p</span><span class="special">); </span><span class="comment">// BAD [attempts phrase level parsing]</span></font></code></pre>
+<p>But if I <font color="#000000">remove the skip-parser, everything goes back
+  to normal again:</font><br>但如果去掉<font color="#000000">跳读分析器，则一切又恢复正常：<code></code></font></p>
+<pre><code><font color="#000000">    <span class="identifier">rule</span><span class="special">&lt;&gt; </span><span class="identifier">r </span><span class="special">= *</span><span class="identifier">anychar_p</span><span class="special">;<br>    </span><span class="identifier">parse</span><span class="special">(</span><span class="string">"hello world"</span><span class="special">, </span><span class="identifier">r</span><span class="special">); </span><span class="comment">// OK [character level parsing]</span></font></code></pre>
+<p>Sometimes you'll want to pass in a rule to one of the functions parse functions
+  that Spirit provides. The problem is that the rule is a template class that
+  is parameterized by the scanner type. This is rather awkward but unavoidable:
+  <strong>the rule is tied to a scanner</strong>. What's not obvious is that this
+  scanner must be compatible with the scanner that is ultimately passed to the
+  rule's parse member function. Otherwise, the compiler will complain.<br>有时，你想将一个规则传入某个由Spirit提供的 parse&nbsp;函数。问题是，规则是一个模板类，它以扫描器类型为参数。这是尴尬而不可避免的：<strong>规则被绑定至某个扫描器</strong>。有一点不太明显，即这个扫描器必须兼容于最终传递给该规则的 parse 成员函数的扫描器。否则，编译器将会抗议。 </p>
+<p>Why does the first call to parse not compile? Because of scanner incompatibility.
+  Behind the scenes, the free parse function creates a scanner from the iterators
+  passed in. In the first call to parse, the scanner created is a plain vanilla
+  <tt>scanner&lt;&gt;</tt>. This is compatible with the default scanner type of
+  <tt>rule&lt;&gt;</tt> [see default template parameters of <a href="rule.html">the
+  rule</a>]. The second call creates a scanner of type <tt><a href="scanner.html#phrase_scanner_t">phrase_scanner_t</a></tt>.
+  Thus, in order for the second call to succeed, the rule must be parameterized
+  as <tt>rule&lt;phrase_scanner_t&gt;</tt>:<br>为什么第一个对 parse 的调用不能编译？因为扫描器不兼容。在其表象之后，这个 parse 函数从传入的迭代器构造一个扫描器。在第一个对 parse 的调用中，创建的扫描器是一个普通的
+  <tt>scanner&lt;&gt;</tt>。它兼容于
+  <tt>rule&lt;&gt;</tt> 的缺省扫描器类型[请见 <a href="rule.html">规则</a> 的缺省模板参数]。而第二个调用则创建一个类型为 <tt><a href="scanner.html#phrase_scanner_t">phrase_scanner_t</a></tt> 的扫描器。因此，为了第二次调用的成功，该规则必须被参数化为 <tt>rule&lt;phrase_scanner_t&gt;</tt>:</p>
+<pre><code><font color="#000000"><span class="comment">    </span><span class="identifier">rule</span><span class="special">&lt;</span><span class="identifier">phrase_scanner_t</span><span class="special">&gt; </span><span class="identifier">r </span><span class="special">= </span><span class="special">*</span><span class="identifier">anychar_p</span><span class="special">;<br>    </span><span class="identifier">parse</span><span class="special">(</span><span class="string">"hello world"</span><span class="special">, </span><span class="identifier">r</span><span class="special">, </span><span class="identifier">space_p</span><span class="special">);       </span><span class="comment">//  OK [phrase level parsing]</span></font></code></pre>
+<p>Take note however that <tt>phrase_scanner_t</tt> is compatible only when you
+  are using <tt>char const*</tt> iterators and <tt>space_p</tt> as the skip parser.
+  Other than that, you'll have to find the right type of scanner. This is tedious
+  to do correctly. In light of this issue, <strong>it is best to avoid rules as
+  arguments to the parse functions</strong>. Keep in mind that this happens only
+  with rules. The rule is the only parser that has to be tied to a particular
+  scanner type. For instance:<br>不过请注意，<tt>phrase_scanner_t</tt> 仅当你使用 <tt>char const*</tt> 迭代器并以 <tt>space_p</tt> 作为跳读分析器时是兼容的。否则，你必须找出扫描器的正确类型。要正确实现是很乏味的。由此问题可见，<strong>最好避免将规则作为参数传给 parse 函数</strong>。留意，这只发生在规则上。规则是唯一一种必须绑定至特定扫描器类型的分析器。例如：</p>
+<pre><span class="comment">    </span><span class="identifier">parse</span><span class="special">(</span><span class="string">"hello world"</span><span class="special">, *</span><span class="identifier">anychar_p</span><span class="special">);           </span><span class="comment"><code><font color="#000000"><span class="comment">//  OK  [character level parsing]</span></font></code>
+    </span><span class="identifier">parse</span><span class="special">(</span><span class="string">"hello world"</span><span class="special">, *</span><span class="identifier">anychar_p</span><span class="special">, </span><span class="identifier">space_p</span><span class="special">);  </span><span class="comment">//  OK  [phrase level parsing]</span></pre>
+<table align="center" border="0" width="80%">
+  <tbody><tr>
+    <td class="note_box"> <strong><img src="theme/note.gif" height="16" width="16">
+      Multiple Scanner Support 多扫描器支持</strong><br>
+      <br>
+      As of v1.8.0, rules can use one or more scanner types. There are cases,
+      for instance, where we need a rule that can work on the phrase and character
+      levels. Rule/scanner mismatch has been a source of confusion and is the
+      no. 1 <a href="faq.html#scanner_business">FAQ</a>. To address this issue,
+      we now have <a href="rule.html#multiple_scanner_support">multiple scanner
+      support</a>. <br>截止至 v1.8.0，规则可以使用一个或多个扫描器类型。有些情况下，例如，当我们需要一个可以工作在短语和字符层面的规则时。规则/扫描器失配是导致混乱的主要来源，且是首要的 <a href="faq.html#scanner_business">FAQ</a>。为了解决该问题，我们现在有了 <a href="rule.html#multiple_scanner_support">多扫描器支持</a><br>
+      <img src="theme/bulb.gif" height="18" width="13"> See the techniques section
+      for an <a href="techniques.html#multiple_scanner_support">example</a> of
+      a <a href="grammar.html">grammar</a> using a multiple scanner enabled rule,
+      <a href="scanner.html#lexeme_scanner">lexeme_scanner</a> and <a href="scanner.html#as_lower_scanner">as_lower_scanner.</a><br><img src="theme/bulb.gif" height="18" width="13">&nbsp;有关多扫描器规则 <a href="grammar.html">语法</a>
+     、<a href="scanner.html#lexeme_scanner">lexeme_scanner</a> 和 <a href="scanner.html#as_lower_scanner">as_lower_scanner</a> 的 <a href="techniques.html#multiple_scanner_support">例子</a>，请见"技术"一节。</td>
+  </tr>
+</tbody></table>
+<p><b> <a name="left_recursion"></a> Eliminating Left Recursion 消除左递归 </b></p>
+<p><font color="#ff0000">Question:</font> I ported a grammar from YACC. It's "kinda"
+  working - the parser itself compiles with no errors. But when I try to parse,
+  it gives me an "invalid page fault". I tracked down the problem to
+  this grammar snippet:<br><font color="#ff0000">问题：</font>我从YACC移植过来一个语法。它只能"部分"工作 - 分析器本身可通过编译。但是当我尝试分析时，它给出了一个 "invalid page fault"。我跟踪了该问题，至以下语法片段：</p>
+<pre>    <span class="identifier">or_expr </span><span class="special">= </span><span class="identifier">xor_expr </span><span class="special">| (</span><span class="identifier">or_expr </span><span class="special">&gt;&gt; </span><span class="identifier">VBAR </span><span class="special">&gt;&gt; </span><span class="identifier">xor_expr</span><span class="special">);</span></pre>
+<p>What you should do is to eliminate direct and indirect left-recursion. This
+  causes the invalid page fault because the program enters an infinite loop. The
+  code above is good for bottom up parsers such as YACC but not for LL parsers
+  such as Spirit.<br>你要做的是，消除直接或间接的左递归。它会引起无效页错误，因为程序陷入了无限循环。以上代码对于象YACC这样的由底而上分析器是好的，而对于象Spirit这样的LL分析器则非如此。</p>
+<p>This is similar to a rule in Hartmut Kaiser's C
+  parser (this should be available for download from <a href="http://spirit.sf.net/">Spirit's site</a> as soon as you read this).<br>这类似于 Hartmut Kaiser 的 C
+  分析器中的一个规则(当你读到这里时，它应该可以由 <a href="http://spirit.sf.net">Spirit's 站点</a> 下载得到)。</p>
+<pre>    <span class="identifier">inclusive_or_expression<br>    </span><span class="special">= </span><span class="identifier">exclusive_or_expression<br>    </span><span class="special">| </span><span class="identifier">inclusive_or_expression </span><span class="special">&gt;&gt; </span><span class="identifier">OR </span><span class="special">&gt;&gt; </span><span class="identifier">exclusive_or_expression<br>    </span><span class="special">;</span></pre>
+<p><span class="special"></span>Transforming left recursion to right recursion,
+  we have:<br>将左递归转换为右递归，我们有：</p>
+<pre>    <span class="identifier">inclusive_or_expression<br>    </span><span class="special">= </span><span class="identifier">exclusive_or_expression </span><span class="special">&gt;&gt; </span><span class="identifier">inclusive_or_expression_helper<br>    </span><span class="special">;<br><br>    </span><span class="identifier">inclusive_or_expression_helper<br>    </span><span class="special">= </span><span class="identifier">OR </span><span class="special">&gt;&gt; </span><span class="identifier">exclusive_or_expression </span><span class="special">&gt;&gt; </span><span class="identifier">inclusive_or_expression_helper<br>    </span><span class="special">| </span><span class="identifier">epsilon_p<br>    </span><span class="special">;</span></pre>
+<p><span class="special"></span>I'd go further. Since:<br>更进一步。因为：</p>
+<pre>    <span class="identifier">r </span><span class="special">= </span><span class="identifier">a </span><span class="special">| </span><span class="identifier">epsilon_p</span><span class="special">;</span></pre>
+<p><span class="special"></span>is equivalent to:<br><span class="special">相当于：<br>
+  </span></p>
+<pre>    <span class="identifier">r </span><span class="special">= !</span><span class="identifier">a</span><span class="special">;</span></pre>
+<p>we can simplify <tt>inclusive_or_expression_helper</tt> thus:<br>所以我们可以简化 <tt>inclusive_or_expression_helper</tt> 为：</p>
+<pre>    <span class="identifier">inclusive_or_expression_helper<br>    </span><span class="special">= !(</span><span class="identifier">OR </span><span class="special">&gt;&gt; </span><span class="identifier">exclusive_or_expression </span><span class="special">&gt;&gt; </span><span class="identifier">inclusive_or_expression_helper</span><span class="special">)<br>    ;</span></pre>
+<p><span class="special"></span>Now, since:<br>现在，由于：</p>
+<pre>    <span class="identifier">r </span><span class="special">= !(</span><span class="identifier">a </span><span class="special">&gt;&gt; </span><span class="identifier">r</span><span class="special">);</span></pre>
+<p><span class="special"></span>is equivalent to:<br>相当于：</p>
+<pre>    <span class="identifier">r </span><span class="special">= *</span><span class="identifier">a</span><span class="special">;</span></pre>
+<p><span class="special"></span>we have:<br>我们有：</p>
+<pre>    <span class="identifier">inclusive_or_expression_helper<br>    </span><span class="special">= *(</span><span class="identifier">OR </span><span class="special">&gt;&gt; </span><span class="identifier">exclusive_or_expression</span><span class="special">)<br>    ;</span></pre>
+<p><span class="special"></span>Now simplifying <tt>inclusive_or_expression</tt>
+  fully, we have:<br>现在对 <tt>inclusive_or_expression</tt>
+  完全简化，我们有：</p>
+<pre>    <span class="identifier">inclusive_or_expression<br>    </span><span class="special">= </span><span class="identifier">exclusive_or_expression </span><span class="special">&gt;&gt; *(</span><span class="identifier">OR </span><span class="special">&gt;&gt; </span><span class="identifier">exclusive_or_expression</span><span class="special">)<br>    ;</span></pre>
+<p><span class="special"></span>Reminds me of the calculators. So in short:<br>记住我们的计算器。所以用伪-YACC可缩写为：</p>
+<pre>    <span class="identifier">a </span><span class="special">= </span><span class="identifier">b </span><span class="special">| </span><span class="identifier">a </span><span class="special">&gt;&gt; </span><span class="identifier">op </span><span class="special">&gt;&gt; </span><span class="identifier">b</span><span class="special">;</span></pre>
+<p><span class="special"></span><span class="identifier">in </span><span class="identifier">pseudo-YACC
+  </span><span class="identifier">is</span><span class="special">:<br></span><span class="identifier">在Spirit中则是：</span><span class="special"></span><span class="special"></span></p>
+<pre>    <span class="identifier">a </span><span class="special">= </span><span class="identifier">b </span><span class="special">&gt;&gt; *(</span><span class="identifier">op </span><span class="special">&gt;&gt; </span><span class="identifier">b</span><span class="special">);</span></pre>
+<p>in Spirit. What could be simpler? Look Ma, no recursion,
+  just iteration.<br><span class="special"></span>还有什么可以更简单？看，没有递归，只有循环。</p>
+<p><b> <a name="right_associativity" id="right_associativity"></a> Implementing Right Associativity 实现右关联 </b></p>
+<p> <font color="#ff0000">Question:</font> I tried adding <tt>'^'</tt> as an operator to compute the power to a calculator grammer. The following code<br><font color="#ff0000">问题：</font>我尝试为计算器语法增加一个操作符 <tt>'^'</tt> 以计算幂数。以下代码
+</p>
+<pre>    <span class="identifier">pow_expression <br>    </span><span class="special">= </span><span class="identifier">pow_operand </span><span class="special">&gt;&gt; </span><span class="special">*( </span><span class="literal">'^' </span><span class="special">&gt;&gt; </span><span class="identifier">pow_operand </span><span class="special">[ </span><span class="special">&amp; </span><span class="identifier">do_pow </span><span class="special">]<br>                      </span><span class="special">)<br>    </span><span class="special">;</span>
+</pre>
+<p>parses the input correctly, but I want the operator to be evalutated from right to left. In other words, the expression <tt>2^3^4</tt> is supposed to have the same semantics as <tt>2^(3^4)</tt> instead of <tt>(2^3)^4</tt>. How do I do it?<br>可以正确地分析输入，但是我希望这个操作符是从右向左求值的。换句话说，表达式 <tt>2^3^4</tt> 应具有与 <tt>2^(3^4)</tt> 相同的语义，而不是 <tt>(2^3)^4</tt>。我要怎么做呢？
+</p>
+<p> The "textbook recipe" for Right Associativity is Right Recursion. In BNF that means:<br>解决右关联的"教科书方法"是右递归。在BNF中，意味着：
+</p><pre>    &lt;pow_expression&gt; ::=  &lt;pow_operand&gt; '^' &lt;pow_expression&gt; | &lt;pow_operand&gt;<br></pre>
+<p>But we better don't take the theory too literally here, because if the first alternative fails, the semantic actions within <tt>pow_operand</tt>
+might have been executed already and will then be executed again when
+trying the second alternative. So let's apply Left Factorization to
+factor out <tt>pow_operand</tt>:<br>但我们最好不要过于从字面理解这个理论，因为如果第一个选择失败，那么 <tt>pow_operand</tt>
+内的语义动作可能已经被执行，而在尝试第二个选择时可能会被再次执行。因此，我们应用左分解来实现 <tt>pow_operand</tt>:
+</p><pre>    &lt;pow_expression&gt; ::=  &lt;pow_operand&gt; &lt;pow_expression_helper&gt;<br>    &lt;pow_expression_helper&gt; ::= '^' &lt;pow_expression&gt; | <i>ε</i> <br></pre>
+<p>The production <tt>pow_expression_helper</tt> matches the empty string <i>ε</i>, so we can replace the alternative with the optional operator in Spirit code.<br>工具 <tt>pow_expression_helper</tt> 匹配空字符串 <i>ε</i>, 因此我们在Spirit代码中可以用可选操作符来替换这一选择。
+</p>
+<pre>    <span class="identifier">pow_expression <br>    </span><span class="special">= </span><span class="identifier">pow_operand </span><span class="special">&gt;&gt; </span><span class="special">!( </span><span class="literal">'^' </span><span class="special">&gt;&gt; </span><span class="identifier">pow_expression </span><span class="special">[ </span><span class="special">&amp; </span><span class="identifier">do_pow </span><span class="special">]<br>                      </span><span class="special">)<br>    </span><span class="special">;</span>
+</pre>
+<p>Now any semantic actions within <tt>pow_operand</tt> can safely be executed. For stack-based evaluation that means that each match of <tt>pow_operand</tt> will leave one value on the stack and the recursion makes sure there are (at least) two values on the stack when <tt>do_pow</tt> is fired to reduce these two values to their power.<br>现在 <tt>pow_operand</tt> 内的任何语义动作均可安全执行。对于基于栈的求值，这意味着 <tt>pow_operand</tt> 的每次匹配将留下一个值在栈中，且这个递归将确保当 <tt>do_pow</tt> 被触发时栈中(至少)有两个值，通过这两个值计算得到它们的幂。
+</p>
+<p>In cases where this technique isn't applicable, such as C-style assignment<br>某些情况下这种技术并不适用，如在C-风格的赋值中
+</p><pre>    <span class="identifier">assignment<br>    </span><span class="special">= </span><span class="identifier">lvalue </span><span class="special">&gt;&gt; </span><span class="literal">'=' </span><span class="special">&gt;&gt; </span><span class="identifier">assignment <br>    </span><span class="special">| </span><span class="identifier">ternary_conditional <br>    </span><span class="special">;</span>
+</pre>
+<p>you can append <tt>| epsilon_p [ <i>action</i> ] &gt;&gt; nothing_p</tt>
+to a parser to correct the semantic context when backtracking occurs
+(in the example case that would be dropping the address pushed by <tt>lvalue</tt> off the evaluation stack):<br>你可以往分析器中增加 <tt>| epsilon_p [ <i>action</i> ] &gt;&gt; nothing_p</tt>，以更正回溯发生时的语义语境(在此例中，将把由<tt>lvalue</tt> 压入的地址从求值栈中删除):
+</p>
+<pre>    <span class="identifier">assignment<br>    </span><span class="special">= </span><span class="identifier">lvalue </span><span class="special">&gt;&gt; </span><span class="special">( </span><span class="literal">'=' </span><span class="special">&gt;&gt; </span><span class="identifier">assignment    </span><span class="special">[ </span><span class="special">&amp; </span><span class="identifier">do_store </span><span class="special">]<br>                </span><span class="special">| </span><span class="identifier">epsilon_p            </span><span class="special">[ </span><span class="special">&amp; </span><span class="identifier">do_drop  </span><span class="special">]<br>                  </span><span class="special">&gt;&gt; </span><span class="identifier">nothing_p<br>                </span><span class="special">) <br>    </span><span class="special">| </span><span class="identifier">ternary_conditional <br>    </span><span class="special">;</span>
+</pre>
+<p>However, this trick compromises the clear separation of syntax and semantics, so you also might want to consider using an <a href="trees.html">AST</a> instead of semantic actions so you can just go with the first definition of <tt>assignment</tt>.<br>然而，这种方法是以语法与语义的清晰分离为代价的，所以你也可能会考虑使用 <a href="trees.html">AST</a> 来替代语义动作，这样你可以只需要 <tt>assignment</tt> 的第一个定义。
+</p>
+<p><b> <a name="lexeme_and_rules" id="lexeme_and_rules"></a> The lexeme_d directive
+  and rules &nbsp; lexeme_d指示符与规则</b></p>
+<p> <font color="#ff0000">Question:</font> Does lexeme_d not support expressions
+  which include rules? In the example below, the definition of atomicRule compiles,<br><font color="#ff0000">问题：</font>lexeme_d 不支持含有规则的表达式吗？在以下例子中，atomicRule 的定义可以编译，
+</p>
+<pre>    <span class="identifier"></span><span class="identifier">rule</span><span class="special">&lt;</span><span class="identifier">phrase_scanner_t</span><span class="special">&gt; </span><span class="identifier">atomicRule</span>
+        <span class="special">= </span><span class="identifier">lexeme_d</span><span class="special">[(</span><span class="identifier">alpha_p </span><span class="special">| </span><span class="literal">'_'</span><span class="special">) &gt;&gt; *(</span><span class="identifier">alnum_p </span><span class="special">| </span><span class="literal">'.' </span><span class="special">| </span><span class="literal">'-' </span><span class="special">| </span><span class="literal">'_'</span><span class="special">)];</span></pre>
+<p>but if I move <tt>alnum_p | '.' | '-' | '_'</tt> into its own rule, the compiler
+  complains about conversion from <tt>const scanner&lt;...&gt;</tt> to <tt>const
+  phrase_scaner_t&amp;</tt>.<br>不过，如果我将 <tt>alnum_p | '.' | '-' | '_'</tt> 移入它的规则中，编译器就会对从 <tt>const scanner&lt;...&gt;</tt> 到 <tt>const
+  phrase_scaner_t&amp;</tt> 的转化提出异议。 </p>
+<pre>    <span class="identifier">rule</span><span class="special">&lt;</span><span class="identifier">phrase_scanner_t</span><span class="special">&gt; </span><span class="identifier">ch </span><span class="special">
+        = </span><span class="identifier">alnum_p </span><span class="special">| </span><span class="literal">'.' </span><span class="special">| </span><span class="literal">'-' </span><span class="special">| </span><span class="literal">'_'</span><span class="special">;</span>
+
+<span class="identifier">    rule</span><span class="special">&lt;</span><span class="identifier">phrase_scanner_t</span><span class="special">&gt; </span><span class="identifier">compositeRule</span>
+        <span class="special">= </span><span class="identifier">lexeme_d</span><span class="special">[(</span><span class="identifier">alpha_p </span><span class="special">| </span><span class="literal">'_'</span><span class="special">) &gt;&gt; *(</span><span class="identifier">ch</span><span class="special">)]; </span><span class="comment">// &lt;- error source</span></pre>
+<p>You might get the impression that the <tt>lexeme_d</tt> directive and rules
+  do not mix. Actually, this problem is related to the first FAQ entry: The Scanner
+  Business. More precisely, the <tt>lexeme_d</tt> directive and rules with incompatible
+  scanner types do not mix. This problem is more subtle. What's causing the scanner
+  incompatibility is the directive itself. The <tt>lexeme_d</tt> directive transforms
+  the scanner it receives into something that disables the skip parser. This non-skipping
+  scanner, unfortunately, is incompatible with the original scanner before transformation
+  took place.<br>你可能有这样的印象，<tt>lexeme_d</tt> 指示符和规则不能混用。实际上，这个问题与第一个FAQ：扫描器事务，是相关的。更准确地说，<tt>lexeme_d</tt> 指示符与带有不兼容扫描器类型的规则不能混用。这个问题更为微妙。导致扫描器不兼容的就是这个指示符本身。<tt>lexeme_d</tt> 指示符将所接受的扫描器转换为禁止了跳读分析器的某种类型。很不幸，这个无跳读的扫描器与转换之前的原扫描器是不兼容的。</p>
+<p>The simplest solution is not to use rules in the <tt>lexeme_d</tt>. Instead,
+  you can definitely apply <tt>lexeme_d</tt> to subrules and grammars if you really
+  need more complex parsers inside the <tt>lexeme_d</tt>. If you really must use
+  a rule, you need to know the exact scanner used by the directive. The <tt>lexeme_scanner</tt>
+  metafunction is your friend here. The example above will work as expected once
+  we give the <tt>ch</tt> rule a correct scanner type:<br>最简单的解决方法是，不要在 <tt>lexeme_d</tt> 中使用规则。如果你真的需要在 <tt>lexeme_d</tt> 中使用较复杂的分析器，你可以明确地将 <tt>lexeme_d</tt> 应用于子规则和语法。此时，<tt>lexeme_scanner</tt>
+  元函数可以帮忙。上述例子可以正确工作，只要我们给定 <tt>ch</tt> 规则一个正确的扫描器类型：</p>
+<pre>    <span class="identifier">rule</span><span class="special">&lt;</span><span class="identifier">lexeme_scanner</span><span class="special">&lt;</span><span class="identifier">phrase_scanner_t</span><span class="special">&gt;::</span><span class="identifier">type</span><span class="special">&gt; </span><span class="identifier">ch </span><span class="special">
+        = </span><span class="identifier">alnum_p </span><span class="special">| </span><span class="literal">'.' </span><span class="special">| </span><span class="literal">'-' </span><span class="special">| </span><span class="literal">'_'</span><span class="special">;</span></pre>
+<p>Note: make sure to add "<tt>typename</tt>" before <tt>lexeme_scanner</tt>
+  when this is used inside a template class or function.<br>注意：当被用于模板类或模板函数内部时，请确认在 <tt>lexeme_scanner</tt>
+  之前加上 "<tt>typename</tt>"。</p>
+<p>The same thing happens when rules are used inside the <tt>as_lower_d</tt> directive.
+  In such cases, you can use the <tt>as_lower_scanner</tt>. See the <span class="identifier"><tt><a href="scanner.html#lexeme_scanner">lexeme_scanner</a></tt></span>
+  and <tt><a href="scanner.html#as_lower_scanner">as_lower_scanner</a></tt>.<br>在 <tt>as_lower_d</tt> 指示符内使用规则时，也会发生同样的事情。此时，你可以使用 <tt>as_lower_scanner</tt>。请见 <span class="identifier"><tt><a href="scanner.html#lexeme_scanner">lexeme_scanner</a></tt></span> 和 <tt><a href="scanner.html#as_lower_scanner">as_lower_scanner</a></tt>。</p>
+<table align="center" border="0" width="80%">
+  <tbody><tr>
+    <td class="note_box"><img src="theme/bulb.gif" height="18" width="13"> See
+      the techniques section for an <a href="techniques.html#multiple_scanner_support">example</a>
+      of a <a href="grammar.html">grammar</a> using a <a href="rule.html#multiple_scanner_support">multiple
+      scanner enabled rule,</a> <a href="scanner.html#lexeme_scanner">lexeme_scanner</a>
+      and <a href="scanner.html#as_lower_scanner">as_lower_scanner.</a><br><img src="theme/bulb.gif" height="18" width="13"> 有关使用 <a href="rule.html#multiple_scanner_support">multiple
+      scanner enabled rule </a><a href="grammar.html">语法</a><a href="rule.html#multiple_scanner_support">,</a> <a href="scanner.html#lexeme_scanner">lexeme_scanner</a> 和 <a href="scanner.html#as_lower_scanner">as_lower_scanner</a> 的 <a href="techniques.html#multiple_scanner_support">例子</a>，请参见"技术"一节。<a href="scanner.html#as_lower_scanner"></a></td>
+  </tr>
+</tbody></table>
+<p><strong><a name="kleene_star"></a>Kleene Star infinite loop 克林星无限循环</strong></p>
+<p><font color="#ff0000">Question</font>: Why Does This Loop Forever?<br><font color="#ff0000">问题：</font>为何以下例子会无限循环？</p>
+<pre>    <span class="identifier">rule</span><span class="special">&lt;&gt; </span><span class="identifier">optional </span><span class="special">= !(</span>str_p<span class="special">(</span><span class="string">"optional"</span><span class="special">));<br>    </span><span class="identifier">rule</span><span class="special">&lt;&gt; </span><span class="identifier">list_of_optional </span><span class="special">= *</span><span class="identifier">optional</span><span class="special">;</span></pre>
+<p>The problem with this is that the kleene star will continue looping until it
+  gets a no-match from it's enclosed parser. Because the <tt>optional</tt> rule
+  is optional, it will always return a match. Even if the input doesn't match
+  "optional" it will return a zero length match. <tt>list_of_optional</tt>
+  will keep calling optional forever since optional will never return a no-match.
+  So in general, any rule that can be "nullable" (meaning it can return
+  a zero length match) must not be put inside a kleene star.<br>这里的问题是，克林星会持续地循环，直至它从内嵌分析器中获得一个不匹配。因为 <tt>optional</tt> 规则是可选的，它总是返回匹配。即使输入并不匹配 "optional"，它还是会返回一个零长度的匹配。<tt>list_of_optional</tt>
+  将不停地调用 optional，由于 optional 永远不会返回一个不匹配。所以一般来说，任何可能为 "nullable" (即可以返回零长度匹配)的规则都不能置于克林星之内。</p>
+<p><strong><a name="CVS"></a>Boost CVS and Spirit CVS</strong></p>
+<p><font color="#ff0000">Question:</font> There is Boost CVS and Spirit CVS. Which
+  is used for further development of Spirit?<br><font color="#ff0000">问题：</font>现在既有 Boost CVS 又有 Spirit CVS。Spirit 后续的开发将使用哪一个?</p>
+<p> Generally, development takes place in Spirit's CVS. However, from time to
+  time a new version of Spirit will be integrated in Boost. When this happens
+  development takes place in the Boost CVS. There will be announcements on the
+  Spirit mailing lists whenever the status of the Spirit CVS changes.<br>通常，开发是在Spirit的CVS中进行的。但是，时不时要将Spirit的新版本集成到Boost中。这时就需要在Boost CVS中进行开发了。当Spirit CVS的状态改变时，在Spirit邮件列表中会有通知。<br>
+</p>
+<table align="center" border="0" width="80%">
+  <tbody><tr>
+    <td class="note_box"><img src="theme/alert.gif" height="16" width="16">
+    During development of Spirit v1.8.1 (released as part of boost-1.32.0) and
+    v1.6.2, Spirit's developers decided to stop maintaining Spirit CVS for
+    BRANCH_1_8 and BRANCH_1_6. This was necessary to reduce the added work of
+    maintaining and synch'ing two repositories. The maintenance of these branches
+    will take place on Boost CVS. At this time, new developments towards Spirit
+    v2 and other experimental developments are expected to happen in Spirit
+    CVS.<br><img src="theme/alert.gif" height="16" width="16">
+    在Spirit v1.8.1 (作为boost-1.32.0的组成部分发布)和
+    v1.6.2 的开发期间，Spirit的开发者决定停止为
+    BRANCH_1_8 和 BRANCH_1_6 维护Spirit CVS。为了减少维护和同步两个版本库的工作量，这是必须的。这些分支的维护将在Boost CVS中进行。此时，Spirit
+    v2的新开发以及其它试验性质的开发工作仍在Spirit
+    CVS中。</td>
+  </tr>
+</tbody></table>
+<p><strong><a name="compilation_times"></a>How to reduce compilation times with
+  complex Spirit grammars 如何减少复杂的Spirit语法的编译时间 </strong></p>
+<p><font color="#ff0000">Question:</font> Are there any techniques to minimize
+  compile times using spirit? For simple parsers compile time doesn't seem to
+  be a big issue, but recently I created a parser with about 78 rules
+  and it took about 2 hours to compile. I would like to break the grammar up into
+  smaller chunks, but it is not as easy as I thought it would be because rules
+  in two grammar capsules are defined in terms of each other. Any thoughts?<br><font color="#ff0000">问题：</font>有
+没有什么技术可以最小化使用spirit的编译时间？对于较为简单的分析器，编译时间不是什么大的问题，但最近我创建了一个约有78个规则的分析器，它差
+不多需要2小时才编译完。我很想将此语法分解为小块，但这并非我所想的那么容易，因为分在两个语法中的规则要相互根据对方来定义。有别的方法吗？</p>
+<p> The only way to reduce compile times is<br>减少编译时间的唯一方法是 </p>
+<ul>
+  <li> to split up your grammars into smaller chunks<br>将你的语法分为更小的块</li>
+  <li> prevent the compiler from seeing all grammar definitions at the same time
+    (in the same compilation unit)<br>阻止编译器在同一时间(在同一个编译单元中)看到所有的语法定义</li>
+</ul>
+<p>The first task is merely logistical, the second is rather a technical one.<br>第一项任务很明显，第二项才是技术活。 </p>
+<p>A good example of solving the first task is given in the Spirit cpp_lexer example
+  written by JCAB (you may find it on the <a href="http://spirit.sourceforge.net/repository/applications/show_contents.php">applications' repository</a>).<br>由JCAB编写的Spirit cpp_lexer 例子中给出了解决第一项任务的一个好例子(你可以在 <a href="http://spirit.sourceforge.net/repository/applications/show_contents.php">应用程序仓库</a> 中找到它)。
+</p>
+<p>The cross referencing problems may be solved by some kind of forward declaration,
+  or, if this does not work, by introducing some dummy template argument to the
+  non-templated grammars. Thus allows the instantiation time to be defered until the
+  compiler has seen all the defintions:<br>交叉引用的问题可以通过一些前向声明来解决，或者，如果这样不行的话，也可以通过向非模板语法引入一些伪模板参数来解决。这样可以将实例化时间推迟至编译器见到所有定义为止：</p>
+<pre>    <span class="keyword">template</span> &lt;<span class="keyword">typename</span> T = <span class="keyword">int</span>&gt;<br>    grammar2;
+
+    <span class="keyword">template</span> &lt;<span class="keyword">typename</span> T = <span class="keyword">int</span>&gt;<br>    <span class="keyword">struct</span> grammar1 : <span class="keyword">public</span> grammar&lt;grammar1&gt;<br>    {<br>    <span class="comment">// refers to grammar2&lt;&gt; 引用grammar2&lt;&gt;</span>
+    };
+
+    <span class="keyword">template</span> &lt;typename T&gt;<br>    <span class="keyword">struct</span> grammar2 : <span class="keyword">public</span> grammar&lt;grammar2&gt;<br>    {<br>    <span class="comment">// refers to grammar1&lt;&gt; 引用grammar1&lt;&gt;</span>
+    };
+
+    //...
+    grammar1&lt;&gt; g; <span class="comment">// both grammars instantiated here 两个语法均在此实例化</span>
+</pre>
+<p>The second task is slightly more complex. You must ensure that in the first
+  compilation unit the compiler sees only some function/template <strong>declaration</strong>
+  and in the second compilation unit the function/template <strong>definition</strong>.
+  Still no problem, if no templates are involved. If templates are involved,
+  you need to manually (explicitly) instantiate these templates with the correct
+  template parameters inside a separate compilation unit. This way the compilation
+  time is split between several compilation units, reducing the overall
+  required time drastically too.<br>第二个任务要复杂些。你必须确保在第一个编译单元中编译器只见到一些函数/模板的<strong>声明</strong>，而在第二个编译单元中是函数/模板的<strong>定义</strong>。如果没有涉及模板，这没有问题。如果涉及到模板，你就需要手工(显式)地在各个编译单元中以正确的模板参数实例化这些模板。使用这种方法，编译时间被几个编译单元分割，从而大大减少所需的总时间。 </p>
+<p>For a sample, showing how to achieve this, you may want to look at the <tt>Wave</tt>
+  preprocessor library, where this technique is used extensively.  (this should be available for download from <a href="http://spirit.sf.net/">Spirit's site</a> as soon as you read this).<br>作为一个示范如何实现这一点的例子，你可以看一下 <tt>Wave</tt>
+  预处理器库，其中广泛使用了此技术(在你阅读本文时，该库应可从 <a href="http://spirit.sf.net">Spirit's 站点</a> 开载了)。</p>
+<p><strong><a name="frame_assertion" id="frame_assertion"></a>Closure frame assertion 闭包帧断言</strong></p>
+<p><font color="#ff0000">Question:</font> When I run the parser I get an assertion
+  <span class="string">"frame.get() != 0 in file closures.hpp"</span>.
+  What am I doing wrong?<br><font color="#ff0000">问题：</font>当我运行一个分析器时，获得了一个
+  <span class="string">"frame.get() != 0 in file closures.hpp"</span> 的断言。我做错了什么？</p>
+<p>Basically, the assertion fires when you are accessing a closure variable that
+  is not constructed yet. Here's an example. We have three rules <tt>a</tt>, <tt>b</tt>
+  and <tt>c</tt>. Consider that the rule <tt>a</tt> has a closure member <tt>m</tt>.
+  Now:<br>基本上，这个断言在你访问一个尚未构造的闭包变量时触发。以下是一个例子。我们有三个规则 <tt>a</tt>, <tt>b</tt> 和 <tt>c</tt>。假设规则 <tt>a</tt> 有一个闭包成员 <tt>m</tt>。现在：</p>
+<pre>    <span class="identifier">a</span> <span class="special">=</span> <span class="identifier">b</span><span class="special">;</span>
+    <span class="identifier">b</span> <span class="special">=</span> <span class="identifier">int_p</span><span class="special">[</span><span class="identifier">a</span><span class="special">.</span><span class="identifier">m</span> <span class="special">=</span> 123<span class="special">];</span>
+    <span class="identifier">c</span> <span class="special">=</span> <span class="identifier">b</span><span class="special">;</span></pre>
+<p>When the rule <tt>a</tt> is invoked, its frame is set, along with its member
+  <tt>m</tt>. So, when <tt>b</tt> is called from <tt>a</tt>, the semantic action
+  <tt>[a.m = 123]</tt>will store <tt>123</tt> into <tt>a</tt>'s closure member
+  <tt>m</tt>. On the other hand, when <tt>c</tt> is invoked, and <tt>c</tt> attempts
+  to call <tt>b</tt>, no frame for <tt>a</tt> is set. Thus, when <tt>b</tt> is
+  called from <tt>c</tt>, the semantic action <tt>[a.m = 123]</tt>will fire the
+  <span class="string">"frame.get() != 0 in file closures.hpp"</span>
+  assertion.<br>当规则 <tt>a</tt> 被调用时，它的帧被设置，其中含有它的成员
+  <tt>m</tt>。因此，当从 <tt>a</tt> 调用 <tt>b</tt> 时，语义动作<tt></tt>
+  <tt>[a.m = 123]</tt>将把 <tt>123</tt> 保存在 <tt>a</tt> 的闭包成员
+  <tt>m</tt> 中。另一方面，当 <tt>c</tt> 被调用且 <tt>c</tt> 试图调用 <tt>b</tt> 时，并没有为 <tt>a</tt> 设置帧。因此，当从 <tt>c</tt> 调用 <tt>b</tt>&nbsp;<tt></tt>时，语义动作 <tt>[a.m = 123]</tt>将触发
+  <span class="string">"frame.get() != 0 in file closures.hpp"</span>
+  断言。</p>
+<p><strong><a name="greedy_rd" id="greedy_rd"></a>Greedy RD &nbsp;贪心RD</strong></p>
+<p><font color="#ff0000">Question:</font> I'm wondering why the this won't work
+  when parsed:<br><font color="#ff0000">问题：</font>我很奇怪为什么在进行分析时，以下语法不能工作：</p>
+<pre><span class="identifier">    a</span> <span class="special">= +</span><span class="identifier">anychar_p</span><span class="special">;</span>
+    <span class="identifier">b</span> = <span class="string">'('</span> <span class="special">&gt;&gt;</span> <span class="identifier">a</span> <span class="special">&gt;&gt;</span> <span class="string">')'</span><span class="special">;</span></pre>
+<p>Try this:<br>试一下这个：</p>
+<pre><span class="identifier">    a</span> <span class="special">= +(</span><span class="identifier">anychar_p - </span><span class="string">')'</span><span class="special">);</span>
+    <span class="identifier">b</span> <span class="special">=</span> <span class="string">'('</span> <span class="special">&gt;&gt;</span> <span class="identifier">a</span> <span class="special">&gt;&gt;</span> <span class="string">')'</span><span class="special">;</span></pre>
+<p>David Held writes: That's because it's like the langoliers--it eats everything
+  up. You usually want to say what it shouldn't eat up by subtracting the terminating
+  character from the parser. The moral being: Using <tt>*anychar_p</tt> or <tt>+anychar_p</tt>
+  all by itself is usually a <em>Bad Thing</em>™.<br>David Held 写道：这是因为它象langoliers--它把一切都吃掉了。通常你想通过从分析器中去掉一些终止符来说明分析器不应吃掉什么。规则是：使用 <tt>*anychar_p</tt> 或 <tt>+anychar_p</tt>
+  通常是一件坏事。</p>
+<p>In other words: Recursive Descent is inherently greedy (however, see <a href="rationale.html#exhaustive_rd">Exhaustive
+  backtracking and greedy RD</a>).<br>换句话说：递归下降本身就是贪心的(不过，请看 <a href="rationale.html#exhaustive_rd">完全回溯和贪心RD</a>)。</p>
+<p><span class="special"></span><strong><a name="referencing_a_rule_at_construction" id="referencing_a_rule_at_construction"></a>Referencing
+  a rule at construction time 在构造期引用规则</strong></p>
+<p><font color="#ff0000">Question:</font> The code below terminates with a segmentation
+  fault, but I'm (obviously) confused about what I'm doing wrong.<br><font color="#ff0000">问题：</font>以下代码导致了段错误，但我(显然)没弄明白自己错在哪里。</p>
+<pre>    rule<span class="special">&lt;</span>ScannerT<span class="special">,</span> clos<span class="special">::</span>context_t<span class="special">&gt;</span> id <span class="special">=</span> int_p<span class="special">[</span>id<span class="special">.</span>i <span class="special">=</span> arg1<span class="special">];</span></pre>
+<p>You have a rule <tt>id</tt> being constructed. Before it is constructed, you
+  reference <tt>id.i</tt> in the RHS of the constructor. It's a chicken and egg
+  thing. The closure member <tt>id.i</tt> is not yet constructed at that point.
+  Using assignment will solve the problem. Try this instead:<br>你有一个规则 <tt>id</tt> 正被构造。在它构造完成之前，你在其构造函数的RHS中引用了 <tt>id.i</tt>。这是鸡和蛋的问题。闭包成员 <tt>id.i</tt> 在此时尚未构造。使用赋值可以解决这个问题。试试这个：</p>
+<pre>    rule<span class="special">&lt;</span>ScannerT<span class="special">,</span> clos<span class="special">::</span>context_t<span class="special">&gt;</span> id<span class="special">;</span>
+    id <span class="special">=</span> int_p<span class="special">[</span>id<span class="special">.</span>i <span class="special">=</span> arg1<span class="special">];</span></pre>
+<p><span class="special"></span><strong><a name="storing_rules" id="storing_rules"></a>Storing
+  Rules 保存规则 </strong></p>
+<p><font color="#ff0000">Question:</font> Why can't I store rules in STL containers
+  for later use and why can't I pass and return rules to and from functions by
+  value?<br><font color="#ff0000">问题：</font>为什么我不能将规则保存在STL容器中以备后用，还有，为什么我不能以传值的方式向函数传入或从函数返回规则？ </p>
+<p>EBNF is primarily declarative. Like in functional programming, It's a static
+  recipe and there's no notion of do this then that. However, in Spirit, we managed
+  to coax imperative C++ to take in declarative EBNF. Hah! Fun!... We did that
+  by masquerading the C++ assignment operator to mimic EBNF's <tt>::=</tt>, among
+  other things (e.g. <tt>&gt;&gt;</tt>, <tt>|</tt>, <tt>&amp;</tt> etc.). We used
+  the rule class to let us do that by giving its assignment operator (and copy
+  constructor) a different meaning and semantics. Doing so made the rule unlike
+  any other C++ object. You can't copy it. You can't assign it. You can't place
+  it in a container (vector, stack, etc).Heck, you can't even return it from a
+  function *by value*.<br>EBNF是声明式的。类似于函数式编程，它是一些静态的声明，且没有这样做的概念。但是，在Spirit中，我们必须设法让C++参与到声明式的EBNF中。哈！有趣！... 我们通过伪装C++的赋值操作符以模仿EBNF的 <tt>::=</tt>，其它东西外(如 <tt>&gt;&gt;</tt>, <tt>|</tt>, <tt>&amp;</tt>
+等等)除外。我们使用 rule 类来实现这一点，通过给予其赋值操作符(及复制构造函数)一个不同的意义和语义。这样做使得 rule
+与其它C++对象不一样。你不能复制它。你不能赋值它。你不能把它放入容器(vector, stack,
+等等)中。哎呀，你甚至不能从一个函数返回它 *以传值的方式*。</p>
+<table align="center" border="0" width="80%">
+  <tbody><tr>
+    <td class="note_box"><img src="theme/alert.gif" height="16" width="16"> The
+      rule is a weird object, unlike any other C++ object. It does not have the
+      proper copy and assignment semantics and cannot be stored and passed around
+      by value.<br><img src="theme/alert.gif" height="16" width="16"> 规则是一种奇怪的对象，与其它C++对象不一样。它没有正确的复制和赋值语义，也不能被保存或以值方式传递。</td>
+  </tr>
+</tbody></table>
+<p>However nice declarative EBNF is, the dynamic nature of C++ can be an advantage.
+  We've seen this in action here and there. There are indeed some interesting
+  applications of dynamic parsers using Spirit. Yet, we haven't fully utilized
+  the power of dynamic parsing, unless(!), we have a rule that's not so alien
+  to C++ (i.e. behaves as a good C++ object). With such a beast, we can write
+  parsers that's defined at run time, as opposed to at compile time.<br>虽
+然声明式EBNF是好，但C++的动态特性也可以是一种优势。我们已经各处的动作中见过这一咪。确有一些使用Spirit的动态分析器的有趣应用。然而，
+我们还没有充分利用动态分析的力量，除非(!)我们有一个对于C++不那么陌生的 rule
+(即其行为是一个好的C++对象)。有了这样一个东西，我们就可以写出在运行期而非编译期定义的分析器了。</p>
+<p>Now that I started focusing on rules (hey, check out the hunky new rule features),
+  it might be a good time to implement the rule-holder. It is basically just a
+  rule, but with C++ object semantics. Yet it's not as simple. Without true garbage
+  collection, the implementation will be a bit tricky. We can't simply use reference
+  counting because a rule-holder (hey, anyone here has a better name?) *is-a*
+  rule, and rules are typically recursive and thus cyclic. The problem is which
+  will own which.<br>现
+在，我开始关注于规则(嘿，找出hunky新规则特性)，它可能是实现规则保存器的好时机。基本上它只是一个规则，但具有C++对象的语义。然而事情并非
+这么简单。没有真正的垃圾回收机制，这个实现将会有些棘手。我们不能只是使用引用计数，因为规则保存器(嘿，其它人有更好的名字吗？)*is-a*规则，
+而规则典型是递归的，这会导致循环。问题是谁将拥有谁。</p>
+<p>Ok... this will do for now. You'll definitely see more of the rule-holder in
+  the coming days.<br>Ok... 现在将要开始实现它。你肯定在不久就会看到更多关于规则保存器的东西。</p>
+<p><strong><a name="parsing_ints_and_reals"></a>Parsing Ints and Reals 分析整数和实数</strong></p>
+<p> <font color="#ff0000">Question:</font>  I was trying to parse an int or float value with the <tt>longest_d</tt> directive and put some actors on the alternatives to visualize the results. When I parse "123.456", the output reports:<br><font color="#ff0000">问题：</font>我尝试用 <tt>longest_d</tt> 指示符分析一个整数或浮点数，并在选择中置入一些动作以得到结果。当我分析 "123.456" 时，输出：</p>
+<ol>
+  <li>(int) has been matched: full match = false</li>
+  <li> (double) has been matched: full match = true</li>
+</ol>
+<p>That is not what I expected. What am I missing?<br>这不是我想要的。我哪里搞错了？ </p>
+<p> Actually, the problem is that both semantic actions of the int and
+real branch will be triggered because both branches will be tried. This
+doesn't buy us much. What actually wins in the end is what you
+expected. But there's no easy way to know which one wins. The problem
+stems from the ambiguity.<br>实际上，问题是整数和实数分支的语义动作都被触发了，因为两个分支均被尝试。这对我们没什么意义。最后哪个分支胜出才是你想要的。不过却没有简单的方法来获知哪一个胜出。这个问题源自于歧义性。 </p>
+<blockquote>
+  <p>Case1: Consider this input: "2". Is it an int or a real? They are both (strictly following the grammar of a real).<br>Case1: 考虑输入 "2"。它是一个整数还是一个实数？两者都是(严格符合实数的语法)。 </p>
+  <p>Case2
+: Now how about "1.0"? Is it an int or a real? They are both, albeit
+the int part gets a partial match: "1". That is why you are getting a
+(partial) match for your <em>int</em> rule (full match = false).<br>Case2
+: 那么输入 "1.0" 又如何？它是一个整数还是一个实数？两者都是，虽然整数部分只获得部分匹配："1"。这就是为什么你从 <em>int</em> 规则获得一个(部分)匹配的原因(full match = false)。 </p>
+</blockquote>
+<p>  Instead of using the <tt>longest_d</tt> to parse ints and reals,
+what I suggest is to remove the ambiguity and use the plain
+short-circuiting alternatives. The first step is to use <tt><a href="numerics.html#strict_reals">strict_real_p</a> </tt>to make the first case unambiguous. Unlike
+
+
+  <tt>real_p</tt>, <tt>strict_real_p</tt> requires a dot to be present for a number to be considered a successful match.
+
+Your grammar can be written unambiguously as:<br>不要使用 <tt>longest_d</tt> 来分析整数和实数，我的建议是，去掉歧义性，使用普通的短路选择。第一步是使用 <tt><a href="numerics.html#strict_reals">strict_real_p</a> </tt>来令第一种情况没有歧义。与
+
+
+  <tt>real_p</tt> 不同，<tt>strict_real_p</tt> 要求数字要有一个小数点才被认为是成功的匹配。你的语法可以无歧义地写为：</p>
+<pre>    strict_real_p<span class="special"> | </span>int_p</pre>
+<p> Note that because ambiguity is resolved, attaching actions to both branches is safe. Only one will be triggered:<br>注意，因为歧义性得到解决，向两个分支附加动作是安全的了。只有一个会被触发：</p>
+<pre>    strict_real_p<span class="special">[</span>R<span class="special">] | </span>int_p<span class="special">[</span>I<span class="special">]</span></pre>
+<blockquote>
+  <p> "1.0" ---&gt; triggers R<br>
+"2" ---&gt; triggers I</p>
+</blockquote>
+<p> Again, as a rule of thumb, it is always best to resolve as much
+ambiguity as possible. The best grammars are those which involve no
+backtracking at all: an LL(1) grammar. Backtracking and semantic
+actions do not mix well.<br>同样，作为一个经验法则，最好总是解决尽可能多的歧义性。最好的语法是那些不需要回溯的语法：一个 LL(1) 语法。回溯和语义动作混用不是太好。</p>
+<p><b><a name="output_operator" id="output_operator"></a>BOOST_SPIRIT_DEBUG and missing <tt>operator&lt;&lt;</tt></b></p>
+<p><font color="#ff0000">Question:</font> My code compiles fine in release mode but when I try to define <tt>BOOST_SPIRIT_DEBUG</tt> the compiler complains about a missing <tt><span class="keyword">operator</span><span class="special">&lt;&lt;</span></tt>.<br><font color="#ff0000">问题：</font>我们代码在发布模式下可正常编译，但当我尝试定义 <tt>BOOST_SPIRIT_DEBUG</tt> 时，编译器投诉缺少 <tt><span class="keyword">operator</span><span class="special">&lt;&lt;</span></tt>。</p>
+<p>When <tt>BOOST_SPIRIT_DEBUG</tt> is defined debug output is generated for
+  spirit parsers. To this end it is expected that each closure member has the
+  default output operator defined.<br>当 <tt>BOOST_SPIRIT_DEBUG</tt> 被定义时，将为spirit分析器生成调试输出。为此，要求每一个闭包成员都带有缺省的输出操作符定义。</p>
+<p>You may provide the operator overload either in the namespace where the
+  class is declared (will be found through Argument Dependent Lookup) or make it visible where it is
+  used, that is <tt><span class="keyword">namespace</span> <span class="identifier">boost</span><span class="special">::</span><span class="identifier">spirit</span></tt>. Here's an example for <tt><span class="identifier">std</span><span class="special">::</span><span class="identifier">pair</span></tt>:<br>你可以在该类被定义的名字空间中提供这个操作符(可通过ADL查找得到)，或者在使用它的地方，即 <tt><span class="keyword">namespace</span> <span class="identifier">boost</span><span class="special">::</span><span class="identifier">spirit</span></tt> 处令其可见。以下是一个关于 <tt><span class="identifier">std</span><span class="special">::</span><span class="identifier">pair</span></tt> 的例子：</p>
+<pre><code>
+    <span class="preprocessor">#include</span> <span class="string">&lt;iosfwd&gt;</span>
+    <span class="preprocessor">#include</span> <span class="string">&lt;utility&gt;</span>
+
+    <span class="keyword">namespace</span> <span class="identifier">std</span> <span class="special">{</span>
+
+        <span class="keyword">template</span> <span class="special">&lt;</span>
+            <span class="keyword">typename</span> <span class="identifier">C</span><span class="special">,</span>
+            <span class="keyword">typename</span> <span class="identifier">E</span><span class="special">,</span>
+            <span class="keyword">typename</span> <span class="identifier">T1</span><span class="special">,</span>
+            <span class="keyword">typename</span> <span class="identifier">T2</span>
+        <span class="special">&gt;</span>
+        <span class="identifier">basic_ostream</span><span class="special">&lt;</span><span class="identifier">C</span><span class="special">,</span> <span class="identifier">E</span><span class="special">&gt;</span> <span class="special">&amp;</span> <span class="keyword">operator</span><span class="special">&lt;&lt;(</span>
+            <span class="identifier">basic_ostream</span><span class="special">&lt;</span><span class="identifier">C</span><span class="special">,</span> <span class="identifier">E</span><span class="special">&gt;</span> <span class="special">&amp;</span> <span class="identifier">out</span><span class="special">,</span>
+            <span class="identifier">pair</span><span class="special">&lt;</span><span class="identifier">T1</span><span class="special">,</span> <span class="identifier">T2</span><span class="special">&gt;</span> <span class="keyword">const</span> <span class="special">&amp;</span> <span class="identifier">what</span><span class="special">)</span>
+        <span class="special">{</span>
+            <span class="keyword">return</span> <span class="identifier">out</span> <span class="special">&lt;&lt;</span> <span class="string">'('</span> <span class="special">&lt;&lt;</span> <span class="identifier">what</span><span class="special">.</span><span class="identifier">first</span> <span class="special">&lt;&lt;</span> <span class="string">", "</span>
+                <span class="special">&lt;&lt;</span> <span class="identifier">what</span><span class="special">.</span><span class="identifier">second</span> <span class="special">&lt;&lt;</span> <span class="string">')'</span><span class="special">;</span>
+        <span class="special">}</span>
+
+    <span class="special">}</span>
+
+</code></pre>
+<p><b><a name="repository" id="repository"></a>Applications that used to be part of spirit 以前作为spirit一部分的应用程序</b></p>
+<p><font color="#ff0000">Question:</font> Where can I find <i>&lt;insert great application&gt;</i>, that used to be part of the Spirit distribution?<br><font color="#ff0000">问题：</font>我可以在哪里找到 <i>&lt;insert great application&gt;</i>，被用作Spirit发布包的一部分的？</p>
+<p>Old versions of Spirit used to include applications built with it.
+  In order to streamline the distribution they were moved to a separate
+  <a href="http://spirit.sourceforge.net/repository/applications/show_contents.php">applications repository</a>.
+  In that page you'll find links to full applications that use the Spirit
+  parser framework. We encourage you to send in your own applications for
+  inclusion (see the page for instructions).<br>Spirit的旧版本通常会包含一些用spirit来构建的应用程序。为了简化发布包，它们被移至了单独的
+  <a href="http://spirit.sourceforge.net/repository/applications/show_contents.php">应用程序仓库</a>。在那里，你可以找到一些链接，链至一些使用了Spirit分析器框架的完整的应用程序。我们鼓励你将你自己的应用程序也发至此处(请见指示页)。</p>
+  <p>You may also check out the <a href="http://spirit.sourceforge.net/repository/grammars/show_contents.php">grammars' repository</a>.<br>你也可以检查一下 <a href="http://spirit.sourceforge.net/repository/grammars/show_contents.php">语法仓库</a>。</p>
+<table align="center" border="0" width="80%">
+  <tbody><tr>
+    <td class="note_box">
+      <img src="theme/note.gif" height="16" width="16"> You'll still find the
+      example applications that complement (actually are part of) the
+      documentation in the usual place: <code>libs/spirit/example</code>.<br><img src="theme/note.gif" height="16" width="16"> 你仍然可以在老地方 <code>libs/spirit/example</code> 找到作为文档补充(其实是文档的一部分)的例子应用程序。<br>
+      <br>
+      <img src="theme/alert.gif" height="16" width="16"> The applications and
+      grammars listed in the repositories are works of the respective authors.
+      It is the author's responsibility to provide support and maintenance.
+      Should you have any questions, please send the author an email.<br><img src="theme/alert.gif" height="16" width="16"> 在仓库中列出的应用程序和语法是各个作者的作品。提供支持和维护是各位作者的责任。如果你有任何问题，请给作者发送email。
+    </td>
+  </tr>
+</tbody></table>
+<br>
+<table border="0">
+  <tbody><tr>
+    <td width="10"></td>
+    <td width="30"><a href="../index.html"><img src="theme/u_arr.gif" border="0"></a></td>
+    <td width="30"><a href="techniques.html"><img src="theme/l_arr.gif" border="0"></a></td>
+    <td width="30"><a href="rationale.html"><img src="theme/r_arr.gif" border="0"></a></td>
+  </tr>
+</tbody></table>
+<br>
+<hr size="1">
+<p class="copyright">Copyright © 1998-2003 Joel de Guzman<br>
+<span class="copyright">Copyright © 2002-2003 Hartmut Kaiser </span><br>
+<span class="copyright">Copyright © 2006-2007 Tobias Schwinger </span><br>
+  <br>
+  <font size="2">Use, modification and distribution is subject to the Boost Software
+      License, Version 1.0. (See accompanying file LICENSE_1_0.txt or copy at
+http://www.boost.org/LICENSE_1_0.txt)</font></p>
+<p class="copyright">&nbsp;</p>
+</body></html>

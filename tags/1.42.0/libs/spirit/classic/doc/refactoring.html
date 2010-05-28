@@ -1,0 +1,121 @@
+<!DOCTYPE HTML PUBLIC "-//W3C//DTD HTML 4.01 Transitional//EN">
+<html><head>
+
+<title>Refactoring Parsers</title><meta http-equiv="Content-Type" content="text/html; charset=UTF-8">
+<link href="theme/style.css" rel="stylesheet" type="text/css"></head>
+
+<body>
+<table background="theme/bkd2.gif" border="0" cellspacing="2" width="100%">
+  <tbody><tr> 
+    <td width="10"> <font face="Verdana, Arial, Helvetica, sans-serif" size="6"><b>&nbsp;</b></font></td>
+    <td width="85%"> <font face="Verdana, Arial, Helvetica, sans-serif" size="6"><b>Refactoring Parsers 重构分析器</b></font></td>
+    <td width="112"><a href="http://spirit.sf.net"><img src="theme/spirit.gif" align="right" border="0" height="48" width="112"></a></td>
+  </tr>
+</tbody></table>
+<br>
+<table border="0">
+  <tbody><tr> 
+    <td width="10"></td>
+    <td width="30"><a href="../index.html"><img src="theme/u_arr.gif" border="0"></a></td>
+    <td width="30"><a href="functor_parser.html"><img src="theme/l_arr.gif" border="0"></a></td>
+    <td width="30"><a href="regular_expression_parser.html"><img src="theme/r_arr.gif" border="0"></a></td>
+  </tr>
+</tbody></table>
+<p><a name="refactoring_parsers"></a>There are three types of Refactoring Parsers 
+  implemented right now, which help to abstract common parser refactoring tasks. 
+  Parser refactoring means, that a concrete parser construct is replaced (refactored) 
+  by another very similar parser construct. Two of the Refactoring Parsers described 
+  here (<tt>refactor_unary_parser</tt> and <tt>refactor_action_parser</tt>) are 
+  introduced to allow a simple and more expressive notation while using <a href="confix.html">Confix 
+  Parsers</a> and <a href="list_parsers.html">List Parsers</a>. The third Refactoring 
+  Parser (<tt>attach_action_parser</tt>) is implemented to abstract some functionality 
+  required for the Grouping Parser. Nevertheless 
+  these Refactoring Parsers may help in solving other complex parsing tasks too.<br>目前已经实现了三种重构分析器，它们有助于抽象分析器的一般重构方法。分析器重构意味着，一个特定的分析器构造被一个非常相像的分析器构造所替代。这节所描述的两种重构分析器（<tt>refactor_unary_parser</tt> 和 <tt>refactor_action_parser</tt><tt></tt>）的作用是在使用<a href="confix.html">片段分析器</a>和<a href="list_parsers.html">列表分析器</a>时，能够使用简单乃至更加复杂的符号。第三个所实现的抽象分析器(<tt>attach_action_parser</tt>) 用于抽象在为分析器编组时所需的某些功能。然而以上这些重构分析器在应对其他复杂的分析上仍有帮助。</p>
+<h3>Refactoring unary parsers 重构一元分析器</h3>
+<p>The <tt>refactor_unary_d</tt> parser generator, which should be used to generate 
+  a unary refactoring parser, transforms a construct of the following type<br><tt>refactor_unary_d</tt><span style="font-family: Courier New;">&nbsp;分析器生成器，用于生成一元重构分析器，转换下面类型的构造</span></p> 
+<pre><code>    <span class="identifier">refactor_unary_d</span><span class="special">[*</span><span class="identifier">some_parser </span><span class="special">- </span><span class="identifier">another_parser</span><span class="special">]</span></code></pre>
+<p>to<br>为 </p> 
+<pre><code>    <span class="special">*(</span><span class="identifier">some_parser</span> <span class="special">- </span><span class="identifier">another_parser</span><span class="special">)</span></code></pre>
+<blockquote>
+  <p>where <tt>refactor_unary_d</tt> is a predefined object of the parser generator 
+    struct <tt>refactor_unary_gen&lt;&gt;</tt><br>其中 <tt>refactor_unary_d</tt> 是分析器生成器结构 <tt>refactor_unary_gen&lt;&gt;</tt> 的一个预定义对象<tt></tt></p>
+</blockquote>
+<p>The <tt>refactor_unary_d</tt> parser generator generates a new parser as shown 
+  above, only if the original construct is an auxilliary binary parser (here the 
+  difference parser) and the left operand of this binary parser is an auxilliary 
+  unary parser (here the kleene star operator). If the original parser isn't a 
+  binary parser the compilation will fail. If the left operand isn't an unary 
+  parser, no refactoring will take place.<br><tt>refactor_unary_d</tt><span style="font-family: Courier New;">&nbsp;</span>分析器生成器只在原始的构造为辅助的二元分析器（这里为减号）且这个二元分析器左边的算子为辅助的一元分析器（这里是克林星操作符）时，才生成如上所示的新的分析器。如果原始的分析器不是二元分析器则产生编译失败。如果左边的算子不是一元分析器，则重构不会发生。</p>
+<h3>Refactoring action parsers&nbsp;重构动作分析器</h3>
+<p>The <tt>refactor_action_d</tt> parser generator, which should be used to generate 
+  an action refactoring parser, transforms a construct of the following type<br> <tt>refactor_action_d</tt><span style="font-family: Courier New;"> </span>分析器生成器用于生成动作重构分析器，转换如下类型的结构</p>
+<pre><code>    <span class="identifier">refactor_action_d</span><span class="special">[</span><span class="identifier">some_parser</span><span class="special">[</span><span class="identifier">some_actor</span><span class="special">] </span><span class="special">- </span><span class="identifier">another_parser</span><span class="special">]</span></code></pre>
+<p>to<br>为 </p>
+<pre><code>    <span class="special">(</span><span class="identifier">some_parser </span><span class="special">- </span><span class="identifier">another_parser</span><span class="special">)[</span><span class="identifier">some_actor</span><span class="special">]</span></code></pre>
+<blockquote> 
+  <p>where <tt>refactor_action_d</tt> is a predefined object of the parser generator 
+    struct <tt>refactor_action_gen&lt;&gt;</tt><br>其中 <tt>refactor_</tt><tt>action</tt><tt>_d</tt> 是分析器生成器结构 <tt>refactor_</tt><tt>action</tt><tt>_gen&lt;&gt;</tt> 的一个预定义对象</p>
+</blockquote>
+<p>The <tt>refactor_action_d</tt> parser generator generates a new parser as shown 
+  above, only if the original construct is an auxilliary binary parser (here the 
+  difference parser) and the left operand of this binary parser is an auxilliary 
+  parser generated by an attached semantic action. If the original parser isn't 
+  a binary parser the compilation will fail. If the left operand isn't an action 
+  parser, no refactoring will take place.<br><tt>refactor_action_d</tt><span style="font-family: Courier New;">&nbsp;</span>分析器生成器仅当原始的构造为辅助的二元分析器（这里为减号）且这个二元分析器左边的算子为生成自所挂接的语义动作的辅助分析器时，才生成如上所示的新的分析器。如果原始的分析器不是二元分析器则产生编译失败。如果左边的算子不是动作分析器，则重构不会发生。</p>
+<h3>Attach action refactoring&nbsp;挂接动作重构</h3>
+<p>The <tt>attach_action_d</tt> parser generator, which should be used to generate 
+  an attach action refactoring parser, transforms a construct of the following 
+  type<br><tt>attach_action_d</tt><span style="font-family: Courier New;">&nbsp;</span>分析器生成器，用于生成挂接动作重构分析器，转换如下类型的结构</p>
+<pre><code>    <span class="identifier">attach_action_d</span><span class="special">[</span><span class="identifier">(some_parser</span> <span class="special">&gt;&gt; </span><span class="identifier">another_parser</span>)<span class="special">[</span><span class="identifier">some_actor</span><span class="special">]</span><span class="special">]</span></code></pre>
+<p>to<br>为 </p>
+<pre><code>    <span class="identifier">some_parser</span><span class="special">[</span><span class="identifier">some_actor</span><span class="special">]</span><span class="identifier"> </span><span class="special">&gt;&gt; </span><span class="identifier">another_parser</span><span class="special">[</span><span class="identifier">some_actor</span><span class="special">]</span></code></pre>
+<blockquote> 
+  <p>where <tt>attach_action_d</tt> is a predefined object of the parser generator 
+    struct <tt>attach_action_gen&lt;&gt;</tt><br>其中&nbsp;<tt>attach</tt><tt>_</tt><tt>action</tt><tt>_d</tt> 是分析器生成器结构&nbsp;<tt>attach</tt><tt>_</tt><tt>action</tt><tt>_gen&lt;&gt;</tt> 的一个预定义对象</p>
+</blockquote> 
+  
+<p>The <tt>attach_action_d</tt> parser generator generates a new parser as shown 
+  above, only if the original construct is an auxilliary action parser and the 
+  parser to it this action is attached is an auxilliary binary parser (here the 
+  sequence parser). If the original parser isn't a action parser the compilation 
+  will fail. If the parser to which the action is attached isn't an binary parser, 
+  no refactoring will take place.<br><tt>attach_action_d</tt> 分析器生成器仅当原始构造是一个动作分析器且这个动作所挂接的分析器是一个二元分析器（这里是并置分析器）时，才生成如上所示新的分析器。如果原始的分析器不是动作分析器则编译失败。如果动作所挂接到的分析器不是二元分析器，则重构不会发生。</p>
+<h3>Nested refactoring 嵌套重构</h3>
+<p>Sometimes it is required to nest different types of refactoring, i.e. to transform 
+  constructs like<br>有时需要嵌套不同类型的重构，比如转化类似下面的结构</p>
+<pre><code>    <span class="special">(*</span><span class="identifier">some_parser</span><span class="special">)[</span><span class="identifier">some_actor</span><span class="special">] </span><span class="special">- </span><span class="identifier">another_parser</span></code></pre>
+<p>to<br>为 </p>
+<pre><code>    <span class="special">(*(</span><span class="identifier">some_parser </span><span class="special">- </span><span class="identifier">another_parser</span><span class="special">))[</span><span class="identifier">some_actor</span><span class="special">]</span></code></pre>
+<p>To simplify the construction of such nested refactoring parsers the <tt>refactor_unary_gen&lt;&gt;</tt> 
+  and <tt>refactor_action_gen&lt;&gt;</tt> both can take another refactoring parser 
+  generator type as their respective template parameter. For instance, to construct 
+  a refactoring parser generator for the mentioned nested transformation we should 
+  write:<br>为了简化这类嵌套重构分析器的构造，<tt>refactor_unary_gen&lt;&gt;</tt><span style="font-family: Courier New;"></span> 和 <tt>refactor_action_gen&lt;&gt;</tt> 都可以接受对方的分析器生成器类型为自己的模板参数。比如，要构造一个我们上面提到的分析器生成器，应该这么写：</p>
+<pre><span class="special">    </span><span class="keyword">typedef </span><span class="identifier">refactor_action_gen</span><span class="special">&lt;</span><span class="identifier">refactor_unary_gen</span><span class="special">&lt;&gt; </span><span class="special">&gt; </span><span class="identifier">refactor_t</span><span class="special">;<br>    </span><span class="keyword">const </span><span class="identifier">refactor_t </span><span class="identifier">refactor_nested_d </span><span class="special">= </span><span class="identifier">refactor_t</span><span class="special">(</span><span class="identifier">refactor_unary_d</span><span class="special">);</span></pre>
+<p>Now we could use it as follows to get the required result:<br>现在我们可以像下面那样使用以获得所需的结果：</p>
+<pre><code><font color="#0000ff">    </font><span class="identifier">refactor_nested_d</span><span class="special">[(*</span><span class="identifier">some_parser</span><span class="special">)[</span><span class="identifier">some_actor</span><span class="special">] </span><span class="special">- </span><span class="identifier">another_parser</span><span class="special">]</span></code></pre>
+<p>An empty template parameter means not to nest this particular refactoring parser. 
+  The default template parameter is <tt>non_nesting_refactoring</tt>, a predefined 
+  helper structure for inhibiting nesting. Sometimes it is required to nest a 
+  particular refactoring parser with itself. This is achieved by providing the 
+  predefined helper structure <tt>self_nested_refactoring</tt> as the template 
+  parameter to the corresponding refactoring parser generator template.<br>空的模板参数意味着不嵌套特定的重构分析器。默认的模板参数为 <tt>non_nesting_refactoring</tt><span style="font-family: Courier New;">，一个用于限制嵌套的预定义的辅助结构。有时特定的重构分析器需要嵌套自身。这是借由把预定义的辅助结构 <tt>self_nested_refactoring</tt> 作为对应的分析器生成器的模板参数来实现的。</span></p>
+<p><img src="theme/lens.gif" height="16" width="15"> See <a href="../example/fundamental/refactoring.cpp">refactoring.cpp</a> for a compilable example. This is part of the Spirit distribution.<br><img src="theme/lens.gif" height="16" width="15">&nbsp;可编译的例子见 <a href="../example/fundamental/refactoring.cpp">refactoring.cpp</a>，这是Spirit发布包的组成部分。</p>
+<table border="0">
+  <tbody><tr> 
+    <td width="10"></td>
+    <td width="30"><a href="../index.html"><img src="theme/u_arr.gif" border="0"></a></td>
+    <td width="30"><a href="functor_parser.html"><img src="theme/l_arr.gif" border="0"></a></td>
+    <td width="30"><a href="regular_expression_parser.html"><img src="theme/r_arr.gif" border="0"></a></td>
+  </tr>
+</tbody></table>
+<br>
+<hr size="1">
+<p class="copyright">Copyright © 2001-2003 Hartmut Kaiser<br>
+  <br>
+  <font size="2">Use, modification and distribution is subject to the Boost Software
+    License, Version 1.0. (See accompanying file LICENSE_1_0.txt or copy at
+    http://www.boost.org/LICENSE_1_0.txt)</font></p>
+<p>&nbsp;</p>
+</body></html>

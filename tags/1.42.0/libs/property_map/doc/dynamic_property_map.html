@@ -1,0 +1,528 @@
+<!DOCTYPE html PUBLIC "-//W3C//DTD XHTML 1.0 Transitional//EN" "http://www.w3.org/TR/xhtml1/DTD/xhtml1-transitional.dtd">
+<html xmlns="http://www.w3.org/1999/xhtml" xml:lang="en" lang="en">
+<head>
+
+
+
+
+  
+  
+  
+  <meta http-equiv="Content-Type" content="text/html; charset=utf-8" />
+
+
+
+
+  
+  
+  
+  <meta name="generator" content="Docutils 0.3.3: http://docutils.sourceforge.net/" />
+
+
+
+
+
+  
+  
+  
+  
+  
+  
+  <title>Boost Dynamic Property Maps</title>
+  <link rel="stylesheet" href="../../../boost.css" type="text/css" />
+</head>
+
+
+<body>
+
+
+
+
+<h1 class="title"><a class="reference" href="../../../index.htm"><img alt="Boost" src="../../../boost.png" align="middle" /></a> 动态 Property Maps</h1>
+
+
+
+
+<div class="document" id="logo-dynamic-property-maps">
+<div class="section" id="summary">
+<h1><a class="toc-backref" href="#id2" name="summary">概要</a></h1>
+
+
+
+
+<p>动态 property map 接口提供了通过一个动态类型接口对一组
+property maps 的访问。算法可以用它来操作 property maps 而无需在编译期知道它们的键类型和值类型。类型安全的代码可以使用动态 property
+maps 来更容易和更完整地连接脚本语言和其它基于文本的键-值数据表示法。</p>
+
+
+
+
+<div class="contents topic" id="contents">
+<p class="topic-title first"><a name="contents">目录</a></p>
+
+
+
+
+<ul class="simple">
+
+
+
+
+  <li><a class="reference" href="#summary" id="id2" name="id2">概要</a></li>
+
+
+
+
+  <li><a class="reference" href="#introduction" id="id3" name="id3">简介</a>
+    
+    
+    
+    <ul>
+
+
+
+
+      <li><a class="reference" href="#fred-s-info-revisited" id="id4" name="id4">重温 "Fred's Info"</a></li>
+
+
+
+
+    
+    
+    
+    </ul>
+
+
+
+
+  </li>
+
+
+
+
+  <li><a class="reference" href="#reference" id="id5" name="id5">参考</a>
+    
+    
+    
+    <ul>
+
+
+
+
+      <li><a class="reference" href="#member-functions" id="id6" name="id6">成员函数</a></li>
+
+
+
+
+      <li><a class="reference" href="#free-functions" id="id7" name="id7">自由函数</a></li>
+
+
+
+
+      <li><a class="reference" href="#exceptions" id="id8" name="id8">异常</a></li>
+
+
+
+
+    
+    
+    
+    </ul>
+
+
+
+
+  </li>
+
+
+
+
+</ul>
+
+
+
+
+</div>
+
+
+
+
+</div>
+
+
+
+
+<div class="section" id="introduction">
+<h1><a class="toc-backref" href="#id3" name="introduction">简介</a></h1>
+
+
+
+
+<p>Boost Property Map 库规定了静态的类型安全接口，它的键-值对可以被泛型算法操作。典型地，使用 property maps 的算法被按其使用的 property maps 类型进行参数化，并且使用
+Boost Property Map 库所规定的接口来操作它们。</p>
+
+
+
+
+<p>以下泛型函数示范了 property map 的基本用法。</p>
+
+
+
+
+<pre class="literal-block">template &lt;typename AgeMap, typename GPAMap&gt;<br />void <br />manipulate_freds_info(AgeMap ages, GPAMap gpas) {<br /><br />  typedef typename boost::property_traits&lt;AgeMap&gt;::key_type name_type;<br />  typedef typename boost::property_traits&lt;AgeMap&gt;::value_type age_type;<br />  typedef typename boost::property_traits&lt;GPAMap&gt;::value_type gpa_type;<br /><br />  name_type fred = "Fred";<br /><br />  age_type old_age = get(ages, fred);<br />  gpa_type old_gpa = get(gpas, fred);<br /><br />  std::cout &lt;&lt; "Fred's old age: " &lt;&lt; old_age &lt;&lt; "\n"<br />            &lt;&lt; "Fred's old gpa: " &lt;&lt; old_gpa &lt;&lt; "\n";<br /><br />  age_type new_age = 18;<br />  gpa_type new_gpa = 3.9;<br />  put(ages, fred, new_age);<br />  put(gpas, fred, new_gpa);<br />}<br /></pre>
+
+
+
+
+<p>这个函数根据两个 property map 类型 <tt class="literal"><span class="pre">AgeMap</span></tt> 和
+<tt class="literal"><span class="pre">GPAMap</span></tt> 来参数化，并接受这两个类型各一个值参数。函数中使用了 <tt class="literal"><span class="pre">property_traits</span></tt> 接口，在编译期获得这两个 property map 的值类型键类型。煞后用 <tt class="literal"><span class="pre">get</span></tt> 函数取出 Fred 的旧信息，再用 <tt class="literal"><span class="pre">put</span></tt> 函数更新信息。<tt class="literal"><span class="pre"></span></tt>要求可读的 Property Map 概念要求具有 <tt class="literal"><span class="pre">get</span></tt> 函数，而读/写 Property Map 概念则要求同时具有 <tt class="literal"><span class="pre">get</span></tt> 和 <tt class="literal"><span class="pre">put</span></tt> 函数。</p>
+
+
+
+
+<p>上面这个函数不仅要求两个类型参数要符合
+property map 概念，还有其它的假设。<tt class="literal"><span class="pre">AgeMap</span></tt> 和 <tt class="literal"><span class="pre">GPAMap</span></tt> 必须具有相同的键类型，该类型必须可以从字符串构造。此外，<tt class="literal"><span class="pre">AgeMap</span></tt> 的值类型必须可以从 <tt class="literal"><span class="pre">int</span></tt> 构造。虽然这些要求并没有显式地声明，但是它们都会在编译时进行静态的类型检查，如果不能满足就会产生编译期的错误。</p>
+
+
+
+
+<p>虽然 property map 接口的静态类型通常可以提供所需要的编译期安全，但是有些算法要求更为动态的 property map
+接口。例如，Boost Graph 库(BGL)提供了一些函数，它们可以通过对一个文本的图形描述(如 GraphML 文件)进
+行解释，来初始化一个图。这种通用的图形描述语言可以指定任意数量的边属性和顶点属性，以字符串来表示键-值对。图的读入函数应该要处理这些任意的属性，
+但是由于函数模板只能被固定数量的 property maps 参数化，所以处理 property maps 的传统技术不能实现这一点。</p>
+
+
+
+
+<p>动态 property maps 特别用于需要在运行期进行检测的 property maps 接口。几个不同的组件组合起来，提供了对动态 property map 的支持。<tt class="literal"><span class="pre">dynamic_properties</span></tt> 类容纳了一组异质的对象，它们符合来自于 Boost Property Map 库的概念。当每一个 property map 被加入到容器中时，会被赋予一个字符串键，可以用这个键来定位它。在内部，<tt class="literal"><span class="pre">dynamic_properties</span></tt> 将每一个包含的 property map 用动态 property map 接口来适配，该接口提供了 <tt class="literal"><span class="pre">get</span></tt> 和 <tt class="literal"><span class="pre">put</span></tt> 函数，这些函数可以用任意类型的值来调用，只有很少的要求。动态 property map 在内部将键-值对进行转换以满足底层的 property map 的要求，如果它做不到，就会抛出一个运行期异常。</p>
+
+
+
+
+<div class="section" id="fred-s-info-revisited">
+<h2><a class="toc-backref" href="#id4" name="fred-s-info-revisited">重温 "Fred's Info"</a></h2>
+
+
+
+
+<p>将前面的例子用
+<tt class="literal"><span class="pre">dynamic_properties</span></tt> 接口重写一下：</p>
+
+
+
+
+<pre class="literal-block">void manipulate_freds_info(boost::dynamic_properties&amp; properties)<br />{<br />  using boost::get;<br />  std::string fred = "Fred";<br /><br />  int old_age = get&lt;int&gt;("age", properties, fred);<br />  std::string old_gpa = get("gpa", properties, fred);<br /><br />  std::cout &lt;&lt; "Fred's old age: " &lt;&lt; old_age &lt;&lt; "\n"<br />            &lt;&lt; "Fred's old gpa: " &lt;&lt; old_gpa &lt;&lt; "\n";<br /><br />  std::string new_age = "18";<br />  double new_gpa = 3.9;<br />  put("age",properties,fred,new_age);<br />  put("gpa",properties,fred,new_gpa);<br />}<br /></pre>
+
+
+
+
+<p>新的函数并不是以 property map 类型进行参数化的模板，而是一个具体的函数，接受一个 <tt class="literal"><span class="pre">dynamic_properties</span></tt>
+对象。此外，其中的代码也不再需要对键类型或值类型进行引用：键和值都以字符串来表示。虽然如此，但是在需要时，函数还是可以使用非字符串类型的。例如，Fred 的旧的年龄就表示为一个 <tt class="literal"><span class="pre">int</span></tt>.
+其值可能通过调用带有类型参数的 <tt class="literal"><span class="pre">get</span></tt> 函数来取出，该类型参数决定了它的返回类型。最后，<tt class="literal"><span class="pre">get</span></tt> 和 <tt class="literal"><span class="pre">put</span></tt> 函数都提供了一个字符串键来决定所需访问的属性。</p>
+
+
+
+
+<p>以下是一个例子，示范了如何调用上述函数：</p>
+
+
+
+
+<pre class="literal-block">int main()<br />{<br />  using boost::get;<br /><br />  // 用 associative_property_map 创建 property maps<br />  std::map&lt;std::string, int&gt; name2age;<br />  std::map&lt;std::string, double&gt; name2gpa;<br />  boost::associative_property_map&lt; std::map&lt;std::string, int&gt; &gt;<br />    age_map(name2age);<br />  boost::associative_property_map&lt; std::map&lt;std::string, double&gt; &gt;<br />    gpa_map(name2gpa);<br /><br />  std::string fred("Fred");<br />  // 添加 键-值 信息<br />  name2age.insert(make_pair(fred,17));<br />  name2gpa.insert(make_pair(fred,2.7));<br /><br />  // 创建并组装动态接口<br />  boost::dynamic_properties properties;<br />  properties.property("age",age_map);<br />  properties.property("gpa",gpa_map);<br /><br />  manipulate_freds_info(properties);<br /><br />  std::cout &lt;&lt; "Fred's age: " &lt;&lt; get(age_map,fred) &lt;&lt; "\n"<br />            &lt;&lt; "Fred's gpa: " &lt;&lt; get(gpa_map,fred) &lt;&lt; "\n";       <br />}<br /></pre>
+
+
+
+
+<p>这段代码首先用 <tt class="literal"><span class="pre">std::map</span></tt> 和
+<tt class="literal"><span class="pre">associative_property_map</span></tt> 适配器创建两个 property map.  然后用键-值数据来初始化
+property maps, 再构造一个
+<tt class="literal"><span class="pre">dynamic_properties</span></tt> 对象并添加两个 property maps,
+分别以字符串 "age" 和 "gpa" 为键。最后 <tt class="literal"><span class="pre">manipulate_freds_info</span></tt>
+被传入这个 <tt class="literal"><span class="pre">dynamic_properties</span></tt> 对象并打印出修改的结果。</p>
+
+
+
+
+<p>如上所示，<tt class="literal"><span class="pre">dynamic_properties</span></tt> 对象在需要时提供了一个对 property maps 的动态类型接口，而在应用程序的其它地方依然保持了 property map 的静态类型。</p>
+
+
+
+
+</div>
+
+
+
+
+</div>
+
+
+
+
+<div class="section" id="reference">
+<h1><a class="toc-backref" href="#id5" name="reference">参考</a></h1>
+
+
+
+
+<pre class="literal-block">class dynamic_properties<br /></pre>
+
+
+
+
+<p><tt class="literal"><span class="pre">dynamic_properties</span></tt> 类为一组 property map 提供了一个动态类型的接口。要使用它，你必须通过 <tt class="literal"><span class="pre">property</span></tt> 成员函数用多个 property map 组装出该类的一个对象。</p>
+
+
+
+
+<div class="section" id="member-functions">
+<h2><a class="toc-backref" href="#id6" name="member-functions">成员函数</a></h2>
+
+
+
+
+<pre class="literal-block">dynamic_properties()<br />dynamic_properties(<br />  const boost::function&lt;<br />    std::auto_ptr&lt;dynamic_property_map&gt; (<br />      const std::string&amp;, const boost::any&amp;, const boost::any&amp;)<br />    &gt;&amp; fn)<br /></pre>
+
+
+
+
+<p><tt class="literal"><span class="pre">dynamic_properties</span></tt> 对象可以用一个函数对象来构造，该函数对象被调用时应创建一个新的 property map.  当试图 <tt class="literal"><span class="pre">put</span></tt> 一个键-值对到一个不存在的 <tt class="literal"><span class="pre">dynamic_properties</span></tt> 键时，将以 <tt class="literal"><span class="pre">dynamic_properties</span></tt> 的键以及相关的属性键和属性值调用该函数。如果 <tt class="literal"><span class="pre">dynamic_properties</span></tt> 是缺省构造的，则这样的 <tt class="literal"><span class="pre">put</span></tt> 尝试将会抛出 
+<tt class="literal"><span class="pre">property_not_found</span></tt>.</p>
+
+
+
+
+<pre class="literal-block">template&lt;typename PropertyMap&gt;<br />dynamic_properties&amp; <br />property(const std::string&amp; name, PropertyMap property_map)<br /></pre>
+
+
+
+
+<p>该成员函数添加一个 property map 到所包含的 maps 组中，以 <tt class="literal"><span class="pre">name</span></tt> 为键。</p>
+
+
+
+
+<p>要求：<tt class="literal"><span class="pre">PropertyMap</span></tt> 必须符合可读 Property Map 或
+读/写 Property Map.</p>
+
+
+
+
+<pre class="literal-block">void insert(const std::string&amp; name, std::auto_ptr&lt;dynamic_property_map&gt; pm)<br /></pre>
+
+
+
+
+<p>该成员函数直接添加一个 <tt class="literal"><span class="pre">dynamic_property_map</span></tt>
+到集合中，以 <tt class="literal"><span class="pre">name</span></tt> 为键。</p>
+
+
+
+
+<pre class="literal-block">iterator begin()<br />const_iterator begin() const<br /></pre>
+
+
+
+
+<p>该成员函数返回一个迭代器，指向 <tt class="literal"><span class="pre">dynamic_properties</span></tt> 对象所持有的 property maps 组。</p>
+
+
+
+
+<pre class="literal-block">iterator end()<br />const_iterator end() const<br /></pre>
+
+
+
+
+<p>该成员函数返回指向 <tt class="literal"><span class="pre">dynamic_properties</span></tt> 对象所持有的 property maps 组的结束迭代器。它用于结束对动态 property maps 组的迭代操作。</p>
+
+
+
+
+<pre class="literal-block">iterator lower_bound(const std::string&amp; name) <br /></pre>
+
+
+
+
+<p>该成员函数返回一个迭代器，指向第一个 <tt class="literal"><span class="pre">dynamic_properties</span></tt> 键为 <tt class="literal"><span class="pre">name</span></tt> 的
+property map.  
+记住，可以有多个 property maps 具有相同的
+<tt class="literal"><span class="pre">dynamic_properties</span></tt> 键，只要它们的 property map 键类型不同。</p>
+
+
+
+
+<p>不变式：区间 [ lower_bound(name), end() ) 包含每一个 <tt class="literal"><span class="pre">dynamic_properties</span></tt> 键为 name 的
+property map.</p>
+
+
+
+
+</div>
+
+
+
+
+<div class="section" id="free-functions">
+<h2><a class="toc-backref" href="#id7" name="free-functions">自由函数</a></h2>
+
+
+
+
+<pre class="literal-block">std::auto_ptr&lt;boost::dynamic_property_map&gt; <br />ignore_other_properties(const std::string&amp;,<br />                      const boost::any&amp;,<br />                      const boost::any&amp;)</pre>
+<p>如果被传递给 <tt class="docutils literal"><span class="pre">dynamic_properties</span></tt> 的构造函数，该函数可以使得 
+<tt class="docutils literal"><span class="pre">dynamic_properties</span></tt> 
+对象忽略将值置入未知键的尝试而不会发出一个错误。</p>
+<pre class="literal-block">template&lt;typename Key, typename Value&gt;<br />bool put(const std::string&amp; name, dynamic_properties&amp; dp, const Key&amp; key, <br />         const Value&amp; value)<br /></pre>
+
+
+
+
+<p>该函数添加一个键-值对到名字和键类型相匹配的 property map 中。如果找不到匹配的 property map，则行为取决于 property map 生成器的有效性。如果在构造 <tt class="docutils literal"><span class="pre">dynamic_properties</span></tt> 对象时指定了一个生成器函数，则会调用生成器函数来创建一个新的
+property map。如果生成器不能生成一个 property map (返回一个空的 <tt class="docutils literal"><span class="pre">auto_ptr</span></tt>)，则 <tt class="docutils literal"><span class="pre">put</span></tt> 函数返回 <tt class="docutils literal"><span class="pre">false</span></tt>。如果另一方面，<tt class="docutils literal"><span class="pre">dynamic_properties</span></tt> 对象没有 property map 生成器(即它是缺省构造的)，则抛出 <tt class="docutils literal"><span class="pre">property_not_found</span></tt>。如果找到的 property map 不支持&nbsp;<tt class="docutils literal"><span class="pre">put</span></tt>,
+则抛出 <tt class="literal"><span class="pre">dynamic_const_put_error</span></tt>。</p>
+
+
+
+
+<pre class="literal-block">template&lt;typename Value, typename Key&gt;<br />Value get(const std::string&amp; name, const dynamic_properties&amp; dp, <br />          const Key&amp; key)<br /></pre>
+
+
+
+
+<p>该函数从名字和键类型相匹配的 property-map 中取出值。如果 <tt class="literal"><span class="pre">Value</span></tt> 是 <tt class="literal"><span class="pre">std::string</span></tt>, 则
+property map 的值类型必须为 <tt class="literal"><span class="pre">std::string</span></tt> 或者符合
+OutputStreamable.  在后一种情况下，<tt class="literal"><span class="pre">get</span></tt> 函数将值转换为字符串。如果没有找到匹配的 property map,
+则抛出 <tt class="literal"><span class="pre">dynamic_get_failure</span></tt>.</p>
+
+
+
+
+<hr />
+<pre class="literal-block">class dynamic_property_map<br /></pre>
+
+
+
+
+<p>该类描述了一个接口，<tt class="literal"><span class="pre">dynamic_properties</span></tt> 使用该接口与用户的 property maps 进行多态的交互。</p>
+
+
+
+
+<pre class="literal-block">boost::any get(const any&amp; key)<br /></pre>
+
+
+
+
+<p>给定一个键的表示，返回与该键相关联的值。</p>
+
+
+
+
+<p>要求：1) 传入的键对象必须可以转换为该
+property
+map 的键类型的一个值。转换的细节未指定。2) 为了使该表达式有效，键必须与某个值相关联，否则结果将是未定义的。</p>
+
+
+
+
+<pre class="literal-block">std::string get_string(const any&amp; key) <br /></pre>
+
+
+
+
+<p>给定一个键的表示，返回与该键相关联的值的字符串表示。</p>
+
+
+
+
+<p>要求：1) 传入的键对象必须可以转换为该
+property
+map 的键类型的一个值。转换的细节未指定。2) 为了使该表达式有效，键必须与某个值相关联，否则结果将是未定义的。3) property map 的值类型必须符合 Output Streamable.</p>
+
+
+
+
+<pre class="literal-block">void put(const any&amp; key, const any&amp; value) <br /></pre>
+
+
+
+
+<p>给定一个键的表示和一个值的表示，在 property map 中关联该键与值。</p>
+
+
+
+
+<p>要求：1) 传入的键对象必须可以转换为该
+property
+map 的键类型的一个值。转换的细节未指定。2) 传入的值对象必须可以转换为该
+property map 的值类型的一个值。转换的细节未指定。3)&nbsp;property map&nbsp;不必支持该成员函数，这时将产生一个错误。这是可读 Property Map 概念的运行期模拟。</p>
+
+
+
+
+<pre class="literal-block">const std::type_info&amp; key() const <br /></pre>
+
+
+
+
+<p>返回一个 <tt class="literal"><span class="pre">type_info</span></tt> 对象，表示 property map 的键类型。</p>
+
+
+
+
+<pre class="literal-block">const std::type_info&amp; value() const <br /></pre>
+
+
+
+
+<p>返回一个 <tt class="literal"><span class="pre">type_info</span></tt> 对象，表示 property map 的值类型。</p>
+
+
+
+
+</div>
+
+
+
+
+<div class="section" id="exceptions">
+<h2><a class="toc-backref" href="#id8" name="exceptions">异常</a></h2>
+
+
+
+
+<pre class="literal-block">struct dynamic_property_exception : public std::exception {<br />  virtual ~dynamic_property_exception() throw() {}<br />};<br /><br />struct property_not_found : public std::exception {<br />  std::string property;<br />  property_not_found(const std::string&amp; property);<br />  virtual ~property_not_found() throw();<br /><br />  const char* what() const throw();<br />};<br /><br />struct dynamic_get_failure : public std::exception {<br />  std::string property;<br />  dynamic_get_failure(const std::string&amp; property);<br />  virtual ~dynamic_get_failure() throw();<br /><br />  const char* what() const throw();<br />};<br /><br />struct dynamic_const_put_error  : public std::exception {<br />  virtual ~dynamic_const_put_error() throw();<br /><br />  const char* what() const throw();<br />};<br /></pre>
+
+
+
+
+<p>在特定的情形下，调用 <tt class="literal"><span class="pre">dynamic_properties</span></tt> 成员函数会抛出以上异常之一。当不需要太高的精确度时，三个具体异常都可以使用
+<tt class="literal"><span class="pre">dynamic_property_exception</span></tt> 名字来捕获。另外，以上所有异常均派生自标准的 <tt class="literal"><span class="pre">std::exception</span></tt>，可进行更为通用的错误处理。产生这些异常的特定情形在前文中已有描述。</p>
+
+
+
+
+</div>
+
+
+
+
+</div>
+
+
+
+
+</div>
+
+
+
+
+<hr class="footer" />
+<div class="footer">Generated on: 2007-06-20 16:36 UTC.
+</div>
+
+
+
+
+</body>
+</html>

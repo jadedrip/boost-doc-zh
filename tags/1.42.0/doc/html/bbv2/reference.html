@@ -1,0 +1,1547 @@
+<!DOCTYPE HTML PUBLIC "-//W3C//DTD HTML 4.01 Transitional//EN">
+<html><head>
+<meta http-equiv="Content-Type" content="text/html; charset=UTF-8">
+
+<title>Detailed reference</title><link rel="stylesheet" href="../boostbook.css" type="text/css">
+<meta name="generator" content="DocBook XSL Stylesheets V1.73.2">
+<link rel="start" href="../index.html" title="The Boost C++ Libraries BoostBook Documentation Subset">
+<link rel="up" href="../bbv2.html" title="Chapter&nbsp;28.&nbsp;Boost.Build V2 User Manual">
+<link rel="prev" href="extender.html" title="Extender Manual">
+<link rel="next" href="faq.html" title="Frequently Asked Questions"></head>
+<body alink="#0000ff" bgcolor="white" link="#0000ff" text="black" vlink="#840084">
+<table cellpadding="2" width="100%"><tbody><tr>
+<td valign="top"><img alt="Boost C++ Libraries" src="../../../boost.png" height="86" width="277"></td>
+<td align="center"><a href="../../../index.html">Home</a></td>
+<td align="center"><a href="../../../libs/libraries.htm">Libraries</a></td>
+<td align="center"><a href="http://www.boost.org/users/people.html">People</a></td>
+<td align="center"><a href="http://www.boost.org/users/faq.html">FAQ</a></td>
+<td align="center"><a href="../../../more/index.htm">More</a></td>
+</tr></tbody></table>
+<hr>
+<div class="spirit-nav">
+<a accesskey="p" href="tasks.html"><img style="border: 0px solid ; width: 19px; height: 19px;" src="../../../doc/html/images/prev.png" alt="Prev"></a><a accesskey="u" href="../bbv2.html"><img src="../../../doc/html/images/up.png" alt="Up"></a><a accesskey="h" href="../index.html"><img src="../../../doc/html/images/home.png" alt="Home"></a><a accesskey="n" href="extender.html"><img style="border: 0px solid ; width: 19px; height: 19px;" src="../../../doc/html/images/next.png" alt="Next"></a>
+</div>
+<div class="section" lang="en">
+<div class="titlepage"><div><div><h2 class="title" style="clear: both;">
+<a name="bbv2.reference"></a>Detailed reference 详细参考手册</h2></div></div></div>
+<div class="toc"><dl>
+<dt><span class="section"><a href="reference.html#bbv2.reference.general">General information 总体说明</a></span></dt>
+<dt><span class="section"><a href="reference.html#bbv2.reference.rules">Builtin rules 内建规则</a></span></dt>
+<dt><span class="section"><a href="reference.html#bbv2.advanced.builtins.features">Builtin features 内建特性</a></span></dt>
+<dt><span class="section"><a href="reference.html#bbv2.reference.tools">Builtin tools 内建工具</a></span></dt>
+<dt><span class="section"><a href="reference.html#bbv2.reference.buildprocess">Build process 构建过程</a></span></dt>
+<dt><span class="section"><a href="reference.html#bbv2.reference.definitions">Definitions 定义</a></span></dt></dl></div>
+<div class="section" lang="en">
+<div class="titlepage"><div><div><h3 class="title">
+<a name="bbv2.reference.general"></a>General information 总体说明</h3></div></div></div>
+<div class="toc"><dl>
+<dt><span class="section"><a href="reference.html#bbv2.reference.init">Initialization 初始化</a></span></dt></dl></div>
+<div class="section" lang="en">
+<div class="titlepage"><div><div><h4 class="title">
+<a name="bbv2.reference.init"></a>Initialization 初始化</h4></div></div></div>
+<p>bjam's first job upon startup is to load the Jam code that
+        implements the build system. To do this, it searches for a file
+        called <code class="filename">boost-build.jam</code>, first in the invocation directory, then
+        in its parent and so forth up to the filesystem root, and finally
+        in the directories specified by the environment variable
+        BOOST_BUILD_PATH. When found, the file is interpreted, and should
+        specify the build system location by calling the boost-build
+        rule:<br>bjam 在启动时的第一项任务是，装入实现该构建系统的 Jam 代码。为此，它要搜索一个名为 <code class="filename">boost-build.jam</code> 的文件，首先是调用目录，然后到它的父目录，等等，直至文件系统的根目录，最后是环境变量
+        BOOST_BUILD_PATH 所指定的目录。找到该文件后，该文件是解释性的，并应通过调用 boost-build
+        规则指定构建系统的位置：</p>
+<pre class="programlisting">rule boost-build ( location ? )<br></pre>
+<p>
+        If location is a relative path, it is treated as relative to
+        the directory of <code class="filename">boost-build.jam</code>. The directory specified by
+        that location and the directories in BOOST_BUILD_PATH are then searched for
+        a file called <code class="filename">bootstrap.jam</code>, which is expected to
+        bootstrap the build system. This arrangement allows the build
+        system to work without any command-line or environment variable
+        settings. For example, if the build system files were located in a
+        directory "build-system/" at your project root, you might place a
+        <code class="filename">boost-build.jam</code> at the project root containing:<br>如果 location 是相对路径的，则被视为相对于 <code class="filename">boost-build.jam</code> 的目录。由 location 指定的目录以及在 BOOST_BUILD_PATH 中的目录都被用于查找一个名为 <code class="filename">bootstrap.jam</code> 的文件，该文件被作为构建系统的自举文件。这种安排允许构建系统在没有任何命令行或环境变量设置时工作。例如，如果构建系统文件位于你的工程根目录中的 "build-system/" 目录，那么你可以将一个
+        <code class="filename">boost-build.jam</code> 放置在工程根目录中，它包含有：
+
+</p>
+<pre class="programlisting">boost-build build-system ;<br></pre>
+<p>
+
+        In this case, running bjam anywhere in the project tree will
+        automatically find the build system.<br>这种情况下，在工程树的任意位置运行 bjam 都可以自动找到这个构建系统。</p>
+
+<p>The default <code class="filename">bootstrap.jam</code>, after loading some standard
+        definitions, loads two files, which can be provided/customised by
+        user: <code class="filename">site-config.jam</code> and <code class="filename">user-config.jam</code>.<br>在装入一些标准定义后，缺省的 <code class="filename">bootstrap.jam</code> 将装入两个文件，它们可以由用户提供或定制：<code class="filename">site-config.jam</code> 和 <code class="filename">user-config.jam</code>.</p></div></div>
+<div class="section" lang="en">
+<div class="titlepage"><div><div><h3 class="title">
+<a name="bbv2.reference.rules"></a>Builtin rules 内建规则</h3></div></div></div>
+<p>This section contains the list of all rules that
+    can be used in Jamfile—both rules that define new
+    targets and auxiliary rules.<br>本节包含了可以在 Jamfile 中使用的所有规则—包括定义新目标的规则和辅助规则。</p>
+<div class="variablelist"><dl>
+<dt><span class="term"><code class="literal">exe</code></span></dt>
+<dd><p>Creates an executable file. See
+        <a class="xref" href="tasks.html#bbv2.tasks.programs" title="Programs">the section called “Programs”</a>.<br>创建一个可执行文件。参见
+        <a class="xref" href="tasks.html#bbv2.tasks.programs" title="Programs">“程序”一节</a>。</p></dd>
+<dt><span class="term"><code class="literal">lib</code></span></dt>
+<dd><p>Creates an library file. See
+        <a class="xref" href="tasks.html#bbv2.tasks.libraries" title="Libraries">the section called “Libraries”</a>.<br>创建一个库文件。参见&nbsp;<a class="xref" href="tasks.html#bbv2.tasks.libraries" title="Libraries">“库”一节</a>。</p></dd>
+<dt><span class="term"><code class="literal">install</code></span></dt>
+<dd><p>Installs built targets and other files. See
+        <a class="xref" href="tasks.html#bbv2.tasks.installing" title="Installing">the section called “Installing”</a>.<br>安装被构建目标和其它文件。参见&nbsp;<a class="xref" href="tasks.html#bbv2.tasks.installing" title="Installing">“安装”一节</a>。</p></dd>
+<dt><span class="term"><code class="literal">alias</code></span></dt>
+<dd><p>Creates an alias for other targets. See
+        <a class="xref" href="tasks.html#bbv2.tasks.alias" title="Alias">the section called “Alias”</a>.<br>创建某个目标的一个别名。参见&nbsp;<a class="xref" href="tasks.html#bbv2.tasks.alias" title="Alias">“别名”一节</a>。</p></dd>
+<dt><span class="term"><code class="literal">unit-test</code></span></dt>
+<dd><p>Creates an executable that will be automatically run. See
+        <a class="xref" href="tutorial.html#bbv2.tutorial.testing" title="Testing">the section called “Testing”</a>.<br>创建一个可执行文件并自动运行。参见 <a class="xref" href="tutorial.html#bbv2.tutorial.testing" title="Testing">“测试”一节</a>。</p></dd>
+<dt>
+<span class="term"><code class="literal">compile</code>, </span><span class="term"><code class="literal">compile-fail</code>, </span><span class="term"><code class="literal">link</code>, </span><span class="term"><code class="literal">link-fail</code>, </span><span class="term"><code class="literal">run</code>, </span><span class="term"><code class="literal">run-fail</code></span>
+</dt>
+<dd><p>Specialized rules for testing. See
+        <a class="xref" href="tutorial.html#bbv2.tutorial.testing" title="Testing">the section called “Testing”</a>.<br>用于测试的特殊规则。参见 <a class="xref" href="tutorial.html#bbv2.tutorial.testing" title="Testing">“测试”一节</a>。</p></dd>
+<dt><span class="term"><code class="literal">obj</code></span></dt>
+<dd><p>Creates an object file. Useful when a single source
+        file must be compiled with special properties.<br>创建一个目标文件。当某一个源文件必须以特殊属性进行编译时使用。</p></dd>
+<dt><span class="term"><code class="literal">glob</code></span></dt>
+<dd>
+<p>The <code class="computeroutput">glob</code> rule takes a list shell pattern
+        and returns the list of files in the project's source directory that
+        match the pattern. For example:<br><code class="computeroutput">glob</code> 规则接受一列 shell 模式，返回在工程源目录中与该模式匹配的文件列表。例如：
+        </p>
+<pre class="programlisting">lib tools : [ glob *.cpp ] ;<br>        </pre>
+<p>
+        It is possible to also pass a second argument—the list of
+        exclude patterns. The result will then include the list of
+        files patching any of include patterns, and not matching any
+        of the exclude patterns. For example:<br>还可以传入第二个参数—被排除的模式列表。这时返回的结果是包含与包含模式相匹配的文件且不包含与排除模式相匹配的文件的列表。例如：
+        </p>
+<pre class="programlisting">lib tools : [ glob *.cpp : file_to_exclude.cpp bad*.cpp ] ;<br>        </pre>
+<p>
+        </p>
+</dd>
+<dt>
+<a name="bbv2.reference.glob-tree"></a><span class="term"><code class="literal">glob-tree</code></span>
+</dt>
+<dd>
+<p>The <code class="computeroutput">glob-tree</code> is similar to the
+        <code class="computeroutput">glob</code> except that it operates recursively from
+        the directory of the containing Jamfile. For example:<br><code class="computeroutput">glob-tree</code> 类似于 <code class="computeroutput">glob</code>，但它是从包含 Jamfile 的目录开始进行递归的操作。例如：
+        </p>
+<pre class="programlisting">ECHO [ glob-tree *.cpp : .svn ] ;<br>        </pre>
+<p>
+        will print the names of all C++ files in your project. The
+        <code class="literal">.svn</code> exclude pattern prevents the
+        <code class="computeroutput">glob-tree</code> rule from entering administrative
+        directories of the Subversion version control system.<br>将打印你的工程中的所有 C++ 文件的名字。排除模式
+        <code class="literal">.svn</code> 防止
+        <code class="computeroutput">glob-tree</code> 规则进入 Subversion 版本控制系统的管理目录。
+        </p>
+</dd>
+<dt><span class="term"><code class="literal">project</code></span></dt>
+<dd><p>Declares project id and attributes, including
+        project requirements. See <a class="xref" href="advanced.html#bbv2.advanced.projects" title="Projects">the section called “Projects”</a>.<br>声明工程 id 和属性，包括工程要求。参见 <a class="xref" href="advanced.html#bbv2.advanced.projects" title="Projects">“工程”一节</a>。
+        </p></dd>
+<dt><span class="term"><code class="literal">use-project</code></span></dt>
+<dd><p>Assigns a symbolic project ID to a project at
+        a given path. This rule must be better documented!<br>将一个符号工程 ID 赋给指定路径中的工程。该规则必须要好好地说明清楚！
+        </p></dd>
+<dt><span class="term"><code class="literal">explicit</code></span></dt>
+<dd><p>The <code class="literal">explicit</code> rule takes a single
+        parameter—a list of target names. The named targets will
+        be marked explicit, and will be built only if they are explicitly
+        requested on the command line, or if their dependents are built.
+        Compare this to ordinary targets, that are built implicitly when
+        their containing project is built.<br><code class="literal">explicit</code> 规则接受一个参数—一个目标名列表。被标记为显式的命名目标，仅当它们在命令行中被明确请求，或依赖于它们的目标被构建时，才进行构建。相比之下，普通的目标在包含它们的工程被构建时就会隐式地进行构建。</p></dd>
+<dt><span class="term"><code class="literal">constant</code></span></dt>
+<dd>
+<p>Sets project-wide constant. Takes two
+        parameters: variable name and a value and makes the specified
+        variable name accessible in this Jamfile and any child Jamfiles.
+        For example:<br>设置工程范围的常量。它接受两个参数：变量名和一个值，并且使得指定的变量名在本 Jamfile 及所有子 Jamfiles 中可访问。例如：
+        </p>
+<pre class="programlisting">constant VERSION : 1.34.0 ;<br>        </pre>
+<p>
+        </p>
+</dd>
+<dt><span class="term"><code class="literal">path-constant</code></span></dt>
+<dd>
+<p>Same as <code class="literal">constant</code> except that
+        the value is treated as path relative to Jamfile location. For example,
+        if <span class="command"><strong>bjam</strong></span> is invoked in the current directory,
+        and Jamfile in <code class="filename">helper</code> subdirectory has:<br>和&nbsp;<code class="literal">constant</code> 相似，除了变量值被视为相对于 Jamfile 位置的路径。例如，如果在当前路径调用 <span class="command"><strong>bjam</strong></span>，且在&nbsp;<code class="filename">helper</code> 子目录中的 Jamfile 有：
+        </p>
+<pre class="programlisting">path-constant DATA : data/a.txt ;<br>        </pre>
+<p>
+        then the variable <code class="varname">DATA</code> will be set to
+        <code class="literal">helper/data/a.txt</code>, and if <span class="command"><strong>bjam</strong></span>
+        is invoked from the <code class="filename">helper</code> directory, then
+        the variable <code class="varname">DATA</code> will be set to
+        <code class="literal">data/a.txt</code>.<br>则变量 <code class="varname">DATA</code> 将被设为
+        <code class="literal">helper/data/a.txt</code>，而如果 <span class="command"><strong>bjam</strong></span>
+        是从 <code class="filename">helper</code> 目录调用的，则变量 <code class="varname">DATA</code> 将被设为
+        <code class="literal">data/a.txt</code>。
+        </p>
+</dd>
+<dt><span class="term"><code class="literal">build-project</code></span></dt>
+<dd><p>Cause some other project to be built. This rule
+        takes a single parameter—a directory name relative to
+        the containing Jamfile. When the containing Jamfile is built,
+        the project located at that directory will be built as well.
+        At the moment, the parameter to this rule should be a directory
+        name. Project ID or general target references are not allowed.<br>引起其它一些工程被构建。该规则接受一个参数—一个相对于所含 Jamfile 的目录名。当所含的 Jamfile 被构建时，位于此目录中的工程也将被构建。目前，传给该规则的参数应是一个目录名。不可以是工程ID或普通的目标引用。
+        </p></dd>
+<dt><span class="term"><code class="literal">test-suite</code></span></dt>
+<dd><p>This rule is deprecated and equivalent to
+        <code class="computeroutput">alias</code>.<br>该规则已不建议使用，它等同于 <code class="computeroutput">alias</code>。</p></dd>
+</dl></div>
+</div>
+<div class="section" lang="en">
+<div class="titlepage"><div><div><h3 class="title">
+<a name="bbv2.advanced.builtins.features"></a>Builtin features 内建特性</h3></div></div></div>
+<div class="variablelist"><dl>
+</dl><p>This section documents the features that are built-in into Boost.Build. For 
+features with a fixed set of values, that set is provided, with the default 
+value listed first.<br>本节介绍了 Boost.Build 中内建的特性。对于具有固定值集合的特性，给出该集合，并列出缺省值。</p><dl><dt><span class="term"><code class="literal">variant</code></span></dt>
+<dd>
+<p>
+            A feature that combines several low-level features, making
+            it easy to request common build configurations.<br>组合了多个低级特性的特性，使得构建配置的请求更为易用。
+          </p>
+<p><span class="bold"><strong>Allowed values:</strong></span> <code class="literal">debug</code>, <code class="literal">release</code>,
+            <code class="literal">profile</code>.<br><span class="bold"><strong>允许值：</strong></span><code class="literal">debug</code>, <code class="literal">release</code>,
+            <code class="literal">profile</code>.</p>
+<p>The value <code class="literal">debug</code> expands to<br>值&nbsp;<code class="literal">debug</code> 展开为</p>
+<pre class="programlisting">&lt;optimization&gt;off &lt;debug-symbols&gt;on &lt;inlining&gt;off &lt;runtime-debugging&gt;on<br></pre>
+<p>The value <code class="literal">release</code> expands to<br>值&nbsp;<code class="literal">release</code> 展开为</p>
+<pre class="programlisting">&lt;optimization&gt;speed &lt;debug-symbols&gt;off &lt;inlining&gt;full &lt;runtime-debugging&gt;off<br></pre>
+<p>The value <code class="literal">profile</code> expands to the same as
+          <code class="literal">release</code>, plus:<br>值&nbsp;<code class="literal">profile</code> 展开为与 <code class="literal">release</code> 一样，再加上：</p>
+<pre class="programlisting">&lt;profiling&gt;on &lt;debug-symbols&gt;on<br></pre>
+<p>User can define his own build variants using the <code class="computeroutput">variant</code> rule from the <code class="computeroutput">common</code>
+          module.<br>用户可以用 <code class="computeroutput">common</code>
+ 模块的 <code class="computeroutput">variant</code> 规则定义自己的构建变体。</p>
+<p><span class="bold"><strong>Notee:</strong></span> Runtime
+          debugging is on in debug builds to suit the expectations of
+          people used to various IDEs.<br><span class="bold"><strong>注：</strong></span>在 debug 构建中打开运行期调试开关，是符合使用各种 IDE 的用户预期的。
+          
+          </p>
+</dd>
+<dt>
+<a name="bbv2.advanced.builtins.features.link"></a><span class="term"><code class="literal">link</code></span>
+</dt>
+<dd>
+<p><span class="bold"><strong>Allowed values:</strong></span> <code class="literal">shared</code>,
+            <code class="literal">static</code><br><span class="bold"><strong>允许值：</strong></span><code class="literal">shared</code>,
+            <code class="literal">static</code></p>
+<p>
+            A feature that controls how libraries are built.<br>控制如何构建库的一个特性。
+          </p>
+</dd>
+<dt>
+<a name="bbv2.advanced.builtins.features.runtime-link"></a><span class="term"><code class="literal">runtime-link</code></span>
+</dt>
+<dd>
+<p><span class="bold"><strong>Allowed values:</strong></span> <code class="literal">shared</code>,
+            <code class="literal">static</code><br><span class="bold"><strong>允许值：</strong></span><code class="literal">shared</code>,
+            <code class="literal">static</code></p>
+<p>
+            Controls if a static or shared C/C++ runtime should be used. There
+            are some restrictions how this feature can be used, for example
+            on some compilers an application using static runtime should
+            not use shared libraries at all, and on some compilers,
+            mixing static and shared runtime requires extreme care.  Check
+            your compiler documentation for more details.<br>控制使用静态或共享的 C/C++ 运行库。对于如何使用该特性，有一些限制，例如，在某些编译器上，使用静态运行库的应用程序就根本不能使用共享库，而在另一些编译器上，混合使用静态和共享运行库要求非常小心。更多详情请查阅你的编译器文档。
+          </p>
+</dd>
+<dt><span class="term"><code class="literal">source</code></span></dt>
+<dd>
+            The <code class="computeroutput">&lt;source&gt;X</code> feature has the same effect on
+            building a target as putting X in the list of sources. It is useful
+            when you want to add the same source to all targets in the project
+            (you can put &lt;source&gt; in requirements) or to conditionally
+            include a source (using conditional requirements, see <a class="xref" href="tutorial.html#bbv2.tutorial.conditions" title="Conditions and alternatives">the section called “Conditions and alternatives”</a>). See also the <code class="computeroutput">&lt;library&gt;
+            </code> feature.<br>特性 <code class="computeroutput">&lt;source&gt;X</code> 与将 X 置于源列表中进行构建目标具有相同的效果。当你想增加某些源文件到工程的所有目标中时(你可以把 &lt;source&gt; 放在要求中)，或者想有条件地包含一个源文件时(使用条件要求，参见 <a class="xref" href="tutorial.html#bbv2.tutorial.conditions" title="Conditions and alternatives">“条件与选择”一节</a>)，它非常有用。参见 <code class="computeroutput">&lt;library&gt;
+            </code> 特性。
+          </dd>
+<dt><span class="term"><code class="literal">library</code></span></dt>
+<dd>
+            This feature is almost equivalent to the <code class="computeroutput">&lt;source&gt;</code>
+            feature, except that it takes effect only for linking. When you want
+            to link all targets in a Jamfile to certain library, the
+            <code class="computeroutput">&lt;library&gt;</code> feature is preferred over
+            <code class="computeroutput">&lt;source&gt;X</code> -- the latter will add the library to
+            all targets, even those that have nothing to do with libraries.<br>该特性基本等同于 <code class="computeroutput">&lt;source&gt;</code>
+ 特性，不过它只对链接起作用。当你想将 Jamfile 中的所有目标都链接到某个特定库时，<code class="computeroutput">&lt;library&gt;</code> 特性优于
+            <code class="computeroutput">&lt;source&gt;X</code> -- 后者会把库加到所有目标中，即使是那些不需要这个库的目标。 
+          </dd>
+<dt><span class="term"><a name="bbv2.builtin.features.dependency"></a>
+          <code class="literal">dependency</code></span></dt>
+<dd>
+            Introduces a dependency on the target named by the value of this
+            feature (so it will be brought up-to-date whenever the target being
+            declared is). The dependency is not used in any other way.<br>引入对由该特性的值所命名的目标的依赖关系(因此无论何时目标被声明，它都会被引发更新)。这个依赖关系没有其它用途。
+
+            
+          </dd>
+<dt><span class="term"><a name="bbv2.builtin.features.use"></a>
+          <code class="literal">use</code></span></dt>
+<dd>
+            Introduces a dependency on the target named by the value of this
+            feature (so it will be brought up-to-date whenever the target being
+            declared is), and adds its usage requirements to the build
+            properties
+            
+            of the target being declared. The dependency is not used in any
+            other way. The primary use case is when you want the usage
+            requirements (such as <code class="computeroutput">#include</code> paths) of some library
+            to be applied, but do not want to link to it.<br>引入对由该特性的值所命名的目标的依赖关系(因此无论何时目标被声明，它都会被引发更新)，并将它的使用要求增加到被声明目标的构建属性中。这个依赖关系没有其它用途。主要的用途是当你希望应用某些库的使用要求(如 <code class="computeroutput">#include</code> 路径)，而又不想链接它的时候。
+            
+          </dd>
+<dt><span class="term"><a name="bbv2.reference.features.dll-path"></a>
+      <code class="literal">dll-path</code></span></dt>
+<dd>
+            Specify an additional directory where the system should
+            look for shared libraries when the executable or shared
+            library is run. This feature only affects Unix
+            compilers. Plase see <a class="xref" href="faq.html#bbv2.faq.dll-path" title="Why are the dll-path and hardcode-dll-paths properties useful?">the section called “Why are the <code class="computeroutput">dll-path</code> and
+    <code class="computeroutput">hardcode-dll-paths</code> properties useful?
+    ”</a>
+            in <a class="xref" href="faq.html" title="Frequently Asked Questions">the section called “Frequently Asked Questions”</a> for details.<br>指定一个额外的目录，当运行可执行文件或共享库时，系统会从该目录查找共享库。该特性只对 Unix 有影响。详情请见 <a class="xref" href="faq.html" title="Frequently Asked Questions">“常见问题”</a> 中的 <a class="xref" href="faq.html#bbv2.faq.dll-path" title="Why are the dll-path and hardcode-dll-paths properties useful?">“为什么 <code class="computeroutput">dll-path</code> 和
+    <code class="computeroutput">hardcode-dll-paths</code> 属性是有用的?
+    ”条目</a>。
+          </dd>
+<dt><span class="term"><code class="literal">hardcode-dll-paths</code></span></dt>
+<dd>
+<p>
+            Controls automatic generation of dll-path properties.<br>控制 dll-path 属性的自动生成。
+          </p>
+<p><span class="bold"><strong>Allowed values:</strong></span>
+            <code class="literal">true</code>, <code class="literal">false</code>.  This property is
+            specific to Unix systems. If an executable is built with
+            <code class="computeroutput">&lt;hardcode-dll-paths&gt;true</code>, the generated binary
+            will contain the list of all the paths to the used shared libraries.
+            As the result, the executable can be run without changing system
+            paths to shared libraries or installing the libraries to system
+            paths. This  is very
+            convenient during development. Plase see the <a class="link" href="faq.html#bbv2.faq.dll-path" title="Why are the dll-path and hardcode-dll-paths properties useful?">FAQ entry</a> for details. Note that on Mac
+            OSX, the paths are unconditionally hardcoded by the linker, and it
+            is not possible to disable that behaviour.<br><span class="bold"><strong>允许值：</strong></span><code class="literal">true</code>, <code class="literal">false</code>. 该属性是为 Unix 系统指定的。如果一个可执行程序是以
+            <code class="computeroutput">&lt;hardcode-dll-paths&gt;true</code> 构建的，则所生成的二进制文件将包含到所用共享库的所有路径的列表。这样，这个可执行文件的运行可以无需修改系统的共享库路径设置或将共享库安装到系统路径中。这在开发阶段是很方便的。详情请见这个 <a class="link" href="faq.html#bbv2.faq.dll-path" title="Why are the dll-path and hardcode-dll-paths properties useful?">FAQ 条目</a>。注意，在 Mac OSX 上，这些路径是无条件地由链接器进行硬编码的，而且不可能禁止这一行为。</p>
+</dd>
+<dt>
+<span class="term"><code class="literal">cflags</code>, </span><span class="term"><code class="literal">cxxflags</code>, </span><span class="term"><code class="literal">linkflags</code></span>
+</dt>
+<dd>
+            The value of those features is passed without modification to the
+            corresponding tools. For <code class="computeroutput">cflags</code> that is both the C and
+            C++ compilers, for <code class="computeroutput">cxxflags</code> that is the C++ compiler
+            and for <code class="computeroutput">linkflags</code> that is the linker. The features are
+            handy when you are trying to do something special that cannot be
+            achieved by a higher-level feature in Boost.Build.<br>这些特性的值会被照原样传递给相应的工具。<code class="computeroutput">cflags</code> 用于 C 和
+            C++ 编译器，<code class="computeroutput">cxxflags</code> 用于 C++ 编译器，而 <code class="computeroutput">linkflags</code> 则用于链接器。当你想做一些不能通过 Boost.Build 的高级特性来完成的特殊事情时，这个特性就很方便了。
+          </dd>
+<dt><span class="term"><code class="literal">warnings</code></span></dt>
+<dd>
+            The <code class="computeroutput">&lt;warnings&gt;</code> feature controls the warning level
+            of compilers. It has the following values:<br><code class="computeroutput">&lt;warnings&gt;</code> 特性控制编译器的告警级别。它具有以下值：
+            <div class="itemizedlist"><ul type="disc">
+<li><p><code class="computeroutput">off</code> - disables all warnings.<br><code class="computeroutput">off</code> - 禁止所有告警。</p></li>
+<li><p><code class="computeroutput">on</code> - enables default warning level for the tool.<br><code class="computeroutput">on</code> - 打开工具的缺省告警级别。</p></li>
+<li><p><code class="computeroutput">all</code> - enables all warnings.<br><code class="computeroutput">all</code> - 打开所有告警。</p></li>
+</ul></div>
+            Default value is <code class="computeroutput">all</code>.<br>缺省值是 <code class="computeroutput">all</code>.
+          </dd>
+<dt><span class="term"><code class="literal">warnings-as-errors</code></span></dt>
+<dd>
+            The <code class="computeroutput">&lt;warnings-as-errors&gt;</code> makes it possible to
+            treat warnings as errors and abort compilation on a warning. The
+            value <code class="computeroutput">on</code> enables this behaviour. The default value is
+            <code class="computeroutput">off</code>.<br> <code class="computeroutput">&lt;warnings-as-errors&gt;</code> 可以把告警视为错误，在出现告警时退出编译。值 <code class="computeroutput">on</code> 打开这一行为。缺省值为
+            <code class="computeroutput">off</code>.
+          </dd>
+<dt><span class="term"><code class="literal">build</code></span></dt>
+<dd>
+<p><span class="bold"><strong>Allowed values:</strong></span> <code class="literal">no</code><br><span class="bold"><strong>允许值：</strong></span><code class="literal">no</code></p>
+<p>
+            The <code class="computeroutput">build</code> feature is used to conditionally disable
+            build of a target. If <code class="computeroutput">&lt;build&gt;no</code> is in properties
+            when building a target, build of that target is skipped. Combined
+            with conditional requirements this allows you to skip building some
+            target in configurations where the build is known to fail.<br><code class="computeroutput">build</code> 特性用于有条件地禁止某个目标的构建。如果在构建一个目标时 <code class="computeroutput">&lt;build&gt;no</code> 在其属性中，则跳过对该目标的构建。通过与条件要求的组合，可以让你在配置中跳过某些已知将会失败的目标的构建。 
+          </p>
+</dd>
+<dt><span class="term"><code class="literal">tag</code></span></dt>
+<dd>
+<p>The <code class="literal">tag</code> feature is used to customize
+        the name of the generated files. The value should have the form:<br><code class="literal">tag</code> 特性用于定制所生成文件的名字。其值应具有以下格式：
+</p>
+<pre class="programlisting">@<em class="replaceable"><code>rulename</code></em></pre>
+<p> where
+        <em class="replaceable"><code>rulename</code></em> should be a name of a rule with the
+        following signature:<br>其中&nbsp;<em class="replaceable"><code>rulename</code></em> 为一个具有以下签名的规则的名称：
+</p>
+<pre class="programlisting">rule tag ( name : type ? : property-set )</pre>
+<p>
+        The rule will be called for each target with the default name computed
+        by Boost.Build, the type of the target, and property set. The rule can
+        either return a string that must be used as the name of the target, or
+        an empty string, in which case the default name will be used.<br>该规则将被各个目标以 Boost.Build 计算得到的缺省名字、目标的类型、属性集来调用。该规则可以返回一个必须被用作该目标的名字的字符串，或者一个空字符串，这时将使用缺省名字。
+        </p>
+<p>Most typical use of the <code class="literal">tag</code> feature is to
+        encode build properties, or library version in library target names. You
+        should take care to return non-empty string from the tag rule only for
+        types you care about — otherwise, you might end up modifying
+        names of object files, generated header file and other targets for which
+        changing names does not make sense.<br><code class="literal">tag</code>&nbsp;特性通常用于将构建属性或库的版本号编入库目标的名字中。你要注意，从 tag 规则返回的非空字符串必须与类型相匹配 — 否则，你可能会改变了目标文件、生成头文件或其它不应改变名字的目标的名字。</p>
+</dd>
+<dt><span class="term"><code class="literal">debug-symbols</code></span></dt>
+<dd>
+<p><span class="bold"><strong>Allowed values:</strong></span> <code class="literal">on</code>, <code class="literal">off</code>.<br><span class="bold"><strong>允许值：</strong></span><code class="literal">on</code>, <code class="literal">off</code>.</p>
+<p>The <code class="literal">debug-symbols</code> feature specifies if
+          produced object files, executables and libraries should include
+          debug information.
+          Typically, the value of this feature is implicitly set by the
+          <code class="literal">variant</code> feature, but it can be explicitly
+          specified by the user. The most common usage is to build
+          release variant with debugging information.<br><code class="literal">debug-symbols</code> 特性指明所产生的目标文件、可执行文件和库文件是否要包含调试信息。通常，该特性的值是由&nbsp;<code class="literal">variant</code> 特性隐式设置的，不过它也可以由用户明确指定。最常见的用途是，构建带有调试信息的发布版本。</p>
+</dd>
+<dt><span class="term"><code class="literal">architecture</code></span></dt>
+<dd><p>The <code class="literal">architecture</code> features specifies
+          the general processor familty to generate code for.<br><code class="literal">architecture</code> 特性指定生成代码的通用处理器家族。</p></dd>
+<dt><span class="term"><code class="literal">instruction-set</code></span></dt>
+<dd>
+<p>Allowed values for this feature depend on used toolset.<br>该特性所允许的值取决于所用的工具集。</p>
+<p>The <code class="literal">instruction-set</code> specifies for which
+          specific instruction set the code should be generated.  The
+          code in general might not run on processors with older/different
+          instruction sets.<br><code class="literal">instruction-set</code> 指定代码应生成那个特定的指令集。代码通常不能运行于带有旧的或不同的指令集的处理器之上。</p>
+<p>While Boost.Build allows a large set of possible values
+          for this features, whether a given value works depends on which
+          compiler you use. Please see
+          <a class="xref" href="reference.html#bbv2.reference.tools.compilers" title="C++ Compilers">the section called “C++ Compilers”</a> for details.<br>虽然 Boost.Build 允许这个特性有一个很大的可能值集合，但是一个给定的值是否可用取决于你所用的编译器。详情请见&nbsp;<a class="xref" href="reference.html#bbv2.reference.tools.compilers" title="C++ Compilers">“C++ 编译器”</a>。
+          </p>
+</dd>
+<dt><span class="term"><code class="literal">address-model</code></span></dt>
+<dd>
+<p><span class="bold"><strong>Allowed values:</strong></span> <code class="literal">32</code>, <code class="literal">64</code>.<br><span class="bold"><strong>允许值：</strong></span><code class="literal">32</code>, <code class="literal">64</code>.</p>
+<p>The <code class="literal">address-model</code> specifies if 32-bit or
+          64-bit code should be generated by the compiler. Whether this feature
+          works depends on the used compiler, its version, how the compiler is
+          configured, and the values of the <code class="literal">architecture</code>
+          <code class="literal">instruction-set</code>
+          features. Please see <a class="xref" href="reference.html#bbv2.reference.tools.compilers" title="C++ Compilers">the section called “C++ Compilers”</a>
+          for details.<br><code class="literal">address-model</code> 指定编译器是否生成32位或64位代码。这个特性是否可用取决于所用的编译器、版本号、编译器的配置，和 <code class="literal">architecture</code>
+          <code class="literal">instruction-set</code> 特性的值。详情请见&nbsp;<a class="xref" href="reference.html#bbv2.reference.tools.compilers" title="C++ Compilers">“C++ 编译器”</a>。</p></dd><dt><span class="term"><code class="literal">c++-template-depth</code></span> 
+</dt><dd>
+<p><span class="bold"><strong>Allowed values:</strong></span> Any positive 
+integer.<br><span class="bold"><strong>允许值：</strong></span><code class="literal"><span style="font-family: sans;">任意正整数。</span></code> </p>
+<p>This feature allows configuring a C++ compiler with the maximal template 
+instantiation depth parameter. Specific toolsets may or may not provide support 
+for this feature depending on whether their compilers provide a corresponding 
+command-line option.<br>该特性允许对一个C++编译器配置其最大模板实例化深度参数。特定的工具集可能提供也可能不提供对此特性的支持，这视乎编译器是否提供相应的命令行选项。 </p></dd><dd>
+<p><span class="bold"><strong>Note:</strong></span> Due to some internal details 
+in the current Boost Build implementation it is not possible to have features 
+whose valid values are all positive integer. As a workaround a large set of 
+allowed values has been defined for this feature and, if a different one is 
+needed, user can easily add it by calling the feature.extend rule.<br><span class="bold"><strong>注：</strong></span>因为当前的 Boost Build 实现的某些内部细节，不可能让某个特性的有效值为所有正整数。作为变通的方法，可以对该特性定义一个大的可用值集合，如果需要其它数例，用户可以通过调用 feature.extend 规则很轻易地增加。 </p></dd><dd>
+</dd><dt><span class="term"><code class="literal">embed-manifest</code></span> 
+</dt><dd><a class="indexterm" name="id4459198"></a><a class="indexterm" name="id4459207"></a>
+<p><span class="bold"><strong>Allowed values:</strong></span> on, off.<br><span class="bold"><strong>允许值：</strong></span><code class="literal"><span style="font-family: sans;">on, off.</span></code> </p>
+<p>This feature is specific to the msvc toolset (see <a class="xref" title="Microsoft Visual C++" href="reference.html#bbv2.reference.tools.compiler.msvc">the section called 
+“Microsoft Visual C++”</a>), and controls whether the manifest files should be 
+embedded inside executables and shared libraries, or placed alongside them. This 
+feature corresponds to the IDE option found in the project settings dialog, 
+under <span class="guimenu">Configuration Properties</span> → <span class="guisubmenu">Manifest Tool</span> → <span class="guisubmenu">Input and 
+Output</span> → <span class="guimenuitem">Embed manifest</span>.<br>该特性专用于 msvc 工具集(请见 <a class="xref" title="Microsoft Visual C++" href="reference.html#bbv2.reference.tools.compiler.msvc">“Microsoft Visual C++”一节</a>)，控制清单文件是否嵌入到可执行文件和共享库中，或者单独放置。该特性相对应于工程设置对话框中的IDE选项，位于 <span class="guimenu">Configuration Properties</span> → <span class="guisubmenu">Manifest Tool</span> → <span class="guisubmenu">Input and 
+Output</span> → <span class="guimenuitem">Embed manifest</span>.</p></dd>
+</dl></div>
+</div>
+<div class="section" lang="en">
+<div class="titlepage"><div><div><h3 class="title">
+<a name="bbv2.reference.tools"></a>Builtin tools 内建工具</h3></div></div></div>
+<div class="toc"><dl>
+<dt><span class="section"><a href="reference.html#bbv2.reference.tools.compilers">C++ Compilers &nbsp;C++编译器</a></span></dt>
+<dt><span class="section"><a href="reference.html#id3912697">Third-party libraries 第三方库</a></span></dt>
+</dl></div>
+<p>Boost.Build comes with support for a large number of C++ compilers,
+      and other tools. This section documents how to use those tools.<br>Boost.Build 支持大量的 C++ 编译器和其它工具。本节讲述如何使用这些工具。</p>
+<p>Before using any tool, you must declare your intention, and possibly
+      specify additional information about the tool's configuration. This is
+      done with the <code class="computeroutput">using</code> rule, for example:<br>在使用任何工具之前，你必须声明你的意图，也许还要指明有关工具配置的其它信息。这是以 <code class="computeroutput">using</code> 规则实现的，例如：
+</p>
+<pre class="programlisting">using gcc ;<br></pre>
+<p>
+      additional parameters can be passed just like for other rules, for example:<br>可以象其它规则那样传递更多的参数，例如：
+</p>
+<pre class="programlisting">using gcc : 4.0 : g++-4.0 ;<br></pre>
+<p>
+      The options that can be passed to each tool will be documented in the
+      subsequent sections.<br>可以传递给各个工具的选项在后面各章节中说明。</p>
+<div class="section" lang="en">
+<div class="titlepage"><div><div><h4 class="title">
+<a name="bbv2.reference.tools.compilers"></a>C++ Compilers &nbsp;C++编译器</h4></div></div></div>
+<div class="toc"><dl>
+<dt><span class="section"><a href="reference.html#bbv2.reference.tools.compiler.gcc">GNU C++</a></span></dt>
+<dt><span class="section"><a href="reference.html#bbv2.reference.tools.compiler.darwin">Apple Darwin 
+gcc</a></span><span class="section"></span></dt><dt><span class="section"><a href="reference.html#bbv2.reference.tools.compiler.msvc">Microsoft Visual C++</a></span></dt>
+<dt><span class="section"><a href="reference.html#bbv2.reference.tools.compiler.intel">Intel C++</a></span></dt>
+<dt><span class="section"><a href="reference.html#bbv2.reference.tools.compiler.acc">HP aC++ compiler</a></span></dt>
+<dt><span class="section"><a href="reference.html#bbv2.reference.tools.compiler.borland">Borland C++ Compiler</a></span></dt>
+<dt><span class="section"><a href="reference.html#bbv2.reference.tools.compiler.como">Comeau C/C++ Compiler</a></span></dt>
+<dt><span class="section"><a href="reference.html#bbv2.reference.tools.compiler.cw">Code Warrior</a></span></dt>
+<dt><span class="section"><a href="reference.html#bbv2.reference.tools.compiler.dmc">Digital Mars C/C++ Compiler</a></span></dt>
+<dt><span class="section"><a href="reference.html#bbv2.reference.tools.compiler.hp_cxx">HP C++ Compiler for Tru64 Unix</a></span></dt>
+<dt><span class="section"><a href="reference.html#bbv2.reference.tools.compiler.sun">Sun Studio</a></span></dt>
+<dt><span class="section"><a href="reference.html#bbv2.reference.tools.compiler.vacpp">IBM Visual Age</a></span></dt>
+</dl></div>
+<p>This section lists all Boost.Build modules that support C++
+        compilers and documents how each one can be initialized.<br>本节列出了所有支持 C++ 编译器的 Boost.Build 模块，并逐个说明如何初始化。</p>
+<div class="section" lang="en">
+<div class="titlepage"><div><div><h5 class="title">
+<a name="bbv2.reference.tools.compiler.gcc"></a>GNU C++</h5></div></div></div>
+<p>The <code class="computeroutput">gcc</code> module supports the
+          <a href="http://gcc.gnu.org/" target="_top">GNU C++ compiler</a>
+          on Linux, a number of Unix-like system including MacOS X, SunOS and
+          BeOS, and on Windows (either <a href="http://www.cygwin.com/" target="_top">Cygwin</a>
+          or <a href="http://www.mingw.org/" target="_top">MinGW</a>).<br><code class="computeroutput">gcc</code> 模块支持 Linux，包括 MacOS X、SunOS、BeOS 在内的多个类-Unix系统，以及 Windows (<a href="http://www.cygwin.com/" target="_top">Cygwin</a> 或 <a href="http://www.mingw.org/" target="_top">MinGW</a>)上的
+          <a href="http://gcc.gnu.org" target="_top">GNU C++ 编译器</a>。
+          </p>
+<p>The <code class="computeroutput">gcc</code> module is initialized using the following
+          syntax:<br><code class="computeroutput">gcc</code> 模块用以下语法进行初始化：</p>
+<pre class="programlisting">using gcc : [<span class="optional"><em class="replaceable"><code>version</code></em></span>] : [<span class="optional"><em class="replaceable"><code>c++-compile-command</code></em></span>] : [<span class="optional"><em class="replaceable"><code>compiler options</code></em></span>] ;</pre>
+<p>This statement may be repeated several times, if you want to configure several versions of the compiler.<br>如果你想配置多个版本的编译器，这一语句可以重复多次。</p>
+<p>
+          If the version is not explicitly specified, it will be
+          automatically detected by running the compiler with the <code class="computeroutput">-v</code>
+          option. If the command is not specified, the <span class="command"><strong>g++</strong></span>
+          binary will be searched in <code class="envar">PATH</code>.<br>如果版本号没有明确指定，将以 <code class="computeroutput">-v</code>
+          选项运行编译器进行自动检测。如果该命令未指定，则在 <code class="envar">PATH</code> 中搜索 <span class="command"><strong>g++</strong></span>
+          二进制文件。</p>
+<p>The following options can be provided, using <code class="literal">&lt;<em class="replaceable"><code>option-name</code></em>&gt;<em class="replaceable"><code>option-value</code></em></code> syntax:<br>可使用 <code class="literal">&lt;<em class="replaceable"><code>option-name</code></em>&gt;<em class="replaceable"><code>option-value</code></em></code> 语法提供以下选项：</p>
+<div class="variablelist"><dl>
+<dt><span class="term"><code class="literal">cflags</code></span></dt>
+<dd><p>Specifies additional compiler flags that will be used when
+      compiling C sources.<br>指定在编译 C 源文件时使用的其它编译器选项。</p></dd>
+<dt><span class="term"><code class="literal">cxxflags</code></span></dt>
+<dd><p>Specifies additional compiler flags that will be used when
+      compiling C++ sources.<br>指定在编译 C++ 源文件时使用的其它编译器选项。</p></dd>
+<dt><span class="term"><code class="literal">compileflags</code></span></dt>
+<dd><p>Specifies additional compiler flags that will be used when
+      compiling both C and C++ sources.<br>指定在编译 C 和 C++ 源文件时使用的其它编译器选项。</p></dd>
+<dt><span class="term"><code class="literal">linkflags</code></span></dt>
+<dd><p>Specifies additional command line options that will be
+      passed to the linker.<br>指定传递给链接器的其它命令行选项。</p></dd>
+<dt><span class="term"><code class="literal">root</code></span></dt>
+<dd><p>Specifies root directory of the compiler installation.
+      This option is necessary only if it is not possible to detect this
+      information from the compiler command—for example if the specified
+      compiler command is a user script.<br>指明编译器安装的根目录。仅当不能从编译器命令检测得到该信息时才需要这个选项，例如当指定的编译器命令为一个用户脚本时。</p></dd>
+<dt><span class="term"><code class="literal">rc</code></span></dt>
+<dd><p>Specifies the resource compiler command
+                that will be used with the version of gcc that is being
+                configured. This setting makes sense only for Windows and only
+                if you plan to use resource files. By
+                default <span class="command"><strong>windres</strong></span> will be used.<br>指定与被配置的 gcc 版本一起使用的资源编译器命令。该设置只对 Windows 有意义，且仅当你准备使用资源文件时有用。缺省使用 <span class="command"><strong>windres</strong></span>。</p></dd>
+<dt><span class="term"><code class="literal">rc-type</code></span></dt>
+<dd><p>Specifies the type of resource compiler. The value can
+                be either <code class="computeroutput">windres</code> for msvc resource compiler,
+                or <code class="computeroutput">rc</code> for borland's resource compiler.<br>指定资源编译器的类型。对于 msvc 资源编译器，该值为 <code class="computeroutput">windres</code>，对于 borland 的资源编译器，该值为 <code class="computeroutput">rc</code>。</p></dd>
+</dl></div>
+<a class="indexterm" name="id3910461"></a>
+
+          In order to compile 64-bit applications, you have to specify
+          <code class="computeroutput">address-model=64</code>, and the <code class="computeroutput">instruction-set</code>
+          feature should refer to a 64 bit processor. Currently, those
+          include <code class="literal">nocona</code>, <code class="literal">opteron</code>,
+          <code class="literal">athlon64</code> and <code class="literal">athlon-fx</code>.<br>为了编译器64位应用程序，你必须指定
+          <code class="computeroutput">address-model=64</code>，且 <code class="computeroutput">instruction-set</code> 特性应表示64位处理器。当前的64位处理器包括有 <code class="literal">nocona</code>, <code class="literal">opteron</code>,
+          <code class="literal">athlon64</code> 和 <code class="literal">athlon-fx</code>.
+
+        </div>
+<div class="section" lang="en">
+<div class="titlepage"><div><div><div class="section" title="Apple Darwin gcc">
+<div class="titlepage">
+<div>
+<div>
+<h5 class="title"><a name="bbv2.reference.tools.compiler.darwin"></a>Apple Darwin 
+gcc</h5></div></div></div>
+<p>The <code class="computeroutput">darwin</code> module supports the version of 
+gcc that is modified and provided by Apple. The configuration is essentially 
+identical to that of the gcc module.<br><code class="computeroutput">darwin</code> 模块支持专为 Apple 修正和提供的 gcc 版本。该配置基本上与 gcc 模块相同。 </p>
+<p><a class="indexterm" name="id2141320"></a>The darwin toolset can generate so 
+called "fat" binaries—binaries that can run support more than one architecture, 
+or address mode. To build a binary that can run both on Intel and PowerPC 
+processors, specify <code class="computeroutput">architecture=combined</code>. To 
+build a binary that can run both in 32-bit and 64-bit modes, specify <code class="computeroutput">address-model=32_64</code>. If you specify both of those 
+properties, a "4-way" fat binary will be generated.<br>darwin 工具集可生成被称为 "fat" 的二进制文件—即可在一个以上的体系或地址模式上运行的二进制文件。要构建一个可以同时在 Intel 和 PowerPC 
+处理器上运行的二进制文件，指定 <code class="computeroutput">architecture=combined</code>。要构建一个可以同时在32位和64位模式下运行的二进制文件，指定 <code class="computeroutput">address-model=32_64</code>。如果你同时指定这两个特性，则生成一个 "4-way" 的 fat 二进制文件。 </p></div><h5 class="title"><a name="bbv2.reference.tools.compiler.msvc"></a>Microsoft Visual C++</h5></div></div></div>
+<p>The <code class="computeroutput">msvc</code> module supports the
+          <a href="http://msdn.microsoft.com/visualc/" target="_top">Microsoft Visual
+          C++</a> command-line tools on Microsoft Windows. The supported
+          products and versions of command line tools are listed below:<br><code class="computeroutput">msvc</code> 模块支持 Microsoft Windows 上的
+          <a href="http://msdn.microsoft.com/visualc/" target="_top">Microsoft Visual
+          C++</a> 命令行工具。可支持的产品和命令行工具版本列出如下：</p>
+<div class="itemizedlist"><ul type="disc">
+<li><p>Visual Studio 2008—9.0</p></li>
+<li><p>Visual Studio 2005—8.0</p></li>
+<li><p>Visual Studio .NET 2003—7.1</p></li>
+<li><p>Visual Studio .NET—7.0</p></li>
+<li><p>Visual Studio 6.0, Service Pack 5—6.5</p></li>
+</ul></div>
+<p>The <code class="computeroutput">msvc</code> module is initialized using the following
+          syntax:<br><code class="computeroutput">msvc</code> 模块使用以下语法进行初始化：</p>
+<pre class="programlisting">using msvc : [<span class="optional"><em class="replaceable"><code>version</code></em></span>] : [<span class="optional"><em class="replaceable"><code>c++-compile-command</code></em></span>] : [<span class="optional"><em class="replaceable"><code>compiler options</code></em></span>] ;<br>          </pre>
+<p>This statement may be repeated several times, if you want to configure several versions of the compiler.<br>如果你想配置多个版本的编译器，这一语句可以重复多次。</p>
+<p>If the version is not explicitly specified, the most recent
+          version found in the registry will be used instead. If the special
+          value <code class="computeroutput">all</code> is passed as the version, all versions found in
+          the registry will be configured. If a version is specified, but the
+          command is not, the compiler binary will be searched in standard
+          installation paths for that version, followed by <code class="envar">PATH</code>.<br>如果版本号没有明确指定，则使用从注册表找以的最新版本。如果传入的版本指定值为 <code class="computeroutput">all</code>，则从注册表找到的所有版本都将被配置。如果指定了版本，但未指定命令，则在该版本的标准安装路径和 <code class="envar">PATH</code> 中搜索编译器的二进制文件。
+          </p>
+<p>The compiler command should be specified using forward slashes,
+          and quoted.<br>编译器命令应该用前导的斜杠来指定，并且用引号引起来。</p>
+<p>The following options can be provided, using <code class="literal">&lt;<em class="replaceable"><code>option-name</code></em>&gt;<em class="replaceable"><code>option-value</code></em></code> syntax:<br>可使用 <code class="literal">&lt;<em class="replaceable"><code>option-name</code></em>&gt;<em class="replaceable"><code>option-value</code></em></code> 语法提供以下选项：</p>
+<div class="variablelist"><dl>
+<dt><span class="term"><code class="literal">cflags</code></span></dt>
+<dd><p>Specifies additional compiler flags that will be used when
+      compiling C sources.<br>指定在编译 C 源文件时使用的其它编译器选项。</p></dd>
+<dt><span class="term"><code class="literal">cxxflags</code></span></dt>
+<dd><p>Specifies additional compiler flags that will be used when
+      compiling C++ sources.<br>指定在编译 C++ 源文件时使用的其它编译器选项。</p></dd>
+<dt><span class="term"><code class="literal">compileflags</code></span></dt>
+<dd><p>Specifies additional compiler flags that will be used when
+      compiling both C and C++ sources.<br>指定在编译 C 和 C++ 源文件时使用的其它编译器选项。</p></dd>
+<dt><span class="term"><code class="literal">linkflags</code></span></dt>
+<dd><p>Specifies additional command line options that will be
+      passed to the linker.<br>指定传递给链接器的其它命令行选项。</p></dd>
+<dt><span class="term"><code class="literal">assembler</code></span></dt>
+<dd><p>The command that compiles assembler sources. If
+              not specified, <span class="command"><strong>ml</strong></span> will be used. The command
+              will be invoked after the setup script was executed and adjusted
+              the <code class="envar">PATH</code> variable.<br>编译汇编源文件的命令。如果未指定，则使用 <span class="command"><strong>ml</strong></span>。该命令在执行设置脚本及调整&nbsp;<code class="envar">PATH</code> 变量后被调用。</p></dd>
+<dt><span class="term"><code class="literal">compiler</code></span></dt>
+<dd><p>The command that compiles C and C++ sources. If
+              not specified, <span class="command"><strong>cl</strong></span> will be used. The command
+              will be invoked after the setup script was executed and adjusted
+              the <code class="envar">PATH</code> variable.<br>编译 C 和 C++ 源文件的命令。如果未指定，则使用 <span class="command"><strong>cl</strong></span>。该命令在执行设置脚本及调整&nbsp;<code class="envar">PATH</code> 变量后被调用。</p></dd>
+<dt><span class="term"><code class="literal">compiler-filter</code></span></dt>
+<dd><p>Command through which to pipe the output of
+              running the compiler. For example to pass the output to STLfilt.<br>对运行编译器的输出进行管道操作的命令。例如，将输出传递给 STLfilt。
+              </p></dd>
+<dt><span class="term"><code class="literal">idl-compiler</code></span></dt>
+<dd><p>The command that compiles Microsoft COM interface
+              definition files. If not specified, <span class="command"><strong>midl</strong></span> will
+              be used. The command will be invoked after the setup script was
+              executed and adjusted the <code class="envar">PATH</code> variable.<br>编译 Microsoft COM 接口定义文件的命令。如果未指定，则使用 <span class="command"><strong>midl</strong></span>。该命令在执行设置脚本及调整&nbsp;<code class="envar">PATH</code> 变量后被调用。</p></dd>
+<dt><span class="term"><code class="literal">linker</code></span></dt>
+<dd><p>The command that links executables and dynamic
+              libraries. If not specified, <span class="command"><strong>link</strong></span> will be used.
+              The command will be invoked after the setup script was executed
+              and adjusted the <code class="envar">PATH</code> variable.<br>链接可执行文件和动态库的命令。如果未指定，则使用 <span class="command"><strong>link</strong></span>。该命令在执行设置脚本及调整&nbsp;<code class="envar">PATH</code> 变量后被调用。</p></dd>
+<dt><span class="term"><code class="literal">mc-compiler</code></span></dt>
+<dd><p>The command that compiles Microsoft message
+              catalog files. If not specified, <span class="command"><strong>mc</strong></span> will be
+              used. The command will be invoked after the setup script was
+              executed and adjusted the <code class="envar">PATH</code> variable.<br>编译 Microsoft 消息目录文件的命令。如果未指定，则使用 <span class="command"><strong>mc</strong></span>。该命令在执行设置脚本及调整&nbsp;<code class="envar">PATH</code> 变量后被调用。</p></dd>
+<dt><span class="term"><code class="literal">resource-compiler</code></span></dt>
+<dd><p>The command that compiles resource files. If not
+              specified, <span class="command"><strong>rc</strong></span> will be used. The command will be
+              invoked after the setup script was executed and adjusted the
+              <code class="envar">PATH</code> variable.<br>编译资源文件的命令。如果未指定，则使用 <span class="command"><strong>rc</strong></span>。该命令在执行设置脚本及调整&nbsp;<code class="envar">PATH</code> 变量后被调用。</p></dd>
+<dt><span class="term"><code class="literal">setup</code></span></dt>
+<dd><p>The filename of the global environment setup
+              script to run before invoking any of the tools defined in this
+              toolset. Will not be used in case a target platform specific
+              script has been explicitly specified for the current target
+              platform. Used setup script will be passed the target platform
+              identifier (x86, x86_amd64, x86_ia64, amd64 or ia64) as a
+              arameter. If not specified a default script is chosen based on the
+              used compiler binary, e.g. <span class="command"><strong>vcvars32.bat</strong></span> or
+              <span class="command"><strong>vsvars32.bat</strong></span>.<br>全
+局的环境设置脚本文件名，在调用该工具集中所定义的任一工具之前运行。如果已经为当前的目标平台明确指定一个目标平台专用脚本，则不再使用该选项。该设置
+脚本将被传入一个目标平台标识符(x86, x86_amd64, x86_ia64, amd64 或
+ia64)作为参数。如果未指定该选项，则基于所用编译器的二进制文件选择一个缺省脚本，如&nbsp;<span class="command"><strong>vcvars32.bat</strong></span> 或
+              <span class="command"><strong>vsvars32.bat</strong></span>。</p></dd>
+<dt>
+<span class="term"><code class="literal">setup-amd64&gt;</code>, </span><span class="term"><code class="literal">setup-i386&gt;</code>, </span><span class="term"><code class="literal">setup-ia64&gt;</code></span>
+</dt>
+<dd><p>The filename of the target platform specific
+              environment setup script to run before invoking any of the tools
+              defined in this toolset. If not specified the global environment
+              setup script is used.<br>目标平台专用的环境设置脚本文件名，在调用该工具集中所定义的任一工具之前运行。如果未指定，则使用全局的环境设置脚本。</p></dd>
+</dl></div>
+<div class="section" lang="en">
+<div class="titlepage"><div><div><h6 class="title">
+<a name="id3910965"></a>64-bit support 对64位的支持</h6></div></div></div>
+<a class="indexterm" name="id3910971"></a><p>Starting with version 8.0, Microsoft Visual Studio can
+            generate binaries for 64-bit processor, both 64-bit flavours of x86
+            (codenamed AMD64/EM64T), and Itanium (codenamed IA64). In addition,
+            compilers that are itself run in 64-bit mode, for better
+            performance, are provided. The complete list of compiler
+            configurations are as follows (we abbreviate AMD64/EM64T to just
+            AMD64):<br>从
+版本8.0开始，Microsoft Visual Studio 可以为64位处理器生成二进制代码，包括64位的 x86 (代号
+AMD64/EM64T)，以及 Itanium (代号
+IA64)。另外，为了更好的性能，还提供了本身运行在64位模式下的编译器。编译器配置的完整列表如下(we 把 AMD64/EM64T 缩写为
+AMD64)：</p>
+<div class="itemizedlist"><ul type="disc">
+<li><p>32-bit x86 host, 32-bit x86 target</p></li>
+<li><p>32-bit x86 host, 64-bit AMD64 target</p></li>
+<li><p>32-bit x86 host, 64-bit IA64 target</p></li>
+<li><p>64-bit AMD64 host, 64-bit AMD64 target</p></li>
+<li><p>64-bit IA64 host, 64-bit IA64 target</p></li>
+</ul></div>
+<p>
+            The 32-bit host compilers can be always used, even on 64-bit
+            Windows. On the contrary, 64-bit host compilers require both 64-bit
+            host processor and 64-bit Windows, but can be faster. By default,
+            only 32-bit host, 32-bit target compiler is installed, and
+            additional compilers need to be installed explicitly.<br>32位主机的编译器也可以在64位 Windows 上使用。反之，64位主机的编译器则同时要求64位的主机处理器和64位的 Windows，但是速度更快。缺省情况下，只安装32位主机、32位目标的编译器，其它编译器需要明确指定安装。
+            </p>
+<p>To use 64-bit compilation you should:<br>要使用64位编译，你应该：</p>
+<div class="orderedlist"><ol type="1">
+<li><p>Configure you compiler as usual. If you provide a
+              path to the compiler explicitly, provide the path to the 32-bit
+              compiler. If you try to specify the path to any of 64-bit
+              compilers, configuration will not work.<br>如常配置你的编译器。如果你明确指定了编译器的路径，就指定32位编译器的路径。如果你试图指定任一个64位编译器的路径，则配置将不能工作。</p></li>
+<li><p>When compiling, use <code class="computeroutput">address-model=64</code>,
+              to generate AMD64 code.<br>编译的时候，使用 <code class="computeroutput">address-model=64</code>，以生成 AMD64 代码。</p></li>
+<li><p>To generate IA64 code, use
+              <code class="computeroutput">architecture=ia64</code><br>要生成 IA64 代码，使用
+              <code class="computeroutput">architecture=ia64</code></p></li>
+</ol></div>
+<p>The (AMD64 host, AMD64 target) compiler will be used
+            automatically when you are generating AMD64 code and are running
+            64-bit Windows on AMD64. The (IA64 host, IA64 target) compiler will
+            never be used, since nobody has an IA64 machine to test.<br>当
+你生成 AMD64 代码并且在 AMD64 上运行64位 Windows 时，会自动使用(AMD64 host, AMD64
+target)编译器。(IA64 host, IA64 target)编译器不会被用到，因为没有人有一台 IA64 的机器来测试。</p>
+<p>It is believed that AMD64 and EM64T targets are essentially
+            compatible. The compiler options <code class="computeroutput">/favor:AMD64</code> and
+            <code class="computeroutput">/favor:EM64T</code>, which are accepted only by AMD64
+            targeting compilers, cause the generated code to be tuned to a
+            specific flavor of 64-bit x86. Boost.Build will make use of those
+            options depending on the value of the<code class="computeroutput">instruction-set</code>
+            feature.<br>可以认为 AMD64 和 EM64T 的目标本质上是兼容的。编译器选项 <code class="computeroutput">/favor:AMD64</code> 和 <code class="computeroutput">/favor:EM64T</code> 只能由 AMD64
+            目标的编译器所接受，它们将导致所生成的代码特别适用于 64-bit x86。Boost.Build 如何使用这些选项，取决于 <code class="computeroutput">instruction-set</code> 特性的值。</p>
+</div>
+</div>
+<div class="section" lang="en">
+<div class="titlepage"><div><div><h5 class="title">
+<a name="bbv2.reference.tools.compiler.intel"></a>Intel C++</h5></div></div></div>
+<p>The <code class="computeroutput">intel-linux</code> and <code class="computeroutput">intel-win</code> modules
+          support the Intel C++ command-line compiler—the <a href="http://www.intel.com/software/products/compilers/clin/index.htm" target="_top">Linux</a>
+          and <a href="http://www.intel.com/cd/software/products/asmo-na/eng/compilers/284527.htm" target="_top">
+          Windows</a> versions respectively.<br><code class="computeroutput">intel-linux</code> 和 <code class="computeroutput">intel-win</code> 模块支持 Intel C++ 命令行编译器—分别对应于 <a href="http://www.intel.com/software/products/compilers/clin/index.htm" target="_top">Linux</a> 和 <a href="http://www.intel.com/cd/software/products/asmo-na/eng/compilers/284527.htm" target="_top">
+          Windows</a> 版本。</p>
+<p>The module is initialized using the following syntax:<br>该模块分别使用以下语法进行初始化：</p>
+<pre class="programlisting">using intel-linux : [<span class="optional"><em class="replaceable"><code>version</code></em></span>] : [<span class="optional"><em class="replaceable"><code>c++-compile-command</code></em></span>] : [<span class="optional"><em class="replaceable"><code>compiler options</code></em></span>] ;</pre>
+<p>or<br>或</p>
+<pre class="programlisting">using intel-win : [<span class="optional"><em class="replaceable"><code>version</code></em></span>] : [<span class="optional"><em class="replaceable"><code>c++-compile-command</code></em></span>] : [<span class="optional"><em class="replaceable"><code>compiler options</code></em></span>] ;</pre>
+<p>respectively.</p>
+<p>This statement may be repeated several times, if you want to configure several versions of the compiler.<br>如果你想配置多个版本的编译器，这一语句可以重复多次。</p>
+<p>
+          If compiler command is not specified, then Boost.Build will
+          look in <code class="envar">PATH</code> for an executable <span class="command"><strong>icpc</strong></span>
+          (on Linux), or <span class="command"><strong>icc.exe</strong></span> (on Windows).<br>如果未指定编译器命令，Boost.Build 将在
+<code class="envar">PATH</code> 中查找可执行文件 <span class="command"><strong>icpc</strong></span>
+          (在 Linux 上)，或 <span class="command"><strong>icc.exe</strong></span> (在 Windows 上)。
+          </p>
+<p>The following options can be provided, using <code class="literal">&lt;<em class="replaceable"><code>option-name</code></em>&gt;<em class="replaceable"><code>option-value</code></em></code> syntax:<br>可使用 <code class="literal">&lt;<em class="replaceable"><code>option-name</code></em>&gt;<em class="replaceable"><code>option-value</code></em></code> 语法提供以下选项：</p>
+<div class="variablelist"><dl>
+<dt><span class="term"><code class="literal">cflags</code></span></dt>
+<dd><p>Specifies additional compiler flags that will be used when
+      compiling C sources.<br>指定在编译 C 源文件时使用的其它编译器选项。</p></dd>
+<dt><span class="term"><code class="literal">cxxflags</code></span></dt>
+<dd><p>Specifies additional compiler flags that will be used when
+      compiling C++ sources.<br>指定在编译 C++ 源文件时使用的其它编译器选项。</p></dd>
+<dt><span class="term"><code class="literal">compileflags</code></span></dt>
+<dd><p>Specifies additional compiler flags that will be used when
+      compiling both C and C++ sources.<br>指定在编译 C 和 C++ 源文件时使用的其它编译器选项。</p></dd>
+<dt><span class="term"><code class="literal">linkflags</code></span></dt>
+<dd><p>Specifies additional command line options that will be
+      passed to the linker.<br>指定传递给链接器的其它命令行选项。</p></dd>
+</dl></div>
+<p>The Linux version supports the following additional options:<br>Linux 版本还支持以下选项：</p>
+<div class="variablelist"><dl>
+<dt><span class="term"><code class="literal">root</code></span></dt>
+<dd><p>Specifies root directory of the compiler installation.
+      This option is necessary only if it is not possible to detect this
+      information from the compiler command—for example if the specified
+      compiler command is a user script.<br>指明编译器安装的根目录。仅当不能从编译器命令检测得到该信息时才需要这个选项，例如当指定的编译器命令为一个用户脚本时。</p></dd>
+</dl></div>
+</div>
+<div class="section" lang="en">
+<div class="titlepage"><div><div><h5 class="title">
+<a name="bbv2.reference.tools.compiler.acc"></a>HP aC++ compiler</h5></div></div></div>
+<p>The <code class="computeroutput">acc</code> module supports the
+<a href="http://h21007.www2.hp.com/dspp/tech/tech_TechSoftwareDetailPage_IDX/1,1703,1740,00.html" target="_top">HP aC++ compiler</a>
+          for the HP-UX operating system.<br><code class="computeroutput">acc</code> 模块支持 HP-UX  操作系统上的
+<a href="http://h21007.www2.hp.com/dspp/tech/tech_TechSoftwareDetailPage_IDX/1,1703,1740,00.html" target="_top">HP aC++ 编译器</a>。</p>
+<p>The module is initialized using the following
+          syntax:<br>该模块使用以下语法进行初始化：</p>
+<pre class="programlisting">using acc : [<span class="optional"><em class="replaceable"><code>version</code></em></span>] : [<span class="optional"><em class="replaceable"><code>c++-compile-command</code></em></span>] : [<span class="optional"><em class="replaceable"><code>compiler options</code></em></span>] ;</pre>
+<p>This statement may be repeated several times, if you want to configure several versions of the compiler.<br>如果你想配置多个版本的编译器，这一语句可以重复多次。</p>
+<p>
+            If the command is not specified, the <span class="command"><strong>aCC</strong></span>
+          binary will be searched in <code class="envar">PATH</code>.<br>如果未指定编译器命令，则在 <code class="envar">PATH</code> 中搜索 <span class="command"><strong>aCC</strong></span> 二进制文件。 </p>
+<p>The following options can be provided, using <code class="literal">&lt;<em class="replaceable"><code>option-name</code></em>&gt;<em class="replaceable"><code>option-value</code></em></code> syntax:<br>可使用 <code class="literal">&lt;<em class="replaceable"><code>option-name</code></em>&gt;<em class="replaceable"><code>option-value</code></em></code> 语法提供以下选项：</p>
+<div class="variablelist"><dl>
+<dt><span class="term"><code class="literal">cflags</code></span></dt>
+<dd><p>Specifies additional compiler flags that will be used when
+      compiling C sources.<br>指定在编译 C 源文件时使用的其它编译器选项。</p></dd>
+<dt><span class="term"><code class="literal">cxxflags</code></span></dt>
+<dd><p>Specifies additional compiler flags that will be used when
+      compiling C++ sources.<br>指定在编译 C++ 源文件时使用的其它编译器选项。</p></dd>
+<dt><span class="term"><code class="literal">compileflags</code></span></dt>
+<dd><p>Specifies additional compiler flags that will be used when
+      compiling both C and C++ sources.<br>指定在编译 C 和 C++ 源文件时使用的其它编译器选项。</p></dd>
+<dt><span class="term"><code class="literal">linkflags</code></span></dt>
+<dd><p>Specifies additional command line options that will be
+      passed to the linker.<br>指定传递给链接器的其它命令行选项。</p></dd>
+</dl></div>
+</div>
+<div class="section" lang="en">
+<div class="titlepage"><div><div><h5 class="title">
+<a name="bbv2.reference.tools.compiler.borland"></a>Borland C++ Compiler</h5></div></div></div>
+<p>The <code class="computeroutput">borland</code> module supports the command line
+          C++ compiler included in
+          <a href="http://www.borland.com/us/products/cbuilder/index.html" target="_top">C++ Builder 2006</a>
+          product and earlier version of it, running on Microsoft Windows.<br><code class="computeroutput">borland</code> 模块支持包含在
+          <a href="http://www.borland.com/us/products/cbuilder/index.html" target="_top">C++ Builder 2006</a>
+          产品中的命令行 C++ 编译器及其更早版本，运行在 Microsoft Windows 上。</p>
+<p>The supported products are listed below. The version reported
+          by the command lines tools is also listed for reference.:<br>可支持的产品列出如下。由命令行工具报告的版本也作为参考列出：</p>
+<div class="itemizedlist"><ul type="disc">
+<li><p>C++ Builder 2006—5.8.2</p></li>
+<li><p>CBuilderX—5.6.5, 5.6.4 (depending on release)</p></li>
+<li><p>CBuilder6—5.6.4</p></li>
+<li><p>Free command line tools—5.5.1<br>免费命令行工具—5.5.1</p></li>
+</ul></div>
+<p>The module is initialized using the following syntax:<br>该模块使用以下语法进行初始化：</p>
+<pre class="programlisting">using borland : [<span class="optional"><em class="replaceable"><code>version</code></em></span>] : [<span class="optional"><em class="replaceable"><code>c++-compile-command</code></em></span>] : [<span class="optional"><em class="replaceable"><code>compiler options</code></em></span>] ;</pre>
+<p>This statement may be repeated several times, if you want to configure several versions of the compiler.<br>如果你想配置多个版本的编译器，这一语句可以重复多次。</p>
+<p>If the command is not specified, Boost.Build will search for
+          a binary named <span class="command"><strong>bcc32</strong></span> in <code class="envar">PATH</code>.<br>如果未指定编译器命令，Boost.Build 将在 <code class="envar">PATH</code> 中搜索名为 <span class="command"><strong>bcc32</strong></span> 的二进制文件。 </p>
+<p>The following options can be provided, using <code class="literal">&lt;<em class="replaceable"><code>option-name</code></em>&gt;<em class="replaceable"><code>option-value</code></em></code> syntax:<br>可使用 <code class="literal">&lt;<em class="replaceable"><code>option-name</code></em>&gt;<em class="replaceable"><code>option-value</code></em></code> 语法提供以下选项：</p>
+<div class="variablelist"><dl>
+<dt><span class="term"><code class="literal">cflags</code></span></dt>
+<dd><p>Specifies additional compiler flags that will be used when
+      compiling C sources.<br>指定在编译 C 源文件时使用的其它编译器选项。</p></dd>
+<dt><span class="term"><code class="literal">cxxflags</code></span></dt>
+<dd><p>Specifies additional compiler flags that will be used when
+      compiling C++ sources.<br>指定在编译 C++ 源文件时使用的其它编译器选项。</p></dd>
+<dt><span class="term"><code class="literal">compileflags</code></span></dt>
+<dd><p>Specifies additional compiler flags that will be used when
+      compiling both C and C++ sources.<br>指定在编译 C 和 C++ 源文件时使用的其它编译器选项。</p></dd>
+<dt><span class="term"><code class="literal">linkflags</code></span></dt>
+<dd><p>Specifies additional command line options that will be
+      passed to the linker.<br>指定传递给链接器的其它命令行选项。</p></dd>
+</dl></div>
+</div>
+<div class="section" lang="en">
+<div class="titlepage"><div><div><h5 class="title">
+<a name="bbv2.reference.tools.compiler.como"></a>Comeau C/C++ Compiler</h5></div></div></div>
+<p>The <code class="computeroutput">como-linux</code> and the <code class="computeroutput">como-win</code>
+          modules supports the
+          <a href="http://www.comeaucomputing.com/" target="_top">Comeau C/C++ Compiler</a>
+          on Linux and Windows respectively.<br><code class="computeroutput">como-linux</code> 和 <code class="computeroutput">como-win</code> 模块分别支持 Linux 和 Windows 上的
+          <a href="http://www.comeaucomputing.com/" target="_top">Comeau C/C++ 编译器</a>。</p>
+<p>The module is initialized using the following syntax:<br>该模块使用以下语法进行初始化：</p>
+<pre class="programlisting">using como-linux : [<span class="optional"><em class="replaceable"><code>version</code></em></span>] : [<span class="optional"><em class="replaceable"><code>c++-compile-command</code></em></span>] : [<span class="optional"><em class="replaceable"><code>compiler options</code></em></span>] ;</pre>
+<p>This statement may be repeated several times, if you want to configure several versions of the compiler.<br>如果你想配置多个版本的编译器，这一语句可以重复多次。</p>
+<p>If the command is not specified, Boost.Build will search for
+          a binary named <span class="command"><strong>como</strong></span> in
+          <code class="envar">PATH</code>.<br>如果未指定编译器命令，Boost.Build 将在 <code class="envar">PATH</code> 中搜索名为 <span class="command"><strong>como</strong></span> 的二进制文件。 </p>
+<p>The following options can be provided, using <code class="literal">&lt;<em class="replaceable"><code>option-name</code></em>&gt;<em class="replaceable"><code>option-value</code></em></code> syntax:<br>可使用 <code class="literal">&lt;<em class="replaceable"><code>option-name</code></em>&gt;<em class="replaceable"><code>option-value</code></em></code> 语法提供以下选项：</p>
+<div class="variablelist"><dl>
+<dt><span class="term"><code class="literal">cflags</code></span></dt>
+<dd><p>Specifies additional compiler flags that will be used when
+      compiling C sources.<br>指定在编译 C 源文件时使用的其它编译器选项。</p></dd>
+<dt><span class="term"><code class="literal">cxxflags</code></span></dt>
+<dd><p>Specifies additional compiler flags that will be used when
+      compiling C++ sources.<br>指定在编译 C++ 源文件时使用的其它编译器选项。</p></dd>
+<dt><span class="term"><code class="literal">compileflags</code></span></dt>
+<dd><p>Specifies additional compiler flags that will be used when
+      compiling both C and C++ sources.<br>指定在编译 C 和 C++ 源文件时使用的其它编译器选项。</p></dd>
+<dt><span class="term"><code class="literal">linkflags</code></span></dt>
+<dd><p>Specifies additional command line options that will be
+      passed to the linker.<br>指定传递给链接器的其它命令行选项。</p></dd>
+</dl></div>
+<p>Before using the Windows version of the compiler, you need to
+          setup necessary environment variables per compiler's documentation. In
+          particular, the <code class="envar">COMO_XXX_INCLUDE</code> variable should be
+          set, where <code class="envar">XXX</code> corresponds to the used backend C
+          compiler.<br>在使用该编译器的 Windows 版本之前，你必须根据编译器的文档设置必要的环境变量。特别是，应设置 <code class="envar">COMO_XXX_INCLUDE</code> 变量，其中 <code class="envar">XXX</code> 对应于所用的后端 C 编译器。</p>
+</div>
+<div class="section" lang="en">
+<div class="titlepage"><div><div><h5 class="title">
+<a name="bbv2.reference.tools.compiler.cw"></a>Code Warrior</h5></div></div></div>
+<p>The <code class="computeroutput">cw</code> module support CodeWarrior compiler,
+          originally produced by Metrowerks and presently developed by
+          Freescale. Boost.Build supports only the versions of the compiler that
+          target x86 processors. All such versions were released by Metrowerks
+          before aquisition and are not sold any longer. The last version known
+          to work is 9.4.<br><code class="computeroutput">cw</code> 模块支持 CodeWarrior 编译器，早先由 Metrowerks 生产，现在由 Freescale 开发。Boost.Build 只支持以 x86 处理器为目标的编译器版本。所有这些版本都是在收购前由 Metrowerks
+          发布的，已不再销售。已知可用的最后版本是 9.4.</p>
+<p>The module is initialized using the following syntax:<br>该模块使用以下语法进行初始化：</p>
+<pre class="programlisting">using cw : [<span class="optional"><em class="replaceable"><code>version</code></em></span>] : [<span class="optional"><em class="replaceable"><code>c++-compile-command</code></em></span>] : [<span class="optional"><em class="replaceable"><code>compiler options</code></em></span>] ;</pre>
+<p>This statement may be repeated several times, if you want to configure several versions of the compiler.<br>如果你想配置多个版本的编译器，这一语句可以重复多次。</p>
+<p>If the command is not specified, Boost.Build will search for a
+          binary named <span class="command"><strong>mwcc</strong></span> in default installation paths and
+          in <code class="envar">PATH</code>.<br>如果未指定编译器命令，Boost.Build 将在 <code class="envar">PATH</code> 中搜索名为 <span class="command"><strong>mwcc</strong></span> 的二进制文件。 </p>
+<p>The following options can be provided, using <code class="literal">&lt;<em class="replaceable"><code>option-name</code></em>&gt;<em class="replaceable"><code>option-value</code></em></code> syntax:<br>可使用 <code class="literal">&lt;<em class="replaceable"><code>option-name</code></em>&gt;<em class="replaceable"><code>option-value</code></em></code> 语法提供以下选项：</p>
+<div class="variablelist"><dl>
+<dt><span class="term"><code class="literal">cflags</code></span></dt>
+<dd><p>Specifies additional compiler flags that will be used when
+      compiling C sources.<br>指定在编译 C 源文件时使用的其它编译器选项。</p></dd>
+<dt><span class="term"><code class="literal">cxxflags</code></span></dt>
+<dd><p>Specifies additional compiler flags that will be used when
+      compiling C++ sources.<br>指定在编译 C++ 源文件时使用的其它编译器选项。</p></dd>
+<dt><span class="term"><code class="literal">compileflags</code></span></dt>
+<dd><p>Specifies additional compiler flags that will be used when
+      compiling both C and C++ sources.<br>指定在编译 C 和 C++ 源文件时使用的其它编译器选项。</p></dd>
+<dt><span class="term"><code class="literal">linkflags</code></span></dt>
+<dd><p>Specifies additional command line options that will be
+      passed to the linker.<br>指定传递给链接器的其它命令行选项。</p></dd>
+<dt><span class="term"><code class="literal">root</code></span></dt>
+<dd><p>Specifies root directory of the compiler installation.
+      This option is necessary only if it is not possible to detect this
+      information from the compiler command—for example if the specified
+      compiler command is a user script.<br>指明编译器安装的根目录。仅当不能从编译器命令检测得到该信息时才需要这个选项，例如当指定的编译器命令为一个用户脚本时。</p></dd>
+<dt><span class="term"><code class="literal">setup</code></span></dt>
+<dd><p>The command that sets up environment variables
+              prior to invoking the compiler. If not specified,
+              <span class="command"><strong>cwenv.bat</strong></span> alongside the compiler binary
+              will be used.<br>该命令在调用编译器之前设置环境变量。如果未指定，则使用与编译器二进制文件一起的
+              <span class="command"><strong>cwenv.bat</strong></span>。</p></dd>
+<dt><span class="term"><code class="literal">compiler</code></span></dt>
+<dd><p>The command that compiles C and C++ sources.
+              If not specified, <span class="command"><strong>mwcc</strong></span> will be used. The
+              command will be invoked after the setup script was
+              executed and adjusted the <code class="envar">PATH</code> variable.<br>编译 C 和 C++ 源文件的命令。如果未指定，则使用&nbsp;<span class="command"><strong>mwcc</strong></span>。该命令在执行设置脚本及调整&nbsp;<code class="envar">PATH</code> 变量后被调用。</p></dd>
+<dt><span class="term"><code class="literal">linker</code></span></dt>
+<dd><p>The command that links executables and dynamic
+              libraries.
+              If not specified, <span class="command"><strong>mwld</strong></span> will be used. The
+              command will be invoked after the setup script was
+              executed and adjusted the <code class="envar">PATH</code> variable.<br>链接可执行文件和动态库的命令。如果未指定，则使用 <span class="command"><strong>mwld</strong></span>。该命令在执行设置脚本及调整&nbsp;<code class="envar">PATH</code> 变量后被调用。</p></dd>
+</dl></div>
+</div>
+<div class="section" lang="en">
+<div class="titlepage"><div><div><h5 class="title">
+<a name="bbv2.reference.tools.compiler.dmc"></a>Digital Mars C/C++ Compiler</h5></div></div></div><p>The <code class="computeroutput">dmc</code> module supports the
+          <a href="http://www.digitalmars.com/" target="_top">Digital Mars C++ compiler.</a><br><code class="computeroutput">dmc</code> 模块支持
+          <a href="http://www.digitalmars.com/" target="_top">Digital Mars C++ 编译器。</a>
+          </p>
+<p>The module is initialized using the following syntax:<br>该模块使用以下语法进行初始化：</p>
+<pre class="programlisting">using dmc : [<span class="optional"><em class="replaceable"><code>version</code></em></span>] : [<span class="optional"><em class="replaceable"><code>c++-compile-command</code></em></span>] : [<span class="optional"><em class="replaceable"><code>compiler options</code></em></span>] ;</pre>
+<p>This statement may be repeated several times, if you want to configure several versions of the compiler.<br>如果你想配置多个版本的编译器，这一语句可以重复多次。</p>
+<p>If the command is not specified, Boost.Build will search for
+          a binary named <span class="command"><strong>como</strong></span> in
+          <code class="envar">PATH</code>.<br>如果未指定编译器命令，Boost.Build 将在 <code class="envar">PATH</code> 中搜索名为 <span class="command"><strong>como</strong></span> 的二进制文件。 </p>
+<p>The following options can be provided, using <code class="literal">&lt;<em class="replaceable"><code>option-name</code></em>&gt;<em class="replaceable"><code>option-value</code></em></code> syntax:<br>可使用 <code class="literal">&lt;<em class="replaceable"><code>option-name</code></em>&gt;<em class="replaceable"><code>option-value</code></em></code> 语法提供以下选项：</p>
+<div class="variablelist"><dl>
+<dt><span class="term"><code class="literal">cflags</code></span></dt>
+<dd><p>Specifies additional compiler flags that will be used when
+      compiling C sources.<br>指定在编译 C 源文件时使用的其它编译器选项。</p></dd>
+<dt><span class="term"><code class="literal">cxxflags</code></span></dt>
+<dd><p>Specifies additional compiler flags that will be used when
+      compiling C++ sources.<br>指定在编译 C++ 源文件时使用的其它编译器选项。</p></dd>
+<dt><span class="term"><code class="literal">compileflags</code></span></dt>
+<dd><p>Specifies additional compiler flags that will be used when
+      compiling both C and C++ sources.<br>指定在编译 C 和 C++ 源文件时使用的其它编译器选项。</p></dd>
+<dt><span class="term"><code class="literal">linkflags</code></span></dt>
+<dd><p>Specifies additional command line options that will be
+      passed to the linker.<br>指定传递给链接器的其它命令行选项。</p></dd>
+</dl></div>
+</div>
+<div class="section" lang="en">
+<div class="titlepage"><div><div><h5 class="title">
+<a name="bbv2.reference.tools.compiler.hp_cxx"></a>HP C++ Compiler for Tru64 Unix</h5></div></div></div>
+<p>The <code class="computeroutput">hp_cxx</code> modules supports the
+          <a href="http://h30097.www3.hp.com/cplus/?jumpid=reg_R1002_USEN" target="_top">
+            HP C++ Compiler</a> for Tru64 Unix.<br><code class="computeroutput">hp_cxx</code> 模块支持 Tru64 Unix 的
+          <a href="http://h30097.www3.hp.com/cplus/?jumpid=reg_R1002_USEN" target="_top">
+            HP C++ 编译器</a>。</p>
+<p>The module is initialized using the following syntax:<br>该模块使用以下语法进行初始化：</p>
+<pre class="programlisting">using hp_cxx : [<span class="optional"><em class="replaceable"><code>version</code></em></span>] : [<span class="optional"><em class="replaceable"><code>c++-compile-command</code></em></span>] : [<span class="optional"><em class="replaceable"><code>compiler options</code></em></span>] ;</pre>
+<p>This statement may be repeated several times, if you want to configure several versions of the compiler.<br>如果你想配置多个版本的编译器，这一语句可以重复多次。</p>
+<p>If the command is not specified, Boost.Build will search for
+          a binary named <span class="command"><strong>hp_cxx</strong></span> in <code class="envar">PATH</code>.<br>如果未指定编译器命令，Boost.Build 将在 <code class="envar">PATH</code> 中搜索名为&nbsp;<span class="command"><strong>hp_cxx</strong></span> 的二进制文件。 </p>
+<p>The following options can be provided, using <code class="literal">&lt;<em class="replaceable"><code>option-name</code></em>&gt;<em class="replaceable"><code>option-value</code></em></code> syntax:<br>可使用 <code class="literal">&lt;<em class="replaceable"><code>option-name</code></em>&gt;<em class="replaceable"><code>option-value</code></em></code> 语法提供以下选项：</p>
+<div class="variablelist"><dl>
+<dt><span class="term"><code class="literal">cflags</code></span></dt>
+<dd><p>Specifies additional compiler flags that will be used when
+      compiling C sources.<br>指定在编译 C 源文件时使用的其它编译器选项。</p></dd>
+<dt><span class="term"><code class="literal">cxxflags</code></span></dt>
+<dd><p>Specifies additional compiler flags that will be used when
+      compiling C++ sources.<br>指定在编译 C++ 源文件时使用的其它编译器选项。</p></dd>
+<dt><span class="term"><code class="literal">compileflags</code></span></dt>
+<dd><p>Specifies additional compiler flags that will be used when
+      compiling both C and C++ sources.<br>指定在编译 C 和 C++ 源文件时使用的其它编译器选项。</p></dd>
+<dt><span class="term"><code class="literal">linkflags</code></span></dt>
+<dd><p>Specifies additional command line options that will be
+      passed to the linker.<br>指定传递给链接器的其它命令行选项。</p></dd>
+</dl></div>
+</div>
+<div class="section" lang="en">
+<div class="titlepage"><div><div><h5 class="title">
+<a name="bbv2.reference.tools.compiler.sun"></a>Sun Studio</h5></div></div></div>
+<p>The <code class="computeroutput">sun</code> module supports the
+          <a href="http://developers.sun.com/sunstudio/index.jsp" target="_top">
+          Sun Studio</a> C++ compilers for the Solaris OS.<br><code class="computeroutput">sun</code> 模块支持 Solaris OS 的
+          <a href="http://developers.sun.com/sunstudio/index.jsp" target="_top">
+          Sun Studio</a> C++ 编译器。</p>
+<p>The module is initialized using the following syntax:<br>该模块使用以下语法进行初始化：</p>
+<pre class="programlisting">using sun : [<span class="optional"><em class="replaceable"><code>version</code></em></span>] : [<span class="optional"><em class="replaceable"><code>c++-compile-command</code></em></span>] : [<span class="optional"><em class="replaceable"><code>compiler options</code></em></span>] ;</pre>
+<p>This statement may be repeated several times, if you want to configure several versions of the compiler.<br>如果你想配置多个版本的编译器，这一语句可以重复多次。</p>
+<p>If the command is not specified, Boost.Build will search for
+          a binary named <span class="command"><strong>CC</strong></span>
+          in <code class="filename">/opt/SUNWspro/bin</code> and in
+          <code class="envar">PATH</code>.<br>如果未指定编译器命令，Boost.Build 将在 <code class="filename">/opt/SUNWspro/bin</code> 和 <code class="envar">PATH</code> 中搜索名为&nbsp;<span class="command"><strong>CC</strong></span> 的二进制文件。 </p>
+<p>When using this compiler on complex C++ code, such as the
+          <a href="http://boost.org/" target="_top">Boost C++ library</a>, it is
+          recommended to specify the following options when intializing the
+          <code class="computeroutput">sun</code> module:<br>如果该编译器用于复杂的 C++ 代码，如
+          <a href="http://boost.org" target="_top">Boost C++ 库</a>，建议在初始化 <code class="computeroutput">sun</code> 模块时指定以下选项：
+          </p>
+<pre class="screen">-library=stlport4 -features=tmplife -features=tmplrefstatic<br>          </pre>
+<p> See the <a href="http://blogs.sun.com/sga/entry/command_line_options" target="_top">
+          Sun C++ Frontend Tales</a> for details.<br>详情请见 <a href="http://blogs.sun.com/sga/entry/command_line_options" target="_top">
+          Sun C++ Frontend Tales</a>。</p>
+<p>The following options can be provided, using <code class="literal">&lt;<em class="replaceable"><code>option-name</code></em>&gt;<em class="replaceable"><code>option-value</code></em></code> syntax:<br>可使用 <code class="literal">&lt;<em class="replaceable"><code>option-name</code></em>&gt;<em class="replaceable"><code>option-value</code></em></code> 语法提供以下选项：</p>
+<div class="variablelist"><dl>
+<dt><span class="term"><code class="literal">cflags</code></span></dt>
+<dd><p>Specifies additional compiler flags that will be used when
+      compiling C sources.<br>指定在编译 C 源文件时使用的其它编译器选项。</p></dd>
+<dt><span class="term"><code class="literal">cxxflags</code></span></dt>
+<dd><p>Specifies additional compiler flags that will be used when
+      compiling C++ sources.<br>指定在编译&nbsp;C++ 源文件时使用的其它编译器选项。</p></dd>
+<dt><span class="term"><code class="literal">compileflags</code></span></dt>
+<dd><p>Specifies additional compiler flags that will be used when
+      compiling both C and C++ sources.<br>指定在编译 C 和 C++ 源文件时使用的其它编译器选项。</p></dd>
+<dt><span class="term"><code class="literal">linkflags</code></span></dt>
+<dd><p>Specifies additional command line options that will be
+      passed to the linker.<br>指定传递给链接器的其它命令行选项。</p></dd>
+</dl></div>
+<a class="indexterm" name="id3912615"></a>
+          Starting with Sun Studio 12, you can create 64-bit applications
+          by using the <code class="computeroutput">address-model=64</code> property.<br>从 Sun Studio 12 开始，你可以使用 <code class="computeroutput">address-model=64</code> 属性来创建64位应用。
+
+        </div>
+<div class="section" lang="en">
+<div class="titlepage"><div><div><h5 class="title">
+<a name="bbv2.reference.tools.compiler.vacpp"></a>IBM Visual Age</h5></div></div></div>
+<p>The <code class="computeroutput">vacpp</code> module supports the
+          <a href="http://www.ibm.com/software/ad/vacpp" target="_top">IBM Visual
+          Age</a> C++ Compiler, for the AIX operating system. Versions
+          7.1 and 8.0 are known to work.<br><code class="computeroutput">vacpp</code> 模块支持 AIX 操作系统的
+          <a href="http://www.ibm.com/software/ad/vacpp" target="_top">IBM Visual
+          Age</a> C++ 编译器。已知可用于版本
+          7.1 和 8.0。</p>
+<p>The module is initialized using the following
+          syntax:<br>该模块使用以下语法进行初始化：</p>
+<pre class="programlisting">using vacpp ;</pre>
+
+<p>The module does not accept any initialization options. The
+          compiler should be installed in the <code class="filename">/usr/vacpp/bin</code>
+          directory.<br>该模块不接受任何初始化选项。编译器应安装在 <code class="filename">/usr/vacpp/bin</code> 目录。</p><p>Later versions of Visual Age are known as XL C/C++. They
+          were not tested with the the <code class="computeroutput">vacpp</code> module.<br>Visual Age 的后续版本称为 XL C/C++。它们未与 <code class="computeroutput">vacpp</code> 模块测试过。</p>
+</div>
+</div>
+<div class="section" lang="en">
+<div class="titlepage"><div><div><h4 class="title">
+<a name="id3912697"></a>Third-party libraries 第三方库</h4></div></div></div>
+<div class="toc"><dl><dt><span class="section"><a href="reference.html#bbv2.reference.tools.libraries.stlport">STLport library &nbsp;STLport库</a></span></dt></dl></div>
+<p>Boost.Build provides special support for some
+        third-party C++ libraries, documented below.<br>Boost.Build 提供了对一些第三方 C++ 库的支持，说明如下。</p>
+<div class="section" lang="en">
+<div class="titlepage"><div><div><h5 class="title">
+<a name="bbv2.reference.tools.libraries.stlport"></a>STLport library &nbsp;STLport库</h5></div></div></div>
+<a class="indexterm" name="id3912719"></a><p>The <a href="http://stlport.org/" target="_top">STLport</a> library
+          is an alternative implementation of C++ runtime library. Boost.Build
+          supports using that library on Windows platfrom.  Linux is
+          hampered by different naming of libraries in each STLport
+          version and is not officially supported.<br><a href="http://stlport.org" target="_top">STLport</a> 库是 C++ 运行库一个可选的实现。Boost.Build
+          支持在 Windows 平台上使用该库。Linux 则受制于各个 STLport
+          版本的库名不同以及无官方支持。</p>
+<p>Before using STLport, you need to configure it in
+          <code class="filename">user-config.jam</code> using the following syntax:<br>在使用 STLport 前，你必须在
+          <code class="filename">user-config.jam</code> 中用以下语法对它进行配置：
+          </p>
+<pre class="programlisting">using stlport : [<span class="optional"><em class="replaceable"><code>version</code></em></span>] : <em class="replaceable"><code>header-path</code></em> : [<span class="optional"><em class="replaceable"><code>library-path</code></em></span>] ;<br></pre>
+<p>
+          Where <em class="replaceable"><code>version</code></em> is the version of
+          STLport, for example <code class="literal">5.1.4</code>,
+          <em class="replaceable"><code>headers</code></em> is the location where
+          STLport headers can be found, and <em class="replaceable"><code>libraries</code></em>
+          is the location where STLport libraries can be found.
+          The version should always be provided, and the library path should
+          be provided if you're using STLport's implementation of
+          iostreams. Note that STLport 5.* always uses its own iostream
+          implementation, so the library path is required.<br>其中 <em class="replaceable"><code>version</code></em> 为
+          STLport 的版本，如 <code class="literal">5.1.4</code>，<em class="replaceable"><code>headers</code></em> 为可找到 STLport 头文件的位置，而 <em class="replaceable"><code>libraries</code></em>
+          为可找到 STLport 库的位置。版本号必须提供，如果你要使用 STLport 的
+          iostreams 实现，则库路径也要提供。注意，STLport 5.* 总是使用它自己的 iostream
+          实现，所以要求必须提供库路径。
+          </p>
+<p>When STLport is configured, you can build with STLport by
+          requesting <code class="literal">stdlib=stlport</code> on the command line.<br>在配置完 STLport 后，你就可以通过在命令行请求 <code class="literal">stdlib=stlport</code> 来以 STLport 进行构建。
+          </p>
+</div>
+</div>
+</div>
+<div class="section" lang="en">
+<div class="titlepage"><div><div><h3 class="title">
+<a name="bbv2.reference.buildprocess"></a>Build process 构建过程</h3></div></div></div>
+<div class="toc"><dl>
+<dt><span class="section"><a href="reference.html#bbv2.reference.buildprocess.alternatives">Alternative selection 选择</a></span></dt>
+<dt><span class="section"><a href="reference.html#bbv2.reference.buildprocess.common">Determining common properties 确定公用属性</a></span></dt>
+</dl></div>
+<p>The general overview of the build process was given in the
+      <a class="link" href="advanced.html#bbv2.advanced.build_process" title="The Build Process">user documentation</a>.
+      This section provides additional details, and some specific rules.<br>构建过程的概述已经在 <a class="link" href="advanced.html#bbv2.advanced.build_process" title="The Build Process">用户文档</a> 中给出。本节给出了更多细节，以及一些特殊的规则。
+    </p>
+<p>To recap, building a target with specific properties includes the
+      following steps:<br>重温一下，以特定属性构建一个目标，包括以下步骤：
+      </p>
+<div class="orderedlist"><ol type="1">
+<li><p>applying default build,<br>应用缺省的构建，</p></li>
+<li><p>selecting the main target alternative to use,
+          <br>选择所用的主目标选择，</p></li>
+<li><p>determining "common" properties,<br>确定"公用"属性，</p></li>
+<li><p>building targets referred by the sources list and
+            dependency properties,<br>构建由源列表和依赖关系属性所指定的目标，</p></li>
+<li><p>adding the usage requirements produces when building
+            dependencies to the "common" properties,<br>将在构建信赖关系时产生的使用要求增加到"公用"属性中，</p></li>
+<li><p>building the target using generators,<br>使用生成器构建目标，</p></li>
+<li><p>computing the usage requirements to be returned.<br>计算返回的使用要求。</p></li>
+</ol></div>
+<p>
+    </p>
+<div class="section" lang="en">
+<div class="titlepage"><div><div><h4 class="title">
+<a name="bbv2.reference.buildprocess.alternatives"></a>Alternative selection 选择</h4></div></div></div>
+<p>When there are several alternatives, one of them must be
+        selected. The process is as follows:<br>当有多个可选物时，必须选择其中一个。过程如下：</p>
+<div class="orderedlist"><ol type="1">
+<li>
+            For each alternative <span class="emphasis"><em>condition</em></span> is defined as
+            the set of base properties in requirements. [Note: it might be
+            better to specify the condition explicitly, as in conditional
+            requirements].<br>对于每一个可选物，<span class="emphasis"><em>condition</em></span> 被定义为在要求中的基本属性集。[注：明确指定条件可能更好些，就象在条件要求中那样]。
+          </li>
+<li>
+            An alternative is viable only if all properties in condition
+            are present in build request.<br>一个可选物仅当条件中的所有属性都出现在构建请求中时才是可见的。
+          </li>
+<li>
+            If there's one viable alternative, it's choosen. Otherwise,
+            an attempt is made to find one best alternative. An alternative
+            a is better than another alternative b, iff the set of properties
+            in b's condition is a strict subset of the set of properities of
+            'a's condition. If there's one viable alternative, which is
+            better than all others, it's selected. Otherwise, an error is
+            reported.<br>如果只有一个可见的可选物，则它被选中。否则，尝试找到最好的可选物。可选物 a 优于可选物 b，当且仅当 b 的条件中的属性集是 a 的条件中的属性集的严格子集。如果只有一个可见的可选物优于所有其它可选物，则它被选中。否则，报告一个错误。
+          </li>
+</ol></div>
+</div>
+<div class="section" lang="en">
+<div class="titlepage"><div><div><h4 class="title">
+<a name="bbv2.reference.buildprocess.common"></a>Determining common properties 确定公用属性</h4></div></div></div>
+
+<p>The "common" properties is a somewhat artificial term. Those are
+        the intermediate property set from which both the build request for
+        dependencies and properties for building the target are derived.<br>"公用"属性是一个有点不太自然的术语。它们是一个中间属性集，来自于依赖关系的构建请求和构建被派生目标的属性。
+      </p>
+<p>Since default build and alternatives are already handled, we have
+        only two inputs: build requests and requirements. Here are the rules
+        about common properties.<br>由于缺省构建和可选物都已经被处理过了，所以我们只有两个输入：构建请求和要求。以下是关于公用属性的规则。
+      </p>
+<div class="orderedlist"><ol type="1">
+<li><p>Non-free feature can have only one
+            value<br>非自由特性只能一个值。</p></li>
+<li><p>A non-conditional property in requirement in always
+            present in common properties.<br>要求中的非条件属性总是出现在公用属性中。</p></li>
+<li><p>A property in build request is present in
+            common properties, unless (2) tells otherwise.<br>构建请求中的属性会出现在公用属性中，除非被第 (2) 条否定。</p></li>
+<li><p>If either build request, or requirements (non-conditional
+            or conditional) include an expandable property (either composite,
+            or property with specified subfeature value), the behaviour is
+            equivalent to explicitly adding all expanded properties to build
+            request or requirements.<br>如果构建请求或要求(非条件的或有条件的)中包含了一个可展开属性(组合属性或具有指定子特性值的属性)，则其行为相当于将所有展开后的属性显式增加到构建请求或要求中。</p></li>
+<li><p>If requirements include a conditional property, and
+            condiiton of this property is true in context of common
+            properties, then the conditional property should be in common
+            properties as well.<br>如果要求中包含一个条件属性，且在公用属性的上下文中该属性的条件为真，则该条件属性也应在公用属性中。</p></li>
+<li><p>If no value for a feature is given by other rules
+            here, it has default value in common properties.<br>如果以上规则未能对一个特性给出值，则它在公用属性中具有缺省值。</p></li>
+</ol></div>
+<p>Those rules are declarative, they don't specify how to compute the
+        common properties. However, they provide enough information for the
+        user. The important point is the handling of conditional
+        requirements. The condition can be satisfied either by property in
+        build request, by non-conditional requirements, or even by another
+        conditional property. For example, the following example works as
+        expected:<br>这些规则是宣示性的，它们并未具体说明如何计算公用属性。不过，它们为用户提供了足够的信息。重点是对条件要求的处理。条件可以由构建请求中的属性得到满足，也可以由非条件要求，甚至由另一个条件属性而得到满足。例如，以下例子可以按预期工作：
+</p>
+<pre class="programlisting">exe a : a.cpp<br>      : &lt;toolset&gt;gcc:&lt;variant&gt;release<br>        &lt;variant&gt;release:&lt;define&gt;FOO ;<br></pre>
+<p>
+      </p>
+</div>
+</div>
+<div class="section" lang="en">
+<div class="titlepage"><div><div><h3 class="title">
+<a name="bbv2.reference.definitions"></a>Definitions 定义</h3></div></div></div>
+<div class="toc"><dl>
+<dt><span class="section"><a href="reference.html#bbv2.reference.features">Features and properties 特性和属性</a></span></dt>
+<dt><span class="section"><a href="reference.html#bbv2.reference.variants">Build Variants 构建变体</a></span></dt>
+<dt><span class="section"><a href="reference.html#bbv2.reference.variants.proprefine">Property refinement 属性的精化</a></span></dt>
+<dt><span class="section"><a href="reference.html#bbv2.reference.variants.propcond">Conditional properties 条件属性</a></span></dt>
+<dt><span class="section"><a href="reference.html#bbv2.reference.ids">Target identifiers and references 目标标识符和引用</a></span></dt>
+</dl></div>
+<div class="section" lang="en">
+<div class="titlepage"><div><div><h4 class="title">
+<a name="bbv2.reference.features"></a>Features and properties 特性和属性</h4></div></div></div>
+<div class="toc"><dl>
+<dt><span class="section"><a href="reference.html#bbv2.reference.features.validity">Property Validity 属性的有效性</a></span></dt>
+<dt><span class="section"><a href="reference.html#bbv2.reference.features.attributes">Feature Attributes 特性的特征</a></span></dt>
+<dt><span class="section"><a href="reference.html#bbv2.reference.features.declaration">Feature Declaration 特性的声明</a></span></dt>
+</dl></div>
+<p>A <span class="emphasis"><em>feature</em></span> is a normalized (toolset-independent)
+        aspect of a build configuration, such as whether inlining is
+        enabled. Feature names may not contain the '<code class="literal">&gt;</code>'
+        character.<br><span class="emphasis"><em>特性</em></span> 是指构建配置的一个规范化(与工具集无关)的方面，如是否打开内联。特性名不能包含 '<code class="literal">&gt;</code>'
+        符。</p>
+<p>Each feature in a build configuration has one or more
+        associated <span class="emphasis"><em>value</em></span>s. Feature values for non-free features
+        may not contain the '<code class="literal">&lt;</code>', '<code class="literal">:</code>', or
+        '<code class="literal">=</code>' characters. Feature values for free features may not
+        contain the '<code class="literal">&lt;</code>' character.<br>在构建配置中的各个特性有一个或多个关联的 <span class="emphasis"><em>值</em></span>。非自由特性的特性值不能包含 '<code class="literal">&lt;</code>', '<code class="literal">:</code>', 或
+        '<code class="literal">=</code>' 符。自由特性的特性值不能包含 '<code class="literal">&lt;</code>' 符。</p>
+<p>A <span class="emphasis"><em>property</em></span> is a (feature,value) pair, expressed as
+        &lt;feature&gt;value.<br><span class="emphasis"><em>属性</em></span> 是指一个(特性，值)对，表示为
+        &lt;feature&gt;value。</p>
+<p>A <span class="emphasis"><em>subfeature</em></span> is a feature that only exists in the
+        presence of its parent feature, and whose identity can be derived
+        (in the context of its parent) from its value. A subfeature's
+        parent can never be another subfeature. Thus, features and their
+        subfeatures form a two-level hierarchy.<br><span class="emphasis"><em>子特性</em></span> 是指只能存在于其父特性之中的特性，其标识可以派生(在其父特性的上下文中)自它的值。子特性的父特性不可以是另一个子特性。因此，特性及其子特性形成一个两级的层次。</p>
+<p>A <span class="emphasis"><em>value-string</em></span> for a feature <span class="bold"><strong>F</strong></span> is a string of
+        the form
+        <code class="literal">value-subvalue1-subvalue2</code>...<code class="literal">-subvalueN</code>, where
+        <code class="literal">value</code> is a legal value for <span class="bold"><strong>F</strong></span> and
+        <code class="literal">subvalue1</code>...<code class="literal">subvalueN</code> are legal values of some
+        of <span class="bold"><strong>F</strong></span>'s subfeatures. For example, the properties
+        <code class="literal">&lt;toolset&gt;gcc &lt;toolset-version&gt;3.0.1</code> can be
+        expressed more conscisely using a value-string, as
+        <code class="literal">&lt;toolset&gt;gcc-3.0.1</code>.<br>特性 <span class="bold"><strong>F</strong></span> 的一个 <span class="emphasis"><em>值串</em></span> 是指一个形如
+        <code class="literal">value-subvalue1-subvalue2</code>...<code class="literal">-subvalueN</code> 的字符串，其中 <code class="literal">value</code> 是 <span class="bold"><strong>F</strong></span> 的一个合法值，而
+        <code class="literal">subvalue1</code>...<code class="literal">subvalueN</code> 是 <span class="bold"><strong>F</strong></span> 的某些子特性的合法值。例如，属性
+        <code class="literal">&lt;toolset&gt;gcc &lt;toolset-version&gt;3.0.1</code> 可以更方便地用一个值串来表示，如 <code class="literal">&lt;toolset&gt;gcc-3.0.1</code>.</p>
+<p>A <span class="emphasis"><em>property set</em></span> is a set of properties (i.e. a
+        collection without duplicates), for instance:
+        <code class="literal">&lt;toolset&gt;gcc &lt;runtime-link&gt;static</code>.<br><span class="emphasis"><em>属性集</em></span> 是指一组属性(即一个无重复的集合)，例如：<code class="literal">&lt;toolset&gt;gcc &lt;runtime-link&gt;static</code>.</p>
+<p>A <span class="emphasis"><em>property path</em></span> is a property set whose elements have
+        been joined into a single string separated by slashes. A property
+        path representation of the previous example would be
+        <code class="literal">&lt;toolset&gt;gcc/&lt;runtime-link&gt;static</code>.<br><span class="emphasis"><em>属性路径</em></span> 是指一个其元素被以斜杠符分隔而合成单个字符串的属性集。上一例子的属性路径表示为：<code class="literal">&lt;toolset&gt;gcc/&lt;runtime-link&gt;static</code>.</p>
+<p>A <span class="emphasis"><em>build specification</em></span> is a property set that fully
+        describes the set of features used to build a target.<br><span class="emphasis"><em>构建规格</em></span> 是指这样一个属性集，它完整地描述了用于构建某个目标的特性集。</p>
+<div class="section" lang="en">
+<div class="titlepage"><div><div><h5 class="title">
+<a name="bbv2.reference.features.validity"></a>Property Validity 属性的有效性</h5></div></div></div>
+<p>
+          For <a class="link" href="reference.html#bbv2.reference.features.attributes.free">free</a>
+            features, all values are valid. For all other features,
+          the valid values are explicitly specified, and the build
+          system will report an error for the use of an invalid
+          feature-value. Subproperty validity may be restricted so
+          that certain values are valid only in the presence of
+          certain other subproperties. For example, it is possible
+          to specify that the <code class="computeroutput">&lt;gcc-target&gt;mingw</code>
+          property is only valid in the presence of
+          <code class="computeroutput">&lt;gcc-version&gt;2.95.2</code>.&nbsp;<br>对于 <a class="link" href="reference.html#bbv2.reference.features.attributes.free">自由</a>
+            特性，所有值都是有效的。对于其它特性，有效值应明确指定，构建系统会对一个无效特性值的使用报告错误。子属性的有效性可能受到限制，如某个特定的值仅当另一个特定的子属性出现时才是有效。例如，可以指定 <code class="computeroutput">&lt;gcc-target&gt;mingw</code>
+          属性仅当
+          <code class="computeroutput">&lt;gcc-version&gt;2.95.2</code> 出现时有效。
+        </p>
+</div>
+<div class="section" lang="en">
+<div class="titlepage"><div><div><h5 class="title">
+<a name="bbv2.reference.features.attributes"></a>Feature Attributes 特性的特征</h5></div></div></div>
+<p>Each feature has a collection of zero or more of the following
+          attributes. Feature attributes are low-level descriptions of how the
+          build system should interpret a feature's values when they appear in
+          a build request. We also refer to the attributes of properties, so
+          that an <span class="emphasis"><em>incidental</em></span> property, for example, is
+          one whose feature has the <span class="emphasis"><em>incidental</em></span>
+          attribute.<br>每一个特性都具有以下特征中的零个或多个。特性的特征是构建系统如何解释在构建请求中的特性值的一个底层说明。我们也称为之属性的特征，因此例如，一个 <span class="emphasis"><em>附带</em></span> 属性，是指其特性具有 <span class="emphasis"><em>附带</em></span> 特征。</p>
+<div class="itemizedlist"><ul type="disc">
+<li>
+<p><span class="emphasis"><em>incidental 附带的</em></span></p>
+<p>Incidental features are assumed not to affect build
+              products at all. As a consequence, the build system may use
+              the same file for targets whose build specification differs
+              only in incidental features. A feature that controls a
+              compiler's warning level is one example of a likely
+              incidental feature.<br>附带特性被假定为不会对构建产品产生影响。结果是，构建系统可能会对构建规格中仅有附带特性存在差异的目标使用相同的文件。控制编译器告警级别的特性就是附带特性一个好例子。</p>
+<p>Non-incidental features are assumed to affect build
+              products, so the files for targets whose build specification
+              differs in non-incidental features are placed in different
+              directories as described in "target paths" below. [ where? ]<br>非附带特性被假定会影响构建产品，所以对于构建规格中有非附带特性存在差异的目标，其目标文件被放在不同的目录下，后面的"目标路径"中会有说明。
+            </p>
+</li>
+<li>
+<p>
+              <a name="bbv2.reference.features.attributes.propagated"></a>
+              <span class="emphasis"><em>propagated 被传播的</em></span>
+            </p>
+<p>Features of this kind are
+              propagated to dependencies. That is, if a <a class="link" href="advanced.html#bbv2.advanced.targets.main">main target</a> is built using a
+              propagated
+              property, the build systems attempts to use the same property
+              when building any of its dependencies as part of that main
+              target. For instance, when an optimized exectuable is
+              requested, one usually wants it to be linked with optimized
+              libraries. Thus, the <code class="literal">&lt;optimization&gt;</code> feature is
+              propagated.<br>此类特性会被传播至依赖物中。即，如果一个 <a class="link" href="advanced.html#bbv2.advanced.targets.main">主目标</a> 是以某个被传播特性构建的，则构建系统会在构建该主目标的依赖物时，尝试使用同样的特性。例如，当请求构建一个优化的可执行文件时，你通常希望它与优化的库文件链接。因此，<code class="literal">&lt;optimization&gt;</code>&nbsp;特性就是被传播的。</p>
+</li>
+<li>
+<p>
+              <a name="bbv2.reference.features.attributes.free"></a>
+              <span class="emphasis"><em>free 自由的</em></span>
+            </p>
+<p>Most features have a finite set of allowed values, and can
+              only take on a single value from that set in a given build
+              specification. Free features, on the other hand, can have
+              several values at a time and each value can be an arbitrary
+              string. For example, it is possible to have several
+              preprocessor symbols defined simultaneously:<br>多数特性都具有有限的允许值集，而且在一个给定的构建规格中只能取这个集中一个值。另一方面，自由特性可以一次取多个值，且每个值都可以是任意的字符串。例如，可以同时定义多个预处理器符号：</p>
+<pre class="programlisting">&lt;define&gt;NDEBUG=1 &lt;define&gt;HAS_CONFIG_H=1<br></pre>
+</li>
+<li>
+<p><span class="emphasis"><em>optional 可选的</em></span></p>
+<p>An optional feature is a feature that is not required to
+              appear in a build specification. Every non-optional non-free
+              feature has a default value that is used when a value for
+              the feature is not otherwise specified, either in a target's
+              requirements or in the user's build request. [A feature's
+              default value is given by the first value listed in the
+              feature's declaration. -- move this elsewhere - dwa]<br>可选特性是指不要求出现在构建规格中的特性。每个非可选的非自由特性都有一个缺省值，当该特性的值在目标要求及用户构建请求中均未被指定时将使用该缺省值。[特性的缺省值由列在特性声明中的第一个值给定]</p>
+</li>
+<li>
+<p><span class="emphasis"><em>symmetric 对称的</em></span></p>
+<p>A symmetric feature's default value is not automatically
+              included in <a class="link" href="reference.html#bbv2.reference.variants" title="Build Variants">build variants</a>.  Normally
+              a feature only generates a subvariant directory when its
+              value differs from the value specified by the build variant,
+              leading to an assymmetric subvariant directory structure for
+              certain values of the feature. A symmetric feature, when
+              relevant to the toolset, always generates a corresponding
+              subvariant directory.<br>对称特性的缺省值不会自动包含到 <a class="link" href="reference.html#bbv2.reference.variants" title="Build Variants">构建变体</a> 中。通常，当一个特性的值与构建变体指定的值不同时，它只生成一个子变体目录，这导致了对该特性的特定值有一个非对称的子变体目录结构。与工具有关的对称特性，总是生成一个相应的子变体目录。</p>
+</li>
+<li>
+<p><span class="emphasis"><em>path 路径的</em></span></p>
+<p>The value of a path feature specifies a path. The path is
+              treated as relative to the directory of Jamfile where path
+              feature is used and is translated appropriately by the build
+              system when the build is invoked from a different
+              directory<br>路径特性的值指定一个路径。该路径被视为相对于使用该路径特性的 Jamfile 的目录，并且在从不同目录进行调用该构建时被构建系统适当转换。</p>
+</li>
+<li>
+<p><span class="emphasis"><em>implicit 隐式的</em></span></p>
+<p>Values of implicit features alone identify the feature.
+              For example, a user is not required to write
+              "&lt;toolset&gt;gcc", but can simply write "gcc". Implicit
+              feature names also don't appear in variant paths, although
+              the values do. Thus: bin/gcc/... as opposed to
+              bin/toolset-gcc/.... There should typically be only a few
+              such features, to avoid possible name clashes.<br>隐
+式特性的值独自标识该特性。例如，用户不需要写 "&lt;toolset&gt;gcc"，只要写 "gcc"
+即可。隐式特性的名字也不会出现在变体路径中，但它的值会。因此：是 bin/gcc/... 而不是
+bin/toolset-gcc/...。通常应该只有少数几个这样的特性，以避免可能的名字冲突。</p>
+</li>
+<li>
+<p><span class="emphasis"><em>composite 组合的</em></span></p>
+<p>Composite features actually correspond to groups of
+              properties. For example, a build variant is a composite
+              feature. When generating targets from a set of build
+              properties, composite features are recursively expanded and
+              <span class="emphasis"><em>added</em></span> to the build property set, so rules can find
+              them if necessary. Non-composite non-free features override
+              components of composite features in a build property set.<br>组合特性实际上相应于一个属性组。例如，一个构建变体就是一个组合特性。当从一个构建属性集生成目标时，组合特性被递归展开，并增加到构建属性集中，规则在需要时就可找到它们。非组合的非自由特性会覆盖构建属性集中的组合特性的元素。</p>
+</li>
+<li>
+<p><span class="emphasis"><em>dependency 依赖的</em></span></p>
+<p>The value of dependency feature if a target reference.
+              When used for building of a main target, the value of
+              dependency feature is treated as additional dependency.<br>依赖特性的值是一个目标引用。当它被用于一个主目标的构建时，依赖特性的值被视为附加的依赖关系。</p>
+<p>For example, dependency features allow to state that
+              library A depends on library B. As the result, whenever an
+              application will link to A, it will also link to B.
+              Specifying B as dependency of A is different from adding B to
+              the sources of A.<br>例如，依赖特性允许声明 A 库依赖于 B 库。这样，当一个应用程序要链接 A 时，它一定也会链接 B。指明 B 是 A 的依赖物，与将 B 增加为 A 的源，是不同的。 </p>
+</li>
+</ul></div>
+<p>Features that are neither free nor incidental are called
+          <span class="emphasis"><em>base</em></span> features.<br>即非自由亦非附带的特性被称为
+          <span class="emphasis"><em>基本</em></span> 特性。</p>
+</div>
+<div class="section" lang="en">
+<div class="titlepage"><div><div><h5 class="title">
+<a name="bbv2.reference.features.declaration"></a>Feature Declaration 特性的声明</h5></div></div></div>
+<p>The low-level feature declaration interface is the
+          <code class="literal">feature</code> rule from the
+          <code class="literal">feature</code> module:<br>低级特性的声明接口是
+          <code class="literal">feature</code> 规则，它来自于
+          <code class="literal">feature</code> 模块：
+
+</p>
+<pre class="programlisting">rule feature ( name : allowed-values * : attributes * )<br></pre>
+<p>
+
+          A feature's allowed-values may be extended with the
+          <code class="computeroutput">feature.extend</code> rule.<br>特性的允许值可以用
+          <code class="computeroutput">feature.extend</code> 规则来扩展。
+        </p>
+</div>
+</div>
+<div class="section" lang="en">
+<div class="titlepage"><div><div><h4 class="title">
+<a name="bbv2.reference.variants"></a>Build Variants 构建变体</h4></div></div></div>
+<p>
+        A build variant, or (simply variant) is a special kind of composite
+        feature that automatically incorporates the default values of
+        features that . Typically you'll want at least two separate
+        variants: one for debugging, and one for your release code. [
+        Volodya says: "Yea, we'd need to mention that it's a composite
+        feature and describe how they are declared, in pacticular that
+        default values of non-optional features are incorporated into
+        build variant automagically. Also, do we wan't some variant
+        inheritance/extension/templates. I don't remember how it works in
+        V1, so can't document this for V2.". Will clean up soon -DWA ]<br>构
+建变体(或变体)是一种特殊的组合特性，它自动合并特性的缺省值。通常，你至少想要两个独立的变体：一个用于调试，另一个用于发布代码。[
+Volodya
+说："是的，我们需要指出的是，它是一个组合特性并描述如何声明它，具体地说，非可选特性的缺省值被自动合并到构建变体中。还有，我们希望有一些变体层
+次、扩展或模板。我不记得在 V1 中它是如何工作的，所以不能在 V2 中说明它了。". 将尽快清理 -DWA ] </p>
+</div>
+<div class="section" lang="en">
+<div class="titlepage"><div><div><h4 class="title">
+<a name="bbv2.reference.variants.proprefine"></a>Property refinement 属性的精化</h4></div></div></div>
+<p>When a target with certain properties is requested, and that
+        target requires some set of properties, it is needed to find the
+        set of properties to use for building. This process is called
+        <span class="emphasis"><em>property refinement</em></span> and is performed by these rules<br>当请求一个带有特定属性的目标，且该目标要求某些属性集时，需要找出构建所用的属性集。这一过程称为
+        <span class="emphasis"><em>属性精化</em></span>，它由以下规则执行</p>
+<div class="orderedlist"><ol type="1">
+<li>
+            Each property in the required set is added to the original
+            property set<br>在要求集中的每个属性被增加到原先的属性集中
+          </li>
+<li>
+            If the original property set includes property with a different
+            value of non free feature, that property is removed.<br>如果原先的属性集含有某个非自由特性的不同值属性，则该属性被移除。
+          </li>
+</ol></div>
+</div>
+<div class="section" lang="en">
+<div class="titlepage"><div><div><h4 class="title">
+<a name="bbv2.reference.variants.propcond"></a>Conditional properties 条件属性</h4></div></div></div>
+<p>Sometime it's desirable to apply certain requirements only for
+        a specific combination of other properties. For example, one of
+        compilers that you use issues a pointless warning that you want to
+        suppress by passing a command line option to it. You would not
+        want to pass that option to other compilers. Conditional
+        properties allow you to do just that. Their syntax is:<br>有时，我们希望仅对某些属性的特定组合应用特定的要求。例如，你所使用的某个编译器会发出一个毫无意义的警告，你想通过命令行选项来禁止它。但是你又不想将这个选项传给其它编译器。条件属性允许你这样做。其语法是：</p>
+<pre class="programlisting">        property ( "," property ) * ":" property<br>      </pre>
+<p>
+        For example, the problem above would be solved by:<br>例如，以上问题可以这样来解决：
+
+</p>
+<pre class="programlisting">exe hello : hello.cpp : &lt;toolset&gt;yfc:&lt;cxxflags&gt;-disable-pointless-warning ;<br></pre>
+
+<p>
+      The syntax also allows several properties in the condition, for
+        example:<br>该语法还允许在条件中使用多个属性，例如：
+</p>
+<pre class="programlisting">exe hello : hello.cpp : &lt;os&gt;NT,&lt;toolset&gt;gcc:&lt;link&gt;static ;<br></pre>
+<p>
+      </p>
+</div>
+<div class="section" lang="en">
+<div class="titlepage"><div><div><h4 class="title">
+<a name="bbv2.reference.ids"></a>Target identifiers and references 目标标识符和引用</h4></div></div></div>
+<p><span class="emphasis"><em>Target identifier</em></span> is used to denote a
+        target. The syntax is:<br><span class="emphasis"><em>目标标识符</em></span> 用于表示一个目标。其语法是：</p>
+<pre class="programlisting">target-id -&gt; (project-id | target-name | file-name )<br>              | (project-id | directory-name) "//" target-name<br>project-id -&gt; path<br>target-name -&gt; path<br>file-name -&gt; path<br>directory-name -&gt; path<br></pre>
+<p>
+        This grammar allows some elements to be recognized as either<br>该语法允许以下一些元素：
+
+        </p>
+<div class="itemizedlist"><ul type="disc">
+<li>
+              project id (at this point, all project ids start with slash).<br>工程 id (当前，所有工程 id 要以斜杠符开头)。
+            </li>
+<li>
+              name of target declared in current Jamfile (note that target
+              names may include slash).<br>在当前 Jamfile 所声明的目标名(注意，目标名可以含有斜杠符)。
+            </li>
+<li>
+              a regular file, denoted by absolute name or name relative to
+              project's sources location.<br>一个普通文件，以绝对名字或相对于工程源文件位置的名字来表示。
+            </li>
+</ul></div>
+<p>
+
+        To determine the real meaning a check is made if project-id
+        by the specified name exists, and then if main target of that
+        name exists. For example, valid target ids might be:<br>为了确定真正的意义，需要检查指定名字的 project-id
+        是否存在，然后是是否有该名字的主目标存在。例如，有效的目标 id 可以是：
+
+</p>
+<pre class="screen">a                                    -- target in current project 在当前工程中的目标<br>lib/b.cpp                            -- regular file 普通文件<br>/boost/thread                        -- project "/boost/thread" 工程"/boost/thread"<br>/home/ghost/build/lr_library//parser -- target in specific project 指定工程中的目标<br></pre>
+
+<p>
+
+      <span class="bold"><strong>Rationale:</strong></span>Target is separated from project by special
+        separator (not just slash), because:<br><span class="bold"><strong>原理：</strong></span>目标是以特定的分隔符(不仅是斜杠符)和工程分开的，因为：</p>
+<div class="itemizedlist"><ul type="disc">
+<li>
+            It emphasises that projects and targets are different things.<br>它强调工程和目标是不同的东西。
+          </li>
+<li>
+            It allows to have main target names with slashes.<br>它允许主目标名带有斜杠符。
+
+            
+          </li>
+</ul></div>
+<p><a name="bbv2.reference.targets.references"></a>
+        <span class="emphasis"><em>Target reference</em></span> is used to
+        specify a source target, and may additionally specify desired
+        properties for that target. It has this syntax:<br><span class="emphasis"><em>目标引用</em></span> 用于指定一个源目标，还可以指定该目标所需要的属性。它具有以下语法：</p>
+<pre class="programlisting">target-reference -&gt; target-id [ "/" requested-properties ]<br>requested-properties -&gt; property-path<br></pre>
+<p>
+        For example,<br>例如，
+
+        </p>
+<pre class="programlisting">          exe compiler : compiler.cpp libs/cmdline/&lt;optimization&gt;space ;<br>        </pre>
+<p>
+
+        would cause the version of <code class="literal">cmdline</code> library,
+        optimized for space, to be linked in even if the
+        <code class="literal">compiler</code> executable is build with optimization for
+        speed.<br>将导致这个版本的 <code class="literal">cmdline</code> 库按空间优化并链接，即使
+        <code class="literal">compiler</code> 可执行文件是以按速度优化来构建的。</p></div></div></div>
+<table xmlns:rev="http://www.cs.rpi.edu/~gregod/boost/tools/doc/revision" width="100%"><tbody><tr>
+<td align="left"></td>
+<td align="right"><div class="copyright-footer"></div></td>
+</tr></tbody></table>
+<hr>
+<div class="spirit-nav">
+<a accesskey="p" href="tasks.html"><img style="border: 0px solid ; width: 19px; height: 19px;" src="../../../doc/html/images/prev.png" alt="Prev"></a><a accesskey="u" href="../bbv2.html"><img src="../../../doc/html/images/up.png" alt="Up"></a><a accesskey="h" href="../index.html"><img src="../../../doc/html/images/home.png" alt="Home"></a><a accesskey="n" href="extender.html"><img style="border: 0px solid ; width: 19px; height: 19px;" src="../../../doc/html/images/next.png" alt="Next"></a>
+</div>
+</body></html>

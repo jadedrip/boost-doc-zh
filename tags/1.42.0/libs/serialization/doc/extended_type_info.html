@@ -1,0 +1,150 @@
+<!DOCTYPE HTML PUBLIC "-//W3C//DTD HTML 4.01 Transitional//EN" "http://www.w3.org/TR/html4/loose.dtd">
+<html><head><!--
+(C) Copyright 2002-4 Robert Ramey - http://www.rrsd.com . Use, modification and distribution is subject to the Boost Software
+License, Version 1.0. (See accompanying file LICENSE_1_0.txt or copy at
+http://www.boost.org/LICENSE_1_0.txt)
+-->
+
+<meta http-equiv="Content-Type" content="text/html; charset=UTF-8">
+<link rel="stylesheet" type="text/css" href="../../../boost.css">
+<link rel="stylesheet" type="text/css" href="style.css"><title>Serialization - extended_type_info</title></head>
+<body link="#0000ff" vlink="#800080">
+<table summary="header" border="0" cellpadding="7" cellspacing="0" width="100%">
+<tbody>
+<tr>
+<td valign="top" width="300">
+<h3><a href="../../../index.htm"><img alt="C++ Boost" src="../../../boost.png" border="0" height="86" width="277"></a></h3>
+</td>
+<td valign="top">
+<h1 align="center">Serialization序列化</h1>
+<h2 align="center"><code style="white-space: normal;">extended_type_info</code></h2>
+</td>
+</tr>
+</tbody>
+</table>
+<hr>
+<dl class="page-index">
+<li><a href="#motivation">动机</a> </li>
+<li><a href="#runtime">运行时接口</a> </li>
+<li><a href="#requirements">要求</a> </li>
+<li><a href="#models">模型</a></li>
+<li><a href="#example">例子</a></li>
+</dl>
+<h3><a name="motivation">动机</a></h3>
+serialization 库需要一个类似于 <code style="white-space: normal;">type_info/typeid()</code>
+的系统来执行以下功能
+<ol>
+<li>给定一个类型 T 的指针，得到所指物的真实类型。 </li>
+<li>给定一个 "外部" 键 - 确定要创建的对象的类型。 </li>
+</ol>
+<h3> <code style="white-space: normal;">std::type_info</code>&amp;
+nbsp;的问题<code style="white-space: normal;"></code></h3>
+<ul>
+<li>我们想要的主要函数 - <code style="white-space: normal;">std::typeid()</code>
+并不是在所有环境下都可用的。该函数的支持信赖于编译器对运行期类型识别(RTTI)的支持。这有可能因为效率的原因而不提供或不激活。 </li>
+<li> <code style="white-space: normal;">std::type_info</code>
+包括一个包含了类型名的字符串。看起来满足上述的第2)项。但该字符串的格式在不同的编译器、库、操作系统的环境下是不一致的。这使得它不能用于可移植的
+存档。 </li>
+<li>即使类型名字符串可以实现可移植性，也不能保证在不同应用中类的头文件被包含在相同的名字空间中。事实上，在不同的名字空间中包
+含不同的头文件正是避免名字空间冲突的常用方法。所以 namespace::class_name 不能被用作关键字。</li>
+<li>有可能不同的类使用了不同的 type id 机制。类的头文件可能包含此信息。如果我们想跨应用引入类的头文件，就需要
+type id 机制支持不同 type id 系统间的互操作。 </li>
+</ul>
+<h3>特性</h3>
+<code style="white-space: normal;"><a target="extended_type_info.hpp" href="../../../boost/serialization/extended_type_info.hpp">extended_type_info</a></code>
+是 <code style="white-space: normal;">std::type_info</code>
+功能的一个实现，并具有以下特性：
+<ul>
+<li>建立一组 <a href="../../../boost/serialization/extended_type_info.hpp" target="extended_type_info.hpp"><code style="white-space: normal;">extended_type_info</code></a>
+记录 - 每个被序列化的类型一条记录。 </li>
+<li>允许关联一个任意的关键字到一个类型。通常这个关键字就是类的名字 - 但也可以不是。这个关键字被称为 GUID -
+全局唯一标识。它被假定为是宇宙中唯一的。典型地，这个 GUID 应位于头文件中并用于匹配跨应用的类型。宏 BOOST_CLASS_EXPORT
+可以用于关联一个字符串键值到某个已知类型。我们称这些类型为"被导出类型"</li>
+<li>允许 "混用" 各种类型信息系统。例如，一个类可以使用 <code style="white-space: normal;">typeid()</code>
+来查找类的外部标识，而另一个类则可以不用如此。 </li>
+</ul>
+被导出类型在一张全局表格中维护，这样给出一个字符串键值，就可以找到对应的类型。这一工具被序列化所使用，为了构造一个通过基类指针来序列化的类型。
+<h3><a name="runtime">运行时接口</a></h3>
+<pre><code =""><br></code>namespace boost { <br>namespace serialization {<br><br>class extended_type_info<br>{<br>protected:<br>    // this class can't be used as is. It's just the <br>    // common functionality for all type_info replacement<br>    // systems.  Hence, make these protected<br>    extended_type_info(<br>        const unsigned int type_info_key,<br>        const char * key<br>    );<br>    ~extended_type_info();<br>    void key_register();<br>    void key_unregister();<br>public:<br>    const char * get_key() const;<br>    bool operator&lt;(const extended_type_info &amp;rhs) const;<br>    bool operator==(const extended_type_info &amp;rhs) const;<br>    bool operator!=(const extended_type_info &amp;rhs) const {<br>        return !(operator==(rhs));<br>    }<br>    // for plugins<br>    virtual void * construct(unsigned int count = 0, ...) const;<br>    virtual void destroy(void const * const p) const;<br>    static const extended_type_info * find(const char *key);<br>};<br><br>} // namespace serialization <br>} // namespace boost<br><code =""><br></code></pre>
+<p>通常，对于每个类型，有且只有一个 <code style="white-space: normal;"><a href="../../../boost/serialization/extended_type_info.hpp" target="extended_type_info.hpp">extended_type_info</a></code>
+实例被创建。但是，这只是在可执行模板的级别被强制。即，如果一个程序包含多个共享库或DLLS，就可能存在一个以上的这个类的实例对应于某个类型。因
+此，下述比较函数不能只比较实例的地址，而必须比较实例所含的实际信息。</p>
+<dl>
+<h4>
+<pre><code><br>extended_type_info(unsigned int type_info_key, const char *key);</code></pre></h4></dl><dl>
+<dd>这个构造函数被所有派生类调用。其第一个实参为特定实现。对于基于 typeid()
+的缺省实现，它是值1。每个系统必须有自己的整数值。该值用于允许不同的类型信息系统间的互操作。<p>第二个实参是一个常量字符串，为该记录对应的类型的外部名。有时它就作为一个 GUID - 即<b>全局唯一</b><b>ID</b>。它通过存档从一个程序传递到另一个程序，唯一地标识了存档中包含的类型。如果这个"导出"工具未被使用，其值可为NULL.
+</p></dd>
+</dl>
+<h4><pre><code>void key_register();<br>void key_unregister();</code><code></code></pre></h4><dl><h4>
+</h4>
+<dd>该系统维护了一个表格，将外部字符串关联至
+<code style="white-space: normal;">extended_type_info</code> 记录。当导入一个通过基类指针序列化的对象的指针时，就要使用该表格。这种情况下，存档中包含了一个字符串，用于在该表格中进行查找以确定使用哪个 <code style="white-space: normal;">extended_type_info</code>
+来创建一个新对象。<p>这些函数被实现了 
+<code style="white-space: normal;">extended_type_info</code>
+的类的构造函数和析构函数所调用，以从表格中增加或删除表项。</p></dd>
+<h4>
+<pre><code><br>const char *get_key() const;<br></code></pre>
+</h4>
+<dd>取出 <code style="white-space: normal;"><a target="extended_type_info.hpp" href="../../../boost/serialization/extended_type_info.hpp">extended_type_info</a></code>
+实例的关键字。如果该实例没有相关联的关键字，则返回 NULL. </dd>
+<dt></dt>
+<h4>
+<pre><code><br>bool operator&lt;(const extended_type_info &amp;rhs) const;<br>bool operator==(const extended_type_info &amp;rhs) const;<br>bool operator!=(const extended_type_info &amp;rhs) const;<br></code></pre>
+</h4>
+<dd>这些函数用于比较两个 <code style="white-space: normal;"><a target="extended_type_info.hpp" href="../../../boost/serialization/extended_type_info.hpp">extended_type_info</a></code>
+对象。它们实现了所有
+<code style="white-space: normal;">extended_type_info</code> 记录之上的一个严格全序关系。 </dd>
+<dt></dt><h4><pre><code><br>virtual void * construct(unsigned int count = 0, ...) const;<br></code></pre></h4>
+<dd>构造一个
+<a target="extended_type_info.hpp" href="../../../boost/serialization/extended_type_info.hpp">
+<code style="white-space: normal;">
+extended_type_info </code></a>记录所对应
+的类型的新实例。这个函数接受最长4个任意类型的参数。这些参数在运行期传递给类型的构造函数。为了使用这一工具，你必须按照构造函数参数顺序声明一个类
+型。这个函数的参数必须与导出类型时指定的参数数量和类型相匹配。这个函数允许你创建任意被导出类型的实例，只需给定通过<strong></strong> BOOST_CLASS_EXPORT 赋予的 <strong>GUID</strong>。如果这些类型是在DLLS或共享库中定义的。那么当这些模块在运行期被装载时，这些构造函数可以在模块被卸载前调用。这些模块被称为<b>插件</b>。 
+</dd>
+<dt></dt><h4><pre><code><br>virtual void destroy(void const * const p) const;<br></code></pre></h4>
+<dd>销毁一个由前述构造函数所创建的实例。
+</dd>
+<dt></dt><h4><pre><code><br>static const extended_type_info * find(const char *key);<br></code></pre></h4>
+<dd>给定一个字符串键值或 <strong>GUID</strong>，返回对应的 <code style="white-space: normal;"><a target="extended_type_info.hpp" href="../../../boost/serialization/extended_type_info.hpp">extended_type_info</a></code>
+对象的地址。 </dd></dl>
+<h3><a name="requirements">要求</a></h3>
+为了被 serialization 库使用，一个
+<code style="white-space: normal;">extended_type_info</code>
+的实现(这里称之为 ETI)， 必须派生自 <a href="../../../boost/serialization/extended_type_info.hpp" target="extended_type_info.hpp"><code style="white-space: normal;">extended_type_info </code></a>且实现以下要求：<dl><dt></dt><h4><code style="white-space: normal;"></code><pre>template&lt;class ETI&gt;<br>const extended_type_info *<br>ETI::get_derived_extended_type_info(const T &amp; t) const;<br></pre></h4><dd>返回对应于"真实类型" 
+T 的 <code style="white-space: normal;">extended_type_info</code> 实例的一个指针。"真实类型"是类层次中最底端的类型。类型 T 总是可以以静态转型的方式转型为"真实类型"。这个函数的实现依赖于类型id系统，而且有时要假设类型 T 可被某个特定的 <code style="white-space: normal;">extended_type_info</code> 实现所识别。
+</dd><dt></dt><h4><code style="white-space: normal;"></code><pre>virtual bool ETI::is_less_than(const extended_type_info &amp;rhs) const;<br></pre></h4><dd>比较本实例与另一个使用同一 <code style="white-space: normal;">extended_type_info</code> 实现的实例。
+</dd><dt></dt><h4><code style="white-space: normal;"></code><pre>virtual bool ETI::is_equal(const extended_type_info &amp;rhs) const;<br></pre></h4><dd>比较本实例与另一个使用同一 <code style="white-space: normal;">extended_type_info</code> 实现的实例。如果所引向的类型是相同的话，返回 <code style="white-space: normal;">true</code>。否则返回 
+<code style="white-space: normal;">false</code>
+</dd><dt></dt><h4><code style="white-space: normal;"></code><pre>const char ETI::get_key() const;<br></pre></h4><dd>取回本类的外部键值(又称 GUID)。
+</dd><dt></dt><h4><code style="white-space: normal;"></code><pre>virtual void * construct(unsigned int count, ...) const;<br></pre></h4><dd>用给定的实参列表构造一个相应类型的实例。
+</dd><dt></dt><h4><code style="white-space: normal;"></code><pre>virtual void * destroy(void const * const ptr ) ) const;<br></pre></h4><dd>销毁本类型的一个实例。它调用正确的析构函数并归还已分配内存。</dd></dl><h3><a name="models">模型</a></h3>
+serialization 库包含两个不同的
+<code style="white-space: normal;"><a target="extended_type_info.hpp" href="../../../boost/serialization/extended_type_info.hpp">extended_type_info</a></code>
+实现。
+
+<h4><a target="extended_type_info_typeid.hpp" href="../../../boost/serialization/extended_type_info_typeid.hpp">
+extended_type_info_typeid</a></h4>
+依据标准的 typeid() 实现。它假设编译器支持 RTTI.
+
+<h4><a target="extended_type_info_no_rtti.hpp" href="../../../boost/serialization/extended_type_info_no_rtti.hpp">
+extended_type_info_no_rtti</a></h4>
+以不依赖于 RTTI 的方式实现。相反，它要求所有动态类型被显式导出。此外，如果使用了导出工具来通过基类指针进行序列化，那么那些类型就要求实现一个具有如下签名的虚拟函数：<code></code>
+<pre>virtual const char * get_key();<br></pre>
+它返回最底层类的唯一字符串。该函数必须是虚拟的，以实现前述
+<code style="white-space: normal;">ETI::get_derived_extended_type_info</code>
+所要求的功能。<br>
+<h3><a name="example">Example</a></h3>
+测试程序 <code style="white-space: normal;"><a target="test_no_rtti" href="../test/test_no_rtti.cpp">test_no_rtti</a></code>
+根据前述的 <code style="white-space: normal;"><a target="extended_type_info_no_rtti.hpp" href="../../../boost/serialization/extended_type_info_no_rtti.hpp">
+extended_type_info</a></code> API
+实现了这个函数，返回与该类相关联的外部关键字。它要求输出非抽象类。它还示范了在两个不同的 <code style="white-space: normal;">extended_type_info</code> 实现间的互操作性。 
+<hr>
+<p><i>© Copyright <a href="http://www.rrsd.com">Robert
+Ramey</a> 2005. Distributed under the Boost Software License,
+Version 1.0. (See
+accompanying file LICENSE_1_0.txt or copy at
+http://www.boost.org/LICENSE_1_0.txt)
+</i></p>
+</body></html>

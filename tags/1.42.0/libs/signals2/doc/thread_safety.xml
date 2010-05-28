@@ -1,0 +1,258 @@
+<?xml version="1.0" encoding="utf-8"?>
+<!DOCTYPE section PUBLIC "-//Boost//DTD BoostBook XML V1.0//EN"
+  "http://www.boost.org/tools/boostbook/dtd/boostbook.dtd">
+<!--
+Copyright Frank Mori Hess 2009
+
+Distributed under the Boost Software License, Version 1.0. (See accompanying
+file LICENSE_1_0.txt or copy at http://www.boost.org/LICENSE_1_0.txt)
+-->
+<section last-revision="$Date: 2007-06-12 14:01:23 -0400 (Tue, 12 Jun 2007) $" id="signals2.thread-safety">
+  <title>Thread-Safety 线程安全性</title>
+
+  <using-namespace name="boost"/>
+  <using-namespace name="boost::signals2"/>
+
+  <section>
+    <title>Introduction 介绍</title>
+    <para>
+      The primary motivation for Boost.Signals2 is to provide a version of
+      the original Boost.Signals library which can be used safely in a
+      multi-threaded environment.
+      This is achieved primarily through two changes from the original Boost.Signals
+      API.  One is the introduction of a new automatic connection management scheme
+      relying on <classname>shared_ptr</classname> and <classname>weak_ptr</classname>,
+      as described in the <link linkend="signals2.tutorial.connection-management">tutorial</link>.
+      The second change was the introduction of a <code>Mutex</code> template type
+      parameter to the <classname>signal</classname> class.  This section details how
+      the library employs these changes to provide thread-safety, and
+      the limits of the provided thread-safety.<sbr/>
+      Boost.Signals2 的原始动机是提供原 Boost.Signals 库的另一版本，使之可以安全地用于多线程环境。 
+      做到这一点主要是通过对原 Boost.Signals API 的两个更改。一是采用了新的，依赖于 <classname>shared_ptr</classname> 
+      和 <classname>weak_ptr</classname> 的自动连接管理方式，详见 
+      <link linkend="signals2.tutorial.connection-management">教程</link> 的描述。
+      二是 <classname>signal</classname> 类引入了模板类型参数 <code>Mutex</code>。 
+      本节详述了库如何采用这些更改来提供线程安全性，以及它所提供的线程安全性的局限性。 
+    </para>
+  </section>
+  <section>
+    <title>Signals and combiners 信号与合并器</title>
+    <para>
+      Each signal object default-constructs a <code>Mutex</code> object to protect
+      its internal state.  Furthermore, a <code>Mutex</code> is created
+      each time a new slot is connected to the signal, to protect the
+      associated signal-slot connection.<sbr/>
+      每个信号对象会缺省构造一个 <code>Mutex</code> 对象，以保护其内部状态。 
+      此外，每当一个新的插槽连接到信号，都会创建一个 <code>Mutex</code>，以保护相关的信号插槽连接。
+    </para>
+    <para>
+      A signal's mutex is automatically locked whenever any of the
+      signal's methods are called.  The mutex is usually held until the
+      method completes, however there is one major exception to this rule.  When
+      a signal is invoked by calling
+      <methodname alt="signalN::operator()">signal::operator()</methodname>,
+      the invocation first acquires a lock on the signal's mutex.  Then
+      it obtains a handle to the signal's slot list and combiner.  Next
+      it releases the signal's mutex, before invoking the combiner to
+      iterate through the slot list.  Thus no mutexes are held by the
+      signal while a slot is executing.  This design choice
+      makes it impossible for user code running in a slot
+      to deadlock against any of the
+      mutexes used internally by the Boost.Signals2 library.
+      It also prevents slots from accidentally causing
+      recursive locking attempts on any of the library's internal mutexes.
+      Therefore, if you invoke a signal concurrently from multiple threads,
+      it is possible for the signal's combiner to be invoked concurrently
+      and thus the slots to execute concurrently.<sbr/>
+      调用信号的任何方法时，信号的互斥体都会自动加锁。通常互斥体会保持锁定，直到方法结束，但是有一个重要的例外。 
+      当信号通过 <methodname alt="signalN::operator()">signal::operator()</methodname> 调用时，
+      该调用首先会获取信号互斥体上的锁。然后，它会获得一个句柄，指向信号的插槽链表与合并器。 
+      接着，它会在调用合并器遍历插槽链表之前，释放信号的互斥体。因此，当插槽执行时，信号并没有持有互斥体。 
+      选择这种设计杜绝了以下可能：插槽中运行的用户代码死锁于 Boost.Signals2 库内部使用的互斥体。 
+      它还可防止插槽意外造成对库的内部互斥体递归加锁。因此，如果您从多个线程并发调用信号， 
+      有可能会造成信号的合并器被并发调用，从而造成插槽并发执行。
+    </para>
+    <para>
+      During a combiner invocation, the following steps are performed in order to
+      find the next callable slot while iterating through the signal's
+      slot list.<sbr/>
+      在合并器的调用中，遍历信号的插槽链表时会执行以下步骤，以找到下一个可调用插槽。
+    </para>
+    <itemizedlist>
+      <listitem>
+        <para>The <code>Mutex</code> associated with the connection to the
+          slot is locked.<sbr/>
+          插槽的连接所关联的 <code>Mutex</code> 被锁定。</para>
+      </listitem>
+      <listitem>
+        <para>All the tracked <classname>weak_ptr</classname> associated with the
+          slot are copied into temporary <classname>shared_ptr</classname> which
+          will be kept alive until the invocation is done with the slot.  If this fails due
+          to any of the
+          <classname>weak_ptr</classname> being expired, the connection is
+          automatically disconnected.  Therefore a slot will never be run
+          if any of its tracked <classname>weak_ptr</classname> have expired,
+          and none of its tracked <classname>weak_ptr</classname> will
+          expire while the slot is running.<sbr/>
+          与插槽相关的所有被跟踪的 <classname>weak_ptr</classname> 被复制到临时的 <classname>shared_ptr</classname>， 
+          并一直生存直到插槽完成调用。如果 <classname>weak_ptr</classname> 过期无法复制，连接将自动断开。 
+          因此，如果插槽跟踪的任何 <classname>weak_ptr</classname> 过期，插槽就不会运行，而当插槽运行时，
+          其跟踪的 <classname>weak_ptr</classname> 不会过期。
+        </para>
+      </listitem>
+      <listitem>
+        <para>
+          The slot's connection is checked to see if it is blocked
+          or disconnected, and then the connection's mutex is unlocked.  If the connection
+          was either blocked or disconnected, we
+          start again from the beginning with the next slot in the slot list.
+          Otherwise, we commit to executing the slot when the combiner next
+          dereferences the slot call iterator (unless the combiner should increment
+          the iterator without ever dereferencing it).<sbr/>
+          插槽的连接被检查，看它是否被阻塞或断开，然后，连接的互斥体被解锁。如果连接被阻塞或断开，
+          则取插槽链表中的下一个插槽重新开始。否则，当合并器下一步解引用插槽调用迭代器时，
+          就执行插槽，（除非合并器递增迭代器而未对其解引用）。 
+        </para>
+      </listitem>
+    </itemizedlist>
+    <para>
+      Note that since we unlock the connection's mutex before executing
+      its associated slot, it is possible a slot will still be executing
+      after it has been disconnected by a
+      <code><methodname>connection::disconnect</methodname>()</code>, if
+      the disconnect was called concurrently with signal invocation.<sbr/>
+      注意，因为我们在执行插槽前就解锁了其对应连接的互斥体，所以有可能插槽在用 
+      <code><methodname>connection::disconnect</methodname>()</code> 断开后仍将继续执行，
+      如在信号调用时并发调用断开。
+    </para>
+    <para>
+      You may have noticed above that during signal invocation, the invocation only
+      obtains handles to the signal's slot list and combiner while holding the
+      signal's mutex.  Thus concurrent signal invocations may still wind up
+      accessing the
+      same slot list and combiner concurrently.  So what happens if the slot list is modified,
+      for example by connecting a new slot, while a signal
+      invocation is in progress concurrently?  If the slot list is already in use,
+      the signal performs a deep copy of the slot list before modifying it.
+      Thus the a concurrent signal invocation will continue to use the old unmodified slot list,
+      undisturbed by modifications made to the newly created deep copy of the slot list.
+      Future signal invocations will receive a handle to the newly created deep
+      copy of the slot list, and the old slot list will be destroyed once it
+      is no longer in use.  Similarly, if you change a signal's combiner with
+      <methodname alt="signalN::set_combiner">signal::set_combiner</methodname>
+      while a signal invocation is running concurrently, the concurrent
+      signal invocation will continue to use the old combiner undisturbed,
+      while future signal invocations will receive a handle to the new combiner.<sbr/>
+      您可能已经注意到，在上述信号调用中，在持有信号的互斥体时，仅仅获取了信号的插槽链表与合并器的句柄。 
+      因此并发调用信号仍可导致并发操作同一插槽链表与合并器。那么，如果插槽链表被更改，例如，
+      当信号调用正在进行中时，并发地连接新的插槽，会发生什么事？如果插槽链表已在使用中，
+      信号会在更改它之前进行深拷贝。因此，并发的信号调用将继续使用旧的未修改的插槽链表， 
+      对于新建的插槽链表深拷贝的更改，将不会干扰到该信号调用。以后的信号调用收到的句柄将指向新建的插槽链表深拷贝， 
+      旧的插槽链表一旦不再使用，将会被销毁。同样，如果信号调用正在运行时，
+      用 <methodname alt="signalN::set_combiner">signal::set_combiner</methodname> 并发地更改信号的合并器， 
+      并发的信号调用将继续使用旧的合并器而不受干扰，而以后的信号调用将会收到新的合并器的句柄。
+    </para>
+    <para>
+      The fact that concurrent signal invocations use the same combiner object
+      means you need to insure any custom combiner you write is thread-safe.
+      So if your combiner maintains state which is modified when the combiner
+      is invoked, you
+      may need to protect that state with a mutex.  Be aware, if you hold
+      a mutex in your combiner while dereferencing slot call iterators,
+      you run the risk of deadlocks and recursive locking if any of
+      the slots cause additional mutex locking to occur.  One way to avoid
+      these perils is for your combiner to release any locks before
+      dereferencing a slot call iterator.  The combiner classes provided by
+      the Boost.Signals2 library are all thread-safe, since they do not maintain
+      any state across invocations.<sbr/>
+      并发的信号调用使用的是同一个合并器对象，这一事实意味着，你需要确保你写的任何自定义合并器是线程安全的。 
+      所以，如果你的合并器需要维护状态，该状态会在合并器被调用时更改，你就可能需要用互斥体保护该状态。 
+      注意，如果您在您的合并器中持有互斥体，当插槽调用迭代器解引用时，如果有个插槽导致了额外的互斥锁的发生， 
+      你就会有死锁和递归锁的危险。避免这些危险的一个方法是，让你的合并器在信号调用迭代器解引用之前释放锁。 
+      Boost.Signals2 库提供的合并器类都是线程安全的，因为它们在调用之间并没有维护任何状态。
+    </para>
+    <para>
+      Suppose a user writes a slot which connects another slot to the invoking signal.
+      Will the newly connected slot be run during the same signal invocation in
+      which the new connection was made?  The answer is no.  Connecting a new slot
+      modifies the signal's slot list, and as explained above, a signal invocation
+      already in progress will not see any modifications made to the slot list.<sbr/>
+      假设用户写了个插槽，该插槽把另一个插槽连接到调用的信号。在同一信号调用中，这个新连接的插槽会不会运行？ 
+      答案是否定的。连接新的插槽更改了信号的插槽链表，正如上文所述，正在进行的信号调用将不会看到对插槽链表的任何更改。
+    </para>
+    <para>
+      Suppose a user writes a slot which disconnects another slot from the invoking signal.
+      Will the disconnected slot be prevented from running during the same signal invocation,
+      if it appears later in the slot list than the slot which disconnected it?
+      This time the answer is yes.  Even if the disconnected slot is still
+      present in the signal's slot list, each slot is checked to see if it is
+      disconnected or blocked immediately before it is executed (or not executed as
+      the case may be), as was described in more detail above.<sbr/>
+      假设用户写了个插槽，该插槽把另一个插槽从调用的信号断开。在同一信号调用中，这个被断开的插槽是否无法运行？ 
+      如果它在插槽链表中出现的位置在那个断开它的插槽之后呢？这一次，答案是肯定的。 
+      即使被断开的插槽仍然存在于信号的插槽链表中，每个插槽在执行（或视情况并不执行）前， 
+      会检查它是否已被断开或阻塞，这在上文中已有详述。
+    </para>
+  </section>
+  <section>
+    <title>Connections and other classes 连接与其他类</title>
+    <para>
+      The methods of the <classname>signals2::connection</classname> class are thread-safe,
+      with the exception of assignment and swap.  This is achived via locking the mutex
+      associated with the object's underlying signal-slot connection.  Assignment and
+      swap are not thread-safe because the mutex protects the underlying connection
+      which a <classname>signals2::connection</classname> object references, not
+      the <classname>signals2::connection</classname> object itself.  That is,
+      there may be many copies of a <classname>signals2::connection</classname> object,
+      all of which reference the same underlying connection.  There is not a mutex
+      for each <classname>signals2::connection</classname> object, there is only
+      a single mutex protecting the underlying connection they reference.<sbr/>
+      <classname>signals2::connection</classname> 类的方法是线程安全的，除了赋值和交换swap。 
+      这是通过对象底层的信号-插槽连接所对应的互斥体加锁实现的。赋值和交换不是线程安全的，
+      因为互斥体保护的是底层的连接，它是由 <classname>signals2::connection</classname> 对象所引用的， 
+      而不是 <classname>signals2::connection</classname> 对象本身。也就是说，可能有许多份 
+      <classname>signals2::connection</classname> 对象的拷贝，所有拷贝都引用了同一个底层连接。 
+      没有针对每个 <classname>signals2::connection</classname> 对象的互斥体，只有一个互斥体保护它们所引用的底层连接。
+    </para>
+    <para>The <classname>shared_connection_block</classname> class obtains some thread-safety
+      from the <code>Mutex</code> protecting the underlying connection which is blocked
+      and unblocked.  The internal reference counting which is used to keep track of
+      how many <classname>shared_connection_block</classname> objects are asserting
+      blocks on their underlying connection is also thread-safe (the implementation
+      relies on <classname>shared_ptr</classname> for the reference counting).
+      However, individual <classname>shared_connection_block</classname> objects
+      should not be accessed concurrently by multiple threads.  As long as two
+      threads each have their own <classname>shared_connection_block</classname> object,
+      then they may use them in safety, even if both <classname>shared_connection_block</classname>
+      objects are copies and refer to the same underlying connection.<sbr/>
+      <classname>shared_connection_block</classname> 类因为有保护其底层连接的 <code>Mutex</code>， 
+      从而获得了一些线程安全性，该底层连接即被阻塞和解除阻塞的连接。其内部引用计数也是线程安全的
+      （实现依赖于 <classname>shared_ptr</classname> 的引用计数），该引用计数用来跟踪有多少 
+      <classname>shared_connection_block</classname> 对象宣称阻塞它们的底层连接。然而，单个的 
+      <classname>shared_connection_block</classname> 对象不应该从多个线程并发访问。
+      只要两个线程都有自己的 <classname>shared_connection_block</classname> 对象，那么它们可以安全地使用它们， 
+      即使这两个 <classname>shared_connection_block</classname> 对象是复制关系，并指向同一个底层连接。
+    </para>
+    <para>
+      The <classname alt="slotN">slot</classname> class has no internal mutex locking
+      built into it.  It is expected that slot objects will be created then
+      connected to a signal in a single thread.  Once they have been copied into
+      a signal's slot list, they are protected by the mutex associated with
+      each signal-slot connection.<sbr/>
+      <classname alt="slotN">slot</classname> 类没有内置的内部互斥锁。插槽对象应该在一个线程内创建，
+      然后连接到信号。它们一旦被复制到信号的插槽链表，它们就会被每个信号-插槽连接所关联的互斥体所保护。
+    </para>
+    <para>The <classname>signals2::trackable</classname> class does NOT provide
+      thread-safe automatic connection management.  In particular, it leaves open the
+      possibility of a signal invocation calling into a partially destructed object
+      if the trackable-derived object is destroyed in a different thread from the
+      one invoking the signal.
+      <classname>signals2::trackable</classname> is only provided as a convenience
+      for porting single-threaded code from Boost.Signals to Boost.Signals2.<sbr/>
+      <classname>signals2::trackable</classname> 类不提供线程安全的自动连接管理。 
+      特别是，它留下了一种可能性，如果可跟踪子类对象在不同于引发信号的线程中被销毁， 
+      信号调用可能会进入部分析构对象。提供 <classname>signals2::trackable</classname> 
+      仅仅是为了方便单线程代码从 Boost.Signals 移植到 Boost.Signals2。
+    </para>
+  </section>
+</section>

@@ -1,0 +1,106 @@
+<!DOCTYPE HTML PUBLIC "-//W3C//DTD HTML 4.01 Transitional//EN">
+<html><head>
+
+<title>Position Iterator</title><meta http-equiv="Content-Type" content="text/html; charset=UTF-8">
+<link rel="stylesheet" href="theme/style.css" type="text/css"></head>
+<body>
+<table background="theme/bkd2.gif" border="0" cellspacing="2" width="100%">
+  <tbody><tr> 
+    <td width="10"> 
+    </td>
+    <td width="85%"> <font face="Verdana, Arial, Helvetica, sans-serif" size="6"><b>Position 
+      Iterator 位置迭代器</b></font> </td>
+    <td width="112"><a href="http://spirit.sf.net"><img src="theme/spirit.gif" align="right" border="0" height="48" width="112"></a></td>
+  </tr>
+</tbody></table>
+<br>
+<table border="0">
+  <tbody><tr>
+    <td width="10"></td>
+    <td width="30"><a href="../index.html"><img src="theme/u_arr.gif" border="0"></a></td>
+    <td width="30"><a href="file_iterator.html"><img src="theme/l_arr.gif" border="0"></a></td>
+    <td width="30"><a href="debugging.html"><img src="theme/r_arr.gif" border="0"></a></td>
+  </tr>
+</tbody></table>
+<p>Often, when writing a parser that is able to detect errors in the format of 
+  the input stream, we want it to communicate to the user where the error happened 
+  within that input. The classic example is when writing a compiler or interpreter 
+  that detects syntactical errors in the parsed program, indicating the line number 
+  and maybe even the position within the line where the error was found.<br>通常，在编写一个可以检测输入流的格式错误的分析器时，我们会希望它可以告知用户，错误发生于输入的何处。典型的例子是，在编写一个编译器或解释器，检测到被分析程序中的语法错误时，可以指出错误发生的行号甚至在行中的位置。</p>
+<p> The class position_iterator is a tool provided within Spirit that allows parser 
+  writers to easily implement this functionality. The concept is quite simple: 
+  this class is an iterator wrapper that keeps track of the current position within 
+  the file, including current file, line and column. It requires a single template 
+  parameter, which should be the type of the iterator that is to be wrapped.<br>类 position_iterator 是Spirit内部提供的一个工具，它允许分析器作者可以很轻易地实现以上功能。这个概念很简单：这个类是一个迭代器包装，它跟踪文件中的当前位置，包含当前文件、行号和列数。它要求单个模板参数，即被封装的迭代器类型。</p>
+<p> To use it, you'll need to add the following include:<br>要使用它，你需要添加以下头文件：</p>
+<pre>    <code><span class="preprocessor">#include </span><span class="special">&lt;</span><span class="identifier">boost</span><span class="special">/</span><span class="identifier">spirit</span><span class="special">/</span><span class="identifier">iterator</span><span class="special">/</span><span class="identifier">position_iterator</span><span class="special">.</span><span class="identifier">hpp</span><span class="special">&gt;</span></code></pre>
+<p> Or include all the iterators in Spirit:<br>或包含Spirit的所有迭代器：</p>
+<pre>    <code><span class="preprocessor">#include </span><span class="special">&lt;</span><span class="identifier">boost</span><span class="special">/</span><span class="identifier">spirit</span><span class="special">/</span><span class="identifier">iterator</span><span class="special">.</span><span class="identifier">hpp</span><span class="special">&gt;</span></code></pre>
+<p> To construct the wrapper, it needs both the begin and end iterators of the 
+  input sequence, and the file name of the input sequence. Optionally, you can 
+  also specify the starting line and column numbers, which default to 1. Default 
+  construction, with no parameters, creates a generic end-of-sequence iterator, 
+  in a similar manner as it's done in the stream operators of the standard C++ 
+  library.<br>为了构造该包装，它需要输入序列的 begin 和 end 迭代器，以及输入序列的文件名。可选地，你也可以指定开始行号和列数，它们缺省为1。不带参数的缺省构造将创建一个泛型的序列结束迭代器，这与标准C++库的流操作符中的方法类似。</p>
+<p> The wrapped iterator must belong to the input or forward iterator category, 
+  and the position_iterator just inherits that category.<br>被封装的迭代器必须属于输入迭代器或前向迭代器种类，且 position_iterator 只是继承其种类。</p>
+<p> For example, to create begin and end positional iterators from an input C- 
+  string, you'd use:<br>例如，从一个输入的C字符串创建 begin 和 end 位置迭代器，你要用：</p>
+<pre>    <code><span class="keyword">char </span><span class="keyword">const</span><span class="special">* </span><span class="identifier">inputstring </span><span class="special">= </span><span class="string">"..."</span><span class="special">;<br>    </span><span class="keyword">typedef </span><span class="identifier">position_iterator</span><span class="special">&lt;</span><span class="keyword">char </span><span class="keyword">const</span><span class="special">*&gt; </span><span class="identifier">iterator_t</span><span class="special">;<br><br>    </span><span class="identifier">iterator_t </span><span class="identifier">begin</span><span class="special">(</span><span class="identifier">inputstring</span><span class="special">, </span><span class="identifier">inputstring</span><span class="special">+</span><span class="identifier">strlen</span><span class="special">(</span><span class="identifier">inputstring</span><span class="special">));<br>    </span><span class="identifier">iterator_t </span><span class="identifier">end</span><span class="special">;</span></code></pre>
+<a name="operations"></a>
+<h2>Operations 操作</h2>
+<pre>    <code><span class="keyword">void </span><span class="identifier">set_position</span><span class="special">(</span><span class="identifier">file_position </span><span class="keyword">const</span><span class="special">&amp;);</span></code></pre>
+<p> Call this function when you need to change the current position stored in 
+  the iterator. For example, if parsing C-style #include directives, the included 
+  file's input must be marked by restarting the file and column to 1 and 1 and 
+  the name to the new file's name.<br>当你需要改变保存在迭代器中的位置时，调用这个函数。例如，如果要分析C风格的 #include 指示符，被包含的文件必须被标记为重新开始一个文件，且行号、列数为1，文件名为新的文件名。<br>
+</p>
+<pre>    <code><span class="identifier">file_position </span><span class="keyword">const</span><span class="special">&amp; </span><span class="identifier">get_position</span><span class="special">() </span><span class="keyword">const</span><span class="special">;</span></code></pre>
+<p> Call this function to retrieve the current position.<br>调用该函数以取出当前位置。</p>
+<pre>    <code><span class="keyword">void </span><span class="identifier">set_tabchars</span><span class="special">(</span><span class="keyword">int</span><span class="special">);</span></code></pre>
+<p> Call this to set the number of tabs per character. This value is necessary 
+  to correctly track the column number.<br>调用此函数以设置制表符的字符数量。该值对于正确跟踪列数是必需的。<br>
+</p>
+<p> <a name="file_position"></a> </p>
+<h2>file_position</h2>
+<p> file_position is a structure that holds the position within a file. Its fields 
+  are:<br>file_position 是一个保存了文件内部位置的结构。它的字段有：</p>
+<table align="center" border="0" width="90%">
+  <tbody><tr> 
+    <td class="table_title" colspan="2">file_position fields</td>
+  </tr>
+  <tr> 
+    <td class="table_cells" width="26%"><code><span class="identifier">std</span><span class="special">::</span><span class="identifier">string 
+      </span><span class="identifier">file</span><span class="special">;</span></code></td>
+    <td class="table_cells" width="74%">Name of the file. Hopefully a full pathname <br>文件名。希望是全路径名</td>
+  </tr>
+  <tr> 
+    <td class="table_cells" width="26%"><code><span class="keyword">int</span><span class="identifier"> 
+      line</span><span class="special">;</span></code></td>
+    <td class="table_cells" width="74%">Line number within the file. By default, 
+      the first line is number 1<br>文件内的行号。缺省地，第一行行号为1</td>
+  </tr>
+  <tr> 
+    <td class="table_cells" width="26%"><code><span class="keyword">int </span><span class="identifier">column</span><span class="special">;</span></code></td>
+    <td class="table_cells" width="74%">Column position within the file. The first 
+      column is 1<br>文件内的列位置。第一列为1</td>
+  </tr>
+</tbody></table>
+<p><img src="theme/lens.gif" height="16" width="15"> See <a href="../example/fundamental/position_iterator/position_iterator.cpp">position_iterator.cpp</a> for a compilable example. This is part of the Spirit distribution.<br><img src="theme/lens.gif" height="16" width="15"> 可编译的例子请见 <a href="../example/fundamental/position_iterator/position_iterator.cpp">position_iterator.cpp</a>。这是Spirit发布包的一部分。</p>
+<table border="0">
+  <tbody><tr> 
+    <td width="10"></td>
+    <td width="30"><a href="../index.html"><img src="theme/u_arr.gif" border="0"></a></td>
+    <td width="30"><a href="file_iterator.html"><img src="theme/l_arr.gif" border="0"></a></td>
+    <td width="30"><a href="debugging.html"><img src="theme/r_arr.gif" border="0"></a></td>
+  </tr>
+</tbody></table>
+<hr size="1">
+<p class="copyright">Copyright © 2002 Juan Carlos Arevalo-Baeza<br>
+  <br>
+  <font size="2">Use, modification and distribution is subject to the Boost Software
+    License, Version 1.0. (See accompanying file LICENSE_1_0.txt or copy at
+    http://www.boost.org/LICENSE_1_0.txt) </font> </p>
+<p class="copyright">&nbsp; </p>
+<p>&nbsp;</p>
+</body></html>

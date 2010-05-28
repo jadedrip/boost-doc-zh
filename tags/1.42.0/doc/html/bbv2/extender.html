@@ -1,0 +1,859 @@
+<!DOCTYPE HTML PUBLIC "-//W3C//DTD HTML 4.01 Transitional//EN">
+<html><head>
+<meta http-equiv="Content-Type" content="text/html; charset=UTF-8">
+
+<title>Extender Manual</title><link rel="stylesheet" href="../boostbook.css" type="text/css">
+<meta name="generator" content="DocBook XSL Stylesheets V1.73.2">
+<link rel="start" href="../index.html" title="The Boost C++ Libraries BoostBook Documentation Subset">
+<link rel="up" href="../bbv2.html" title="Chapter&nbsp;28.&nbsp;Boost.Build V2 User Manual">
+<link rel="prev" href="tasks.html" title="Common tasks">
+<link rel="next" href="reference.html" title="Detailed reference"></head>
+<body alink="#0000ff" bgcolor="white" link="#0000ff" text="black" vlink="#840084">
+<table cellpadding="2" width="100%"><tbody><tr>
+<td valign="top"><img alt="Boost C++ Libraries" src="../../../boost.png" height="86" width="277"></td>
+<td align="center"><a href="../../../index.html">Home</a></td>
+<td align="center"><a href="../../../libs/libraries.htm">Libraries</a></td>
+<td align="center"><a href="http://www.boost.org/users/people.html">People</a></td>
+<td align="center"><a href="http://www.boost.org/users/faq.html">FAQ</a></td>
+<td align="center"><a href="../../../more/index.htm">More</a></td>
+</tr></tbody></table>
+<hr>
+<div class="spirit-nav">
+<a accesskey="p" href="reference.html"><img style="border: 0px solid ; width: 19px; height: 19px;" src="../../../doc/html/images/prev.png" alt="Prev"></a><a accesskey="u" href="../bbv2.html"><img src="../../../doc/html/images/up.png" alt="Up"></a><a accesskey="h" href="../index.html"><img src="../../../doc/html/images/home.png" alt="Home"></a><a accesskey="n" href="faq.html"><img style="border: 0px solid ; width: 19px; height: 19px;" src="../../../doc/html/images/next.png" alt="Next"></a>
+</div>
+<div class="section" lang="en">
+<div class="titlepage"><div><div><h2 class="title" style="clear: both;">
+<a name="bbv2.extender"></a>Extender Manual 扩展手册</h2></div></div></div>
+<div class="toc"><dl>
+<dt><span class="section"><a href="extender.html#bbv2.extender.intro">Introduction 简介</a></span></dt>
+<dt><span class="section"><a href="extender.html#bbv2.extender.example">Example: 
+1-to-1 generator 例子：1到1生成器</a> </span><span class="section"></span></dt><dt><span class="section"><a href="extender.html#bbv2.extending.targets">Target types 目标类型</a></span></dt>
+<dt><span class="section"><a href="extender.html#bbv2.extending.tools">Tools and generators 工具和生成器</a></span></dt>
+<dt><span class="section"><a href="extender.html#bbv2.extending.features">Features 特性</a></span></dt>
+<dt><span class="section"><a href="extender.html#bbv2.extending.rules">Main target rules 主目标规则</a></span></dt>
+<dt><span class="section"><a href="extender.html#bbv2.extending.toolset_modules">Toolset modules 工具集模块</a></span></dt>
+</dl></div>
+<div class="section" lang="en">
+<div class="titlepage"><div><div><h3 class="title">
+<a name="bbv2.extender.intro"></a>Introduction 简介</h3></div></div></div><div class="section" title="Introduction">
+<div class="toc">
+<dl><dt><span class="section"><a href="extender.html#bbv2.extender.overview.metatargets">Metatargets 元目标</a></span> 
+</dt><dt><span class="section"><a href="extender.html#bbv2.extender.overview.targets">Concrete targets 具体目标</a></span> 
+</dt><dt><span class="section"><a href="extender.html#bbv2.extender.overview.generators">Generators 生成器</a></span> 
+</dt></dl></div>
+<p>This section explains how to extend Boost.Build to accomodate your local 
+requirements—primarily to add support for non-standard tools you have. Before we 
+start, be sure you have read and understoon the concept of metatarget, <a class="xref" title="Concepts" href="overview.html#bbv2.overview.concepts">the 
+section called “Concepts”</a>, which is critical to understanding the remaining 
+material.<br>本节介绍如何扩展 Boost.Build 以适应你本身的要求—主要是增加对你的非标准工具的支持。在我们开始之前，请确认你已经阅读并理解了元目标的概念，见<a class="xref" title="Concepts" href="overview.html#bbv2.overview.concepts"> “概念”一节</a>，它是理解其它东西的关键。 </p>
+<p>The current version of Boost.Build has three levels of targets, listed below.<br>当前版本的 Boost.Build 有三级目标，列出如下。 
+</p>
+<div class="variablelist">
+<dl><dt><span class="term">metatarget 元目标</span> 
+</dt><dd>
+<p>Object that is created from declarations in Jamfiles. May be called with a 
+set of properties to produce concrete targets.<br>从 Jamfiles 中的声明所创建的目标。可以带上一组属性进行调用，以生成具体目标。</p></dd><dt><span class="term">concrete target 具体目标</span> 
+</dt><dd>
+<p>Object that corresponds to a file or an action.<br>与某个文件或动作相对应的对象。</p></dd><dt><span class="term">jam target &nbsp;jam目标</span> 
+</dt><dd>
+<p>Low-level concrete target that is specific to Boost.Jam build engine. 
+Essentially a string—most often a name of file.<br>特定针对 Boost.Jam 构建引擎的低级具体目标。基本上就是一个字符串—通常是一个文件名。</p></dd></dl></div>
+<p>In most cases, you will only have to deal with concrete targets and the 
+process that creates concrete targets from metatargets. Extending metatarget 
+level is rarely required. The jam targets are typically only used inside the 
+command line patterns.<br>在多数情况下，你只需要处理具体目标以及从元目标生成具体目标的过程。极少需要扩展元目标级别。jam目标通常只在命令行模式内部使用。 </p>
+<div class="warning" title="Warning">
+<table summary="Warning" border="0">
+<tbody>
+<tr>
+<td rowspan="2" align="middle" valign="top" width="25"><img alt="[Warning]" src="../../../doc/html/images/warning.png"></td>
+<th align="left">Warning 警告</th></tr>
+<tr>
+<td align="left" valign="top">
+<p>All of the Boost.Jam target-related builtin functions, like <code class="computeroutput">DEPENDS</code> or <code class="computeroutput">ALWAYS</code> 
+operate on jam targets. Applying them to metatargets or concrete targets has no 
+effect.</p><p>所有 Boost.Jam 目标相关的内建函数，如 <code class="computeroutput">DEPENDS</code> 或 <code class="computeroutput">ALWAYS</code> 
+是对jam目标进行操作的。将它们用于元目标或具体目标是没有作用的。</p></td></tr></tbody></table></div>
+<div class="section" title="Metatargets">
+<div class="titlepage">
+<div>
+<div>
+<h4 class="title"><a name="bbv2.extender.overview.metatargets"></a>Metatargets 元目标</h4></div></div></div>
+
+<p>Metatarget is an object that records information specified in Jamfile, such 
+as metatarget kind, name, sources and properties, and can be called with 
+specific properties to generate concrete targets. At the code level it is 
+represented by an instance of class derived from <code class="computeroutput">abstract-target</code>. <sup>[<a class="footnote" href="extender.html#ftn.id2179234" name="id2179234">14</a>]</sup><br>元目标是一个记录了在Jamfile中给定信息的对象，这些信息包括有元目标种类、名字、源和属性，它可以带上指定的属性进行调用，以生成具体目标。在代码级上，它被表示为一个派生自 <code class="computeroutput">abstract-target</code> 的类的实例。<sup>[<a class="footnote" href="#ftn.id2179234" name="id2179234">14</a>]</sup> </p>
+<p>The <code class="computeroutput">generate</code> method takes the build 
+properties (as an instance of the <code class="computeroutput">property-set</code> 
+class) and returns a list containing:<br>方法 <code class="computeroutput">generate</code> 接受一些构建属性(作为 <code class="computeroutput">property-set</code> 
+类的一个实例)并返回一个列表，列表中包含有：</p>
+<div class="itemizedlist">
+<ul class="itemizedlist" type="disc"><li class="listitem">
+<p>As front element—Usage-requirements from this invocation (an instance of 
+<code class="computeroutput">property-set</code>)<br>首元素—此次调用的用法要求(一个 
+<code class="computeroutput">property-set</code> 实例)</p></li><li class="listitem">
+<p>As subsequent elements—created concrete targets ( instances of the <code class="computeroutput">virtual-target</code> class.)<br>后续元素—创建的具体目标(多个 <code class="computeroutput">virtual-target</code> 类的实例)。</p></li></ul></div>
+<p>It's possible to lookup a metataget by target-id using the <code class="computeroutput">targets.resolve-reference</code> function, and the <code class="computeroutput">targets.generate-from-reference</code> function can both 
+lookup and generate a metatarget.<br>可以用 <code class="computeroutput">targets.resolve-reference</code> 函数通过 target-id 查找一个元目标，而 <code class="computeroutput">targets.generate-from-reference</code> 函数则可以同时查找并生成一个元目标。</p>
+<p>The <code class="computeroutput">abstract-target</code> class has three 
+immediate derived classes:<br>类 <code class="computeroutput">abstract-target</code> 有三个直接派生类：</p>
+<div class="itemizedlist">
+<ul class="itemizedlist" type="disc"><li class="listitem">
+<p><code class="computeroutput">project-target</code> that corresponds to a 
+project and is not intended for further subclassing. The <code class="computeroutput">generate</code> method of this class builds all targets in 
+the project that are not marked as explicit.<br><code class="computeroutput">project-target</code> 对应于一个项目，它没有其它子类。该类的 <code class="computeroutput">generate</code> 方法创建项目中所有未显式标出的目标。</p></li><li class="listitem">
+<p><code class="computeroutput">main-target</code> corresponds to a target in a 
+project and contains one or more target alternatives. This class also should not 
+be subclassed. The <code class="computeroutput">generate</code> method of this 
+class selects an alternative to build, and calls the <code class="computeroutput">generate</code> method of that alternative.<br><code class="computeroutput">main-target</code> 对应于项目中的一个目标，可以包含一个或多个可选目标。这个类也不应再派生子类。该类的 <code class="computeroutput">generate</code> 方法选择一个可选目标进行构建，并调用选中目标的 <code class="computeroutput">generate</code> 方法。</p></li><li class="listitem">
+<p><code class="computeroutput">basic-target</code> corresponds to a specific 
+target alternative. This is base class, with a number of derived classes. The 
+<code class="computeroutput">generate</code> method processes the target 
+requirements and requested build properties to determine final properties for 
+the target, builds all sources, and finally calls the abstract <code class="computeroutput">construct</code> method with the list of source virtual 
+targets, and the final properties.<br><code class="computeroutput">basic-target</code> 对应于一个特定的目标选择。这是一个基类，有多个派生类。其
+<code class="computeroutput">generate</code> 方法处理目标要求和被请求的构建属性，以确定该目标的最终属性，然后构建所有源，最后以源虚拟目标的列表和最终属性调用抽象的 <code class="computeroutput">construct</code> 方法。</p></li></ul></div>
+<p>The instances of the <code class="computeroutput">project-target</code> and 
+<code class="computeroutput">main-target</code> classes are created 
+implicitly—when loading a new Jamfiles, or when a new target alternative with 
+as-yet unknown name is created. The instances of the classes derived from <code class="computeroutput">basic-target</code> are typically created when Jamfile 
+calls a <em class="firstterm">metatarget rule</em>, such as such as <code class="computeroutput">exe</code>.<br><code class="computeroutput">project-target</code> 和 
+<code class="computeroutput">main-target</code> 类的实例是隐式创建的—在装入一个新的Jamfiles时，或当一个未知名的新目标被创建时。而派生自 <code class="computeroutput">basic-target</code> 的类的实例则通常在 Jamfile 
+调用一个 <em class="firstterm">元目标规则</em>, 如 <code class="computeroutput">exe</code> 时，被创建。 </p>
+<p>It it permissible to create a custom class derived from <code class="computeroutput">basic-target</code> and create new metatarget rule that 
+creates instance of such target. However, in the majority of cases, a specific 
+subclass of <code class="computeroutput">basic-target</code>— <code class="computeroutput">typed-target</code> is used. That class is associated with 
+a <em class="firstterm">type</em> and relays to <em class="firstterm">generators</em> to construct concrete targets of that type. This 
+process will be explained below. When a new type is declared, a new metatarget 
+rule is automatically defined. That rule creates new instance of type-target, 
+associated with that type.<br>你可从 <code class="computeroutput">basic-target</code> 派生一个客户类，并创建新的元目标规则来创建该目标的实例。不过，在大多数情况下，我们使用 <code class="computeroutput">basic-target</code> 的一个特定子类— <code class="computeroutput">typed-target</code>。这个类与一个 <em class="firstterm">类型type</em> 相关联，并且依赖于 <em class="firstterm">生成器generators</em> 来构造该类型的具体目标。这个过程将在后文中说明。当声明一个新类型时，将自动定义一个新的元目标规则。该规则创建 type-target 的新实例，关联至该类型。 </p></div>
+<div class="section" title="Concrete targets">
+<div class="titlepage">
+<div>
+<div>
+<h4 class="title"><a name="bbv2.extender.overview.targets"></a>Concrete 
+targets 具体目标</h4></div></div></div>
+<p>Concrete targets are represented by instance of classes derived from <code class="computeroutput">virtual-target</code>. The most commonly used subclass is 
+<code class="computeroutput">file-target</code>. A file target is associated with 
+an action that creates it— an instance of the <code class="computeroutput">action</code> class. The action, in turn, hold a list of 
+source targets. It also holds the <code class="computeroutput">property-set</code> 
+instance with the build properties that should be used for the action.<br>具体目标表现为派生处 <code class="computeroutput">virtual-target</code> 的类的实例。最常用的子类是 
+<code class="computeroutput">file-target</code>。文件目标关联于一个创建它的动作—一个 <code class="computeroutput">action</code> 类的实例。反过来，这个动作持有一个源目标列表。它还持有 <code class="computeroutput">property-set</code> 
+实例，其中有用于该动作的相关构建属性。</p>
+<p>Here's an example of creating a target from another target, <code class="computeroutput">source<br></code>以下是一个从某个目标 <code class="computeroutput">source</code> 创建另一个目标的例子：<code class="computeroutput"></code></p><pre class="programlisting">local a = [ new action $(source) : common.copy : $(property-set) ] ;<br>local t = [ new file-target $(name) : CPP : $(project) : $(a) ] ;<br></pre>
+<p>The first line creates an instance of the <code class="computeroutput">action&gt;</code> class. The first parameter is the list of 
+sources. The second parameter is the name a jam-level <a class="link" href="overview.html#bbv2.overview.jam_language.actions">action</a>. The third 
+parameter is the property-set applying to this action. The second line creates a 
+target. We specifie a name, a type and a project. We also pass the action object 
+created earlier. If the action creates several targets, we can repeat the second 
+line several times.<br>第一行创建一个 <code class="computeroutput">action&gt;</code> 类的实例。第一个参数是源列表。第二个参数是一个jam级 <a class="link" href="overview.html#bbv2.overview.jam_language.actions">动作</a> 的名字。第三个参数是应用于该动作的属性集。第二行创建一个目标。我们指定一个名字、一个类型和一个项目。我们同时还传入早前创建的动作对象。如果该动作创建多个目标，我们可以多次重复第二行。</p>
+<p>In some cases, code that creates concrete targets may be invoked more than 
+once with the same properties. Returning to different instance of <code class="computeroutput">file-target</code> that correspond to the same file clearly 
+will result in problems. Therefore, whenever returning targets you should pass 
+them via the <code class="computeroutput">virtual-target.register</code> function, 
+that will replace targets with previously created identical ones, as 
+necessary.<sup>[<a class="footnote" href="extender.html#ftn.id2179576" name="id2179576">15</a>]</sup> Here are a couple of examples:<br>有些情况下，创建具体目标的代码可能以相同的属性多次执行。返回不同的 <code class="computeroutput">file-target</code> 实例，如果它们对应于同一个文件显然是有问题的。因此，每次返回目标时，你应该通过 <code class="computeroutput">virtual-target.register</code> 函数来传递它们，这样将对先前创建的相同目标进行替换，如果需要的话。<sup>[<a class="footnote" href="#ftn.id2179576" name="id2179576">15</a>]</sup> 以下是几个例子： </p><pre class="programlisting">return [ virtual-target.register $(t) ] ;<br>return [ sequence.transform virtual-target.register : $(targets) ] ;<br></pre>
+<p></p></div>
+<div class="section" title="Generators">
+<div class="titlepage">
+<div>
+<div>
+<h4 class="title"><a name="bbv2.extender.overview.generators"></a>Generators 生成器</h4></div></div></div>
+<p>In theory, every kind of metatarget in Boost.Build (like <code class="computeroutput">exe</code>, <code class="computeroutput">lib</code> or <code class="computeroutput">obj</code>) could be implemented by writing a new 
+metatarget class that, independently of the other code, figures what files to 
+produce and what commands to use. However, that would be rather inflexible. For 
+example, adding support for a new compiler would require editing several 
+metatargets.<br>理论上讲，Boost.Build中的每种元目标(如 <code class="computeroutput">exe</code>, <code class="computeroutput">lib</code> 或 <code class="computeroutput">obj</code>)都可以通过编写一个新的元目标类来实现，独立于其它代码，指出要生成哪些文件以及要使用哪些命令。不过，这样很不灵活。例如，增加一个新的编译器的支持将需要编辑多个元目标。 </p>
+<p>In practice, most files have specific types, and most tools consume and 
+produce files of specific type. To take advantage of this fact, Boost.Build 
+defines concept of target type and <a class="indexterm" name="id2179635"></a><em class="firstterm">generators</em>, and has special metatarget class <code class="computeroutput">typed-target</code>. Target type is merely an identifier. 
+It is associated with a set of file extensions that correspond to that type. 
+Generator is an abstraction of a tool. It advertises the types it produces and, 
+if called with a set of input target, tries to construct output targets of the 
+advertised types. Finally, <code class="computeroutput">typed-target</code> is 
+associated with specific target type, and relays the generator (or generators) 
+for that type.<br>在实践中，多数文件具有特定的类型，且多数工具读入并产出特定类型的文件。为了充分利用这一点，Boost.Build 
+定义了目标类型和 <a class="indexterm" name="id2179635"></a><em class="firstterm">生成器generators</em> 的概念，以及特定元目标 <code class="computeroutput">typed-target</code>。目标类型只是一个标识符。它关联至对应于该类型的一组文件扩展名。生成器是工具的一个抽象。它公开宣称其产出的类型，如果以一组输入目标来调用它，它将尝试构造所宣称类型的输出目标。最后，<code class="computeroutput">typed-target</code> 关联至特定的目标类型，以及该类型的生成器。 </p>
+<p>A generator is an instance of a class derived from <code class="computeroutput">generator</code>. The <code class="computeroutput">generator</code> class itself is suitable for common cases. 
+You can define derived classes for custom scenarios.<br>生成器是派生自 <code class="computeroutput">generator</code> 的类的实例。<code class="computeroutput">generator</code> 类本身适用于常见的情形。你可以为特定情形定义派生类。</p></div></div>
+<div class="section" title="Example: 1-to-1 generator">
+<div class="titlepage">
+<div>
+<div>
+<h3 class="title"><a name="bbv2.extender.example"></a>Example: 1-to-1 
+generator</h3></div></div></div></div><p>Say you're writing an application that generates C++ code. If
+  you ever did this, you know that it's not nice. Embedding large
+  portions of C++ code in string literals is very awkward. A much
+  better solution is:<br>假设你正在编写一个生成 C++ 代码的应用。如果你曾经试过，你应该知道那并不好办。将大部分 C++ 代码嵌入到字符串中是非常笨拙的。一个更好的解决方法是：</p>
+<div class="orderedlist"><ol type="1">
+<li>
+        Write the template of the code to be generated, leaving
+    placeholders at the points that will change<br>编写被生成代码的模板，在将会变化的地方放置占位符。
+      </li>
+<li>
+        Access the template in your application and replace
+    placeholders with appropriate text.<br>在你的应用中访问这些模板，并以适当的文本替换占位符。
+      </li>
+<li>Write the result.<br>输出结果。</li>
+</ol></div>
+<p>It's quite easy to achieve. You write special verbatim files that are
+  just C++, except that the very first line of the file contains the name of a
+  variable that should be generated. A simple tool is created that takes a
+  verbatim file and creates a cpp file with a single <code class="computeroutput">char*</code> variable
+  whose name is taken from the first line of the verbatim file and whose value
+  is the file's properly quoted content.<br>这很容易办到。你编写一些特定的 C++ 逐字文件，只不过这些文件的第一行含有要被生成的变量的名称。你可以创建一个简单的工具，它接受一个逐字文件，生成一个 cpp 文件和一个 <code class="computeroutput">char*</code> 变量，变量名取自于逐字文件的第一行，而变量值则是文件的正确内容。</p>
+<p>Let's see what Boost.Build can do.<br>我们来看看 Boost.Build 可以做什么。</p>
+<p>First off, Boost.Build has no idea about "verbatim files". So, you must
+  register a new target type. The following code does it:<br>首先，Boost.Build 不知道"逐字文件"。所以，你必须注册一个新的目标类型。以下代码可以做到：</p>
+<pre class="programlisting">import type ;<br>type.register VERBATIM : verbatim ;<br></pre>
+<p>The first parameter to <code class="computeroutput">type.register</code> gives
+  the name of the declared type. By convention, it's uppercase. The second
+  parameter is the suffix for files of this type. So, if Boost.Build sees
+  <code class="filename">code.verbatim</code> in a list of sources, it knows that it's of
+  type <code class="computeroutput">VERBATIM</code>.<br>传给&nbsp;<code class="computeroutput">type.register</code> 的第一个参数给出被声明类型的名称。作为惯例，它应该是大写的。第二个参数为此类文件的后缀。所以，如果 Boost.Build 在源列表中看到
+  <code class="filename">code.verbatim</code>，它知道其类型为 <code class="computeroutput">VERBATIM</code>。</p>
+<p>Next, you tell Boost.Build that the verbatim files can be
+  transformed into C++ files in one build step.  A
+  <em class="firstterm">generator</em> is a template for a build step that
+  transforms targets of one type (or set of types) into another.  Our
+  generator will be called <code class="computeroutput">verbatim.inline-file</code>; it
+  transforms <code class="computeroutput">VERBATIM</code> files into <code class="computeroutput">CPP</code> files:<br>接着，你要告诉 Boost.Build 逐字文件可以在一个构建步骤中转化为 C++ 文件。<em class="firstterm">生成器</em> 是一个用于在一个构建步骤中将一种类型(或一组类型)的目标转化为另一种类型的目标的模板。我们的生成器将被称为 <code class="computeroutput">verbatim.inline-file</code>；它将 <code class="computeroutput">VERBATIM</code> 文件转化为 <code class="computeroutput">CPP</code> 文件：
+
+</p>
+<pre class="programlisting">import generators ;<br>generators.register-standard verbatim.inline-file : VERBATIM : CPP ;<br></pre>
+
+<p>
+  Lastly, you have to inform Boost.Build about the shell
+  commands used to make that transformation.  That's done with an
+  <code class="computeroutput">actions</code> declaration.<br>最后，你必须告诉 Boost.Build 用于执行这一转化的 shell
+  命令。这是用一个
+  <code class="computeroutput">actions</code> 声明来完成的。
+
+</p>
+<pre class="programlisting">actions inline-file<br>{<br>    "./inline-file.py" $(&lt;) $(&gt;)<br>}<br></pre>
+
+<p>
+
+
+
+
+
+    Now, we're ready to tie it all together. Put all the code above in file
+    <code class="filename">verbatim.jam</code>, add <code class="computeroutput">import verbatim ;</code> to
+    <code class="filename">Jamroot.jam</code>, and it's possible to write the following
+    in your Jamfile:<br>现在，我们可以将所有东西合起来。将以上所有代码放入文件
+    <code class="filename">verbatim.jam</code>，再将 <code class="computeroutput">import verbatim ;</code> 加到
+    <code class="filename">Jamroot.jam</code> 中，就可以在你的 Jamfile 中编写以下代码：
+  </p>
+<pre class="programlisting">exe codegen : codegen.cpp class_template.verbatim usage.verbatim ;<br></pre>
+<p>
+    The listed verbatim files will be automatically converted into C++ source
+    files, compiled and then linked to the codegen executable.<br>以上列出的逐字文件将被自动转换为 C++ 源文件，被编译然后链接成 codegen 可执行文件。
+  </p>
+<p>
+    In subsequent sections, we will extend this example, and review all the
+    mechanisms in detail. The complete code is available in the
+    <code class="filename">example/customization</code> directory.<br>在以下章节中，我们将扩展这一例子，并回顾这一机制的所有细节。完整的代码位于
+    <code class="filename">example/customization</code> 目录中。
+  </p>
+</div>
+<div class="section" lang="en">
+<div class="titlepage"><div><div><h3 class="title">
+<a name="bbv2.extending.targets"></a>Target types 目标类型</h3></div></div></div>
+<div class="toc"><dl><dt><span class="section"><a href="extender.html#bbv2.extending.scanners">Scanners 扫描器</a></span></dt></dl></div>
+<p>The first thing we did in the <a class="link" href="extender.html#bbv2.extender.intro" title="Introduction">intruduction</a> was declaring a
+      new target type:<br>在 <a class="link" href="extender.html#bbv2.extender.intro" title="Introduction">简介</a> 中我们所做的第一件事是，声明一个新的目标类型：
+</p>
+<pre class="programlisting">import type ;<br>type.register VERBATIM : verbatim ;<br></pre>
+<p>
+        The type is the most important property of a target. Boost.Build can
+        automatically generate necessary build actions only because you
+        specify the desired type (using the different main target rules), and
+        because Boost.Build can guess the type of sources from their
+        extensions.<br>类型是一个目标最重要的属性。Boost.Build 可以自动生成所需的构建动作，就是因为你给出了想要的类型(使用不同的主目标规则)，或是因为 Boost.Build 可以从源文件的扩展名猜测到源文件的类型。
+      </p>
+<p>The first two parameters for the <code class="computeroutput">type.register</code> rule
+        are the name of new type and the list of extensions associated with
+        it. A file with an extension from the list will have the given target
+        type. In the case where a target of the declared type is generated
+        from other sources, the first specified extension will be used.<br><code class="computeroutput">type.register</code> 规则的头两个参数是新类型的名字以及与之关联的扩展名列表。一个带有列表中某个扩展名的文件具有给定的目标类型。当被声明类型的目标是生成自其它源目标时，将使用第一个指定的扩展名。
+      </p>
+<p>Sometimes you want to change the suffix used for generated targets
+      depending on build properties, such as toolset. For example, some compiler
+      uses extension <code class="literal">elf</code> for executable files. You can use the
+      <code class="computeroutput">type.set-generated-target-suffix</code> rule:<br>有时，你可能想根据构建属性，如工具集等，来改变被生成目标的后缀。例如，有些编译器对可执行文件使用 <code class="literal">elf</code> 扩展名。这时，你可以使用 <code class="computeroutput">type.set-generated-target-suffix</code> 规则：
+</p>
+<pre class="programlisting">type.set-generated-target-suffix EXE : &lt;toolset&gt;elf : elf ;<br></pre>
+
+<p>
+    A new target type can be inherited from an existing one.<br>新的目标类型也可以从已有的类型继承：
+</p>
+<pre class="programlisting">type.register PLUGIN : : SHARED_LIB ;<br></pre>
+<p>
+      The above code defines a new type derived from
+      <code class="computeroutput">SHARED_LIB</code>. Initially, the new type inherits all the
+      properties of the base type - in particular generators and suffix.
+      Typically, you'll change the new type in some way. For example, using
+      <code class="computeroutput">type.set-generated-target-suffix</code> you can set the suffix for
+      the new type. Or you can write special a generator for the new type. For
+      example, it can generate additional metainformation for the plugin.
+      In either way, the <code class="computeroutput">PLUGIN</code> type can be used whenever
+      <code class="computeroutput">SHARED_LIB</code> can. For example, you can directly link plugins
+      to an application.<br>上述代码定义了一个继承自
+      <code class="computeroutput">SHARED_LIB</code> 的新类型。起初，新类型继承了基类型的所有属性 - 尤其是生成器和后缀。通常情况下，你会在某种程度上修改这个新类型。例如，通过使用
+      <code class="computeroutput">type.set-generated-target-suffix</code>，你可以设置新类型的后缀。或者可以专门为新类型编写一个生成器。例如，可以为插件生成额外的元信息。无论是哪种方式，类型 <code class="computeroutput">PLUGIN</code> 可以在任何使用
+      <code class="computeroutput">SHARED_LIB</code> 的地方使用。例如，你可以直接将插件链接到一个应用程序中。
+    </p>
+<p>A type can be defined as "main", in which case Boost.Build will
+      automatically declare a main target rule for building targets of that
+      type. More details can be found <a class="link" href="extender.html#bbv2.extending.rules.main-type">later</a>.<br>类型可以被定义为"main"，这时 Boost.Build 将为该类型的目标构建自动声明一个主目标规则。更多细节请见 <a class="link" href="extender.html#bbv2.extending.rules.main-type">后文</a>。
+    </p>
+<div class="section" lang="en">
+<div class="titlepage"><div><div><h4 class="title">
+<a name="bbv2.extending.scanners"></a>Scanners 扫描器</h4></div></div></div>
+<p>
+          Sometimes, a file can refer to other files via some include system. To
+          make Boost.Build track dependencies between included files, you need
+          to provide a scanner. The primary limitation is that only one scanner
+          can be assigned to a target type.<br>有时候，一个文件可以通过某些包含系统引向其它文件。要让 Boost.Build 跟踪包含文件之间的依赖关系，你需要提供一个扫描器。主要的限制是，对于一种目标类型，只能赋给一个扫描器。
+        </p>
+<p>First, we need to declare a new class for the scanner:<br>首先，我们需要为扫描器声明一个新的类：
+</p>
+<pre class="programlisting">class verbatim-scanner : common-scanner<br>{<br>    rule pattern ( )<br>    {<br>        return "//###include[ ]*\"([^\"]*)\"" ;<br>    }<br>}<br></pre>
+<p>
+          All the complex logic is in the <code class="computeroutput">common-scanner</code>
+          class, and you only need to override the method that returns
+          the regular expression to be used for scanning. The
+          parentheses in the regular expression indicate which part
+          of the string is the name of the included file.  Only the
+          first parenthesized group in the regular expression will be
+          recognized; if you can't express everything you want that
+          way, you can return multiple regular expressions, each of
+          which contains a parenthesized group to be matched.<br>所有的复杂逻辑都在 <code class="computeroutput">common-scanner</code>
+类中，你只需要覆写一个返回用于扫描的正则表达式的方法。在正则表达式中的圆括号表示其中的字符串是被包含文件的名字。只有在正则表达式中的第一个括号组
+被识别；如果你不能以此方法表达你想要的东西，你可以返回多个正则表达式，其中每个正则表达式都包含一个用于匹配的括号组。 </p>
+<p>After that, we need to register our scanner class:<br>然后，我们需要注册我们的扫描器类：
+</p>
+<pre class="programlisting">scanner.register verbatim-scanner : include ;<br></pre>
+<p>
+            The value of the second parameter, in this case
+            <code class="computeroutput">include</code>, specifies the properties that contain the list
+            of paths that should be searched for the included files.<br>第二个参数的值，即本例中的
+            <code class="computeroutput">include</code>，给出了一些属性，其中包含有查找被包含文件的各个路径的列表。
+         </p>
+<p>Finally, we assign the new scanner to the <code class="computeroutput">VERBATIM</code>
+        target type:<br>最后，我们将这个新的扫描器赋给 <code class="computeroutput">VERBATIM</code> 目标类型：
+</p>
+<pre class="programlisting">type.set-scanner VERBATIM : verbatim-scanner ;<br></pre>
+<p>
+          That's enough for scanning include dependencies.<br>这就足以扫描包含的依赖关系了。
+        </p>
+</div>
+</div>
+<div class="section" lang="en">
+<div class="titlepage"><div><div><h3 class="title">
+<a name="bbv2.extending.tools"></a>Tools and generators 工具和生成器</h3></div></div></div>
+<p>
+        This section will describe how Boost.Build can be extended to support
+        new tools.<br>本节将讲述 Boost.Build 可以如何扩展以支持新的工具。
+      </p>
+<p>For each additional tool, a Boost.Build object called generator
+        must be created. That object has specific types of targets that it
+        accepts and produces. Using that information, Boost.Build is able
+        to automatically invoke the generator. For example, if you declare a
+        generator that takes a target of the type <code class="literal">D</code> and
+        produces a target of the type <code class="literal">OBJ</code>, when placing a
+        file with extention <code class="literal">.d</code> in a list of sources will
+        cause Boost.Build to invoke your generator, and then to link the
+        resulting object file into an application. (Of course, this requires
+        that you specify that the <code class="literal">.d</code> extension corresponds
+        to the <code class="literal">D</code> type.)<br>对于每一种新的工具，必须创建一个名为生成器的 Boost.Build&nbsp;对象。该对象接受和产生特定的目标类型。通过使用这些信息，Boost.Build 可以自动调用生成器。例如，如果你声明了一个生成器，它接受类型为 <code class="literal">D</code> 的目标并产生类型为 <code class="literal">OBJ</code> 的目标，那么在处理一个在源列表中的带有扩展名 <code class="literal">.d</code> 的文件时，将引发 Boost.Build 调用你的生成器，然后将所得到的目标文件链接到应用程序中。(当然，这需要你指定扩展名 <code class="literal">.d</code> 对应于类型 <code class="literal">D</code>)。
+      </p>
+<p>Each generator should be an instance of a class derived from the
+        <code class="computeroutput">generator</code> class. In the simplest case, you don't need to
+        create a derived class, but simply create an instance of the
+        <code class="computeroutput">generator</code> class. Let's review the example we've seen in the
+        <a class="link" href="extender.html#bbv2.extender.intro" title="Introduction">introduction</a>.<br>每一个生成器都应该是一个派生自
+        <code class="computeroutput">generator</code> 类的类的一个实例。在最简单的情况下，你不需要创建一个派生类，只要创建一个
+        <code class="computeroutput">generator</code> 类的实例就可以了。我们来重温一下在
+        <a class="link" href="extender.html#bbv2.extender.intro" title="Introduction">简介</a> 中看到的例子。
+        
+</p>
+<pre class="programlisting">import generators ;<br>generators.register-standard verbatim.inline-file : VERBATIM : CPP ;<br>actions inline-file<br>{<br>    "./inline-file.py" $(&lt;) $(&gt;)<br>}<br></pre>
+
+<p>
+      We declare a standard generator, specifying its id, the source type
+        and the target type. When invoked, the generator will create a target
+        of type <code class="literal">CPP</code> with a source target of
+        type <code class="literal">VERBATIM</code> as the only source. But what command
+        will be used to actually generate the file? In bjam, actions are
+        specified using named "actions" blocks and the name of the action
+        block should be specified when creating targets. By convention,
+        generators use the same name of the action block as their own id. So,
+        in above example, the "inline-file" actions block will be used to
+        convert the source into the target.<br>我们声明了一个标准的生成器，指定它的 id、源类型和目标类型。在被调用时，生成器会以类型为 <code class="literal">VERBATIM</code> 的源目标为唯一源创建一个类型为 <code class="literal">CPP</code> 的目标。<code class="literal"></code>不
+过，用什么命令来实际生成这个文件呢？在 bjam 中，动作是用命名的 "actions"
+块来指定的，在创建目标时应给出动作块的名称。为方便起见，生成器使用了和它们本身的
+id&nbsp;同名的动作块。所以，在上例中，"inline-file" 动作块将被用于将源转换为目标。 </p>
+<p>
+        There are two primary kinds of generators: standard and composing,
+        which are registered with the
+        <code class="computeroutput">generators.register-standard</code> and the
+        <code class="computeroutput">generators.register-composing</code> rules, respectively. For
+        example:<br>有两类主要的生成器：标准的和组合的，它们分别使用
+        <code class="computeroutput">generators.register-standard</code> 规则和
+        <code class="computeroutput">generators.register-composing</code> 规则来注册。例如：
+</p>
+<pre class="programlisting">generators.register-standard verbatim.inline-file : VERBATIM : CPP ;<br>generators.register-composing mex.mex : CPP LIB : MEX ;<br></pre>
+<p>
+        The first (standard) generator takes a <span class="emphasis"><em>single</em></span>
+        source of type <code class="computeroutput">VERBATIM</code> and produces a result. The second
+        (composing) generator takes any number of sources, which can have either
+        the <code class="computeroutput">CPP</code> or the <code class="computeroutput">LIB</code> type. Composing generators
+        are typically used for generating top-level target type. For example,
+        the first generator invoked when building an <code class="computeroutput">exe</code> target is
+        a composing generator corresponding to the proper linker.<br>第一个(标准的)生成器接受单一个 <code class="computeroutput">VERBATIM</code> 类型的源并产生一个结果。第二个(组合的)生成器则接受任意数量的源，可以是 <code class="computeroutput">CPP</code> 类型或 <code class="computeroutput">LIB</code> 类型。组合生成器通常用于生成顶层的目标类型。例如，在构建一个 <code class="computeroutput">exe</code> 目标时第一个被调用的生成器就是与正确的链接器相对应的生成器。
+      </p>
+<p>You should also know about two specific functions for registering
+        generators: <code class="computeroutput">generators.register-c-compiler</code> and
+        <code class="computeroutput">generators.register-linker</code>. The first sets up header
+        dependecy scanning for C files, and the seconds handles various
+        complexities like searched libraries. For that reason, you should always
+        use those functions when adding support for compilers and linkers.<br>你还应知道有两个用于注册生成器的特殊函数：<code class="computeroutput">generators.register-c-compiler</code> 和
+        <code class="computeroutput">generators.register-linker</code>。第一个扫描 C 文件以设置头文件依赖关系，第二个则处理多种的复杂性，如查找库。为此，你在增加对编译器和链接器的支持时应该总是使用这些函数。
+      </p>
+<p>(Need a note about UNIX)<br>(需要一个有关 UNIX 的说明)</p>
+<h4>
+<a name="id3907244"></a>Custom generator classes 定制生成器类</h4>
+<p>The standard generators allows you to specify source and target
+        types, an action, and a set of flags. If you need anything more complex,
+        
+        you need to create a new generator class with your own logic. Then,
+        you have to create an instance of that class and register it. Here's
+        an example how you can create your own generator class:<br>标准的生成器允许你指定类类型和目标类型、一个动作和一组标志。如果你需要更复杂的东西，你就需要创建一个新的、具有你自己的逻辑的生成器类。然后，你必须创建这个类的一个实例并注册它。以下是一个如何创建自己的生成器类的例子：
+</p>
+<pre class="programlisting">class custom-generator : generator<br>{<br>    rule __init__ ( * : * )<br>    {<br>        generator.__init__ $(1) : $(2) : $(3) : $(4) : $(5) : $(6) : $(7) : $(8) : $(9) ;<br>    }<br><br>}<br><br>generators.register<br>  [ new custom-generator verbatim.inline-file : VERBATIM : CPP ] ;<br></pre>
+<p>
+        This generator will work exactly like the
+        <code class="computeroutput">verbatim.inline-file</code> generator we've defined above, but
+        it's possible to customize the behaviour by overriding methods of the
+        <code class="computeroutput">generator</code> class.<br>这个生成器的作用与我们在前面定义的
+        <code class="computeroutput">verbatim.inline-file</code> 生成器完全一样，不过它通过覆写
+        <code class="computeroutput">generator</code> 类中的方法，可以定制相应的行为。
+      </p>
+<p>There are two methods of interest. The <code class="computeroutput">run</code> method is
+        responsible for the overall process - it takes a number of source targets,
+        converts them to the right types, and creates the result. The
+        <code class="computeroutput">generated-targets</code> method is called when all sources are
+        converted to the right types to actually create the result.<br>有两个要关注的方法。方法 <code class="computeroutput">run</code> 负责整个过程 - 它接受多个源目标，将它们转换为正确的类型，并创建结果。方法
+        <code class="computeroutput">generated-targets</code> 则在所有源都被转换为正确类型时被调用，以正确创建结果。
+      </p>
+<p>The <code class="computeroutput">generated-targets</code> method can be overridden when you
+        want to add additional properties to the generated targets or use
+        additional sources. For a real-life example, suppose you have a program
+        analysis tool that should be given a name of executable and the list of
+        all sources. Naturally, you don't want to list all source files
+        manually. Here's how the <code class="computeroutput">generated-targets</code> method can find
+        the list of sources automatically:<br>在你想增加其它属性到生成的目标中，或者使用其它源时，可以覆写 <code class="computeroutput">generated-targets</code> 方法。以下是一个现实的例子，假设你有一个程序分析工具，要给定它一个可执行文件的名字和所有源的列表。自然，你不会想手工列出所有源文件。以下就是 <code class="computeroutput">generated-targets</code> 方法如何可以自动找到源列表的方法：
+</p>
+<pre class="programlisting">class itrace-generator : generator {<br>....<br>    rule generated-targets ( sources + : property-set : project name ? )<br>    {<br>        local leaves ;<br>        local temp = [ virtual-target.traverse $(sources[1]) : : include-sources ] ;<br>        for local t in $(temp)<br>        {<br>            if ! [ $(t).action ]<br>            {<br>                leaves += $(t) ;<br>            }<br>        }<br>        return [ generator.generated-targets $(sources) $(leafs)<br>          : $(property-set) : $(project) $(name) ] ;<br>    }<br>}<br>generators.register [ new itrace-generator nm.itrace : EXE : ITRACE ] ;<br></pre>
+<p>
+        The <code class="computeroutput">generated-targets</code> method will be called with a single
+        source target of type <code class="literal">EXE</code>. The call to
+        <code class="computeroutput">virtual-target.traverse</code> will return all targets the
+        executable depends on, and we further find files that are not
+        produced from anything. 
+        The found targets are added to the sources.<br>方法 <code class="computeroutput">generated-targets</code> 被调用时会传入一个 <code class="literal">EXE</code> 类型的源目标。对
+        <code class="computeroutput">virtual-target.traverse</code> 的调用将返回该可执行文件所依赖的所有目标，我们再进一步找出那些不是从其它目标生成的文件。找到的目标将被增加到源中。
+      </p>
+<p>The <code class="computeroutput">run</code> method can be overriden to completely
+        customize the way the generator works. In particular, the conversion of
+        sources to the desired types can be completely customized. Here's
+        another real example. Tests for the Boost Python library usually
+        consist of two parts: a Python program and a C++ file. The C++ file is
+        compiled to Python extension that is loaded by the Python
+        program. But in the likely case that both files have the same name,
+        the created Python extension must be renamed. Otherwise, the Python
+        program will import itself, not the extension. Here's how it can be
+        done:<br>方法 <code class="computeroutput">run</code>
+可以被覆写以完全定制生成器工作的方式。具体地说，源目标到所要类型的转换可以被完全定制。以下是另一个真实的例子。Boost Python
+库的测试通常包含两个部分：一个 Python 程序和一个 C++ 文件。C++ 文件被编译为 Python 扩展库，并由 Python
+程序装入。但是在多数情况下，这两个文件会具有一样的名字，所以所创建的 Python 扩展库必须更名。否则，Python
+程序将装入自己本身，而不是扩展库。以下是如何做的方法：
+</p>
+<pre class="programlisting">rule run ( project name ? : property-set : sources * )<br>{<br>    local python ;<br>    for local s in $(sources)<br>    {<br>        if [ $(s).type ] = PY<br>        {<br>            python = $(s) ;<br>        }<br>    }<br>    <br>    local libs ;<br>    for local s in $(sources)<br>    {<br>        if [ type.is-derived [ $(s).type ] LIB ]<br>        {<br>            libs += $(s) ;<br>        }<br>    }<br><br>    local new-sources ;<br>    for local s in $(sources)<br>    {<br>        if [ type.is-derived [ $(s).type ] CPP ]<br>        {<br>            local name = [ $(s).name ] ;    # get the target's basename 取得目标的基本名<br>            if $(name) = [ $(python).name ]<br>            {<br>                name = $(name)_ext ;        # rename the target 对目标改名<br>            }<br>            new-sources += [ generators.construct $(project) $(name) :<br>              PYTHON_EXTENSION : $(property-set) : $(s) $(libs) ] ;<br>        }<br>    }<br><br>    result = [ construct-result $(python) $(new-sources) : $(project) $(name)<br>                 : $(property-set) ] ;<br>}<br></pre>
+<p>
+        
+
+        First, we separate all source into python files, libraries and C++
+        sources. For each C++ source we create a separate Python extension by
+        calling <code class="computeroutput">generators.construct</code> and passing the C++ source
+        and the libraries. At this point, we also change the extension's name,
+        if necessary.<br>首先，我们将所有源文件分为 python 文件、库文件和 C++
+        源文件。对于每个 C++ 源文件，我们通过调用 <code class="computeroutput">generators.construct</code> 并传入 C++ 源文件和库文件，创建一个独立的 Python 扩展库。同时，我们还要在需要时修改该扩展库的名字。
+      </p>
+</div>
+<div class="section" lang="en">
+<div class="titlepage"><div><div><h3 class="title">
+<a name="bbv2.extending.features"></a>Features 特性</h3></div></div></div>
+<p>
+        Often, we need to control the options passed the invoked tools. This
+        is done with features. Consider an example:<br>通常，我们需要控制传递给被调用工具的选项。这是通过特性来完成的。考虑以下例子：
+</p>
+<pre class="programlisting"># Declare a new free feature 声明一个新的自由特性<br>import feature : feature ;<br>feature verbatim-options : : free ;<br><br># Cause the value of the 'verbatim-options' feature to be<br># available as 'OPTIONS' variable inside verbatim.inline-file<br># 使得 'verbatim-options' 特性的值成为 verbatim.inline-file 内的 'OPTIONS' 变量<br>import toolset : flags ;<br>flags verbatim.inline-file OPTIONS &lt;verbatim-options&gt; ;<br><br># Use the "OPTIONS" variable 使用 'OPTIONS' 变量<br>actions inline-file<br>{<br>    "./inline-file.py" $(OPTIONS) $(&lt;) $(&gt;)<br>}<br></pre>
+<p>
+        We first define a new feature. Then, the <code class="computeroutput">flags</code> invocation
+        says that whenever verbatin.inline-file action is run, the value of
+        the <code class="computeroutput">verbatim-options</code> feature will be added to the
+        <code class="computeroutput">OPTIONS</code> variable, and can be used inside the action body.
+        You'd need to consult online help (--help) to find all the features of
+        the <code class="computeroutput">toolset.flags</code> rule.<br>我们首先定义一个新的特性。然后，对 <code class="computeroutput">flags</code> 的调用表示无论何时运行 verbatin.inline-file 动作，<code class="computeroutput">verbatim-options</code> 特性的值都将被加入到
+        <code class="computeroutput">OPTIONS</code> 变量中，并可以在动作体内部使用。你需要参考在线帮助 (--help) 以查找 <code class="computeroutput">toolset.flags</code> 规则的所有特性。
+        
+      </p>
+<p>
+      Although you can define any set of features and interpret their values
+      in any way, Boost.Build suggests the following coding standard for
+      designing features.<br>虽然你可以定义任意的特性集，并以任何方式解释它们的值，但是 Boost.Build 为特性的设计建议了以下代码标准。
+    </p>
+<p>Most features should have a fixed set of values that is portable
+      (tool neutral) across the class of tools they are designed to work
+      with. The user does not have to adjust the values for a exact tool.  For
+      example, <code class="computeroutput">&lt;optimization&gt;speed</code> has the same meaning for
+      all C++ compilers and the user does not have to worry about the exact
+      options passed to the compiler's command line.<br>多数特性都应该具有一个固定的值集，这些值应该可以在想与该特性一起使用的工具类之间移植(即与工具无关)。用户不需要为特定的工具调整这些值。例如，对于所有的 C++ 编译器而言，<code class="computeroutput">&lt;optimization&gt;speed</code> 具有相同的意义，用户无须关心传递给编译器的命令行的精确选项。
+    </p>
+<p>
+      Besides such portable features there are special 'raw' features that
+      allow the user to pass any value to the command line parameters for a
+      particular tool, if so desired. For example, the
+      <code class="computeroutput">&lt;cxxflags&gt;</code> feature allows you to pass any command line
+      options to a C++ compiler. The <code class="computeroutput">&lt;include&gt;</code> feature
+      allows you to pass any string preceded by <code class="computeroutput">-I</code> and the interpretation
+      is tool-specific.  (See <a class="xref" href="faq.html#bbv2.faq.external" title="Can I get output of external program as a variable in a Jamfile?">the section called “Can I get output of external program as a variable in a Jamfile?
+    ”</a> for an example of very smart usage of that
+      feature).  Of course one should always strive to use portable
+      features, but these are still be provided as a backdoor just to make
+      sure Boost.Build does not take away any control from the user.<br>除了这些可移植的特性以外，还有一些特殊的'原始'特性，它允许用户在需要时传递任意值给特定工具的命令行参数。例如，特性
+      <code class="computeroutput">&lt;cxxflags&gt;</code> 允许你传递任意命令行选项给 C++ 编译器。特性 <code class="computeroutput">&lt;include&gt;</code> 则允许你传递任意字符串并前加 <code class="computeroutput">-I</code>，对它的解释是工具指定的。(有关这一特性的一个非常漂亮的用例，参见 <a class="xref" href="faq.html#bbv2.faq.external" title="Can I get output of external program as a variable in a Jamfile?">“我可以获取外部程序的输出并用作 Jamfile 的变量吗?”一节</a>)。当然，你应该尽量使用可移植特性，但这些特性还是作为一个后门被提供，以确保 Boost.Build 不会使用户失去控制力。
+    </p>
+<p>
+      Using portable features is a good idea because:<br>使用可移植特性是好的方式，因为：
+      </p>
+<div class="itemizedlist"><ul type="disc">
+<li><p>When a portable feature is given a fixed set of
+          values, you can build your project with two different
+          settings of the feature and Boost.Build will automatically
+          use two different directories for generated files.
+          Boost.Build does not try to separate targets built with
+          different raw options.<br>因为可移植特性给定了固定的值集，你可以使用不同的特性设置来构建你的工程，而 Boost.Build 会自动为生成的文件使用不同的目录。Boost.Build 不会将以不同的原始选项进行构建的目标分开。
+            
+          </p></li>
+<li><p>Unlike with “raw” features, you don't need to use
+          specific command-line flags in your Jamfile, and it will be
+          more likely to work with other tools.<br>与"原始"特性不同，你不需要在你的 Jamfile 中使用特定的命令行选项，这样它更可能和其它工具一起使用。
+          </p></li>
+</ul></div>
+<p>
+    </p>
+<h4>
+<a name="id3907574"></a>Steps for adding a feauture 增加一个特性的步骤</h4>
+<p>Adding a feature requires three steps:<br>增加一个特性需要三个步骤：
+
+        </p>
+<div class="orderedlist"><ol type="1">
+<li>
+<p>Declaring a feature. For that, the "feature.feature"
+              rule is used. You have to decide on the set of <a class="link" href="reference.html#bbv2.reference.features.attributes" title="Feature Attributes">feature
+              attributes</a>:<br>声明一个特性。为此，要使用 "feature.feature"
+              规则。你必须决定 <a class="link" href="reference.html#bbv2.reference.features.attributes" title="Feature Attributes">特性属性的集合</a>：
+
+              </p>
+<div class="itemizedlist"><ul type="disc">
+<li><p>if you want a feature value set for one target
+                to automaticaly propagate to its dependant targets then make it
+                “propagated”.<br>如果你希望某个目标的一个特性值集自动传播给依赖于它的目标，则将它标记为 "propagated". </p></li>
+<li><p>if a feature does not have a fixed list of
+                values, it must be “free.”  For example, the <code class="computeroutput">include
+                </code> feature is a free feature.<br>如果一个特性没有固定的值列表，它就必须是"自由"的。例如，<code class="computeroutput">include
+                </code>特性就是一个自由特性。</p></li>
+<li><p>if a feature is used to refer to a path relative
+                to the Jamfile, it must be a “path” feature. Such features will
+                also get their values automatically converted to Boost Build's
+                internal path representation. For example, <code class="computeroutput">include</code>
+                is a path feature.<br>如果一个特性用于表示相对于 Jamfile 的路径，它就必须是一个"路径"特性。此类特性将它们的值自动转换为 Boost Build 的内部路径表示法。例如，<code class="computeroutput">include</code> 就是一个路径特性。</p></li>
+<li><p>if feature is used to refer to some target, it
+                must be a “dependency” feature.<br>如果一个特性用于表示某个目标，它必须是一个"依赖"特性。 </p></li>
+</ul></div>
+<p>
+              </p>
+</li>
+<li><p>Representing the feature value in a
+          target-specific variable. Build actions are command
+          templates modified by Boost.Jam variable expansions.  The
+          <code class="computeroutput">toolset.flags</code> rule sets a target-specific
+          variable to the value of a feature.<br>在一个目标特定的变量中表示这个特性值。构建动作是一些通过 Boost.Jam 变量展开修改的命令模板。<code class="computeroutput">toolset.flags</code> 规则将一个目标特定变量设置为特性的值。</p></li>
+<li><p>Using the variable. The variable set in step 2 can
+              be used in a build action to form command parameters or
+              files.<br>使用该变量。在第2步中设置的变量可以在构建动作中使用，形成命令参数或文件。</p></li>
+</ol></div>
+<p>
+      </p>
+<h4>
+<a name="id3907683"></a>Another example 另一个例子</h4>
+<p>Here's another example.
+        Let's see how we can make a feature that refers to a target. For example,
+        when linking dynamic libraries on Windows, one sometimes needs to
+        specify a "DEF file", telling what functions should be exported. It
+        would be nice to use this file like this:<br>以下是另一个例子。我们来看看如何可以让一个特性引用一个目标。例如，在 Windows 上链接动态库时，有时候需要指定一个 "DEF 文件"，说明哪些函数要被导出。象下面这样使用这个文件是好的方式：
+</p>
+<pre class="programlisting">        lib a : a.cpp : &lt;def-file&gt;a.def ;<br></pre>
+<p>
+
+        Actually, this feature is already supported, but anyway...<br>实际上，这个特性已经被支持，不过...
+        
+      </p>
+<div class="orderedlist"><ol type="1">
+<li>
+<p>Since the feature refers to a target, it must be "dependency".<br>因为这个特性引向一个目标，它必须是"依赖"的。
+</p>
+<pre class="programlisting">feature def-file : : free dependency ;<br></pre>
+<p>
+            </p>
+</li>
+<li>
+<p>One of the toolsets that cares about
+        
+        DEF files is msvc. The following line should be added to it.<br>一个关心 DEF 文件的工具集是 msvc。应加入以下这行代码。
+        
+
+</p>
+<pre class="programlisting">flags msvc.link DEF_FILE &lt;def-file&gt; ;<br></pre>
+<p>
+            
+            </p>
+</li>
+<li>
+<p>Since the DEF_FILE variable is not used by the
+msvc.link action,
+
+we need to modify it to be:<br>由于 msvc.link 动作没有使用 DEF_FILE 变量，我们需要将它修改为：
+
+</p>
+<pre class="programlisting">actions link bind DEF_FILE<br>{<br>    $(.LD) .... /DEF:$(DEF_FILE) ....<br>}<br></pre>
+<p>
+            </p>
+<p> Note the <code class="computeroutput">bind DEF_FILE</code> part. It tells
+          bjam to translate the internal target name in
+          <code class="varname">DEF_FILE</code> to a corresponding filename in
+          the <code class="computeroutput">link</code> action.  Without it the expansion of
+          <code class="computeroutput">$(DEF_FILE)</code> would be a strange symbol that is
+          not likely to make sense for the linker.<br>留意 <code class="computeroutput">bind DEF_FILE</code> 部分。它告诉
+          bjam 将 <code class="varname">DEF_FILE</code> 中的内部目标名翻译为在 <code class="computeroutput">link</code> 动作中的对应文件名。没有它，<code class="computeroutput">$(DEF_FILE)</code> 的展开将是一个一点都不像链接器的奇怪符号。
+          </p>
+<p>
+            We are almost done, but we should stop for a small workaround. Add the following
+            code to msvc.jam<br>我们快完成了，不过还要为一个小的变通方法停一会。把以下代码增加到 msvc.jam 中
+
+</p>
+<pre class="programlisting">rule link<br>{<br>    DEPENDS $(&lt;) : [ on $(&lt;) return $(DEF_FILE) ] ;<br>}<br></pre>
+<p>
+
+
+            This is needed to accomodate some bug in bjam, which hopefully
+            will be fixed one day.<br>这是为了适应 bjam 中的一些缺陷而需要的，有希望在以后修正。
+            
+</p>
+</li>
+</ol></div>
+<h4>
+<a name="id3907796"></a>Variants and composite features. 变体与合成特性</h4>
+<p>Sometimes you want to create a shortcut for some set of
+        features. For example, <code class="computeroutput">release</code> is a value of
+        <code class="computeroutput">&lt;variant&gt;</code> and is a shortcut for a set of features.<br>有时你想要为一些特性集创建一个缩写。例如，<code class="computeroutput">release</code> 是
+        <code class="computeroutput">&lt;variant&gt;</code> 的一个值，也是一个特性集的缩写。
+      </p>
+<p>It is possible to define your own build variants. For example:<br>你可以定义自己的构建变体。例如：
+</p>
+<pre class="programlisting">variant crazy : &lt;optimization&gt;speed &lt;inlining&gt;off<br>                &lt;debug-symbols&gt;on &lt;profiling&gt;on ;<br></pre>
+<p>
+        will define a new variant with the specified set of properties. You
+        can also extend an existing variant:<br>就定义了一个带有指定属性集的新变体。你也可以扩展已有的变体：
+</p>
+<pre class="programlisting">variant super_release : release : &lt;define&gt;USE_ASM ;<br></pre>
+<p>
+        In this case, <code class="computeroutput">super_release</code> will expand to all properties
+        specified by <code class="computeroutput">release</code>, and the additional one you've specified.<br>在这个例子中，<code class="computeroutput">super_release</code> 将展开为由 <code class="computeroutput">release</code> 指定的所有属性，再加上你指定的那个属性。
+      </p>
+<p>You are not restricted to using the <code class="computeroutput">variant</code> feature
+      only.
+      
+      Here's example that defines a brand new feature:<br>你并没有被限制只能使用 <code class="computeroutput">variant</code> 特性。以下是一个定义全新特性的例子：
+</p>
+<pre class="programlisting">feature parallelism : mpi fake none : composite link-incompatible ;<br>feature.compose &lt;parallelism&gt;mpi : &lt;library&gt;/mpi//mpi/&lt;parallelism&gt;none ;<br>feature.compose &lt;parallelism&gt;fake : &lt;library&gt;/mpi//fake/&lt;parallelism&gt;none ;<br></pre>
+<p>
+
+        This will allow you to specify the value of feature
+        <code class="computeroutput">parallelism</code>, which will expand to link to the necessary
+        library.<br>它允许你指定特性
+        <code class="computeroutput">parallelism</code> 的值，该值将展开为链接所需的库。
+      </p>
+</div>
+<div class="section" lang="en">
+<div class="titlepage"><div><div><h3 class="title">
+<a name="bbv2.extending.rules"></a>Main target rules 主目标规则</h3></div></div></div>
+<p>
+      A main target rule (e.g “<code class="computeroutput">exe</code>”
+      Or “<code class="computeroutput">lib</code>”) creates a top-level target. It's quite likely that you'll want to declare your own and
+      there are two ways to do that.<br>主目标规则(如 “<code class="computeroutput">exe</code>” 或 “<code class="computeroutput">lib</code>”)创建一个顶层目标。很有可能你想声明自己的主目标，有两种方法可以做到。
+      
+    </p>
+<p><a name="bbv2.extending.rules.main-type"></a>The first way applies when
+
+      your target rule should just produce a target of specific type. In that case, a
+      rule is already defined for you! When you define a new type, Boost.Build
+      automatically defines a corresponding rule. The name of the rule is
+      obtained from the name of the type, by downcasing all letters and
+      replacing underscores with dashes.
+      
+      For example, if you create a module
+      <code class="filename">obfuscate.jam</code> containing:<br>第一种方法适用于你的目标规则只是产生指定类型的一个目标的情况。在这种情况下，已经为你定义了一个规则！当你定义一个新的类型时，Boost.Build
+      自动地定义了一个相应的规则。该规则的名字来自于类型的名字，将所有字母变为小写并将下划线替换为连字符而得到。例如，如果你创建了一个模块 <code class="filename">obfuscate.jam</code>，其中包含：
+
+</p>
+<pre class="programlisting">import type ;<br>type.register OBFUSCATED_CPP  : ocpp ;<br><br>import generators ;<br>generators.register-standard obfuscate.file : CPP : OBFUSCATED_CPP ;<br></pre>
+<p>
+      and import that module, you'll be able to use the rule "obfuscated-cpp"
+      in Jamfiles, which will convert source to the OBFUSCATED_CPP type.<br>导入该模块，你将可以在 Jamfiles 中使用规则 "obfuscated-cpp"，它会将源目标转换为 OBFUSCATED_CPP 类型。
+    </p>
+<p>
+      The second way is to write a wrapper rule that calls any of the existing
+      rules. For example, suppose you have only one library per directory and
+      want all cpp files in the directory to be compiled into that library. You
+      can achieve this effect using:<br>第二种方法是，编写一个调用已有规则的外裹规则。例如，假定你在每个目录中只有一个库，而你想让目录中的所有 cpp 文件都编译到这个库中。你可以用以下方法实现这一目的：
+</p>
+<pre class="programlisting">lib codegen : [ glob *.cpp ] ;<br></pre>
+<p>
+      If you want to make it even simpler, you could add the following
+      definition to the <code class="filename">Jamroot.jam</code> file:<br>如果你想更简单些，你可以将以下定义加到 <code class="filename">Jamroot.jam</code> 文件中：
+</p>
+<pre class="programlisting">rule glib ( name : extra-sources * : requirements * )<br>{<br>    lib $(name) : [ glob *.cpp ] $(extra-sources) : $(requirements) ;<br>}<br></pre>
+<p>
+      allowing you to reduce the Jamfile to just<br>它允许你将 Jamfile 简化为：
+</p>
+<pre class="programlisting">glib codegen ;<br></pre>
+<p>
+    </p>
+<p>
+      Note that because you can associate a custom generator with a target type,
+      the logic of building can be rather complicated. For example, the
+      <code class="computeroutput">boostbook</code> module declares a target type
+      <code class="computeroutput">BOOSTBOOK_MAIN</code> and a custom generator for that type. You can
+      use that as example if your main target rule is non-trivial.<br>注意，因为你可以将一个定制的生成器关联到一个目标类型，所以构建的逻辑可能会很复杂。例如，模块
+      <code class="computeroutput">boostbook</code> 声明了一个目标类型
+      <code class="computeroutput">BOOSTBOOK_MAIN</code>，以及一个用于该类型的定制生成器。如果你的主目标规则是非平凡的，你可以象上例那样使用。
+    </p>
+</div>
+<div class="section" lang="en">
+<div class="titlepage"><div><div><h3 class="title">
+<a name="bbv2.extending.toolset_modules"></a>Toolset modules 工具集模块</h3></div></div></div>
+<p>
+      If your extensions will be used only on one project, they can be placed in
+      a separate <code class="filename">.jam</code> file and imported by your
+      <code class="filename">Jamroot.jam</code>. If the extensions will be used on many
+      projects, users will thank you for a finishing touch.<br>如果你的扩展只在一个工程中使用，那么它们可以被放置在一个独立的 <code class="filename">.jam</code> 文件中，并由你的
+      <code class="filename">Jamroot.jam</code> 导入。如果扩展会在多个工程中使用，那么用户会非常感激你的最后这一步工作。
+    </p>
+<p>The <code class="computeroutput">using</code> rule provides a standard mechanism
+    for loading and configuring extensions.  To make it work, your module
+    
+    should provide an <code class="computeroutput">init</code> rule. The rule will be called
+    with the same parameters that were passed to the
+    <code class="computeroutput">using</code> rule. The set of allowed parameters is
+    determined by you. For example, you can allow the user to specify
+    paths, tool versions, and other options.<br><code class="computeroutput">using</code> 规则为扩展的装入和配置提供了标准的机制。要使用它，你的模块应提供一个 <code class="computeroutput">init</code> 规则。该规则将被以传给
+    <code class="computeroutput">using</code> 规则的相同参数来调用。允许使用的参数集是由你决定的。例如，你可以允许用户指定路径、工具版本和其它选项。
+    
+    </p>
+<p>Here are some guidelines that help to make Boost.Build more
+      consistent:<br>以下是有助于让 Boost.Build 更加一致的一些指引：
+      </p>
+<div class="itemizedlist"><ul type="disc">
+<li><p>The <code class="computeroutput">init</code> rule should never fail. Even if
+          the user provided an incorrect path, you should emit a warning and go
+          on. Configuration may be shared between different machines, and
+          wrong values on one machine can be OK on another.<br><code class="computeroutput">init</code> 规则永远不应失败。即使用户指定了一个错误的路径，你应该给出一个警告并继续。配置可以在不同机器间共享，在一台机器上错误的值可能在另一台上是OK的。
+          
+          </p></li>
+<li>
+<p>Prefer specifying the command to be executed
+        to specifying the tool's installation path. First of all, this
+        gives more control: it's possible to specify<br>最好给出可以指明工具的安装路径的执行命令。首先，这可以有更多的控制：你可以指定
+</p>
+<pre class="programlisting">/usr/bin/g++-snapshot<br>time g++<br><br></pre>
+<p>
+            as the command. Second, while some tools have a logical
+            "installation root", it's better if the user doesn't have to remember whether
+            a specific tool requires a full command or a path.<br>为该命令。其次，虽然一些工具有一个合乎逻辑的"安装根"，但如果用户不记得是否某个特定工具是否需要完整的命令或路径，这样做更好一些。
+            
+          </p>
+</li>
+<li>
+<p>Check for multiple initialization. A user can try to
+            initialize the module several times. You need to check for this
+            and decide what to do. Typically, unless you support several
+            versions of a tool, duplicate initialization is a user error.
+            
+            If the
+            tool's version can be specified during initialization, make sure the
+            version is either always specified, or never specified (in which
+            case the tool is initialied only once). For example, if you allow:<br>检
+查多次初始化。用户可以多次初始化一个模块。你需要检查这一点，并决定如何做。通常，除非你支持一个工具的多个版本，否则重复的初始化就是一个用户错误。
+如果工具的版本可以在初始化时指定，请确保版本总是被指定，或从不指定(这种情况下，工具只能初始化一次)。例如，如果你允许：
+</p>
+<pre class="programlisting">using yfc ;<br>using yfc : 3.3 ;<br>using yfc : 3.4 ;<br></pre>
+<p>
+            Then it's not clear if the first initialization corresponds to
+            version 3.3 of the tool, version 3.4 of the tool, or some other
+            version. This can lead to building twice with the same version.<br>那么，这弄不清楚第一个初始化对应的是版本3.3的工具，还是版本3.4的工具，或是其它的版本。这会导致同一版本的两次构建。
+            
+            </p>
+</li>
+<li>
+<p>If possible, <code class="computeroutput">init</code> must be callable
+          with no parameters. In which case, it should try to autodetect all
+          the necessary information, for example, by looking for a tool in
+          <code class="envar">PATH</code> or in common installation locations. Often this
+          is possible and allows the user to simply write:<br>如果可以，<code class="computeroutput">init</code> 必须可以以不带参数的方式调用。这时，它应尝试自动检测所有必需的信息，例如，在&nbsp;<code class="envar">PATH</code> 或通常的安装位置中查找工具。通常这是可能的，并允许用户只要写：
+</p>
+<pre class="programlisting">using yfc ;<br></pre>
+<p>
+          </p>
+</li>
+<li><p>Consider using facilities in the
+          <code class="computeroutput">tools/common</code> module. You can take a look at how
+          <code class="computeroutput">tools/gcc.jam</code> uses that module in the <code class="computeroutput">init</code> rule.<br>考虑使用在
+          <code class="computeroutput">tools/common</code> 模块中的工具。你可以看一下
+          <code class="computeroutput">tools/gcc.jam</code> 在 <code class="computeroutput">init</code> 规则中是如何使用这个模块的。
+          </p></li>
+</ul></div>
+<p>
+    </p><div class="footnote">
+<p><sup>[<a class="para" href="#id2179234" name="ftn.id2179234">14</a>] </sup>This 
+name is historic, and will be eventuall changed to <code class="computeroutput">metatarget<br></code>&nbsp; &nbsp; &nbsp; &nbsp; &nbsp; 这个名字是旧的，将改为 <code class="computeroutput">metatarget</code></p></div>
+<div class="footnote">
+<p><sup>[<a class="para" href="#id2179576" name="ftn.id2179576">15</a>] </sup>This 
+create-then-register pattern is caused by limitations of the Boost.Jam language. 
+Python port is likely to never create duplicate targets.<br>&nbsp; &nbsp; &nbsp; &nbsp; &nbsp; 这种"创建并注册"的模式是由于 Boost.Jam 语言的限制造成的。Python 上的移植很可能不会创建重复的目标。</p></div>
+</div>
+</div>
+<table xmlns:rev="http://www.cs.rpi.edu/~gregod/boost/tools/doc/revision" width="100%"><tbody><tr>
+<td align="left"></td>
+<td align="right"><div class="copyright-footer"></div></td>
+</tr></tbody></table>
+<hr>
+<div class="spirit-nav">
+<a accesskey="p" href="reference.html"><img style="border: 0px solid ; width: 19px; height: 19px;" src="../../../doc/html/images/prev.png" alt="Prev"></a><a accesskey="u" href="../bbv2.html"><img src="../../../doc/html/images/up.png" alt="Up"></a><a accesskey="h" href="../index.html"><img src="../../../doc/html/images/home.png" alt="Home"></a><a accesskey="n" href="faq.html"><img style="border: 0px solid ; width: 19px; height: 19px;" src="../../../doc/html/images/next.png" alt="Next"></a>
+</div>
+</body></html>

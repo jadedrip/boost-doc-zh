@@ -1,0 +1,1260 @@
+<!DOCTYPE HTML PUBLIC "-//W3C//DTD HTML 4.01 Transitional//EN">
+<html>
+<head>
+
+
+
+
+
+
+
+  
+  
+  
+  
+  
+  
+  <meta content="text/html; charset=UTF-8" http-equiv="content-type">
+
+
+
+
+
+
+  
+
+
+  
+  
+  
+  
+  
+  
+  
+  
+  
+  
+  
+  <title>file_iteration.html</title>
+  <link rel="stylesheet" type="text/css" href="../styles.css">
+</head>
+
+
+<body>
+
+
+
+
+
+
+
+<h4>文件迭代 </h4>
+
+
+
+
+
+
+
+<div>文件迭代是一种复杂但强大的竖向重复结构。它针对用户指定的区间中每个数字重复包含某个文件。 </div>
+
+
+
+
+
+
+
+<h4>指南 </h4>
+
+
+
+
+
+
+
+<div>这个机制要求两方面信息来操作：一个是进行迭代的区间，另一个是在每次迭代中包含的文件。还有第三个可选的信息，是一些标志，表示
+了在同一个文件的不同迭代间的差异。这些信息通过一个或两个 <i>命名外部参数</i>
+来获得。这些参数由用户自定义的名为 <b>BOOST_PP_ITERATION_PARAMS_<i>x</i></b>
+的宏或 <b>BOOST_PP_FILENAME_<i>x</i></b> 和 <b>BOOST_PP_ITERATION_LIMITS</b>
+的组合所指定。 </div>
+
+
+
+
+
+
+
+<div> <b>BOOST_PP_ITERATION_LIMITS</b>
+指定了要迭代的值区间。它必须展开为一个 <i>tuple</i>，其中包含两个元素 --
+一个下界和一个上界。上界和下界都必须是 <i>0</i> 到 <b>BOOST_PP_LIMIT_ITERATION</b>
+间的数值。例如，如果用户希望某个宏以0到10之间的数字展开，<b>BOOST_PP_</b><b>ITERATION</b><b>_LIMITS</b>
+就应该定义为： </div>
+
+
+
+
+
+
+
+<div class="code">
+<pre>#define BOOST_PP_ITERATION_LIMITS (0, 10)<br></pre>
+
+
+
+
+
+
+
+</div>
+
+
+
+
+
+
+
+<div>注意，在宏的名字后要留有空白。这个宏不是带有两个参数。在上例中，如果没有留空白，将产生一个预处理错误，因为 <i>0</i>
+和 <i>10</i> 都是无效的标识符。
+</div>
+
+
+
+
+
+
+
+<div>在 <b>BOOST_PP_</b><b>ITERATION</b><b>_LIMITS</b> 宏中指定的上界和下界都必须是 <i>可
+求值参数</i>。这意味着它们可以含有简单的算术或逻辑表达式。例如，上面的定义可以写为：<br>
+
+
+
+
+
+
+
+</div>
+
+
+
+
+
+
+
+<div class="code">
+<pre>#define N() 5<br>#define BOOST_PP_ITERATION_LIMITS (0, N() + 5)<br></pre>
+
+
+
+
+
+
+
+</div>
+
+
+
+
+
+
+
+<div>因此，如果宏名后的空白被省略，也可能变为语法有效的定义：
+</div>
+
+
+
+
+
+
+
+<div class="code">
+<pre>#define A 0<br>#define B 10<br>#define BOOST_PP_ITERATION_LIMITS(A, B)<br> // 注意：没有空白<br></pre>
+
+
+
+
+
+
+
+</div>
+
+
+
+
+
+
+
+<div>如果这样，就会在本机制内部试图使用该宏时发生错误。错误的提示可能很晦涩，因此你要时刻记住留空。上例的正确版本应该是：
+</div>
+
+
+
+
+
+
+
+<div class="code">
+<pre>#define A 0<br>#define B 10<br>#define BOOST_PP_ITERATION_LIMITS (A, B)<br> // 注意：留有空白<br></pre>
+
+
+
+
+
+
+
+</div>
+
+
+
+
+
+
+
+<div><b>BOOST_PP_FILENAME_<i>x</i></b> 指定了迭代的文件。<i>x</i>
+是一个迭代维度的占位符(现在我们将假设它是 <i>1</i>--即第一个维度，所以我们将使用 <b>BOOST_PP_FILENAME_1</b>)。这个宏必须展开为一个有效的文件名 -- 取决于如何访问该文件而使用引号或尖括号： </div>
+
+
+
+
+
+
+
+<div class="code">
+<pre>#define BOOST_PP_FILENAME_1 "file.h"<br>// 或<br>#define BOOST_PP_FILENAME_1 &lt;file.h&gt;<br></pre>
+
+
+
+
+
+
+
+</div>
+
+
+
+
+
+
+
+<div>现在我们要执行一个简单的文件迭代，要做的就是调用这个机制： </div>
+
+
+
+
+
+
+
+<div class="code">
+<pre>??=include BOOST_PP_ITERATE()<br></pre>
+
+
+
+
+
+
+
+</div>
+
+
+
+
+
+
+
+<div> (<code>??=</code> 记号是 <code>#</code> 的三字母表示法。我使用这个三字母表示法是为了清楚地表示我不是在<i>包含</i>一个文件，而是在定义或展开一个宏，不过这并不是必需的。此外也可以使用两字母表示法 <code>%:</code>。有些编译器不接受三字母表示法和两字母表示法，要记住这一点。除此以外，你可以按你的喜好选择使用哪一种表示法。) </div>
+
+
+
+
+
+
+
+<div>因此，如果我们想从1到10迭代 "file.h"<i></i>, 我们只需要将这些放在一起： </div>
+
+
+
+
+
+
+
+<div class="code">
+<pre>#define BOOST_PP_ITERATION_LIMITS (1, 10)<br>#define BOOST_PP_FILENAME_1 "file.h"<br>??=include BOOST_PP_ITERATE()<br></pre>
+
+
+
+
+
+
+
+</div>
+
+
+
+
+
+
+
+<div>以上代码的效果是连续包含 "file.h" 10次。 </div>
+
+
+
+
+
+
+
+<div>另外，迭代的区间和文件可以在一个宏中同时被指定，这个宏就是 <b>BOOST_PP_ITERATION_PARAMS_<i>x</i></b>. 同样，这里的 <i>x</i> 是代表迭代维度的一个占位符 -- 我们假设它是 <i>1</i>. 该宏必须扩展为一个包含下界、上界、文件名和可选标志(按顺序)的数组。 </div>
+
+
+
+
+
+
+
+<div class="code">
+<pre>#define BOOST_PP_ITERATION_PARAMS_1 (3, (1, 10, "file.h"))<br>??=include BOOST_PP_ITERATE()<br></pre>
+
+
+
+
+
+
+
+</div>
+
+
+
+
+
+
+
+<div>这种写法与前一个版本具有相同的效果。每次只能使用两种方法中的一种。(原因是必须用两种不同的方法来处理维度的抽象，稍后我将会进行介绍)。 </div>
+
+
+
+
+
+
+
+<div>十次包含同一个文件并没有什么特别的用处。区别在于每次的宏状态会更改。例如，当前的"迭代值"可以用 <b>BOOST_PP_ITERATION</b>() 获得。如果 "file.h" 的定义如下... </div>
+
+
+
+
+
+
+
+<div class="code">
+<pre>// file.h<br>template&lt;&gt; struct sample&lt;BOOST_PP_ITERATION()&gt; { };<br></pre>
+
+
+
+
+
+
+
+</div>
+
+
+
+
+
+
+
+<div> ...而它被按以下方式迭代... </div>
+
+
+
+
+
+
+
+<div class="code">
+<pre>template&lt;int&gt; struct sample;<br><br>#define BOOST_PP_ITERATION_PARAMS_1 (3, (1, 5, "file.h"))<br>??=include BOOST_PP_ITERATE()<br></pre>
+
+
+
+
+
+
+
+</div>
+
+
+
+
+
+
+
+<div> ...那么每次的结果将会不同: </div>
+
+
+
+
+
+
+
+<div>
+<pre>template&lt;&gt; struct sample&lt;1&gt; { };<br>template&lt;&gt; struct sample&lt;2&gt; { };<br>template&lt;&gt; struct sample&lt;3&gt; { };<br>template&lt;&gt; struct sample&lt;4&gt; { };<br>template&lt;&gt; struct sample&lt;5&gt; { };<br></pre>
+
+
+
+
+
+
+
+</div>
+
+
+
+
+
+
+
+<div> 没有理由一个文件不能迭代其自身。这样做的优点是可以把代码放在一起。问题是，你必须将文件的"常规"部分和迭代部分区别开来。本库提供了 <b>BOOST_PP_IS_ITERATING</b>
+宏来帮助你。如果正在进行迭代，则该宏被定义为 <i>1</i>. 例如，可以将 "file.h" 的内容合并到迭代它的文件中: </div>
+
+
+
+
+
+
+
+<div class="code">
+<pre>// sample.h<br>#if !BOOST_PP_IS_ITERATING<br><br> #ifndef SAMPLE_H<br> #define SAMPLE_H<br><br> #include &lt;boost/preprocessor/iteration/iterate.hpp&gt;<br><br> template&lt;int&gt; struct sample;<br><br> #define BOOST_PP_ITERATION_PARAMS_1 (3, (1, 5, "sample.h"))<br> ??=include BOOST_PP_ITERATE()<br><br> #endif // SAMPLE_H<br><br>#else<br><br> template&lt;&gt; struct sample&lt;BOOST_PP_ITERATION()&gt; { };<br><br>#endif<br></pre>
+
+
+
+
+
+
+
+</div>
+
+
+
+
+
+
+
+<div>使用这样的文件会引起另一个问题。如果一个文件对其自身执行两次独立的文件迭代，那么会怎样？这正是引入可选的标志参数的目的。该参数用于在各次迭代中进行区分。 </div>
+
+
+
+
+
+
+
+<div class="code">
+<pre>// sample.h<br>#if !BOOST_PP_IS_ITERATING<br><br> #ifndef SAMPLE_H<br> #define SAMPLE_H<br><br> #include &lt;boost/preprocessor/iteration/iterate.hpp&gt;<br> #include &lt;boost/preprocessor/repetition/enum_params.hpp&gt;<br> #include &lt;boost/preprocessor/repetition/enum_shifted_params.hpp&gt;<br><br> template&lt;int&gt; struct sample;<br><br> #define BOOST_PP_ITERATION_PARAMS_1 (4, (1, 5, "sample.h", 1))<br> ??=include BOOST_PP_ITERATE()<br><br> template&lt;class T, class U&gt; struct typelist_t {<br> typedef T head;<br> typedef U tail;<br> };<br><br> template&lt;int&gt; struct typelist;<br> struct null_t;<br><br> template&lt;&gt; struct typelist&lt;1&gt; {<br> template&lt;class T0&gt; struct args {<br> typedef typelist_t&lt;T0, null_t&gt; type;<br> };<br> };<br><br> #ifndef TYPELIST_MAX<br> #define TYPELIST_MAX 50<br> #endif<br><br> #define BOOST_PP_ITERATION_PARAMS_1 (4, (2, TYPELIST_MAX, "sample.h", 2))<br> ??=include BOOST_PP_ITERATE()<br><br> #endif // SAMPLE_H<br><br>#elif BOOST_PP_ITERATION_FLAGS() == 1<br><br> template&lt;&gt; struct sample&lt;BOOST_PP_ITERATION()&gt; { };<br><br>#elif BOOST_PP_ITERATION_FLAGS() == 2<br><br> #define N BOOST_PP_ITERATION()<br><br> template&lt;&gt; struct typelist&lt;N&gt; {<br> template&lt;BOOST_PP_ENUM_PARAMS(N, class T)&gt; struct args {<br> typedef typelist_t&lt;<br> T0,<br> typename typelist&lt;N - 1&gt;::args&lt;BOOST_PP_ENUM_SHIFTED_PARAMS(N, T)&gt;::type<br> &gt; type;<br> };<br> };<br><br> #undef N<br><br>#endif<br></pre>
+
+
+
+
+
+
+
+</div>
+
+
+
+
+
+
+
+<div>注意其中对 "标志" 参数的使用(该参数通过 <b>BOOST_PP_ITERATION_FLAGS</b>() 来访问)。它区分了我们的重复 <code>sample</code>
+迭代和 typelist 线性迭代。 </div>
+
+
+
+
+
+
+
+<div>第二个迭代示范了文件迭代机制的强大。它生成了形如 <code>typelist&lt;3&gt;::args&lt;int,
+double, char&gt;::type</code> 的 typelist. </div>
+
+
+
+
+
+
+
+<div>实际上，作为这个 typelist 例子的继续，通过另一个迭代的帮助，我们可以完全线性化
+typelist 的创建.... </div>
+
+
+
+
+
+
+
+<div class="code">
+<pre>// extract.h<br>#if !BOOST_PP_IS_ITERATING<br><br> #ifndef EXTRACT_H<br> #define EXTRACT_H<br><br> #include &lt;boost/preprocessor/iteration/iterate.hpp&gt;<br> #include &lt;boost/preprocessor/repetition/enum.hpp&gt;<br> #include &lt;boost/preprocessor/repetition/enum_params.hpp&gt;<br> #include &lt;boost/preprocessor/repetition/enum_trailing_params.hpp&gt;<br><br> // 某些类型如 "void" 不能作为函数的参数类型<br><br> template&lt;class T&gt; struct incomplete {<br> typedef T type;<br> };<br><br> template&lt;class T&gt; struct strip_incomplete {<br> typedef T type;<br> };<br><br> template&lt;class T&gt; struct strip_incomplete&lt;incomplete&lt;T&gt; &gt; {<br> typedef T type;<br> };<br><br> template&lt;template&lt;int&gt; class output, class func_t&gt; struct extract;<br><br> #ifndef EXTRACT_MAX<br> #define EXTRACT_MAX 50<br> #endif<br><br> #define BOOST_PP_ITERATION_PARAMS_1 (3, (1, EXTRACT_MAX, "extract.h"))<br> ??=include BOOST_PP_ITERATE()<br><br> #endif // EXTRACT_H<br><br>#else<br><br> #define N BOOST_PP_ITERATION()<br> #define STRIP(z, n, _) \<br> typename strip_incomplete&lt;T ## n&gt;::type \<br> /**/<br><br> template&lt;template&lt;int&gt; class output, class R BOOST_PP_ENUM_TRAILING_PARAMS(N, class T)&gt;<br> struct extract&lt;R (BOOST_PP_ENUM_PARAMS(N, T))&gt; {<br> typedef typename output&lt;N&gt;::template args&lt;BOOST_PP_ENUM(N, STRIP, nil)&gt;::type type;<br> };<br><br> #undef STRIP<br> #undef N<br><br>#endif<br></pre>
+
+
+
+
+
+
+
+</div>
+
+
+
+
+
+
+
+<div>现在我们可以定义一个辅助宏来完成这一工作: </div>
+
+
+
+
+
+
+
+<div class="code">
+<pre>#define TYPELIST(args) extract&lt;typelist, void args&gt;::type<br><br>typedef TYPELIST((int, double, incomplete&lt;void&gt;)) xyz;<br></pre>
+
+
+
+
+
+
+
+</div>
+
+
+
+
+
+
+
+<div>这里有两个较小的说明。首先，某些类型如 <code>void</code> 不能作为参数的类型，所以必须用 <code>incomplete&lt;T&gt; 来包装它们。其次，必须使用两重括号。当</code> C++ 具备 C99 的变长参数宏的能力时，<code>TYPELIST</code>
+可以定义为: </div>
+
+
+
+
+
+
+
+<div class="code">
+<pre>#define TYPELIST(...) extract&lt;typelist, void (__VA_ARGS__)&gt;::type<br><br>typedef TYPELIST(int, double, short) xyz;<br></pre>
+
+
+
+
+
+
+
+</div>
+
+
+
+
+
+
+
+<div>还要留意迭代的下界和上界也可以在迭代中通过 <b>BOOST_PP_ITERATION_START</b>() 和 <b>BOOST_PP_ITERATION_FINISH</b>() 获得。 </div>
+
+
+
+
+
+
+
+<div>我希望以上解释和示例可以示范出文件迭代的强大能力。虽然如此，这也仅仅是一个开始而已。文件迭代机制还定义了一整套工具以支持多维迭代。 </div>
+
+
+
+
+
+
+
+<h4>多个维度 </h4>
+
+
+
+
+
+
+
+<div>文件迭代机制支持多达 <b>BOOST_PP_LIMIT_ITERATION_DIM</b>
+个维度。第一个维度(即最外层)我们在前面已用到。为了使用第二个维度(在第一个维度内)，我们只需要用2而不是1来替代占位符 <i>x</i>. </div>
+
+
+
+
+
+
+
+<div class="code">
+<pre>#define BOOST_PP_ITERATION_PARAMS_2 /* ... */<br> ^<br></pre>
+
+
+
+
+
+
+
+</div>
+
+
+
+
+
+
+
+<div> ...或者... </div>
+
+
+
+
+
+
+
+<div class="code">
+<pre>#define BOOST_PP_FILENAME_2 /* ... */<br> ^<br></pre>
+
+
+
+
+
+
+
+</div>
+
+
+
+
+
+
+
+<div>每个维度必须从1开始按顺序使用。因此，上述代码只能在第一维度之内立即使用才有效。 </div>
+
+
+
+
+
+
+
+<div>在这里，需要进一步解释 <b>BOOST_PP_ITERATION</b>,
+<b>BOOST_PP_ITERATION_START</b>, 和 <b>BOOST_PP_ITERATION_FINISH</b>.&nbsp;
+<b>BOOST_PP_ITERATION</b>() 被扩展为当前维度的迭代值 -- 不论是哪一个维度。类似的，<b>BOOST_PP_ITERATION_START</b>() 和 <b>BOOST_PP_ITERATION_FINISH</b>() 被扩展为当前维度的下界和上界。以下伪代码作为参考: </div>
+
+
+
+
+
+
+
+<div class="code">
+<pre>for (int i = start(1); i &lt;= finish(1); ++i) {<br> // A<br> for (int j = start(2); j &lt;= finish(2); ++j) {<br> // B<br> }<br> // C<br>}<br></pre>
+
+
+
+
+
+
+
+</div>
+
+
+
+
+
+
+
+<div>在<i>A</i>处，<b>BOOST_PP_ITERATION</b>()
+为 <code>i</code>.&nbsp;<b>BOOST_PP_ITERATION_START</b>() 和 <b>BOOST_PP_ITERATION_FINISH</b>() 分别为 <code>start(1)</code> 和 <code>finish(1)</code>。而在<i>B</i>处，<b>BOOST_PP_ITERATION</b>() 为 <code>j</code> -- 即<i>B</i>处的当前迭代值。同样，<b>BOOST_PP_ITERATION_START</b>() 为
+<code>start(2)</code>, 等等.. </div>
+
+
+
+
+
+
+
+<div>如果每个维度使用单独的文件，那么就没有什么大问题，只要直接使用多维度就可以了。但是，如果有一个以上的维度位于同一个文件中，则它们需要相互区分开来。文件迭代机制为此提供了宏 <b>BOOST_PP_ITERATION_DEPTH</b>: </div>
+
+
+
+
+
+
+
+<div class="code">
+<pre>// file.h<br>#if !BOOST_PP_IS_ITERATING<br><br> #ifndef FILE_H<br> #define FILE_H<br><br> #include &lt;boost/preprocessor/iteration/iterate.hpp&gt;<br><br> #define BOOST_PP_ITERATION_PARAMS_1 (3, (1, 2, "file.h"))<br> ??=include BOOST_PP_ITERATE()<br><br> #endif // FILE_H<br><br>#elif BOOST_PP_ITERATION_DEPTH() == 1<br><br> // A<br> + BOOST_PP_ITERATION()<br><br> #define BOOST_PP_ITERATION_PARAMS_2 (3, (1, 2, "file.h"))<br> ??=include BOOST_PP_ITERATE()<br><br> // C<br><br>#elif BOOST_PP_ITERATION_DEPTH() == 2<br><br> // B<br> - BOOST_PP_ITERATION()<br><br>#endif<br></pre>
+
+
+
+
+
+
+
+</div>
+
+
+
+
+
+
+
+<div>结果如下: </div>
+
+
+
+
+
+
+
+<div>
+<pre>+ 1<br>- 1<br>- 2<br>+ 2<br>- 1<br>- 2<br></pre>
+
+
+
+
+
+
+
+</div>
+
+
+
+
+
+
+
+<div>多维度还带来了另一个问题。如何访问当前维度以外的其它维度的状态？换句话说，如何在B处访问i？(译注：原文是 how does one access <code>i</code>
+at point <i>A</i>? 似有误)。由于预处理器是延迟求值的，所以以下写法不能达到目的.... </div>
+
+
+
+
+
+
+
+<div class="code">
+<pre>// ...<br><br>#elif BOOST_PP_ITERATION_DEPTH() == 1<br><br> #define I BOOST_PP_ITERATION()<br><br> #define BOOST_PP_ITERATION_PARAMS_2 (3, (1, 2, "file.h"))<br> ??=include BOOST_PP_ITERATE()<br><br> #undef I<br><br>#elif BOOST_PP_ITERATION_DEPTH() == 2<br><br> #define J BOOST_PP_ITERATION()<br><br> // use I and J<br><br> #undef I<br><br>#endif<br></pre>
+
+
+
+
+
+
+
+</div>
+
+
+
+
+
+
+
+<div>这里的问题是 <code>I</code> 是 <b>BOOST_PP_ITERATION</b>() 的引用，而不是位于 I 的定义点处的 <b>BOOST_PP_ITERATION</b>() 的值。 </div>
+
+
+
+
+
+
+
+<div>本库提供了宏来访问这些值，有两种方法 -- 绝对的或相对的。第一种方法访问某个指定迭代帧(即维度)的值。要从任意维度访问第一维度的迭代值，可以使用 <b>BOOST_PP_FRAME_ITERATION</b>(<i>1</i>)。访问第二维度的迭代值，则使用 <b>BOOST_PP_FRAME_ITERATION</b>(<i>2</i>)，依次类推。 </div>
+
+
+
+
+
+
+
+<div>另外还有访问某个维度的下界、上界和标志的宏：<b>BOOST_PP_FRAME_START</b>,
+<b>BOOST_PP_FRAME_FINISH</b>, 和 <b>BOOST_PP_FRAME_FLAGS</b>.
+</div>
+
+
+
+
+
+
+
+<div>因此，要修正上述例子，我们可以修改 <code>I 的定义</code>....
+</div>
+
+
+
+
+
+
+
+<div class="code">
+<pre>// ...<br><br>#elif BOOST_PP_ITERATION_DEPTH() == 1<br><br> #define I BOOST_PP_FRAME_ITERATION(1)<br><br>// ...<br></pre>
+
+
+
+
+
+
+
+</div>
+
+
+
+
+
+
+
+<div>本库还提供了宏用于访问相对于当前维度的其它维度(如前一个维度)的值。这些宏接受一个表示与当前维度的偏移量的参数。例如， <b>BOOST_PP_RELATIVE_ITERATION</b>(<i>1</i>)
+总是引向当前维度外层的相邻维度的迭代值。参数 <i>0</i> 表示偏移量为 <i>0</i>，因此<b>BOOST_PP_RELATIVE_ITERATION</b>(<i>0</i>) 等价于 <b>BOOST_PP_ITERATION</b>().&nbsp;<b>BOOST_PP_RELATIVE_ITERATION</b>(<i>2</i>)
+引向当前维度之外的第二层维度的迭代值。&nbsp; </div>
+
+
+
+
+
+
+
+<div>同样可以用这种方式来访问某个维度的下界和上界，相应的宏分别为 <b>BOOST_PP_RELATIVE_START</b> 和 <b>BOOST_PP_RELATIVE_FINISH</b>. 相对维度的标志也可以用 <b>BOOST_PP_RELATIVE_FLAGS</b> 来访问。
+</div>
+
+
+
+
+
+
+
+<h4>相对性 </h4>
+
+
+
+
+
+
+
+<div>前面我曾提到过，使用两种方法来对该机制进行参数化是有原因的。原因就是维度的抽象。在特定的情形下，正在迭代的代码并不知道当前的维度 -- 可能是由于该代码被复用于多个不同的维度。如果该代码需要再次迭代，它就必须定义正确的参数(基于维度)来让该机制使用。 </div>
+
+
+
+
+
+
+
+<div>由该机制所维护的所有宏状态均可以以相对于某个维度的简接方法来引用。这就是 <b>BOOST_PP_RELATIVE_</b>
+访问器的作用。 </div>
+
+
+
+
+
+
+
+<div>类似的，由用户定义的 <i>命名外部参数</i> 也可以用这种方法来定义 -- <i>除了</i>被迭代的文件名以外。由于下界和上界是由机制来求值的，所以该实现不需要宏 <b>BOOST_PP_ITERATION_LIMITS</b>,
+而且标识符也可以被每个迭代维度所复用。 </div>
+
+
+
+
+
+
+
+<div>不幸的是，文件名不能这样。本库没有办法对引号(或尖括号)中的文本进行求值。因此，它不得不对每个维度使用一个不同的宏。这就是 <b>BOOST_PP_FILENAME_<i>x</i></b> 宏的目的。它们的存在将机制所要求的仅有的不可抽象的数据进行了隔离。 </div>
+
+
+
+
+
+
+
+<div>为了以一个抽象的方式来定义文件名，你需要这样做: </div>
+
+
+
+
+
+
+
+<div class="code">
+<pre>#define UNIQUE_TO_FILE "some_file.h"<br><br>#if BOOST_PP_ITERATION_DEPTH() == 0<br> #define BOOST_PP_FILENAME_1 UNIQUE_TO_FILE<br>#elif BOOST_PP_ITERATION_DEPTH() == 1<br> #define BOOST_PP_FILENAME_2 UNIQUE_TO_FILE<br>#elif BOOST_PP_ITERATION_DEPTH() == 2<br> #define BOOST_PP_FILENAME_3 UNIQUE_TO_FILE<br><br>// ... 直至 BOOST_PP_LIMIT_ITERATION_DIM<br><br>#endif<br></pre>
+
+
+
+
+
+
+
+</div>
+
+
+
+
+
+
+
+<div>我们的目标是避免对文件名以外的东西这样做。如果需要在一个文件中多次这样做(<b>BOOST_PP_FILENAME_<i>x</i></b> 在使用后会被机制去定义)，就应该考虑使用一个独立的文件来进行适当的定义: </div>
+
+
+
+
+
+
+
+<div class="code">
+<pre># // detail/define_file_h.h<br># ifndef FILE_H<br># error FILE_H is not defined<br># endif<br>#<br># if BOOST_PP_ITERATION_DEPTH() == 0<br># define BOOST_PP_FILENAME_1 FILE_H<br># elif BOOST_PP_ITERATION_DEPTH() == 1<br># define BOOST_PP_FILENAME_2 FILE_H<br># elif BOOST_PP_ITERATION_DEPTH() == 2<br># define BOOST_PP_FILENAME_3 FILE_H<br># elif BOOST_PP_ITERATION_DEPTH() == 3<br># define BOOST_PP_FILENAME_4 FILE_H<br># elif BOOST_PP_ITERATION_DEPTH() == 4<br># define BOOST_PP_FILENAME_5 FILE_H<br># else<br># error unsupported iteration dimension<br># endif<br></pre>
+
+
+
+
+
+
+
+</div>
+
+
+
+
+
+
+
+<div>然后这样使用.... </div>
+
+
+
+
+
+
+
+<div class="code">
+<pre>// file.h<br>#if !BOOST_PP_IS_ITERATING<br><br> #ifndef FILE_H<br> #define FILE_H "file.h"<br><br> #define BOOST_PP_ITERATION_LIMITS (1, 10)<br> #include "detail/define_file_h.h"<br><br> ??=include BOOST_PP_ITERATE()<br><br>#endif // FILE_H<br><br>#else<br> // iterated portion<br>#endif<br></pre>
+
+
+
+
+
+
+
+</div>
+
+
+
+
+
+
+
+<div>通过这样做，我们可以维护抽象性而不引起代码的膨胀。不过，我们没有一个完全通用的解决方案，所以必须对每个文件名都这样做，不过这总比没有要好。 </div>
+
+
+
+
+
+
+
+<h4>结论 </h4>
+
+
+
+
+
+
+
+<div>以上大致覆盖了文件迭代机制所提供的功能。通过使用这些功能，我们将实现一个 <code>function_traits</code>
+模板，来示范对该机制的全面使用。 </div>
+
+
+
+
+
+
+
+<h4> Function Traits - 一个复杂的例子 </h4>
+
+
+
+
+
+
+
+<div>实现一个全面的 <code>function_traits</code>
+模板元函数需要使用文件迭代机制中的每个重要部分。 </div>
+
+
+
+
+
+
+
+<div> (这个例子并没有试图去解决编译器的不足，只用于示范本机制)。 </div>
+
+
+
+
+
+
+
+<div>最终的结果应具有以下特性: </div>
+
+
+
+
+
+
+
+<ul>
+
+
+
+
+
+
+
+  <li>返回类型</li>
+
+
+
+
+
+
+
+  <li>参数数量和类型</li>
+
+
+
+
+
+
+
+  <li>类型是否为函数指针、函数引用、成员函数指针，或是普通函数类型</li>
+
+
+
+
+
+
+
+  <li>类型是否有省略号</li>
+
+
+
+
+
+
+
+  <li>如果不是成员函数指针，则可获得等价的函数指针、函数引用和函数类型</li>
+
+
+
+
+
+
+
+  <li>否则，可获得成员指针类型、所引向的类类型，以及是否具有 const 和/或 volatile 限定符</li>
+
+
+
+
+
+
+
+</ul>
+
+
+
+
+
+
+
+<div>实现的方法有很多种。这里我对下述实现中将发生什么给出一个概要说明。 </div>
+
+
+
+
+
+
+
+<div>该实现必须要处理函数的参数数量。因此，我们至少要对函数的参数数量进行迭代并定义主模板 <code>function_traits 的偏特化版本。对于变长参数的函数</code>(即带有省略号的函数)，情况就更为复杂。因此，对于每一个参数数量, 我们都需要一个变长的版本。 </div>
+
+
+
+
+
+
+
+<div>我们还要处理成员函数指针。这意味着我们不仅要处理参数数量和变长版本，还有
+cv-限定符。 </div>
+
+
+
+
+
+
+
+<div>为了更加清晰，以下实现将分别处理函数类型和成员函数指针。它们也可以合并起来，但那样的话代码会明显杂乱得多。 </div>
+
+
+
+
+
+
+
+<div>为了处理函数类型，以下实现要对函数的参数数量进行迭代。对于每一个参数数量，又分别迭代每一个参数以提供对每一个参数的访问。然后又再包含其本身以定义一个相同参数数量的变长特化版。它的效果与以下伪代码大致相同: </div>
+
+
+
+
+
+
+
+<div class="code">
+<pre>void make_spec(int i, bool variadic) {<br> :open function_traits&lt;i, variadic&gt;<br> for (int j = 0; j &lt; i; ++j) {<br> :parameter&lt;j&gt;<br> }<br> :close<br> if (!variadic) {<br> make_spec(i, true);<br> }<br> return;<br>}<br><br>void function_types(int max_arity) {<br> for (int i = 0; i &lt;= max_arity; ++i) {<br> make_spec(i, false);<br> }<br> return;<br>}<br></pre>
+
+
+
+
+
+
+
+</div>
+
+
+
+
+
+
+
+<div>针对成员函数指针的实现则有点不一样。首先，它迭代 cv-限定符。对于每一个 cv-限定符，再迭代函数的参数数量。对于每一个参数数量，再对每个参数进行迭代。最后再包含其本身来定义一个相同参数数量的变长特化版.... </div>
+
+
+
+
+
+
+
+<div class="code">
+<pre>void make_spec(int j, const char* cv, bool variadic) {<br> :open function_traits&lt;j, cv, variadic&gt;<br> for (int k = 0; k &lt; j; ++k) {<br> parameter&lt;k&gt;<br> }<br> :close<br> if (!variadic) {<br> make_spec(j, cv, true);<br> }<br> return;<br>}<br><br>void gen_arities(const char* cv, int max_arity) {<br> for (int j = 0; j &lt;= max_arity; ++j) {<br> make_spec(j, cv, false);<br> }<br> return;<br>}<br><br>void pointers_to_members(int max_arity) {<br> static const char* cv_qualifiers[] = { "", "const", "volatile", "const volatile" };<br> for (int i = 0; i &lt; 4; ++i) {<br> gen_arities(cv_qualifiers[i], max_arity);<br> }<br> return;<br>}<br></pre>
+
+
+
+
+
+
+
+</div>
+
+
+
+
+
+
+
+<div>以下是完整的实现。这个例子表现了文件迭代机制的强大，同时也是本库的强大功能，所以如果你想完全弄明白这个机制是怎么回事，就请仔细地读一下这段代码.... </div>
+
+
+
+
+
+
+
+<div class="code">
+<pre>// function_traits.hpp<br><br>#if !BOOST_PP_IS_ITERATING<br><br>#ifndef FUNCTION_TRAITS_HPP<br>#define FUNCTION_TRAITS_HPP<br><br>#include &lt;boost/preprocessor/cat.hpp&gt;<br>#include &lt;boost/preprocessor/facilities/apply.hpp&gt;<br>#include &lt;boost/preprocessor/iteration/iterate.hpp&gt;<br>#include &lt;boost/preprocessor/iteration/self.hpp&gt;<br>#include &lt;boost/preprocessor/repetition/enum_params.hpp&gt;<br>#include &lt;boost/preprocessor/repetition/enum_trailing_params.hpp&gt;<br>#include &lt;boost/preprocessor/tuple/elem.hpp&gt;<br><br>// 允许用户扩展<br>#ifndef FUNCTION_TRAITS_MAX_ARITY<br> #define FUNCTION_TRAITS_MAX_ARITY 15<br>#endif<br><br>namespace detail {<br><br>// 避免"缺省"值的重复<br>struct function_traits_base {<br> static const bool is_plain = false;<br> static const bool is_pointer = false;<br> static const bool is_reference = false;<br> static const bool is_member = false;<br>};<br><br>} // detail<br><br>// 无定义<br>template&lt;class&gt; struct function_traits;<br><br>// 获取省略号状态<br>#define ELLIPSIS(n) \<br> BOOST_PP_APPLY( \<br> BOOST_PP_TUPLE_ELEM(2, n, ELLIPSIS_I) \<br> ) \<br> /**/<br><br>// 对函数类型进行函数的参数数量的迭代<br>#define BOOST_PP_ITERATION_PARAMS_1 \<br> (4, (0, FUNCTION_TRAITS_MAX_ARITY, "function_traits.hpp", 0)) \<br> /**/<br>??=include BOOST_PP_ITERATE()<br><br>// 由索引获得一个 cv-限定符<br>#define QUALIFIER(n) \<br> BOOST_PP_APPLY( \<br> BOOST_PP_TUPLE_ELEM( \<br> 4, n, \<br> (BOOST_PP_NIL, (const), (volatile), (const volatile)) \<br> ) \<br> ) \<br> /**/<br><br>// 对成员指针进行 cv-限定符的迭代<br>#define BOOST_PP_ITERATION_PARAMS_1 \<br> (4, (0, 3, "function_traits.hpp", 1)) \<br> /**/<br>??=include BOOST_PP_ITERATE()<br><br>// 删除临时宏<br>#undef QUALIFIER<br>#undef ELLIPSIS<br><br>// 用于函数指针的覆盖跳转<br>template&lt;class T&gt; struct function_traits&lt;T*&gt; : function_traits&lt;T&gt; {<br> static const bool is_plain = false;<br> static const bool is_pointer = true;<br>};<br><br>// 用于函数引用的覆盖跳转<br>template&lt;class T&gt; struct function_traits&lt;T&amp;&gt; : function_traits&lt;T&gt; {<br> static const bool is_plain = false;<br> static const bool is_reference = true;<br>};<br><br>// 文件结束<br>#endif // FUNCTION_TRAITS_HPP<br><br>// 对于函数类型的特化<br>#elif BOOST_PP_ITERATION_DEPTH() == 1 \<br> &amp;&amp; BOOST_PP_ITERATION_FLAGS() == 0 \<br> /**/<br><br> // 定义省略号状态<br> #if BOOST_PP_IS_SELFISH<br> #define ELLIPSIS_I ((true), (...))<br> #else<br> #define ELLIPSIS_I ((false), BOOST_PP_NIL)<br> #endif<br><br> #define N BOOST_PP_ITERATION()<br><br> template&lt;class R BOOST_PP_ENUM_TRAILING_PARAMS(N, class T)&gt;<br> struct function_traits&lt;R (BOOST_PP_ENUM_PARAMS(N, T) ELLIPSIS(1))&gt;<br> : detail::function_traits_base {<br> static const bool is_plain = true;<br> typedef R function_type(BOOST_PP_ENUM_PARAMS(N, T) ELLIPSIS(1));<br> typedef function_type* pointer_type;<br> typedef function_type&amp; reference_type;<br> static const bool has_ellipsis = ELLIPSIS(0);<br> typedef R return_type;<br> static const int parameter_count = N;<br> template&lt;int, class D = int&gt; struct parameter;<br> #if N<br> // 对参数进行迭代<br> #define BOOST_PP_ITERATION_PARAMS_2 \<br> (3, (0, N - 1, "function_traits.hpp")) \<br> /**/<br> ??=include BOOST_PP_ITERATE()<br> #endif<br> };<br><br> #undef N<br> #undef ELLIPSIS_I<br><br> // 重包含本节，以处理省略号变长情况<br> #if !BOOST_PP_IS_SELFISH<br> #define BOOST_PP_INDIRECT_SELF "function_traits.hpp"<br> ??=include BOOST_PP_INCLUDE_SELF()<br> #endif<br><br>// 对 cv-限定符进行迭代<br>#elif BOOST_PP_ITERATION_DEPTH() == 1 \<br> &amp;&amp; BOOST_PP_ITERATION_FLAGS() == 1 \<br> /**/<br><br> #define BOOST_PP_ITERATION_PARAMS_2 \<br> (3, (0, FUNCTION_TRAITS_MAX_ARITY, "function_traits.hpp")) \<br> /**/<br> ??=include BOOST_PP_ITERATE()<br><br>// 生成对成员指针的特化<br>#elif BOOST_PP_ITERATION_DEPTH() == 2 \<br> &amp;&amp; BOOST_PP_FRAME_FLAGS(1) == 1 \<br><br> // 定义省略号状态<br> #if BOOST_PP_IS_SELFISH<br> #define ELLIPSIS_I ((true), (...))<br> #else<br> #define ELLIPSIS_I ((false), BOOST_PP_NIL)<br> #endif<br><br> #define N BOOST_PP_ITERATION()<br> #define Q QUALIFIER(BOOST_PP_FRAME_ITERATION(1))<br><br> template&lt;class R, class O BOOST_PP_ENUM_TRAILING_PARAMS(N, class T)&gt;<br> struct function_traits&lt;R (O::*)(BOOST_PP_ENUM_PARAMS(N, T) ELLIPSIS(1)) Q&gt;<br> : detail::function_traits_base {<br> static const bool is_member = true;<br> typedef R (O::* pointer_to_member_type)(BOOST_PP_ENUM_PARAMS(N, T) ELLIPSIS(1)) Q;<br> typedef O class_type;<br> typedef Q O qualified_class_type;<br> static const bool has_ellipsis = ELLIPSIS(0);<br> static const bool is_const =<br> BOOST_PP_FRAME_ITERATION(1) == 1 || BOOST_PP_FRAME_ITERATION(1) == 3;<br> static const bool is_volatile =<br> BOOST_PP_FRAME_ITERATION(1) == 2 || BOOST_PP_FRAME_ITERATION(1) == 3;<br> typedef R return_type;<br> static const int parameter_count = N;<br> template&lt;int, class D = int&gt; struct parameter;<br> #if N<br> // 对参数进行迭代<br> #define BOOST_PP_ITERATION_PARAMS_3 \<br> (3, (0, N - 1, "function_traits.hpp")) \<br> /**/<br> ??=include BOOST_PP_ITERATE()<br> #endif<br> };<br><br> #undef Q<br> #undef N<br> #undef ELLIPSIS_I<br><br> // 重包含本节，以处理省略号变长情况<br> #if !BOOST_PP_IS_SELFISH<br> #define BOOST_PP_INDIRECT_SELF "function_traits.hpp"<br> ??=include BOOST_PP_INCLUDE_SELF()<br> #endif<br><br>// parameter 特化<br>#else<br><br> #define X BOOST_PP_ITERATION()<br><br> template&lt;class D&gt; struct parameter&lt;X, D&gt; {<br> typedef BOOST_PP_CAT(T, X) type;<br> };<br><br> #undef X<br><br>#endif<br></pre>
+
+
+
+
+
+
+
+</div>
+
+
+
+
+
+
+
+<div>还存在一个问题，就是缺乏对 <code>throw</code> 规格的支持。由于我们不能对 throw 规格进行偏特化，所以我们没有办法完全解决它。不过，我们可以精确地报告"真实的"函数类型，包括 <code>throw</code>
+规格(上述实现是做不到这点的，因为它重新构造了那些类型)。如果你喜欢，你可以将这作为一个练习来做一下。 </div>
+
+
+
+
+
+
+
+<h4>参见 </h4>
+
+
+
+
+
+
+
+<ul>
+
+
+
+
+
+
+
+  <li> <a href="../ref/iterate.html">BOOST_PP_ITERATE</a></li>
+
+
+
+
+
+
+
+</ul>
+
+
+
+
+
+
+
+<div class="sig"> - Paul Mensonides </div>
+
+
+
+
+
+
+
+<hr size="1">
+<div style="margin-left: 0px;"> <i>&copy;
+Copyright <a href="http://www.housemarque.com" target="_top">Housemarque
+Oy</a> 2002</i> <br>
+
+
+
+
+
+
+
+<i>&copy; Copyright Paul Mensonides 2002</i> </div>
+
+
+
+
+
+
+
+<div style="margin-left: 0px;">
+<p><small>Distributed under the Boost Software License,
+Version 1.0. (See accompanying file <a href="../../../../LICENSE_1_0.txt">LICENSE_1_0.txt</a>
+or copy at <a href="http://www.boost.org/LICENSE_1_0.txt">www.boost.org/LICENSE_1_0.txt</a>)</small></p>
+
+
+
+
+
+
+
+</div>
+
+
+
+
+
+
+
+</body>
+</html>

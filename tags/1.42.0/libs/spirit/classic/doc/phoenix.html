@@ -1,0 +1,193 @@
+<!DOCTYPE HTML PUBLIC "-//W3C//DTD HTML 4.01 Transitional//EN">
+<html><head>
+
+<title>Phoenix</title><meta http-equiv="Content-Type" content="text/html; charset=UTF-8">
+<link rel="stylesheet" href="theme/style.css" type="text/css"></head>
+<body>
+<table background="theme/bkd2.gif" border="0" cellspacing="2" width="100%">
+  <tbody><tr> 
+    <td width="10"> 
+    </td>
+    <td width="85%"> <font face="Verdana, Arial, Helvetica, sans-serif" size="6"><b>Phoenix</b></font> 
+    </td>
+    <td width="112"><a href="http://spirit.sf.net"><img src="theme/spirit.gif" align="right" border="0" height="48" width="112"></a></td>
+  </tr>
+</tbody></table>
+<br>
+<table border="0">
+  <tbody><tr>
+    <td width="10"></td>
+    <td width="30"><a href="../index.html"><img src="theme/u_arr.gif" border="0"></a></td>
+    <td width="30"><a href="functional.html"><img src="theme/l_arr.gif" border="0"></a></td>
+    <td width="30"><a href="closures.html"><img src="theme/r_arr.gif" border="0"></a></td>
+  </tr>
+</tbody></table>
+<p>The preceding chapter introduced Phoenix as a means to implementing
+your semantic actions. We shall look a little bit more into this
+important library with focus on how you can use it handily with Spirit.
+This chapter is by no means a thorough discourse of the library. For
+more information on Phoenix, please take some time to read the <a href="../phoenix/index.html">Phoenix User's Guide</a>.
+If you just want to use it quickly, this chapter will probably suffice.
+Rather than taking you to the theories and details of the library, we
+shall try to provide you with annotated exemplars instead. Hopefully,
+this will get you into high gear quickly.<br>前一章节把Phoenix作为实现语义动作的一种方法来介绍。下面我们将稍微深入了解这个重要的库，并把焦点集中于如何在Spirit中便利地使用它。但这一章节绝非对这个库的完整讨论。想了解Phoenix的更多信息，需要拿出点时间来阅读<a href="../phoenix/index.html">Phoenix用户指南</a>。如果只是想尽快学会使用它，这一章将可以满足。比起告诉你这个库的理论和细节，我们倾向于把带有评注的例子提供给你。希望这样能使你的水平迅速提高。 </p>
+<p>Semantic actions in Spirit can be just about any function or
+function object (functor) as long as it can satisfy the required
+signature. For example, <tt>uint_p</tt> requires a signature of <tt>void F(T)</tt>, where <tt>T</tt> is the type of the integer (typically <tt>unsigned int</tt>). Plain vanilla actions are of the <tt>void F(IterT, IterT)</tt> variety. You can code your actions in plain C++. Calls to C++ functions or functors will thus be of the form <tt>P[&amp;F]</tt> or <tt>P[F()]</tt> etc. (see <a href="semantic_actions.html">Semantic Actions</a>). Phoenix on the other hand, attempts to mimic C++ such that you can define the function body inlined in the code.<br>Spirit的语义动作可以是任意的函数和函数对象（仿函数），只要他们符合所需的签名。比如，uint_p需要void
+F(T)这样的签名，这里T是整数的类型（一般为unsigned int）。一般的动作为void
+F(IterT,IterT)的变形。你可以只用C++来编写你的动作。对这些函数和仿函数的调用将有诸如 <tt>P[&amp;F]</tt> 或 <tt>P[F()]</tt> 这样的形式(见 <a href="semantic_actions.html">语义动作</a>)。另一方面，Phoenix 试图模仿C++以使你能在代码中直接插入函数体。 </p>
+<table align="center" border="0" width="80%">
+  <tbody><tr>
+    <td class="note_box"> <img src="theme/lens.gif" height="16" width="15"> <strong>C++ in C++? </strong><br>
+        <br>
+      In as much as Spirit attempts to mimic EBNF in C++, Phoenix attempts to mimic C++ in C++!!!<br>就像Spirit试图在C++里模仿EBNF，Phoenix试图在C++里模仿C++!!!</td>
+  </tr>
+</tbody></table>
+<h2>var</h2>
+<p>Remember the <tt>boost::ref</tt>? We discussed that in the <a href="parametric_parsers.html">Parametric Parsers chapter</a>. Phoenix has a similar, but more flexible, counterpart. It's called <tt>var</tt>. The usage is similar to <tt>boost::ref</tt> and you can use it as a direct replacement. However, unlike <tt>boost::ref</tt>, you can use it to form more complex expressions. Here are some examples:<br>记得 <tt>boost::ref</tt> 吗？我们在<a href="parametric_parsers.html">参数化分析器</a>一章中讨论过它。Phoenix有一个类似的，但更有弹性的摹本。它叫 <tt>var</tt>。使用起来类似于 <tt>boost::ref</tt>，你可以直接把他当成占位符。然而，与 <tt>boost::ref</tt> 不同，你可以用它来组成更复杂的表达式。下面是一些例子：</p>
+<pre>    <span class="identifier">var</span><span class="special">(</span><span class="identifier">x</span><span class="special">) += </span><span class="number">3<br>    </span><span class="identifier">var</span><span class="special">(</span><span class="identifier">x</span><span class="special">) = </span><span class="identifier">var</span><span class="special">(</span><span class="identifier">y</span><span class="special">) + </span><span class="identifier">var</span><span class="special">(</span><span class="identifier">z</span><span class="special">)<br></span><span class="number">    </span><span class="identifier">var</span><span class="special">(</span><span class="identifier">x</span><span class="special">) = </span><span class="identifier">var</span><span class="special">(</span><span class="identifier">y</span><span class="special">) + </span><span class="identifier"><span class="special">(</span>3 * var</span><span class="special">(</span><span class="identifier">z</span><span class="special">))<br></span><span class="number">    </span><span class="identifier">var</span><span class="special">(</span><span class="identifier">x</span><span class="special">) = </span><span class="identifier">var</span><span class="special">(</span><span class="identifier">y</span><span class="special">)[</span>var<span class="special">(</span>i<span class="special">)] </span><span class="comment">// assuming y is indexable and i is an index</span></pre>
+<p>Let's start with a simple example. We'll want to parse a comma
+separated list of numbers and report the sum of all the numbers. Using
+phoenix's var, we do not have to write external semantic actions. We
+simply inline the code inside the semantic action slots. Here's the
+complete grammar with our phoenix actions (see <a href="../example/fundamental/sum.cpp">sum.cpp</a> in the examples):<br>我们以简单的例子开始。比方我们想分析一个由逗号分隔的数字列表并报告所有数字之和。使用phoenix的var，我们不需要写额外的语义动作。而只需要简单地把代码内联在语义动作槽内。下面是完整的使用phoenix语义动作的语法（例子见<a href="../example/fundamental/sum.cpp">sum.cpp</a>）：</p>
+<pre><span class="number">    </span><span class="identifier">real_p</span><span class="special">[</span><span class="identifier">var</span><span class="special">(</span><span class="identifier">n</span><span class="special">) </span><span class="special">= </span><span class="identifier">arg1</span><span class="special">] </span><span class="special">&gt;&gt; </span><span class="special">*(</span><span class="literal">',' </span><span class="special">&gt;&gt; </span><span class="identifier">real_p</span><span class="special">[</span><span class="identifier">var</span><span class="special">(</span><span class="identifier">n</span><span class="special">) </span><span class="special">+= </span><span class="identifier">arg1</span><span class="special">])</span> </pre>
+<p> <img src="theme/lens.gif" height="16" width="15"> The full source code can be <a href="../example/fundamental/sum.cpp">viewed here</a>.
+This is part of the Spirit distribution.<br><img src="theme/lens.gif" height="16" width="15">完整的源码在<a href="../example/fundamental/sum.cpp">这里</a>。这是Spirit发布包的组成部分。</p>
+<h3>argN</h3>
+
+<p>Notice the expression: <span class="identifier"><tt>var(n) = arg1 </tt></span>. What is <tt>arg1</tt> and what is it doing there? <tt>arg1</tt> is an argument placeholder. Remember that <tt>real_p</tt> (see <a href="numerics.html">Numerics</a>) reports the parsed number to its attached semantic action. <tt>arg1</tt>
+is a placeholder for the first argument passed to the semantic action
+by the parser. If there are more than one arguments passed in, these
+arguments can be referred to using <tt>arg1</tt>..<tt>argN</tt>. For instance, generic semantic actions (transduction interface; see <a href="semantic_actions.html">Semantic Actions</a>) are passed 2 arguments: the iterators (<tt>first</tt>/<tt>last</tt>) to the matching portion of the input stream. You can refer to <tt>first</tt> and <tt>last</tt> through <tt>arg1</tt> and <tt>arg2</tt>, respectively.<br>注意表达式<span class="identifier"><tt>var(n) = arg1</tt></span>。<tt>arg1</tt> 是什么，干什么？<tt>arg1</tt><span style="font-family: Courier New;"></span> 是一个参数的占位符。记得 <tt>real_p</tt> (see <a href="numerics.html">数值</a>)要把分析出的数值报告给挂接着它的语义动作。<tt>arg1</tt> 就是对应由分析器传给语义动作的第一个参数的占位符。如果传入的参数超过一个，则这些参数用 <tt>arg1</tt>..<tt>argN</tt> 来引用。举例来说，一般的语义动作（转换接口；见<a href="http://www.boost.org/libs/spirit/doc/semantic_actions.html">语义动作</a>）接受两个参数：对应输入流中匹配位置的一对迭代器（<tt>first</tt>/<tt>ast</tt>）。你可以分别通过 <tt>arg1</tt> 和 <tt>arg2</tt> 来引用 <tt>first</tt> 和 <tt>last</tt>。<tt></tt></p><p>Like var, argN is also composable. Here are some examples:<br>类似于 var，argN 也是可复合的。这里是一些例子：</p>
+<pre>    <span class="identifier">var</span><span class="special">(</span><span class="identifier">x</span><span class="special">) += </span><span class="number">arg1<br>    </span><span class="identifier">var</span><span class="special">(</span><span class="identifier">x</span><span class="special">) = </span><span class="identifier">arg1</span><span class="special"> + </span><span class="identifier">var</span><span class="special">(</span><span class="identifier">z</span><span class="special">)<br></span><span class="number">    </span><span class="identifier">var</span><span class="special">(</span><span class="identifier">x</span><span class="special">) = </span><span class="identifier">arg1</span><span class="special"> + </span><span class="identifier"><span class="special">(</span>3 * arg2</span><span class="special">)<br></span><span class="number">    </span><span class="identifier">var</span><span class="special">(</span><span class="identifier">x</span><span class="special">) = </span><span class="identifier">arg1</span><span class="special">[</span>arg2<span class="special">] </span><span class="comment">// assuming arg1 is indexable and arg2 is an index</span></pre>
+<h3>val</h3>
+<p>Note the expression: <tt>3 * arg2.</tt> This expression is actually a short-hand equivalent to: <tt>val(3) * arg2</tt>.
+We shall see later why, in some cases, we need to explicitly wrap
+constants and literals inside the val. Again, like var and argN, val is
+also composable.<br>注意表达式 <tt>3 * arg2</tt><span style="font-family: Courier New;"></span>。这个表达式实际上是 <tt>val(3) * arg2</tt> 的简写。后面我们将见到为什么在某些情况下，我们需要显式地封装常量和变量于 val 中。再次，类似于 var 和 argN，val 也是可复合的。</p>
+<h3>Functions 函数 </h3>
+<p>Remember our very first example? In the <a href="quick_start.html">Quick Start</a> chapter, we presented a parser that parses a comma separated list and stuffs the parsed numbers in a vector (see <a href="../example/fundamental/number_list.cpp"> number_list.cpp</a>) . For simplicity, we used Spirit's pre-defined actors (see <a href="predefined_actors.html">Predefined Actors</a>). In the example, we used <tt>push_back_a</tt>:<br>记得我们很早的例子么？在<a href="quick_start.html">快速开始</a>一章中，我们展示了一个分析逗号分隔的数值表并把数值推入一个vector的分析器（见 <a href="../example/fundamental/number_list.cpp">number_list.cpp</a>）。简单起见，我们用了Spirit预定义的动作器。（见<a href="predefined_actors.html">预定义动作器</a>）。在那个例子中，我们使用了 <tt>push_back_a</tt>:</p>
+<pre><code><font color="#000000">    </font><font color="#000000"><span class="identifier">real_p</span><span class="special">[</span><span class="identifier">push_back_a</span><span class="special">(</span><span class="identifier">v</span><span class="special">)]</span> <span class="special">&gt;&gt;</span> <span class="special">*(</span><span class="literal">','</span> <span class="special">&gt;&gt;</span> <span class="identifier">real_p</span><span class="special">[</span><span class="identifier">push_back_a</span><span class="special">(</span><span class="identifier">v</span><span class="special">)])</span></font></code></pre>
+<p>Phoenix allows you to write more powerful polymorphic functions, similar to <tt>push_back_a</tt>, easily. See <a href="../example/fundamental/stuff_vector.cpp">stuff_vector.cpp</a>. The example is similar to <a href="../example/fundamental/number_list.cpp">number_list.cpp</a> in functionality, but this time, using phoenix a function to actually implement the <tt>push_back</tt> function:<br>Phoenix允许你写更强大的多态函数，类似于 <tt>push_back_a</tt>，但更简单。见 <a href="../example/fundamental/stuff_vector.cpp">stuff_vector.cpp</a>。下面的例子功能类似于 <a href="../example/fundamental/number_list.cpp">number_list.cpp</a>，但这次，用phoenix写一个函数来实现 <tt>push_back</tt>&nbsp;函数：</p>
+<pre><span class="identifier">    </span><span class="keyword">struct </span><span class="identifier">push_back_impl<br>    </span><span class="special">{<br>        </span><span class="keyword">template </span><span class="special">&lt;</span><span class="keyword">typename </span><span class="identifier">Container</span><span class="special">, </span><span class="keyword">typename </span><span class="identifier">Item</span><span class="special">&gt;<br>        </span><span class="keyword">struct </span><span class="identifier">result<br>        </span><span class="special">{<br>            </span><span class="keyword">typedef </span><span class="keyword">void </span><span class="identifier">type</span><span class="special">;<br>        </span><span class="special">};<br><br>        </span><span class="keyword">template </span><span class="special">&lt;</span><span class="keyword">typename </span><span class="identifier">Container</span><span class="special">, </span><span class="keyword">typename </span><span class="identifier">Item</span><span class="special">&gt;<br>        </span><span class="keyword">void </span><span class="keyword">operator</span><span class="special">()(</span><span class="identifier">Container</span><span class="special">&amp; </span><span class="identifier">c</span><span class="special">, </span><span class="identifier">Item </span><span class="keyword">const</span><span class="special">&amp; </span><span class="identifier">item</span><span class="special">) </span><span class="keyword">const<br>        </span><span class="special">{<br>            </span><span class="identifier">c</span><span class="special">.</span><span class="identifier">push_back</span><span class="special">(</span><span class="identifier">item</span><span class="special">);<br>        </span><span class="special">}<br>    </span><span class="special">};</span>
+
+    <span class="identifier">function</span><span class="special">&lt;</span><span class="identifier">push_back_impl</span><span class="special">&gt; </span><span class="keyword">const </span><span class="identifier">push_back </span><span class="special">= </span><span class="identifier">push_back_impl</span><span class="special">();</span></pre>
+<p><img src="theme/lens.gif" height="16" width="15"> The full source code can be <a href="../example/fundamental/stuff_vector.cpp">viewed here</a>. This is part of the Spirit distribution.<br><img src="theme/lens.gif" height="16" width="15"> 完整的源码参见<a href="../example/fundamental/stuff_vector.cpp">这里</a>。这是Spirit分发包的组成部分。</p>
+<table align="center" border="0" width="80%">
+  <tbody><tr>
+    <td class="note_box"> <img src="theme/lens.gif" height="16" width="15"> <strong>Predefined Phoenix Functions 预定义的Phoenix函数</strong><br>
+      <br>
+A future version of Phoenix will include an extensive set of predefined
+functions covering the whole of STL containers, iterators and
+algorithms. push_back, will be part of this suite.<br>Phoenix将来的版本将包含一个巨大的预定义函数集，涵盖整个STL容器、迭代器和算法。push_back，将是这个套装的一部分。 </td>
+  </tr>
+</tbody></table>
+<p><span class="identifier"><tt>push_back_impl</tt></span> is a simple wrapper over the <tt>push_back</tt>
+member function of STL containers. The extra scaffolding is there to
+provide phoenix with additional information that otherwise cannot be
+directly deduced. <tt>result</tt> relays to phoenix the return type of the functor (<tt>operator()</tt>) given its argument types (<tt>Container</tt>  and  <tt>Item</tt>) . In this case, the return type is always, simply <tt>void</tt>.<br><span class="identifier"><tt>push_back_impl</tt></span>&nbsp;是一个针对STL容器的 <span class="identifier"><tt>push_back</tt></span>&nbsp;成员函数的简单封装。其他的多出来的代码用来给Phoenix提供附加的信息，否则它将无法直接推演。<tt>result</tt> 把给定了参数（<tt>Container</tt> 和  <tt>Item</tt>）的仿函数（<tt>operator()</tt>）的返回类型传递给Phoenix。在这个例子里，返回类型总是单纯的 <tt>void</tt>。</p>
+<p><span class="identifier"><tt>push_back</tt></span> is a phoenix
+function object. This is the actual function object that we shall use.
+The beauty behind phoenix function objects is that the actual use is
+strikingly similar to a normal C++ function call. Here's the number
+list parser rewritten using our phoenix function object:<br><span class="identifier"><tt>push_back</tt></span>&nbsp;是一个phoenix函数对象。这是我们将实际使用的函数对象。phoenix函数对象幕后的美丽在于它的实际调用非常类似于一个C++的普通函数。下面是用我们的phoenix函数对象重写的数值列表分析器：</p>
+<pre><span class="special">    </span><span class="identifier">real_p</span><span class="special">[</span><span class="identifier">push_back</span><span class="special">(</span><span class="identifier">var</span><span class="special">(</span><span class="identifier">v</span><span class="special">), </span><span class="identifier">arg1</span><span class="special">)] </span><span class="special">&gt;&gt; </span><span class="special">*(</span><span class="literal">',' </span><span class="special">&gt;&gt; </span><span class="identifier">real_p</span><span class="special">[</span><span class="identifier">push_back</span><span class="special">(</span><span class="identifier">var</span><span class="special">(</span><span class="identifier">v</span><span class="special">), </span><span class="identifier">arg1</span><span class="special">)])</span></pre>
+<p>And, unlike predefined actors, they can be composed. See the pattern? Here are some examples:<br>并且，与预定义动作器不同，他们可以复合。看到这个模式了么？这里是一些例子：</p>
+<pre>    <span class="identifier">push_back</span><span class="special">(</span><span class="identifier">var</span><span class="special">(</span><span class="identifier">v</span><span class="special">), </span><span class="identifier">arg1 + 2</span><span class="special">)</span>
+    <span class="identifier">push_back</span><span class="special">(</span><span class="identifier">var</span><span class="special">(</span><span class="identifier">v</span><span class="special">), </span><span class="identifier">var<span class="special">(</span>x<span class="special">)</span></span><span class="special"> + </span><span class="identifier">arg1</span><span class="special">)</span>
+<span class="identifier">    push_back</span><span class="special">(</span><span class="identifier">var</span><span class="special">(</span><span class="identifier">v</span><span class="special">)[</span>arg1<span class="special">], </span><span class="identifier">arg2</span><span class="special">)<span class="comment"> // assuming v is a vector of vectors and arg1 is an index</span></span></pre>
+<p>push_back does not have a return type. Say, for example, we wrote another phoenix function <tt>sin</tt>, we can use it in expressions as well:<br>push_back 并没有返回类型。假如，举例来说，我们写了另一个phoenix函数 <tt>sin</tt>，我们也可以把它用于表达式中：</p>
+<pre>    <span class="identifier">push_back</span><span class="special">(</span><span class="identifier">var</span><span class="special">(</span><span class="identifier">v</span><span class="special">), </span><span class="identifier">sin</span><span class="special">(</span><span class="identifier">arg1<span class="special">)</span> </span><span class="special">*</span><span class="identifier"> 2</span><span class="special">)</span>
+</pre>
+<h3>Construct 构造</h3>
+<p>Sometimes, we wish to construct an object. For instance, we might want to create a <tt>std::string</tt>
+given the first/last iterators. For instance, say we want to parse a
+list of identifiers instead. Our grammar, without the actions, is:<br>有时，我们希望构造一个对象。例如，我们可能像用给定的 first/last 迭代器创建一个 <tt>std::string</tt>&nbsp;对象。比如，假设我们想分析一个标识符列表。我们的语法，没有语义动作，是这样的：</p>
+<pre><span class="number">    </span><span class="special">(+</span><span class="identifier">alpha_p</span><span class="special">) </span><span class="special">&gt;&gt; </span><span class="special">*(</span><span class="literal">',' </span><span class="special">&gt;&gt; </span><span class="special">(+</span><span class="identifier">alpha_p</span><span class="special">)</span><span class="special">)</span></pre>
+<p><strong><tt>construct_</tt></strong>  is a predefined phoenix function that, you guessed it, constructs an object, from the arguments passed in. The usage is:<br><strong><tt>construct_</tt></strong> 是一个预定义的phoenix函数，正如你猜到的，构造一个对象，使用给定的参数。使用方法是：</p>
+<pre><span class="number">    </span><span class="identifier">construct_</span><span class="special">&lt;</span><span class="identifier">T</span><span class="special">&gt;(</span><span class="identifier">arg1</span><span class="special">, </span><span class="identifier">arg2</span><span class="special">,... </span><span class="identifier">argN</span><span class="special">)</span></pre>
+<p>where T is the desired type and arg1..argN are the constructor arguments. For example, we can construct a <tt>std::string</tt> from the first/last iterator pair this way:<br>这里T是想构造的类型而 arg1...argN 是构造函数的参数。例如，我们可以这样从 first/last 迭代器对创建 <tt>std::string</tt>:</p>
+<pre><span class="identifier">    construct_</span><span class="special">&lt;</span><span class="identifier">std</span><span class="special">::</span><span class="identifier">string</span><span class="special">&gt;(</span><span class="identifier">arg1</span><span class="special">, </span><span class="identifier">arg2</span><span class="special">)</span></pre>
+<p>Now, we attach the actions to our grammar:<br>现在，我们把语义动作挂接到语法上：</p>
+<pre><span class="number">    </span><span class="special">(+</span><span class="identifier">alpha_p</span><span class="special">)<br>    </span><span class="special">[<br>        </span><span class="identifier">push_back</span><span class="special">(</span><span class="identifier">var</span><span class="special">(</span><span class="identifier">v</span><span class="special">), </span><span class="identifier">construct_</span><span class="special">&lt;</span><span class="identifier">std</span><span class="special">::</span><span class="identifier">string</span><span class="special">&gt;(</span><span class="identifier">arg1</span><span class="special">, </span><span class="identifier">arg2</span><span class="special">))<br>    </span><span class="special">]<br>    </span><span class="special">&gt;&gt;<br>    </span><span class="special">*(</span><span class="literal">',' </span><span class="special">&gt;&gt;<br>        </span><span class="special">(+</span><span class="identifier">alpha_p</span><span class="special">)<br>        </span><span class="special">[<br>            </span><span class="identifier">push_back</span><span class="special">(</span><span class="identifier">var</span><span class="special">(</span><span class="identifier">v</span><span class="special">), </span><span class="identifier">construct_</span><span class="special">&lt;</span><span class="identifier">std</span><span class="special">::</span><span class="identifier">string</span><span class="special">&gt;(</span><span class="identifier">arg1</span><span class="special">, </span><span class="identifier">arg2</span><span class="special">))<br>        </span><span class="special">]<br>    </span><span class="special">)</span></pre>
+<p><img src="theme/lens.gif" height="16" width="15"> The full source code can be <a href="../example/fundamental/stuff_vector2.cpp">viewed here</a>. This is part of the Spirit distribution.<br><img src="theme/lens.gif" height="16" width="15"> 完整的代码参见<a href="../example/fundamental/stuff_vector2.cpp">这里</a>。这是Spirit分发包的组成部分。<span class="special"></span></p>
+<h3><a name="lambda"></a>Lambda expressions &nbsp;Lambda表达式</h3>
+<p>All these phoenix expressions we see above are lambda expressions.
+The important thing to note is that these expressions are not evaluated
+immediately. At grammar construction time, when the actions are
+attached to the productions, a lambda expression actually generates an
+unnamed function object that is evaluated later, at parse time. In
+other words, lambda expressions are <strong>lazily evaluated</strong>.<br>所有这些我们在上面见到的Phoenix表达式都是所谓的lambda表达式。值得注意的是这些表达式并不是立即推算的。在语法创建的时
+候，当语义动作挂接到所生成的对象上时，一个lambda表达式是延迟计算的的，只是在分析时才实际产生一个匿名函数对象。换言之，lambda表达式是<strong>惰性推算</strong>的。</p>
+<table align="center" border="0" width="80%">
+  <tbody><tr>
+    <td class="note_box"> <b><img src="theme/lens.gif" height="16" width="15"> Lambda Expressions? </b>λ<b>表达式？</b><br>
+        <br>
+Lambda expressions are actually unnamed partially applied functions
+where placeholders (e.g. arg1, arg2) are provided in place of some of
+the arguments. The reason this is called a lambda expression is that
+traditionally, such placeholders are written using the Greek letter
+lambda <img src="theme/lambda.png" height="22" width="15">.<br>Lambda 表达式实际上是匿名的部分已应用的函数，其中某些参数被占位符(如 arg1, arg2)替代。之所以把它称为 lambda 表达式，是由于在传统上，这样的占位符被写为希腊字母
+lambda <img src="theme/lambda.png" height="22" width="15">.</td>
+  </tr>
+</tbody></table>
+<p>Phoenix uses tricks not unlike those used by Spirit to mimic C++
+such that you can define the function body inlined in the code. It's
+weird, but as mentioned, Phoenix actually mimicks C++ in C++ using
+expression templates. Surely, there are limitations...<br>Phoenix使用类似于Spirit里用的技巧来模仿C++使得你可以在代码中内联地定义函数体。这很奇怪，但正如所提到的，Phoenix实际上是用表达式模板来在C++里模仿C++。当然，这也是有限制的……</p>
+<p>All components in a Phoenix expression must be an <strong>actor</strong> (in phoenix parlance) in the same way that components in Spirit should be a <tt>parser</tt>. In Spirit, you can write:<br>Phoenix表达式里所有的元件都必须是<strong>动作器</strong>（以phoenix的行话）而Spirit里这些元件必须是 <tt>parser</tt>。在Spirit中，我们可以写：</p>
+<pre><span class="number">    </span><span class="identifier">r </span><span class="special">= </span><span class="identifier">ch_p</span><span class="special">(</span><span class="literal">'x'</span><span class="special">) </span><span class="special">&gt;&gt; </span><span class="literal">'y'</span><span class="special">;</span></pre>
+<p>But not:<br>但不能：</p>
+<pre><span class="special">    </span><span class="identifier">r </span><span class="special">= </span><span class="literal">'x' </span><span class="special">&gt;&gt; </span><span class="literal">'y'</span><span class="special">;</span></pre>
+<p>In essence, <tt>parser &gt;&gt; char</tt> is a parser, but <tt>char &gt;&gt; char</tt> is a char (the char shift-right by another char).<br>本质上，<tt>parser &gt;&gt; char</tt>&nbsp;是一个分析器，但 <tt>char &gt;&gt; char</tt>&nbsp;是一个char（由一个char右移位而来的另一个char）。</p>
+<p>The same restrictions apply to Phoenix. For instance:<br>Phoenix中同样存在这样的限制。例如：</p>
+<pre><span class="special">    </span><span class="keyword">int </span><span class="identifier">x </span><span class="special">= </span><span class="number">1</span><span class="special">;<br>    </span><span class="identifier">cout </span><span class="special">&lt;&lt; </span><span class="identifier">var</span><span class="special">(</span><span class="identifier">x</span><span class="special">) </span><span class="special">&lt;&lt; </span><span class="string">"pizza"</span></pre>
+<p>is a well formed Phoenix expression that's lazily evaluated. But:<br>是一个形态良好、惰性推算的Phoenix表达式。但：</p>
+<pre><span class="string">    </span><span class="identifier">cout </span><span class="special">&lt;&lt; </span><span class="identifier">x </span><span class="special">&lt;&lt; </span><span class="string">"pizza"</span></pre>
+<p>is not. Such expressions are immediately executed. C++ syntax dictates that at least <strong>one</strong> of the operands must be a Phoenix actor type. This also applies to compound expressions. For example:<br>不是。这样的表达式是立即计算的。C++句法要求只要有<strong>一个</strong>算子是Phoenix动作器类。这对复合表达式同样成立。比如：</p>
+<pre><span class="string">    </span><span class="identifier">cout </span><span class="special">&lt;&lt; </span><span class="identifier">var</span><span class="special">(</span><span class="identifier">x</span><span class="special">) </span><span class="special">&lt;&lt; </span><span class="string">"pizza" </span><span class="special">&lt;&lt; </span><span class="string">"man"</span></pre>
+<p>This is evaluated as:<br>这个被推算为：</p>
+<pre><span class="string">    </span><span class="special">(((</span><span class="identifier">cout </span><span class="special">&lt;&lt; </span><span class="identifier">var</span><span class="special">(</span><span class="identifier">x</span><span class="special">)) </span><span class="special">&lt;&lt; </span><span class="string">"pizza"</span><span class="special">) </span><span class="special">&lt;&lt; </span><span class="string">"man"</span><span class="special">)</span></pre>
+<p>Since <tt>(cout &lt;&lt; var(x))</tt> is an actor, at least <strong>one</strong> of the operands is a phoenix actor, <tt>((cout &lt;&lt; var(x)) &lt;&lt; "pizza")</tt> is also a Phoenix actor, and the whole expression is thus also an actor.<br>由于 <tt>(cout &lt;&lt; var(x))</tt>&nbsp;<span style="font-family: Courier New;">是一个动作器，至少<strong>一个</strong>算子是phoenix动作器， <tt>((cout &lt;&lt; var(x)) &lt;&lt; "pizza")</tt> 也是一个Phoenix动作器，而整个表达式也因此是一个动作器。</span></p>
+<p>Sometimes, it is safe to write:<br>有时，这么写是安全的：</p>
+<pre><span class="special">    </span><span class="identifier">cout </span><span class="special">&lt;&lt; </span><span class="identifier">var</span><span class="special">(</span><span class="identifier">x</span><span class="special">) </span><span class="special">&lt;&lt; </span><span class="identifier">val</span><span class="special">(</span><span class="string">"pizza"</span><span class="special">) </span><span class="special">&lt;&lt; </span><span class="identifier">val</span><span class="special">(</span><span class="string">"man"</span><span class="special">)</span></pre>
+<p>just to make it explicitly clear what we are dealing with,
+especially with complex expressions, in the same way as we explicitly
+wrap literal strings in <tt>str_p("lit")</tt> in Spirit.<br>只要用与Spirit里显式地用 <tt>str_p("lit")</tt>&nbsp;封装字符串相同的方法显式地表明我们在和什么打交道，在复杂表达式中这点尤为重要。</p>
+<p>Phoenix (and Spirit) also deals with unary operators. In such cases,
+we have no choice. The operand must be a Phoenix actor (or Spirit
+parser). Examples:<br>Phoenix（以及Spirit）也处理一元操作符。在这样的情况下，我们没选择。算子必须是Phoenix动作器（或者Spirit分析器）。例子：</p>
+<p>Spirit:</p>
+<pre><span class="special">    </span><span class="special">*</span><span class="identifier">ch_p</span><span class="special">(</span><span class="literal">'z'</span><span class="special">)  </span><span class="comment">// good<br>    </span><span class="special">*(</span><span class="literal">'z'</span><span class="special">) </span><span class="comment">// bad</span></pre>
+<p> Phoenix:</p>
+<pre><span class="comment">    </span><span class="special">*</span><span class="identifier">var</span><span class="special">(</span><span class="identifier">x</span><span class="special">) </span><span class="comment">// good (lazy)<br>    </span><span class="special">*</span><span class="identifier">x </span><span class="comment">// bad (immediate)</span></pre>
+<p>Also, in Phoenix, for assignments and indexing to be lazily
+evaluated, the object acted upon should be a Phoenix actor. Examples:<br>同样，在Phoenix里，要使等号和下标被惰性推算，其上的动作对象必须是Phoenix动作器。例子：</p>
+<pre><span class="comment">    </span><span class="identifier">var</span><span class="special">(</span><span class="identifier">x</span><span class="special">) </span><span class="special">= </span><span class="number">123 </span><span class="comment">// good (lazy)<br>    </span><span class="identifier">x </span><span class="special">= </span><span class="number">123 </span><span class="comment">// bad (immediate)<br>    </span><span class="identifier">var</span><span class="special">(</span><span class="identifier">x</span><span class="special">)[</span><span class="number">0</span><span class="special">] </span><span class="comment">// good (lazy)<br>    </span><span class="identifier">x</span><span class="special">[</span><span class="number">0</span><span class="special">] </span><span class="comment">// bad, immediate<br>    </span><span class="identifier">var</span><span class="special">(</span><span class="identifier">x</span><span class="special">)[</span><span class="identifier">var</span><span class="special">(</span><span class="identifier">i</span><span class="special">)] </span><span class="comment">// good (lazy)<br>    </span><span class="identifier">x</span><span class="special">[</span><span class="identifier">var</span><span class="special">(</span><span class="identifier">i</span><span class="special">)] </span><span class="comment">// bad and illegal (x is not an actor)<br>    </span><span class="identifier">var</span><span class="special">(</span><span class="identifier">x</span><span class="special">[</span><span class="identifier">var</span><span class="special">(</span><span class="identifier">i</span><span class="special">)]) </span><span class="comment">// bad and illegal (x is not an actor)</span></pre>
+<h3>Wrapping up 封装 </h3>
+<p>Well, there you have it. I hope with this jump-start chapter, you
+may be able to harness the power of lambda expressions. By all means,
+please read the <a href="../phoenix/index.html">phoenix manual</a> to
+learn more about the nitty gritty details. Surely, you'll get to know a
+lot more than just by reading this chapter. There are a lot of things
+still to be touched. There won't be enough space here to cover all the
+features of Phoenix even in brief.<br>好了，就到这儿了。我希望这个入门章节能够让你驾驭lambda表达式的力量。请一定要阅读<a href="../phoenix/index.html">phoneix手册</a>以了解更多的实质细节。当然，你将获得比阅读这章更多的知识。还有很多事情要了解。这里没有足够的空间来涵盖即使是简明的Phoenix功能介绍。</p>
+<p>The next chapter, <a href="closures.html">Closures</a>, we'll see more of phoenix. Stay tuned.<br>下一章，<a href="closures.html">闭包</a>，我们将看到更多的phoenix，请不要走开，我们马上回来。</p>
+<table border="0">
+  <tbody><tr> 
+    <td width="10"></td>
+    <td width="30"><a href="../index.html"><img src="theme/u_arr.gif" border="0"></a></td>
+    <td width="30"><a href="functional.html"><img src="theme/l_arr.gif" border="0"></a></td>
+    <td width="30"><a href="closures.html"><img src="theme/r_arr.gif" border="0"></a></td>
+  </tr>
+</tbody></table>
+<br>
+<hr size="1">
+<p class="copyright">Copyright © 1998-2003 Joel de Guzman<br>
+  <br>
+<font size="2">Use, modification and distribution is subject to the Boost Software
+    License, Version 1.0. (See accompanying file LICENSE_1_0.txt or copy at
+    http://www.boost.org/LICENSE_1_0.txt)</font></p>
+<p class="copyright">&nbsp;</p>
+</body></html>

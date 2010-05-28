@@ -1,0 +1,816 @@
+<!DOCTYPE HTML PUBLIC "-//W3C//DTD HTML 4.01 Transitional//EN" "http://www.w3.org/TR/html4/loose.dtd">
+<html><head><!--
+(C) Copyright 2002-4 Robert Ramey - http://www.rrsd.com . 
+Use, modification and distribution is subject to the Boost Software
+License, Version 1.0. (See accompanying file LICENSE_1_0.txt or copy at
+http://www.boost.org/LICENSE_1_0.txt)
+-->
+
+
+
+
+  
+  
+  
+  <meta http-equiv="Content-Type" content="text/html; charset=UTF-8">
+
+
+
+
+  
+  
+  
+  <link rel="stylesheet" type="text/css" href="../../../boost.css">
+
+
+
+
+  
+  
+  
+  <link rel="stylesheet" type="text/css" href="style.css">
+
+
+
+
+  
+  
+  
+  <title>Serialization - More on Archives</title></head>
+<body link="#0000ff" vlink="#800080">
+
+
+
+
+<table summary="header" border="0" cellpadding="7" cellspacing="0" width="100%">
+
+
+
+
+  <tbody>
+
+
+
+    <tr>
+
+
+
+ 
+    <td valign="top" width="300"> 
+      
+      
+      
+      
+      <h3><a href="../../../index.htm"><img alt="C++ Boost" src="../../../boost.png" border="0" height="86" width="277"></a></h3>
+
+
+
+
+    </td>
+
+
+
+
+    <td valign="top"> 
+      
+      
+      
+      
+      <h1 align="center">Serialization序列化</h1>
+
+
+
+
+      
+      
+      
+      
+      <h2 align="center">存档类参考</h2>
+
+
+
+
+    </td>
+
+
+
+
+  </tr>
+
+
+
+
+  
+  
+  
+  </tbody>
+</table>
+
+
+
+
+<hr>
+<dl class="page-index">
+
+
+
+
+  <dt><a href="#implementation">实现</a>
+  </dt>
+
+
+
+  <dt><a href="#usage">用法</a>
+  </dt>
+
+
+
+  <dt><a href="#testing">测试</a>
+  </dt>
+
+
+
+  <dt><a href="#polymorphic">多态存档</a>
+  </dt>
+
+
+
+</dl>
+
+
+
+
+<h3><a name="implementation">实现</a></h3>
+
+
+<a href="archives.html"><strong>Archive</strong></a> 概念指定了一个类要被用于序列化 
+<a href="serialization.html"><strong>Serializable</strong></a> 类型而必须实现的功能。本库为了适应不同目的，实现了一组存档类型。本节介绍这些存档是如何实现的，以及你如何去实现自己的存档类。我们的讨论主要针对用于导入的存档，对于用于保存数据的存档，情况是类似的。
+<p>我们的存档被归纳为一棵类树，以尽量减少代码的重复。请看所附的 
+<a target="class_diagram" href="class_diagram.html">类图</a>。任何实现以下要求的类都可用作一个输入存档。</p><h4>最低要求</h4><p>存档类派生自以下模板：
+</p>
+
+
+
+<pre><code>
+template&lt;class Archive&gt;
+detail::common_iarchive;
+</code></pre>该模板的实例负责处理与序列化相关的所有 "簿记" 工作。为了能够被使用，<span style="font-weight: bold;">必须</span>另行定义以下函数：
+<dl>
+
+
+
+
+  <dt></dt>
+
+
+
+  
+  
+  
+  <h4><code>void load(T &amp;t);</code></h4>
+
+
+
+
+  <dd>该函数必须为所有基本数据类型实现。可以用一个成员模板来实现，也可以显式地为所有基本类型进行声明。
+  </dd>
+
+
+
+
+
+  <dt></dt>
+
+
+
+  
+  
+  
+  <h4><code>void load_binary(void *address, std::size_t size);</code></h4>
+
+
+
+
+  <dd>该函数从存档中读入 <code style="white-space: normal;">size</code> 个字节，并拷贝到从 <code style="white-space: normal;">address</code> 开始的内存中。
+  </dd>
+
+
+
+
+
+  <dt></dt>
+
+
+
+  
+  
+  
+  <h4><code>friend class boost::archive::load_access;</code></h4>
+
+
+
+
+  <dd>另外，该类还<span style="font-weight: bold;">必须</span>提供以上友元声明，授权序列化库的核心部分可以访问本类的函数。
+  </dd>
+
+
+
+
+
+</dl>
+
+
+因此，一个输入存档的最普通的实现应如下：
+
+<pre><code><br><a href="../../../boost/archive/detail/common_iarchive.hpp" target="common_iarchive_hpp"><br>#include &lt;boost/archive/detail/common_iarchive.hpp&gt;<br></a><br><br>/////////////////////////////////////////////////////////////////////////<br>// 类 trivial_iarchive - 从一个输入文本流读入被序列化的对象<br>class trivial_iarchive : <br>    public boost::archive::detail::common_iarchive&lt;trivial_iarchive&gt;<br>{<br>    // 允许序列化系统的特权访问，以实现内联模板的最大速度<br>    friend class boost::archive::load_access;<br><br>    // 导入基本类型的成员模板。对于需要特殊处理的类型/模板，请覆写<br>    template&lt;class T&gt;<br>    void load(T &amp; t);<br><br>public:<br>    //////////////////////////////////////////////////////////<br>    // </code><code>公有接口，</code><code>用于</code><code>使用序列化库</code><code>的程序<br><br>    // 存档应支持以下函数<br>    void load_binary(void *address, std::size_t count);<br>};<br><br></code></pre>
+
+
+最简单的输出存档类也类似于上例。在后面的讨论中，我们只针对输入存档。输出存档可完全参照输入存档。
+<p>给定了适当的 <code style="white-space: normal;">load</code> 和 <code style="white-space: normal;">load_binary</code> 定义，任何使用标准的C++编译器的序列化程序，都可以正确使用该存档类。
+
+</p>
+
+
+
+<h4>可选的覆写</h4>
+
+
+
+
+
+<code style="white-space: normal;">detail::common_iarchive</code> 类包含了一些函数，它们用于序列化库的不同部分，以特定的形式协助处理存档。
+
+<dl>
+
+
+
+
+
+  <dt></dt>
+
+
+
+  
+  
+  
+  <h4><code>void load_start()</code></h4>
+
+
+
+
+  <dd>
+    <strong>缺省</strong>：空操作。<br>
+
+
+
+
+    <strong>用途：</strong>写入/取出一个对象名到存档。用于 XML 存档，在写入数据之前写入 "&lt;name ".
+  </dd>
+
+
+
+
+  
+  
+  
+
+
+  
+
+
+  
+  
+  
+  <h4><code>void load_end()</code></h4>
+
+
+
+
+  <dd>
+    <strong>缺省：</strong>空操作。<br>
+
+
+
+
+    <strong>用途</strong><strong>：</strong>写入/取出一个对象名到存档。用于 XML 存档，在写入数据之后写入 "&lt;/name&gt;".
+  </dd>
+
+
+
+  
+
+
+
+  
+  
+  
+
+
+  
+
+
+  
+  
+  
+  <h4><code>void end_preamble()</code></h4>
+
+
+
+
+  <dd>
+    <strong>缺省：</strong>空操作。<br>
+
+
+
+
+    <strong>用途</strong><strong>：</strong><span style="font-weight: bold;">每一次</span>保存用户数据时调用该函数。但是在保存存档的簿记数据时不调用它。XML 存档用它来确定何时在 XML 头部结束处写入 "&gt;". XML 输出存档用自己的内部标志来表示正在写出的数据是头部数据。当开始写出对象数据时，就重置该内部标志。当 
+    <code style="white-space: normal;">void end_preamble()</code> 被调用，该内部标志使得一个 "&gt;" 字符被添加到输出中，并且重置该内部标志。<code style="white-space: normal;">void end_preamble()</code> 的缺省实现是空操作，这样对于不使用的存档类也不会有影响。
+  </dd>
+
+
+
+  
+  
+  
+  <h4><code>
+template&lt;class T&gt;
+void load_override(T &amp; t, int);
+  </code></h4>
+
+
+
+
+  <dd>
+    <strong>缺省：</strong>调用 <code style="white-space: normal;">archive::load(Archive &amp; ar, t)</code><code style="white-space: normal;"></code><br>
+
+
+这是进入序列化库的主要入口。<br>
+
+
+
+
+    <strong>用途</strong><strong>：</strong>在需要对写入到存档的数据进行特殊处理时，可以覆写该函数模板。例如，XML 存档通过为名字-值对覆写该函数模板来实现对名字-值对的特殊处理。它取代了缺省的名字-值对处理，即丢掉名字的处理方法，代之以写出一个与对象名相对应的 XML 标志。
+    
+    
+    
+    <p>第二个参数必须是函数签名的一部分，虽然它并不被使用。它的作用是确保代码可以被移植到那些不能正确实现 partial function template ordering 的编译器上。更多的信息请见
+    <a href="implementation.html#functiontemplateordering">这里</a>。
+
+
+    </p>
+
+
+
+  </dd>
+
+
+
+</dl>
+
+
+
+
+
+<h4>序列化库使用的类型</h4>
+
+序列化库将簿记数据写入序列化存档中。这些数据包含了对象id、版本号、类名等等。每个这样的对象都被包在一个包装内，以便存档类可以覆写 <code style="white-space: normal;">void load_override(T &amp; t, int);</code> 的实现。例如，在 XML 存档中，相应的覆写会将 object_id 等于 23 表示为
+"object_id=_23".  下表列出了在 
+<code style="white-space: normal;">boost::archive 名字空间中定义的这些类型，它们只在序列化库内部使用：</code>
+<p>
+</p>
+
+
+
+<table border="1">
+
+
+
+
+  <tbody>
+
+
+
+    <tr>
+
+
+
+      <th align="left">类型</th>
+
+
+
+      <th align="left"><code style="white-space: normal;">缺省被序列化为</code></th>
+
+
+
+
+    </tr>
+
+
+
+    <tr>
+
+
+
+      <td><code style="white-space: normal;">version_type</code></td>
+
+
+
+      <td><code style="white-space: normal;">unsigned int</code></td>
+
+
+
+             
+    </tr>
+
+
+
+    <tr>
+
+
+
+      <td><code style="white-space: normal;">object_id_type</code></td>
+
+
+
+      <td><code style="white-space: normal;">unsigned int</code></td>
+
+
+
+   
+    </tr>
+
+
+
+    <tr>
+
+
+
+      <td><code style="white-space: normal;">object_id_reference_type</code></td>
+
+
+
+      <td><code style="white-space: normal;">unsigned int</code></td>
+
+
+
+   
+    </tr>
+
+
+
+    <tr>
+
+
+
+      <td><code style="white-space: normal;">class_id_type</code></td>
+
+
+
+      <td><code style="white-space: normal;">int</code></td>
+
+
+
+   
+    </tr>
+
+
+
+    <tr>
+
+
+
+      <td><code style="white-space: normal;">class_id_optional_type</code></td>
+
+
+
+      <td><code style="white-space: normal;">nothing</code></td>
+
+
+
+   
+    </tr>
+
+
+
+    <tr>
+
+
+
+      <td><code style="white-space: normal;">class_id_reference_type</code></td>
+
+
+
+      <td><code style="white-space: normal;">int</code></td>
+
+
+
+   
+    </tr>
+
+
+
+    <tr>
+
+
+
+      <td><code style="white-space: normal;">tracking_type</code></td>
+
+
+
+      <td><code style="white-space: normal;">bool</code></td>
+
+
+
+   
+    </tr>
+
+
+
+    <tr>
+
+
+
+      <td><code style="white-space: normal;">classname_type</code></td>
+
+
+
+      <td><code style="white-space: normal;">string</code></td>
+
+
+
+   
+    </tr>
+
+
+
+  
+  
+  
+  </tbody>
+</table>
+
+
+
+
+<p>所有这些类型都被关联到一个缺省的基本类型序列化实现，所以不需要为这些类型定义 <code style="white-space: normal;">load_override</code>.
+</p>
+
+
+
+<p>它们都定义在
+<a href="../../../boost/archive/basic_archive.hpp" target="basic_archive_hpp"><code style="white-space: normal;">basic_archive.hpp</code></a>.
+所有这些类型都被指定了
+<code style="white-space: normal;">primitive</code> 的 
+<a target="detail" href="traits.html#level">实现级别</a><code style="white-space: normal;"></code> 且可以转换为象 int, unsigned int, 等类型，所以它们有缺省的实现。在
+<a href="../../../boost/archive/basic_text_iarchive.hpp" target="basic_text_iarchive_hpp"><code style="white-space: normal;">basic_text_iarchive.hpp</code></a> 示例了缺省的情况。但是，在某些情形下，必须为这些类型提供显式的覆写。有关例子请见
+<a href="../../../boost/archive/basic_xml_iarchive.hpp" target="basic_xml_iarchive_hpp"><code style="white-space: normal;">basic_xml_iarchive.hpp</code></a>.
+</p>
+
+
+
+<p>实际环境中，我们面对的还不止这些。以下的多个问题需要得到解决：
+</p>
+
+
+
+<ul>
+
+
+
+
+    <li>许多编译器不能正确实现函数模板的 partial ordering. 这种情况下本库中的存档会使用参数重载。该技术在
+    <a target="detail" href="implementation.html#functiontemplateordering">
+    本手册的其它章节中</a> 中介绍。<a target="detail" href="implementation.html#functiontemplateordering"></a>
+    </li>
+
+
+
+  <li>即使我们用的是符合标准的编译器，我们也可能想让我们新的存档类可以移植到其它不标准的编译器上。
+    </li>
+
+
+
+  <li>我们的存档格式可能要求插入额外的信息。例如，XML 存档需要在数据对象外面包上 &lt;name ... &gt;...&lt;/name&gt;.
+    </li>
+
+
+
+  <li>解决以上问题可能会带来更多的问题。
+    </li>
+
+
+
+  <li>本库中的存档都是以一个
+    <code style="white-space: normal;">stream</code> 或 <code style="white-space: normal;">streambuf</code> 作为模板参数的类模板，而不是简单的类。这一点再加上上述各点，在非标准编译器上将产生更多的问题。
+  </li>
+
+
+
+</ul>
+
+本文所附的 <a target="class_diagram" href="class_diagram.html">类图</a>
+显示了用于实现序列化库的各个类之间的关系。
+<p>最近对于本库所包含的存档的测试表明，可移植的存档可以覆盖所有数据类型。
+</p>
+
+
+
+<h3><a name="usage">用法</a></h3>
+
+新近创建的存档通常都是以头文件模块的方式提供。你要做的就是包含这个头文件并构造这个新存档的一个实例。除了一种特殊情况：
+<ul>
+
+
+
+
+    <li>通过基类指针对一个派生类实例进行序列化。
+    </li>
+
+
+
+  <li>该实例从未隐式或显式地 "注册"。即使用宏 <code style="white-space: normal;">BOOT_CLASS_EXPORT</code> 来为新的存档实例化序列化代码。
+  </li>
+
+
+
+</ul>为了让这种情况也可以工作，应该在存档类定义后包含以下宏： <pre><code><br>#define BOOST_SERIALIZATION_REGISTER_ARCHIVE(Archive)<br></code></pre>不这样做并不会使程序无法编译、链接和执行 - 除了一种情况。如果通过基类指针序列化一个派生类实例，程序将抛出一个 <a href="exceptions.html#unregistered_class"><code style="white-space: normal;">unregistered_class</code></a> 异常。<h4><a name="testing">测试</a></h4>
+
+
+
+
+<a name="testing">彻底地测试这个库要求对每种存档测试不同种类的对象序列化。对于任意存档，有46种不同的测试可以运行。系统中包含了5个 "标准存档" (其中3个不支持宽字符 i/o)。 
+</a>
+<p>
+<a name="testing">另外，有28种测试不涉及任何特定的存档类。
+</a></p>
+
+
+
+<p>
+<a name="testing">缺省的 <code style="white-space: normal;">bjam</code> 测试安装测运行上述所有测试。这样就有多达 46 个存档测试 * 5 
+个标准存档 + 28 个通用测试 = 258 个测试。注意，本库的完整测试包括 DLL vs 静态库，发布版 vs 调试版，因此真正的总数接近 1032 个测试。
+</a></p>
+
+
+
+<p>
+<a name="testing">对于每个存档，在测试目录下都有一个类似于下面的头文件。通过设置环境变量</a> <code style="white-space: normal;">BOOST_ARCHIVE_TEST</code> 为头文件的名字，将存档的名字传递给测试程序。以下是头文件 
+<code style="white-space: normal;">test_archive.hpp</code> . 其它存档的测试头文件也都类似。
+</p>
+
+
+
+<pre><code>
+<a name="testing">// text_archive 测试头文件<br>// 包含输出存档头文件<br>#include &lt;boost/archive/text_oarchive.hpp&gt;<br>// 设置测试输出存档的名字<br>typedef boost::archive::text_oarchive test_oarchive;<br>// 设置测试输出流的名字<br>typedef std::ofstream test_ostream;<br><br>// 为输入存档重复以上动作<br>#include &lt;boost/archive/text_iarchive.hpp&gt;<br>typedef boost::archive::text_iarchive test_iarchive;<br>typedef std::ifstream test_istream;<br><br>// 定义流的打开模式<br>//   二进制存档应使用 std::ios_base::binary<br>#define TEST_STREAM_FLAGS (std::ios_base::openmode)0<br></a></code></pre>
+
+
+
+
+
+<a name="testing">要用 gcc 编译器测试一个新的存档，如可移植二进制存档，建立一个头文件 <code style="white-space: normal;">portable_binary_archive.hpp</code>
+并执行 <code style="white-space: normal;">bjam</code>，指定
+</a>
+<pre><code><a name="testing"> <br>-sBOOST_ARCHIVE_LIST=portable_binary_archive.hpp<br></a></code></pre>
+
+
+
+
+<a name="testing">整个过程被封装在 shell 脚本或命令脚本&nbsp;<code style="white-space: normal;">library</code><code style="white-space: normal;">_test</code> 中，命令行为
+</a>
+<pre><code><br><a name="testing">library_test </a></code><a>--toolset=gcc -sBOOST_ARCHIVE_LIST=portable_binary_archive.hpp</a><code><br></code></pre>
+
+
+
+
+<h3><a name="polymorphic">多态存档</a></h3>
+
+
+
+
+
+<h4>动机</h4>
+
+到目前为止所介绍的存档都是以模板方式实现的。对于每个存档类和数据类型的组合，都要重新生成保存和导入数据的代码。在这种情况下，一个好的优化编译器可以将内联函数扩展至足够的深度，以生成更快的代码。但是：
+<ul>
+
+
+
+
+  <li>太多内联函数重复。
+  </li>
+
+
+
+  <li>如果有几种存档类，就要为每一种存档类重新生成代码。
+  </li>
+
+
+
+  <li>如果序列化代码是放在一个库中的，则每次创建一个新的存档类时都要重新构建该库。
+  </li>
+
+
+
+  <li>如果序列化代码是放在一个 DLL 中，则
+    
+    <ul>
+
+
+
+
+  <li>DLL 将包含每个存档类型的代码版本。这样会导致在装载DLL时装入了不需要用的代码 - 基本上这是与选择使用DLL的主要动机相违背的。
+  </li>
+
+
+
+      <li>如果创建了一个新的存档且应用已发布，则所有 DLL 都要重新构建，并与使用新存档的应用一起重新发布。这也是与使用DLL的动机相违背的。
+  </li>
+
+
+
+    
+    
+    
+    </ul>
+
+
+
+
+  </li>
+
+
+
+</ul>
+
+
+
+
+
+<h4>实现</h4>
+
+解决的方法是 <code>polymorphic_oarchive</code> 和 <code>polymorphic_iarchive</code>.  它们提供了虚拟函数的公用接口 - 不是模板 - 这与标准的模板版本是等价的。它们显示在所附的 
+<a target="class_diagram" href="class_diagram.html">类图</a> 中。<a target="class_diagram" href="class_diagram.html"></a>
+<p>相关的示例程序在文件
+
+<a target="demo_polymorphic_cp" href="../example/demo_polymorphic.cpp"><code style="white-space: normal;">demo_polymorphic.cpp</code></a>, 
+<a target="demo_polymorphic_A_hpp" href="../example/demo_polymorphic_A.hpp"><code style="white-space: normal;">demo_polymorphic_A.hpp</code></a>, 和 
+<a target="demo_polymorphic_A_cpp" href="../example/demo_polymorphic_A.cpp"><code style="white-space: normal;">demo_polymorphic_A</code></a>
+中，示范了如何使用多态存档。注意以下两点：
+</p>
+
+
+
+<ul>
+
+
+
+
+  <li><a target="demo_polymorphic_A_hpp" href="../example/demo_polymorphic_A.hpp"><code style="white-space: normal;">demo_polymorphic_A.hpp</code></a> 和
+    <a target="demo_polymorphic_A_cpp" href="../example/demo_polymorphic_A.cpp"><code style="white-space: normal;">demo_polymorphic_A.cpp</code></a>
+不包含模板，且不涉及任意特定的存档实现。即，它们对于所有存档实现只需编译一次。即使是用于未来创建的存档类。
+  </li>
+
+
+
+  <li>主程序 <a target="demo_polymorphic_cp" href="../example/demo_polymorphic.cpp"><code style="white-space: normal;">demo_polymorphic.cpp</code></a>
+指定了一个特定的存档实现。  
+  </li>
+
+
+
+</ul>
+
+正如在
+<a target="class_diagram" href="class_diagram.html">类图</a>
+和头文件中看到的那样，该实现只不过是一个多态接口与标准的模板驱动实现的组合。该组合由模板<a href="../../../boost/archive/detail/polymorphic_iarchive_route.hpp" target="polymorphic_iarchive_route_hpp"><code style="white-space: normal;">polymorphic_iarchive_route.hpp</code></a> 和 <a href="../../../boost/archive/detail/polymorphic_oarchive_route.hpp" target="polymorphic_oarchive_route_hpp"><code style="white-space: normal;">polymorphic_oarchive_route.hpp</code></a> 来完成。由于它们都不包含与特定存档实现相关的代码，所以它们可以用于从任意的基于函数模板的存档实现创建一个多态的存档实现。
+<p>为方便使用，在一些小的头文件中包含了对应于相应模板实现的多态实现的 
+<code style="white-space: normal;">typedef</code>.  例如，头文件
+<a target="polymorphic_text_iarchive_hpp" href="../../../boost/archive/polymorphic_text_iarchive.hpp"><code style="white-space: normal;">polymorphic_text_iarchive.hpp</code></a> 和
+<a target="polymorphic_text_oarchive_hpp" href="../../../boost/archive/polymorphic_text_oarchive.hpp"><code style="white-space: normal;">polymorphic_text_oarchive.hpp</code></a> 分别包含了标准的文本存档类  
+<a target="text_iarchive_hpp" href="../../../boost/archive/text_iarchive.hpp"><code style="white-space: normal;">text_iarchive.hpp</code></a> 和
+<a target="text_oarchive_hpp" href="../../../boost/archive/text_oarchive.hpp"><code style="white-space: normal;">text_oarchive.hpp</code></a>
+的多态实现的 <code style="white-space: normal;">typedef</code>. 所有被包含的多态存档都使用相同的命名规则。
+</p>
+
+
+
+<h4>用法</h4>
+
+多态存档解决了由模板实现所引起的上述问题。即，它没有重复的代码，无须为新存档重新编译。它可以为使用一种以上类型存档的程序生成更小的可执行文件，以
+及更小的DLLS. 其代价是，需要通过虚拟函数分派表来调用存档函数，且编译器不可能内联存档函数。这将导致保存和导入存档的性能会有可察觉的降低。
+
+<p>多态存档的主要作用是，可以构建类 DLLs，其中包含所有当前及未来的存档的序列化代码，且没有冗余代码。
+</p>
+
+
+
+<hr>
+<p><i>© Copyright <a href="http://www.rrsd.com">Robert Ramey</a> 2002-2004. 
+Distributed under the Boost Software License, Version 1.0. (See
+accompanying file LICENSE_1_0.txt or copy at http://www.boost.org/LICENSE_1_0.txt)
+</i></p>
+
+
+
+
+</body></html>

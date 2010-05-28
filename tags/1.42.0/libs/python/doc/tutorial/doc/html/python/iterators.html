@@ -1,0 +1,340 @@
+<!DOCTYPE HTML PUBLIC "-//W3C//DTD HTML 4.01 Transitional//EN">
+<html><head>
+<meta http-equiv="Content-Type" content="text/html; charset=UTF-8">
+
+<title>Iterators</title><link rel="stylesheet" href="../../../../../../../doc/html/boostbook.css" type="text/css">
+<meta name="generator" content="DocBook XSL Stylesheets V1.66.1">
+<link rel="start" href="../index.html" title="Chapter 1. python 1.0">
+<link rel="up" href="../index.html" title="Chapter 1. python 1.0">
+<link rel="prev" href="embedding.html" title="Embedding">
+<link rel="next" href="exception.html" title=" Exception Translation"></head>
+<body alink="#0000ff" bgcolor="white" link="#0000ff" text="black" vlink="#840084">
+<table cellpadding="2" width="100%"><tbody><tr>
+<td valign="top"><img alt="Boost C++ Libraries" src="../../../../../../../boost.png" height="86" width="277"></td>
+<td align="center"><a href="../../../../../../../index.html">Home</a></td>
+<td align="center"><a href="../../../../../../../libs/libraries.htm">Libraries</a></td>
+<td align="center"><a href="http://www.boost.org/users/people.html">People</a></td>
+<td align="center"><a href="http://www.boost.org/users/faq.html">FAQ</a></td>
+<td align="center"><a href="../../../../../../../more/index.htm">More</a></td>
+</tr></tbody></table>
+<hr>
+<div class="spirit-nav">
+<a accesskey="p" href="embedding.html"><img src="../../../../../../../doc/html/images/prev.png" alt="Prev"></a><a accesskey="u" href="../index.html"><img src="../../../../../../../doc/html/images/up.png" alt="Up"></a><a accesskey="h" href="../index.html"><img src="../../../../../../../doc/html/images/home.png" alt="Home"></a><a accesskey="n" href="exception.html"><img src="../../../../../../../doc/html/images/next.png" alt="Next"></a>
+</div>
+<div class="section" lang="en">
+<div class="titlepage"><div><div><h2 class="title" style="clear: both;">
+<a name="python.iterators"></a>Iterators</h2>
+<h2 class="title" style="clear: both;">迭代器</h2>
+</div></div></div>
+<p>
+      In C++, and STL in particular, we see iterators everywhere. Python also has
+      iterators, but these are two very different beasts.
+    </p>
+
+<p>
+	在C++，特别是STL中，我们到处看到迭代器。
+	Python也有迭代器，但它们是两个非常不同的野兽。
+    </p>
+
+<p>
+      <span class="bold"><b>C++ iterators:</b></span>
+    </p>
+
+<div class="itemizedlist"><ul type="disc">
+<li>
+        C++ has 5 type categories (random-access, bidirectional, forward, input,
+        output)
+      </li>
+<li>
+        There are 2 Operation categories: reposition, access
+      </li>
+<li>
+        A pair of iterators is needed to represent a (first/last) range.
+      </li>
+</ul></div>
+
+<p>
+      <span class="bold"><b>C++迭代器：</b></span>
+    </p>
+
+<div class="itemizedlist"><ul type="disc">
+<li>
+		在C++中有5个迭代器类别（随机访问、双向、前向、输入、输出）
+      </li>
+<li>
+        有2个操作类别：重定位、访问
+      </li>
+<li>
+        需要一对迭代器表示一个（第一/最后）区间。
+      </li>
+</ul></div>
+
+<p>
+      <span class="bold"><b>Python Iterators:</b></span>
+    </p>
+
+<div class="itemizedlist"><ul type="disc">
+<li>
+        1 category (forward)
+      </li>
+<li>
+        1 operation category (next())
+      </li>
+<li>
+        Raises StopIteration exception at end
+      </li>
+</ul></div>
+
+<p>
+      <span class="bold"><b>Python迭代器：</b></span>
+    </p>
+
+<div class="itemizedlist"><ul type="disc">
+<li>
+        1个类别（前向）
+      </li>
+<li>
+        1个操作类别（next()）
+      </li>
+<li>
+        结束时抛StopIteration异常
+      </li>
+</ul></div>
+
+<p>
+      The typical Python iteration protocol: <tt class="literal"><span class="bold"><b>for y
+      in x...</b></span></tt> is as follows:
+    </p>
+
+<p>
+	典型的Python迭代协议：
+	<tt class="literal"><span class="bold"><b>for y
+      in x...</b></span></tt>
+	如下：
+    </p>
+
+<p>
+    </p>
+<pre class="programlisting"><span class="identifier">iter</span> <span class="special">=</span> <span class="identifier">x</span><span class="special">.</span><span class="identifier">__iter__</span><span class="special">()</span>         <span class="comment"># get iterator<br></span><span class="keyword">try</span><span class="special">:</span>
+    <span class="keyword">while</span> <span class="number">1</span><span class="special">:</span>
+    <span class="identifier">y</span> <span class="special">=</span> <span class="identifier">iter</span><span class="special">.</span><span class="identifier">next</span><span class="special">()</span>         <span class="comment"># get each item<br></span>    <span class="special">...</span>                     <span class="comment"># process y<br></span><span class="keyword">except</span> <span class="identifier">StopIteration</span><span class="special">:</span> <span class="keyword">pass</span>  <span class="comment"># iterator exhausted<br></span></pre>
+<p>
+      Boost.Python provides some mechanisms to make C++ iterators play along nicely
+      as Python iterators. What we need to do is to produce appropriate <tt class="computeroutput"><span class="identifier">__iter__</span></tt> function from C++ iterators that
+      is compatible with the Python iteration protocol. For example:
+    </p>
+
+<p>
+	 Boost.Python提供了一些机制，
+	 使C++迭代器可以作为Python迭代器很好地运行。
+	 我们需要做的就是，要从C++迭代器产生适当的
+	 <tt class="computeroutput"><span class="identifier">__iter__</span></tt>
+	 函数，与Python迭代协议兼容。
+	 例如：
+    </p>
+
+<p>
+    </p>
+<pre class="programlisting"><span class="identifier">object</span> <span class="identifier">get_iterator</span> <span class="special">=</span> <span class="identifier">iterator</span><span class="special">&lt;</span><span class="identifier">vector</span><span class="special">&lt;</span><span class="keyword">int</span><span class="special">&gt;</span> <span class="special">&gt;();</span>
+<span class="identifier">object</span> <span class="identifier">iter</span> <span class="special">=</span> <span class="identifier">get_iterator</span><span class="special">(</span><span class="identifier">v</span><span class="special">);</span>
+<span class="identifier">object</span> <span class="identifier">first</span> <span class="special">=</span> <span class="identifier">iter</span><span class="special">.</span><span class="identifier">next</span><span class="special">();</span>
+</pre>
+<p>
+      Or for use in class_&lt;&gt;:
+    </p>
+
+<p>
+	或用于class_&lt;&gt;：
+    </p>
+
+<pre class="programlisting"><span class="special">.</span><span class="identifier">def</span><span class="special">(</span><span class="string">"__iter__"</span><span class="special">,</span> <span class="identifier">iterator</span><span class="special">&lt;</span><span class="identifier">vector</span><span class="special">&lt;</span><span class="keyword">int</span><span class="special">&gt;</span> <span class="special">&gt;())</span>
+</pre>
+<p>
+      <span class="bold"><b>range</b></span>
+    </p>
+
+<p>
+      <span class="bold"><b>range</b></span>
+    </p>
+
+<p>
+      We can create a Python savvy iterator using the range function:
+    </p>
+
+<p>
+      我们可以用 range 函数创建一个Python的迭代器：
+    </p>
+
+<div class="itemizedlist"><ul type="disc">
+<li>
+        range(start, finish)
+      </li>
+<li>
+        range&lt;Policies,Target&gt;(start, finish)
+      </li>
+</ul></div>
+<p>
+      Here, start/finish may be one of:
+    </p>
+
+<p>
+      其中，start/finish可以是下列任一：
+    </p>
+
+<div class="itemizedlist"><ul type="disc">
+<li>
+        member data pointers
+      </li>
+<li>
+        member function pointers
+      </li>
+<li>
+        adaptable function object (use Target parameter)
+      </li>
+</ul></div>
+
+<div class="itemizedlist"><ul type="disc">
+<li>
+        成员数据指针
+      </li>
+<li>
+        成员函数指针
+      </li>
+<li>
+        可适配函数对旬（使用Target参数）
+      </li>
+</ul></div>
+
+
+<p>
+      <span class="bold"><b>iterator</b></span>
+    </p>
+
+<p>
+      <span class="bold"><b>iterator</b></span>
+    </p>
+
+<div class="itemizedlist"><ul type="disc"><li>
+        iterator&lt;T, Policies&gt;()
+      </li></ul></div>
+<p>
+      Given a container <tt class="literal">T</tt>, iterator is a shortcut that simply
+      calls <tt class="literal">range</tt> with &amp;T::begin, &amp;T::end.
+    </p>
+
+<p>
+      给定容器 <tt class="literal">T</tt>，
+      iterator 是用 &amp;T::begin、&amp;T::end 简单调用
+      <tt class="literal">range</tt> 
+      的快捷方式。
+    </p>
+
+<p>
+      Let's put this into action... Here's an example from some hypothetical bogon
+      Particle accelerator code:
+    </p>
+
+<p>
+      让我们付诸实践……
+      假设有一段粒子加速器的代码如下：
+    </p>
+
+<p>
+    </p>
+<pre class="programlisting"><span class="identifier">f</span> <span class="special">=</span> <span class="identifier">Field</span><span class="special">()</span>
+<span class="keyword">for</span> <span class="identifier">x</span> <span class="keyword">in</span> <span class="identifier">f</span><span class="special">.</span><span class="identifier">pions</span><span class="special">:</span>
+    <span class="identifier">smash</span><span class="special">(</span><span class="identifier">x</span><span class="special">)</span>
+<span class="keyword">for</span> <span class="identifier">y</span> <span class="keyword">in</span> <span class="identifier">f</span><span class="special">.</span><span class="identifier">bogons</span><span class="special">:</span>
+    <span class="identifier">count</span><span class="special">(</span><span class="identifier">y</span><span class="special">)</span>
+</pre>
+<p>
+      Now, our C++ Wrapper:
+    </p>
+
+<p>
+      现在，我们的C++封装：
+    </p>
+
+<p>
+    </p>
+<pre class="programlisting"><span class="identifier">class_</span><span class="special">&lt;</span><span class="identifier">F</span><span class="special">&gt;(</span><span class="string">"Field"</span><span class="special">)</span>
+    <span class="special">.</span><span class="identifier">property</span><span class="special">(</span><span class="string">"pions"</span><span class="special">,</span> <span class="identifier">range</span><span class="special">(&amp;</span><span class="identifier">F</span><span class="special">::</span><span class="identifier">p_begin</span><span class="special">,</span> <span class="special">&amp;</span><span class="identifier">F</span><span class="special">::</span><span class="identifier">p_end</span><span class="special">))</span>
+    <span class="special">.</span><span class="identifier">property</span><span class="special">(</span><span class="string">"bogons"</span><span class="special">,</span> <span class="identifier">range</span><span class="special">(&amp;</span><span class="identifier">F</span><span class="special">::</span><span class="identifier">b_begin</span><span class="special">,</span> <span class="special">&amp;</span><span class="identifier">F</span><span class="special">::</span><span class="identifier">b_end</span><span class="special">));</span>
+</pre>
+<p>
+      <span class="bold"><b>stl_input_iterator</b></span>
+    </p>
+
+<p>
+      <span class="bold"><b>stl_input_iterator</b></span>
+    </p>
+
+<p>
+      So far, we have seen how to expose C++ iterators and ranges to Python. Sometimes
+      we wish to go the other way, though: we'd like to pass a Python sequence to
+      an STL algorithm or use it to initialize an STL container. We need to make
+      a Python iterator look like an STL iterator. For that, we use <tt class="computeroutput"><span class="identifier">stl_input_iterator</span><span class="special">&lt;&gt;</span></tt>.
+      Consider how we might implement a function that exposes <tt class="computeroutput"><span class="identifier">std</span><span class="special">::</span><span class="identifier">list</span><span class="special">&lt;</span><span class="keyword">int</span><span class="special">&gt;::</span><span class="identifier">assign</span><span class="special">()</span></tt> to Python:
+    </p>
+
+<p>
+      到目前为止，我们已经看到如何导出C++的迭代器和区间到Python。
+      然而有时候，我们希望能走另一条路：
+      我们想传入一个Python序列，到STL算法，
+      或用它来初始化STL容器。
+      我们需要让Python迭代器看起来像一个STL迭代器。
+      为此，我们使用
+      <tt class="computeroutput"><span class="identifier">stl_input_iterator</span><span class="special">&lt;&gt;</span></tt>。
+      考虑我们如何实现一个函数，导出
+      <tt class="computeroutput"><span class="identifier">std</span><span class="special">::</span><span class="identifier">list</span><span class="special">&lt;</span><span class="keyword">int</span><span class="special">&gt;::</span><span class="identifier">assign</span><span class="special">()</span></tt> 
+      到Python。
+    </p>
+
+<p>
+    </p>
+<pre class="programlisting"><span class="keyword">template</span><span class="special">&lt;</span><span class="keyword">typename</span> <span class="identifier">T</span><span class="special">&gt;</span>
+<span class="keyword">void</span> <span class="identifier">list_assign</span><span class="special">(</span><span class="identifier">std</span><span class="special">::</span><span class="identifier">list</span><span class="special">&lt;</span><span class="identifier">T</span><span class="special">&gt;&amp;</span> <span class="identifier">l</span><span class="special">,</span> <span class="identifier">object</span> <span class="identifier">o</span><span class="special">)</span> <span class="special">{</span>
+    <span class="comment">// Turn a Python sequence into an STL input range<br></span>    <span class="identifier">stl_input_iterator</span><span class="special">&lt;</span><span class="identifier">T</span><span class="special">&gt;</span> <span class="identifier">begin</span><span class="special">(</span><span class="identifier">o</span><span class="special">),</span> <span class="identifier">end</span><span class="special">;</span>
+    <span class="identifier">l</span><span class="special">.</span><span class="identifier">assign</span><span class="special">(</span><span class="identifier">begin</span><span class="special">,</span> <span class="identifier">end</span><span class="special">);</span>
+<span class="special">}</span>
+
+<span class="comment">// Part of the wrapper for list&lt;int&gt;<br></span><span class="identifier">class_</span><span class="special">&lt;</span><span class="identifier">std</span><span class="special">::</span><span class="identifier">list</span><span class="special">&lt;</span><span class="keyword">int</span><span class="special">&gt;</span> <span class="special">&gt;(</span><span class="string">"list_int"</span><span class="special">)</span>
+    <span class="special">.</span><span class="identifier">def</span><span class="special">(</span><span class="string">"assign"</span><span class="special">,</span> <span class="special">&amp;</span><span class="identifier">list_assign</span><span class="special">&lt;</span><span class="keyword">int</span><span class="special">&gt;)</span>
+    <span class="comment">// ...<br></span>    <span class="special">;</span>
+</pre>
+<p>
+      Now in Python, we can assign any integer sequence to <tt class="computeroutput"><span class="identifier">list_int</span></tt>
+      objects:
+    </p>
+
+<p>
+      现在，在Python中，我们就可以将任何整数序列赋值到
+      <tt class="computeroutput"><span class="identifier">list_int</span></tt>
+      对象：
+    </p>
+
+<p>
+    </p>
+<pre class="programlisting"><span class="identifier">x</span> <span class="special">=</span> <span class="identifier">list_int</span><span class="special">();</span>
+<span class="identifier">x</span><span class="special">.</span><span class="identifier">assign</span><span class="special">([</span><span class="number">1</span><span class="special">,</span><span class="number">2</span><span class="special">,</span><span class="number">3</span><span class="special">,</span><span class="number">4</span><span class="special">,</span><span class="number">5</span><span class="special">])</span>
+</pre>
+</div>
+<table xmlns:rev="http://www.cs.rpi.edu/~gregod/boost/tools/doc/revision" width="100%"><tbody><tr>
+<td align="left"></td>
+<td align="right"><div class="copyright-footer">Copyright © 2002-2005 Joel
+      de Guzman, David Abrahams<p>
+        Distributed under the Boost Software License, Version 1.0. (See accompanying
+        file LICENSE_1_0.txt or copy at <a href="http://www.boost.org/LICENSE_1_0.txt" target="_top">
+        http://www.boost.org/LICENSE_1_0.txt </a>)
+      </p>
+      
+      <p>翻译：<a href="http://blog.csdn.net/jq0123">金庆</a></p>
+      <p>译文更新：2008.5.29</p>
+      
+</div></td>
+</tr></tbody></table>
+<hr>
+<div class="spirit-nav">
+<a accesskey="p" href="embedding.html"><img src="../../../../../../../doc/html/images/prev.png" alt="Prev"></a><a accesskey="u" href="../index.html"><img src="../../../../../../../doc/html/images/up.png" alt="Up"></a><a accesskey="h" href="../index.html"><img src="../../../../../../../doc/html/images/home.png" alt="Home"></a><a accesskey="n" href="exception.html"><img src="../../../../../../../doc/html/images/next.png" alt="Next"></a>
+</div>
+</body></html>

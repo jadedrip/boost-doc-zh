@@ -1,0 +1,102 @@
+<!DOCTYPE HTML PUBLIC "-//W3C//DTD HTML 4.01 Transitional//EN">
+<html><head>
+
+<title>Dynamic Parsers</title><meta http-equiv="Content-Type" content="text/html; charset=UTF-8">
+<link rel="stylesheet" href="theme/style.css" type="text/css"></head>
+<body>
+<table background="theme/bkd2.gif" border="0" cellspacing="2" width="100%">
+  <tbody><tr> 
+    <td width="10"> 
+    </td>
+    <td width="85%"> <font face="Verdana, Arial, Helvetica, sans-serif" size="6"><b>Dynamic 
+      Parsers 动态分析器 </b></font></td>
+    <td width="112"><a href="http://spirit.sf.net"><img src="theme/spirit.gif" align="right" border="0" height="48" width="112"></a></td>
+  </tr>
+</tbody></table>
+<br>
+<table border="0">
+  <tbody><tr>
+    <td width="10"></td>
+    <td width="30"><a href="../index.html"><img src="theme/u_arr.gif" border="0"></a></td>
+    <td width="30"><a href="closures.html"><img src="theme/l_arr.gif" border="0"></a></td>
+    <td width="30"><a href="stored_rule.html"><img src="theme/r_arr.gif" border="0"></a></td>
+  </tr>
+</tbody></table>
+<p>We see dynamic parsing everywhere in Spirit. A special group of
+parsers, aptly named dynamic parsers, form the most basic building
+blocks to dynamic parsing. This chapter focuses on these critters.
+You'll notice the similarity of these parsers with C++'s control
+structures. The similarity is not a coincidence. These parsers give an
+imperative flavor to parsing, and, since imperative constructs are not
+native to declarative EBNF, mimicking the host language, C++, should
+make their use immediately familiar.<br>在Spirit中动态分析随处可见。有一组特别的分析器，被恰当地命名为动态分析器，组成了动态分析中最基本的成分。这章的焦点集中于这些关键要素
+上。你将看到这些分析器和C++控制结构的相似性。但相似性并非一致性。这些分析器带来了指令式分析，并且，由于指令式结构并非声明式的EBNF的特征，而是
+模仿宿主语言C++，将使这些分析器的使用方法能够被迅速熟悉。</p>
+<p>Dynamic parsers modify the parsing behavior according to conditions. Constructing 
+    dynamic parsers requires a condition argument and a body parser argument. Additional 
+    arguments are required by some parsers.<br>动态分析器通过条件改变分析行为。构造动态分析器需要一个条件参数和一个分析器体参数。某些分析器需要更多的参数。</p>
+<h2>Conditions 条件</h2>
+<p>Functions or functors returning values convertable to bool can be used as conditions. 
+  When the evaluation of the function/functor yields true it will be considered 
+  as meeting the condition.<br>其返回值可以转换为bool型的函数或仿函数可以被用作条件。当函数/仿函数的演算值为真时，则认为条件被符合。
+</p>
+<p>Parsers can be used as conditions, as well. When the parser matches the condition 
+  is met. Parsers used as conditions work in an all-or-nothing manner: the scanner 
+  will not be advanced when they don't match.&nbsp;<br>分析器也可以作为条件使用。当分析器匹配时，认为条件被符合。被当成条件使用的分析器以一种"零或全部"的行为工作：当不匹配时，扫描器不会前进。</p>
+<p>A failure to meet the condition will not result in a parse error.<br>失败的条件匹配不会引起分析错误。</p>
+<h2>if_p</h2>
+<p><tt>if_p</tt> can be used with or without an else-part. The syntax is:<br><tt>if_p</tt>&nbsp;<span style="font-family: Courier New;">的 else 部分可有可无。它的语法为：</span></p>
+<pre>    <span class="identifier">if_p</span><span class="special">(</span><span class="identifier">condition</span><span class="special">)[</span><span class="identifier">then</span><span class="special">-</span><span class="identifier">parser</span><span class="special">]</span></pre>
+<p><span class="special"></span>or<br>或</p>
+<pre><span class="identifier">    if_p</span><span class="special">(</span><span class="identifier">condition</span><span class="special">)[</span><span class="identifier">then</span><span class="special">-</span><span class="identifier">parser</span><span class="special">].</span><span class="identifier">else_p</span><span class="special">[</span><span class="identifier">else</span><span class="special">-</span><span class="identifier">parser</span><span class="special">]</span></pre>
+<p>When the condition is met the then-parser is used next in the parsing process. 
+  When the condition is not met and an else-parser is available the else-parser 
+  is used next. When the condition isn't met and no else-parser is available then 
+  the whole parser matches the empty sequence. (<img src="theme/alert.gif" height="16" width="16"> 
+  Note: older versions of <tt>if_p</tt> report a failure when the condition isn't 
+  met and no else-parser is available.)<br>当条件匹配时，then-分析器将被用于下一步的分析过程。当条件不匹配且else-分析器存在时，else-分析器被接着调用。当条件不匹配而else-分析器也不存在时，那么整个分析器将匹配空序列（<img src="theme/alert.gif" height="16" width="16">注意：老版本的 <tt>if_p</tt>&nbsp;在条件不匹配且没有else-分析器时会报告一个失败）。</p>
+<p>Example:<br>例如：</p>
+<pre>    <span class="special"></span><span class="identifier">if_p</span><span class="special">(</span><span class="string">"0x"</span><span class="special">)[</span><span class="identifier">hex_p</span><span class="special">].</span><span class="identifier">else_p</span><span class="special">[</span><span class="identifier">uint_p</span><span class="special">]</span></pre>
+<h2>while_p, do_p</h2>
+<p><tt>while_p</tt>/<tt>do_p</tt> syntax is:<br><tt>while_p</tt>/<tt>do_p</tt> 的语法为：</p>
+<pre>    <span class="identifier">while_p</span><span class="special">(</span><span class="identifier">condition</span><span class="special">)[</span><span class="identifier">body</span><span class="special">-</span><span class="identifier">parser</span><span class="special">]<br>    </span><span class="identifier">do_p</span><span class="special">[</span><span class="identifier">body</span><span class="special">-</span><span class="identifier">parser</span><span class="special">].</span><span class="identifier">while_p</span><span class="special">(</span><span class="identifier">condition</span><span class="special">)</span></pre>
+<p>As long as the condition is met the dynamic parser constructed by <tt>while_p</tt> 
+  will try to match the body-parser. <tt>do_p</tt> returns a parser that tries 
+  to match the body-parser and then behaves just like the parser returned by <tt>while_p</tt>. 
+  A failure to match the body-parser will cause a failure to be reported by the 
+  while/do-parser.<br>只要条件匹配，由 <tt>while_p</tt>&nbsp;构造的动态分析器将一直尝试匹配body-分析器。<tt>do_p</tt>&nbsp;<span style="font-family: Courier New;">则返回一个首先尝试匹配body-分析器，接着就干和<span style="font-family: Courier New;"></span></span> <tt>while_p</tt>&nbsp;<span style="font-family: Courier New;"><span style="font-family: Courier New;">一样的事情的分析器。body-分析器的匹配失败将导致while/do-分析器报告一个失败。</span></span></p>
+<p>Example:<br>例如：</p>
+<pre><span class="special">    </span><span class="identifier">uint_p</span><span class="special">[</span><span class="identifier">assign_a</span><span class="special">(</span><span class="identifier">sum</span><span class="special">)] &gt;&gt; </span><span class="identifier">while_p</span><span class="special">(</span><span class="literal">'+'</span><span class="special">)[</span><span class="identifier">uint_p</span><span class="special">(</span><span class="identifier">add</span><span class="special">(</span><span class="identifier">sum</span><span class="special">)]<br>    </span><span class="literal">'"' </span><span class="special">&gt;&gt; </span><span class="identifier">while_p</span><span class="special">(~</span><span class="identifier">eps_p</span><span class="special">(</span><span class="literal">'"'</span><span class="special">))[</span><span class="identifier">c_escape_ch_p</span><span class="special">[</span><span class="identifier">push_back_a</span><span class="special">(</span><span class="identifier">result</span><span class="special">)]] &gt;&gt; </span><span class="literal">'"'</span>
+</pre>
+<h2>for_p</h2>
+<p><tt>for_p</tt> requires four arguments. The syntax is:<br><tt>for_p</tt> 需要四个参数。其语法为：</p>
+<pre>    <span class="literal"></span><span class="identifier">for_p</span><span class="special">(</span><span class="identifier">init</span><span class="special">, </span><span class="identifier">condition</span><span class="special">, </span><span class="identifier">step</span><span class="special">)[</span><span class="identifier">body</span><span class="special">-</span><span class="identifier">parser</span><span class="special">]</span></pre>
+<p>init and step have to be 0-ary functions/functors. for_p returns a parser that 
+  will:<br>init 和 step 必须是无参数函数/仿函数。for_p 返回的分析器将：</p>
+<ol>
+  <li> call init<br>调用 init</li>
+  <li>check the condition, if the
+condition isn't met then a match is returned. The match will cover
+everything that has been matched successfully up to this point.<br>检查条件，如果条件不符合则返回一个匹配，这个匹配覆盖着到目前为止所匹配的所有东西。 </li>
+  <li> tries to match the body-parser. A failure to match the body-parser will cause a failure to be reported by the for-parser<br>尝试匹配body-分析器，body-分析器匹配失败会使for-分析器报告失败。</li>
+  <li> calls step<br>调用 step</li>
+  <li> goes to 2.<br>转至步骤2。</li>
+</ol>
+<table border="0">
+  <tbody><tr> 
+    <td width="10"></td>
+    <td width="30"><a href="../index.html"><img src="theme/u_arr.gif" border="0"></a></td>
+    <td width="30"><a href="closures.html"><img src="theme/l_arr.gif" border="0"></a></td>
+    <td width="30"><a href="stored_rule.html"><img src="theme/r_arr.gif" border="0"></a></td>
+  </tr>
+</tbody></table>
+<br>
+<hr size="1">
+<p class="copyright">Copyright © 2002-2003 Joel de Guzman<br>
+  Copyright © 2002-2003 Martin Wille<br>
+  <br>
+<font size="2">Use, modification and distribution is subject to the Boost Software
+    License, Version 1.0. (See accompanying file LICENSE_1_0.txt or copy at
+    http://www.boost.org/LICENSE_1_0.txt)</font></p>
+<p class="copyright">&nbsp;</p>
+</body></html>
