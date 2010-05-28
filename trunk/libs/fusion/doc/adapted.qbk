@@ -1,5 +1,6 @@
 [/==============================================================================
     Copyright (C) 2001-2007 Joel de Guzman, Dan Marsden, Tobias Schwinger
+    Copyright (C) 2010 Christopher Schmidt
 
     Use, modification and distribution is subject to the Boost Software
     License, Version 1.0. (See accompanying file LICENSE_1_0.txt or copy at
@@ -7,7 +8,7 @@
 ===============================================================================/]
 [section Adapted]
 
-Fusion provides a couple of adapters for other sequences such as
+Fusion provides a couple of adapters for other sequences such as arrays,
 `std::pair`, __mpl__ sequences, and `boost::array`. These adapters are
 written using Fusion's non-intrusive __extension__ mechanism. If you wish
 to use these sequences with fusion, simply include the necessary files and
@@ -33,6 +34,32 @@ include:
     #include <boost/fusion/include/mpl.hpp>
 
 The header includes all the necessary headers.
+
+[section:array Array]
+
+This module provides adapters for arrays. Including the module
+header makes any array a fully conforming __random_access_sequence__.
+
+[heading Header]
+
+    #include <boost/fusion/adapted/array.hpp>
+    #include <boost/fusion/include/array.hpp>
+
+[heading Model of]
+
+* __random_access_sequence__
+
+[heading Example]
+
+    int arr[3] = {1,2,3};
+
+    std::cout << *__begin__(arr) << std::endl;
+    std::cout << *__next__(__begin__(arr)) << std::endl;
+    std::cout << *__advance_c__<2>(__begin__(arr)) << std::endl;
+    std::cout << *__prior__(__end__(arr)) << std::endl;
+    std::cout << __at_c__<2>(arr) << std::endl;
+
+[endsect]
 
 [section std::pair]
 
@@ -101,8 +128,8 @@ header makes `boost::array` a fully conforming __random_access_sequence__.
 
 [heading Header]
 
-    #include <boost/fusion/adapted/array.hpp>
-    #include <boost/fusion/include/array.hpp>
+    #include <boost/fusion/adapted/boost_array.hpp>
+    #include <boost/fusion/include/boost_array.hpp>
 
 [heading Model of]
 
@@ -153,7 +180,8 @@ __boost_tuple_library__
 
 [heading Description]
 BOOST_FUSION_ADAPT_STRUCT is a macro that can be used to generate all the
-necessary boilerplate to make an arbitrary struct into a __random_access_sequence__.
+necessary boilerplate to make an arbitrary struct a model of
+__random_access_sequence__.
 
 [heading Synopsis]
     BOOST_FUSION_ADAPT_STRUCT(
@@ -166,12 +194,13 @@ necessary boilerplate to make an arbitrary struct into a __random_access_sequenc
 [heading Semantics]
 
 The above macro generates the necessary code to adapt `struct_name`
-as a model of __random_access_sequence__. The sequence of `(member_typeN, member_nameN)`
-pairs declare the type and names of each of the struct members that will be
+as a model of __random_access_sequence__.
+The sequence of `(member_typeN, member_nameN)`
+pairs declares the type and names of each of the struct members that are
 part of the sequence.
 
 The macro should be used at global scope, and `struct_name` should be the fully
-namespace qualified name of the struct to be converted.
+namespace qualified name of the struct to be adapted.
 
 [heading Header]
 
@@ -196,12 +225,138 @@ namespace qualified name of the struct to be converted.
 
 [endsect]
 
+[section:adapt_tpl_struct BOOST_FUSION_ADAPT_TPL_STRUCT]
+
+[heading Description]
+BOOST_FUSION_ADAPT_TPL_STRUCT is a macro that can be used to generate all the
+necessary boilerplate to make an arbitrary template struct a model of
+__random_access_sequence__.
+
+[heading Synopsis]
+    BOOST_FUSION_ADAPT_TPL_STRUCT(
+        (template_param0)(template_param1)...,
+        (struct_name) (specialization_param0)(specialization_param1)...,
+        (member_type0, member_name0)
+        (member_type1, member_name1)
+        ...
+        )
+
+[heading Semantics]
+
+The above macro generates the necessary code to adapt `struct_name` or an 
+arbitrary specialization of `struct_name` as a model of
+__random_access_sequence__.
+The sequence `(template_param0)(template_param1)...` declares the names of
+the template type parameters used.
+The sequence `(specialization_param0)(specialization_param1)...`
+declares the template parameters of the actual specialization of `struct_name`
+that is adapted as a fusion sequence.
+The sequence of `(member_typeN, member_nameN)`
+pairs declares the type and names of each of the struct members that are
+part of the sequence.
+
+The macro should be used at global scope, and `struct_name` should be the fully
+namespace qualified name of the struct to be adapted.
+
+[heading Header]
+
+    #include <boost/fusion/adapted/struct/adapt_struct.hpp>
+    #include <boost/fusion/include/adapt_struct.hpp>
+
+[heading Example]
+    namespace demo
+    {
+        template<typename Name, typename Age>
+        struct employee
+        {
+            Name name;
+            Age age;
+        };
+    }
+
+    // Any instantiated demo::employee is now a Fusion sequence
+    BOOST_FUSION_ADAPT_TPL_STRUCT(
+        (Name)(Age),
+        (demo::employee) (Name)(Age),
+        (Name, name)
+        (Age, age))
+
+[endsect]
+
+[section:adapt_struct_named BOOST_FUSION_ADAPT_STRUCT_NAMED]
+
+[heading Description]
+BOOST_FUSION_ADAPT_STRUCT_NAMED and BOOST_FUSION_ADAPT_STRUCT_NAMED_NS are 
+macros that can be used to generate all the necessary boilerplate to make an 
+arbitrary struct a model of __random_access_sequence__. The given struct is 
+adapted using the given name.
+
+[heading Synopsis]
+    BOOST_FUSION_ADAPT_STRUCT_NAMED(
+        struct_name, adapted_name,
+        (member_type0, member_name0)
+        (member_type1, member_name1)
+        ...
+        )
+
+    BOOST_FUSION_ADAPT_STRUCT_NAMED_NS(
+        struct_name,
+        (namespace0)(namespace1)...,
+        adapted_name,
+        (member_type0, member_name0)
+        (member_type1, member_name1)
+        ...
+        )
+
+[heading Semantics]
+
+The above macros generate the necessary code to adapt `struct_name`
+as a model of __random_access_sequence__ while using `adapted_name` as the 
+name of the adapted struct.
+The sequence `(namespace0)(namespace1)...` declares the namespace
+for `adapted_name`. It yields to a fully qualified name for `adapted_name` of
+`namespace0::namespace1::... adapted_name`.
+If an empty namespace sequence is given, the adapted view is placed in the
+global namespace.
+If no namespace sequence is given (i.e. `BOOST_FUSION_ADAPT_STRUCT_NAMED`), the
+adapted view is placed in the namespace `boost::fusion::adapted`.
+The sequence of `(member_typeN, member_nameN)`
+pairs declares the type and names of each of the struct members that are
+part of the sequence.
+
+The macros should be used at global scope, and `struct_name` should be the fully
+namespace qualified name of the struct to be converted.
+
+[heading Header]
+
+    #include <boost/fusion/adapted/struct/adapt_struct_named.hpp>
+    #include <boost/fusion/include/adapt_struct_named.hpp>
+
+[heading Example]
+    namespace demo
+    {
+        struct employee
+        {
+            std::string name;
+            int age;
+        };
+    }
+
+    // boost::fusion::adapted::adapted_employee is now a Fusion sequence
+    // referring to demo::employee
+    BOOST_FUSION_ADAPT_STRUCT_NAMED(
+        demo::employee, adapted_employee,
+        (std::string, name)
+        (int, age))
+
+[endsect]
+
 [section:adapt_assoc BOOST_FUSION_ADAPT_ASSOC_STRUCT]
 
 [heading Description]
 BOOST_FUSION_ADAPT_ASSOC_STRUCT is a macro that can be used to generate all the
-necessary boilerplate to make an arbitrary struct into a model of  __random_access_sequence__
-and __associative_sequence__.
+necessary boilerplate to make an arbitrary struct a model of
+__random_access_sequence__ and __associative_sequence__.
 
 [heading Synopsis]
     BOOST_FUSION_ADAPT_ASSOC_STRUCT(
@@ -216,11 +371,11 @@ and __associative_sequence__.
 The above macro generates the necessary code to adapt `struct_name`
 as a model of __random_access_sequence__ and __associative_sequence__.
 The sequence of `(member_typeN, member_nameN, key_typeN)`
-triples declare the type, name and key type of each of the struct members
-that will be part of the sequence.
+triples declares the type, name and key type of each of the struct members
+that are part of the sequence.
 
 The macro should be used at global scope, and `struct_name` should be the fully
-namespace qualified name of the struct to be converted.
+namespace qualified name of the struct to be adapted.
 
 [heading Header]
 
@@ -243,7 +398,7 @@ namespace qualified name of the struct to be converted.
         struct age;
     }
 
-    // demo::employee is now a Fusion sequence
+    // demo::employee is now a Fusion sequence.
     // It is also an associative sequence with
     // keys keys::name and keys::age present.
     BOOST_FUSION_ADAPT_ASSOC_STRUCT(
@@ -251,6 +406,426 @@ namespace qualified name of the struct to be converted.
         (std::string, name, keys::name)
         (int, age, keys::age))
 
+[endsect]
+
+[section:adapt_assoc_tpl_struct BOOST_FUSION_ADAPT_ASSOC_TPL_STRUCT]
+
+[heading Description]
+BOOST_FUSION_ADAPT_ASSOC_TPL_STRUCT is a macro that can be used to generate all the
+necessary boilerplate to make an arbitrary template struct a model of
+__random_access_sequence__ and __associative_sequence__.
+
+[heading Synopsis]
+    BOOST_FUSION_ADAPT_ASSOC_TPL_STRUCT(
+        (template_param0)(template_param1)...,
+        (struct_name) (specialization_param0)(specialization_param1)...,
+        (member_type0, member_name0, key_type0)
+        (member_type1, member_name1, key_type1)
+        ...
+        )
+
+[heading Semantics]
+
+The above macro generates the necessary code to adapt `struct_name` or an 
+arbitrary specialization of `struct_name` as a model of
+__random_access_sequence__ and __associative_sequence__.
+The sequence `(template_param0)(template_param1)...` declares the names of
+the template type parameters used.
+The sequence `(specialization_param0)(specialization_param1)...`
+declares the template parameters of the actual specialization of `struct_name`
+that is adapted as a fusion sequence.
+The sequence of `(member_typeN, member_nameN, key_typeN)`
+triples declares the type, name and key type of each of the struct members
+that are part of the sequence.
+
+The macro should be used at global scope, and `struct_name` should be the fully
+namespace qualified name of the struct to be adapted.
+
+[heading Header]
+
+    #include <boost/fusion/adapted/struct/adapt_assoc_struct.hpp>
+    #include <boost/fusion/include/adapt_assoc_struct.hpp>
+
+[heading Example]
+    namespace demo
+    {
+        template<typename Name, typename Age>
+        struct employee
+        {
+            Name name;
+            Age age;
+        };
+    }
+
+    namespace keys
+    {
+        struct name;
+        struct age;
+    }
+    
+    // Any instantiated demo::employee is now a Fusion sequence.
+    // It is also an associative sequence with
+    // keys keys::name and keys::age present.
+    BOOST_FUSION_ADAPT_ASSOC_TPL_STRUCT(
+        (Name)(Age),
+        (demo::employee) (Name)(Age),
+        (Name, name, keys::name)
+        (Age, age, keys::age))
+
+[endsect]
+
+[section:adapt_assoc_struct_named BOOST_FUSION_ADAPT_ASSOC_STRUCT_NAMED]
+
+[heading Description]
+BOOST_FUSION_ADAPT_ASSOC_STRUCT_NAMED and BOOST_FUSION_ADAPT_ASSOC_STRUCT_NAMED_NS are 
+macros that can be used to generate all the necessary boilerplate to make an 
+arbitrary struct a model of __random_access_sequence__ and
+__associative_sequence__. The given struct is adapted using the given name.
+
+[heading Synopsis]
+    BOOST_FUSION_ADAPT_ASSOC_STRUCT_NAMED(
+        struct_name, adapted_name,
+        (member_type0, member_name0, key_type0)
+        (member_type1, member_name1, key_type1)
+        ...
+        )
+
+    BOOST_FUSION_ADAPT_ASSOC_STRUCT_NAMED_NS(
+        struct_name,
+        (namespace0)(namespace1)...,
+        adapted_name,
+        (member_type0, member_name0, key_type0)
+        (member_type1, member_name1, key_type1)
+        ...
+        )
+
+[heading Semantics]
+
+The above macros generate the necessary code to adapt `struct_name`
+as a model of __random_access_sequence__ and __associative_sequence__ while
+using `adapted_name` as the name of the adapted struct.
+The sequence `(namespace0)(namespace1)...` declares the namespace
+for `adapted_name`. It yields to a fully qualified name for `adapted_name` of
+`namespace0::namespace1::... adapted_name`.
+If an empty namespace sequence is given, the adapted view is placed in the
+global namespace.
+If no namespace sequence is given (i.e. `BOOST_FUSION_ADAPT_STRUCT_ASSOC_NAMED`), the
+adapted view is placed in the namespace `boost::fusion::adapted`.
+The sequence of `(member_typeN, member_nameN, key_typeN)`
+triples declares the type, name and key type of each of the struct members
+that are part of the sequence.
+
+The macros should be used at global scope, and `struct_name` should be the fully
+namespace qualified name of the struct to be converted.
+
+[heading Header]
+
+    #include <boost/fusion/adapted/struct/adapt_assoc_struct_named.hpp>
+    #include <boost/fusion/include/adapt_assoc_struct_named.hpp>
+
+[heading Example]
+    namespace demo
+    {
+        struct employee
+        {
+            std::string name;
+            int age;
+        };
+    }
+
+    namespace keys
+    {
+        struct name;
+        struct age;
+    }
+    
+    // boost::fusion::adapted::adapted_employee is now a Fusion sequence
+    // referring to demo::employee
+    BOOST_FUSION_ADAPT_ASSOC_STRUCT_NAMED(
+        demo::employee, adapted_employee,
+        (std::string, name, keys::name)
+        (int, age, keys::age))
+
+[endsect]
+
+[section:define_struct BOOST_FUSION_DEFINE_STRUCT]
+
+[heading Description]
+
+BOOST_FUSION_DEFINE_STRUCT is a macro that can be used to generate all the
+necessary boilerplate to define and adapt an arbitrary struct as a model of
+__random_access_sequence__.
+
+[heading Synopsis]
+
+    BOOST_FUSION_DEFINE_STRUCT(
+        (namespace0)(namespace1)...,
+        struct_name,
+        (member_type0, member_name0)
+        (member_type1, member_name1)
+        ...
+        )
+
+[variablelist Notation
+    [[`str`]            [An instance of `struct_name`]]
+    [[`e0`...`en`]      [Heterogeneous values]]
+    [[`fs`]             [A __forward_sequence__]]
+]
+
+[heading Expression Semantics]
+
+The above macro generates the necessary code that defines and adapts `struct_name`
+as a model of __random_access_sequence__.
+The sequence `(namespace0)(namespace1)...` declares the namespace
+for `struct_name`. It yields to a fully qualified name for `struct_name` of
+`namespace0::namespace1::... struct_name`.
+If an empty namespace sequence is given, the struct is placed in the
+global namespace.
+The sequence of `(member_typeN, member_nameN)`
+pairs declares the type and names of each of the struct members that are
+part of the sequence.
+
+The macro should be used at global scope.
+Semantics of an expression is defined only where it differs from, or is not
+defined in __random_access_sequence__.
+
+[table
+    [[Expression]                     [Semantics]]
+    [[`struct_name()`]                [Creates an instance of `struct_name` with default constructed elements.]]
+    [[`struct_name(e0, e1,... en)`]   [Creates an instance of `struct_name` with elements `e0`...`en`.]]
+    [[`struct_name(fs)`]              [Copy constructs an instance of `struct_name` from a __forward_sequence__ `fs`.]]
+    [[`str = fs`]                     [Assigns from a __forward_sequence__ `fs`.]]
+    [[`str.member_nameN`]             [Access of struct member `member_nameN`]] 
+]
+
+[heading Header]
+
+    #include <boost/fusion/adapted/struct/define_struct.hpp>
+    #include <boost/fusion/include/define_struct.hpp>
+    
+[heading Example]
+
+    // demo::employee is a Fusion sequence
+    BOOST_FUSION_DEFINE_STRUCT(
+        (demo), employee,
+        (std::string, name)
+        (int, age))
+
+[endsect]
+
+[section:define_tpl_struct BOOST_FUSION_DEFINE_TPL_STRUCT]
+
+[heading Description]
+
+BOOST_FUSION_DEFINE_TPL_STRUCT is a macro that can be used to generate all the
+necessary boilerplate to define and adapt an arbitrary template struct as a
+model of __random_access_sequence__.
+
+[heading Synopsis]
+
+    BOOST_FUSION_DEFINE_TPL_STRUCT(
+        (namespace0)(namespace1)...,
+        (template_param0)(template_param1)...,
+        struct_name,
+        (member_type0, member_name0)
+        (member_type1, member_name1)
+        ...
+        )
+
+[variablelist Notation
+    [[`Str`]            [An instantiated `struct_name`]]
+    [[`str`]            [An instance of `Str`]]
+    [[`e0`...`en`]      [Heterogeneous values]]
+    [[`fs`]             [A __forward_sequence__]]
+]
+
+[heading Expression Semantics]
+
+The above macro generates the necessary code that defines and adapts `struct_name`
+as a model of __random_access_sequence__.
+The sequence `(namespace0)(namespace1)...` declares the namespace
+for `struct_name`. It yields to a fully qualified name for `struct_name` of
+`namespace0::namespace1::... struct_name`.
+If an empty namespace sequence is given, the struct is placed in the
+global namespace.
+The sequence `(template_param0)(template_param1)...` declares the names of
+the template type parameters used.
+The sequence of `(member_typeN, member_nameN)`
+pairs declares the type and names of each of the struct members that are
+part of the sequence.
+
+The macro should be used at global scope.
+Semantics of an expression is defined only where it differs from, or is not
+defined in __random_access_sequence__.
+
+[table
+    [[Expression]                     [Semantics]]
+    [[`Str()`]                        [Creates an instance of `Str` with default constructed elements.]]
+    [[`Str(e0, e1,... en)`]           [Creates an instance of `Str` with elements `e0`...`en`.]]
+    [[`Str(fs)`]                      [Copy constructs an instance of `Str` from a __forward_sequence__ `fs`.]]
+    [[`str = fs`]                     [Assigns from a __forward_sequence__ `fs`.]]
+    [[`str.member_nameN`]             [Access of struct member `member_nameN`]] 
+]
+
+[heading Header]
+
+    #include <boost/fusion/adapted/struct/define_struct.hpp>
+    #include <boost/fusion/include/define_struct.hpp>
+    
+[heading Example]
+
+    // Any instantiated demo::employee is a Fusion sequence
+    BOOST_FUSION_DEFINE_TPL_STRUCT(
+        (demo), (Name)(Age), employee,
+        (Name, name)
+        (Age, age))
+
+[endsect]
+
+[section:define_assoc_struct BOOST_FUSION_DEFINE_ASSOC_STRUCT]
+
+[heading Description]
+
+BOOST_FUSION_DEFINE_ASSOC_STRUCT is a macro that can be used to generate all the
+necessary boilerplate to define and adapt an arbitrary struct as a model of
+__random_access_sequence__ and __associative_sequence__.
+
+[heading Synopsis]
+
+    BOOST_FUSION_DEFINE_ASSOC_STRUCT(
+        (namespace0)(namespace1)...,
+        struct_name,
+        (member_type0, member_name0, key_type0)
+        (member_type1, member_name1, key_type1)
+        ...
+        )
+
+[variablelist Notation
+    [[`str`]            [An instance of `struct_name`]]
+    [[`e0`...`en`]      [Heterogeneous values]]
+    [[`fs`]             [A __forward_sequence__]]
+]
+
+[heading Expression Semantics]
+
+The above macro generates the necessary code that defines and adapts `struct_name`
+as a model of __random_access_sequence__ and __associative_sequence__.
+The sequence `(namespace0)(namespace1)...` declares the namespace
+for `struct_name`. It yields to a fully qualified name for `struct_name` of
+`namespace0::namespace1::... struct_name`.
+If an empty namespace sequence is given, the struct is placed in the
+global namespace.
+The sequence of `(member_typeN, member_nameN, key_typeN)`
+triples declares the type, name and key type of each of the struct members
+that are part of the sequence.
+
+The macro should be used at global scope.
+Semantics of an expression is defined only where it differs from, or is not
+defined in __random_access_sequence__ and __associative_sequence__.
+
+[table
+    [[Expression]                     [Semantics]]
+    [[`struct_name()`]                [Creates an instance of `struct_name` with default constructed elements.]]
+    [[`struct_name(e0, e1,... en)`]   [Creates an instance of `struct_name` with elements `e0`...`en`.]]
+    [[`struct_name(fs)`]              [Copy constructs an instance of `struct_name` from a __forward_sequence__ `fs`.]]
+    [[`str = fs`]                     [Assigns from a __forward_sequence__ `fs`.]]
+    [[`str.member_nameN`]             [Access of struct member `member_nameN`]] 
+]
+
+[heading Header]
+
+    #include <boost/fusion/adapted/struct/define_assoc_struct.hpp>
+    #include <boost/fusion/include/define_assoc_struct.hpp>
+    
+[heading Example]
+
+    namespace keys
+    {
+        struct name;
+        struct age;
+    }
+    
+    // demo::employee is a Fusion sequence
+    BOOST_FUSION_DEFINE_ASSOC_STRUCT(
+        (demo), employee,
+        (std::string, name, keys::name)
+        (int, age, keys::age))
+
+[endsect]
+
+[section:define_assoc_tpl_struct BOOST_FUSION_DEFINE_ASSOC_TPL_STRUCT]
+
+[heading Description]
+
+BOOST_FUSION_DEFINE_ASSOC_TPL_STRUCT is a macro that can be used to generate all
+the necessary boilerplate to define and adapt an arbitrary template struct as a
+model of __random_access_sequence__  and __associative_sequence__.
+
+[heading Synopsis]
+
+    BOOST_FUSION_DEFINE_ASSOC_TPL_STRUCT(
+        (namespace0)(namespace1)...,
+        (template_param0)(template_param1)...,
+        struct_name,
+        (member_type0, member_name0, key_type0)
+        (member_type1, member_name1, key_type1)
+        ...
+        )
+
+[variablelist Notation
+    [[`Str`]            [An instantiated `struct_name`]]
+    [[`str`]            [An instance of `Str`]]
+    [[`e0`...`en`]      [Heterogeneous values]]
+    [[`fs`]             [A __forward_sequence__]]
+]
+
+[heading Expression Semantics]
+
+The above macro generates the necessary code that defines and adapts
+`struct_name` as a model of __random_access_sequence__  and
+__associative_sequence__.
+The sequence `(namespace0)(namespace1)...` declares the namespace
+for `struct_name`. It yields to a fully qualified name for `struct_name` of
+`namespace0::namespace1::... struct_name`.
+If an empty namespace sequence is given, the struct is placed in the
+global namespace.
+The sequence `(template_param0)(template_param1)...` declares the names of
+the template type parameters used.
+The sequence of `(member_typeN, member_nameN, key_typeN)`
+triples declares the type, name and key type of each of the struct members
+that are part of the sequence.
+
+The macro should be used at global scope.
+Semantics of an expression is defined only where it differs from, or is not
+defined in __random_access_sequence__ and __associative_sequence__.
+
+[table
+    [[Expression]                     [Semantics]]
+    [[`Str()`]                        [Creates an instance of `Str` with default constructed elements.]]
+    [[`Str(e0, e1,... en)`]           [Creates an instance of `Str` with elements `e0`...`en`.]]
+    [[`Str(fs)`]                      [Copy constructs an instance of `Str` from a __forward_sequence__ `fs`.]]
+    [[`str = fs`]                     [Assigns from a __forward_sequence__ `fs`.]]
+    [[`str.member_nameN`]             [Access of struct member `member_nameN`]] 
+]
+
+[heading Header]
+
+    #include <boost/fusion/adapted/struct/define_assoc_struct.hpp>
+    #include <boost/fusion/include/define_assoc_struct.hpp>
+    
+[heading Example]
+
+    namespace keys
+    {
+        struct name;
+        struct age;
+    }
+    
+    // Any instantiated demo::employee is a Fusion sequence
+    BOOST_FUSION_DEFINE_ASSOC_TPL_STRUCT(
+        (demo), (Name)(Age), employee,
+        (Name, name, keys::name)
+        (Age, age, keys::age))
 
 [endsect]
 
