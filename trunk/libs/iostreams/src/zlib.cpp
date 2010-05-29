@@ -14,6 +14,7 @@
 // than using it (possibly importing code).
 #define BOOST_IOSTREAMS_SOURCE 
 
+#include <boost/throw_exception.hpp>
 #include <boost/iostreams/detail/config/dyn_link.hpp>
 #include <boost/iostreams/filter/zlib.hpp> 
 #include "zlib.h"   // Jean-loup Gailly's and Mark Adler's "zlib.h" header.
@@ -70,7 +71,7 @@ zlib_error::zlib_error(int error)
     : BOOST_IOSTREAMS_FAILURE("zlib error"), error_(error) 
     { }
 
-void zlib_error::check(int error)
+void zlib_error::check BOOST_PREVENT_MACRO_SUBSTITUTION(int error)
 {
     switch (error) {
     case Z_OK: 
@@ -78,9 +79,9 @@ void zlib_error::check(int error)
     //case Z_BUF_ERROR: 
         return;
     case Z_MEM_ERROR: 
-        throw std::bad_alloc();
+        boost::throw_exception(std::bad_alloc());
     default:
-        throw zlib_error(error);
+        boost::throw_exception(zlib_error(error));
         ;
     }
 }
@@ -128,12 +129,12 @@ void zlib_base::after(const char*& src_begin, char*& dest_begin, bool compress)
     dest_begin = next_out;
 }
 
-int zlib_base::deflate(int flush)
+int zlib_base::xdeflate(int flush)
 { 
     return ::deflate(static_cast<z_stream*>(stream_), flush);
 }
 
-int zlib_base::inflate(int flush)
+int zlib_base::xinflate(int flush)
 { 
     return ::inflate(static_cast<z_stream*>(stream_), flush);
 }
@@ -143,7 +144,7 @@ void zlib_base::reset(bool compress, bool realloc)
     z_stream* s = static_cast<z_stream*>(stream_);
     // Undiagnosed bug:
     // deflateReset(), etc., return Z_DATA_ERROR
-    //zlib_error::check(
+    //zlib_error::check BOOST_PREVENT_MACRO_SUBSTITUTION(
         realloc ?
             (compress ? deflateReset(s) : inflateReset(s)) :
             (compress ? deflateEnd(s) : inflateEnd(s))
@@ -154,7 +155,7 @@ void zlib_base::reset(bool compress, bool realloc)
 void zlib_base::do_init
     ( const zlib_params& p, bool compress, 
       #if !BOOST_WORKAROUND(BOOST_MSVC, < 1300)
-          zlib::alloc_func /* alloc */, zlib::free_func /* free*/, 
+          zlib::xalloc_func /* alloc */, zlib::xfree_func /* free*/, 
       #endif
       void* derived )
 {
@@ -172,7 +173,7 @@ void zlib_base::do_init
     //#endif
     s->opaque = derived;
     int window_bits = p.noheader? -p.window_bits : p.window_bits;
-    zlib_error::check(
+    zlib_error::check BOOST_PREVENT_MACRO_SUBSTITUTION(
         compress ?
             deflateInit2( s, 
                           p.level,
