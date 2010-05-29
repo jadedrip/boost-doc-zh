@@ -1,0 +1,95 @@
+[/
+ / Copyright (c) 2008 Eric Niebler
+ /
+ / Distributed under the Boost Software License, Version 1.0. (See accompanying
+ / file LICENSE_1_0.txt or copy at http://www.boost.org/LICENSE_1_0.txt)
+ /]
+
+[section:release_notes Appendix A: Release Notes 附录A：发布备注]
+
+[/=================]
+[heading Boost 1.43]
+[/=================]
+
+In Boost 1.43, the recommended usage of _extends_ changed slightly. The new
+usage looks like this:\n
+在 Boost 1.43 中，对 _extends_ 的推荐用法稍微有些改变。新的用法如下：
+
+  // my_expr is an expression extension of the Expr parameter
+  // my_expr 是 Expr 参数的表达式扩展
+  template<typename Expr>
+  struct my_expr
+    : proto::extends<Expr, my_expr<Expr>, my_domain>
+  {
+      my_expr(Expr const &expr = Expr())
+        : proto::extends<Expr, my_expr, my_domain>(expr)
+      {}
+
+      // NEW: use the following macro to bring
+      // proto::extends::operator= into scope.
+      // 新用法：使用以下宏将 proto::extends::operator=　置于当前作用域
+      BOOST_PROTO_EXTENDS_USING_ASSIGN(my_expr)
+  };
+
+The new thing is the use of the [^[macroref BOOST_PROTO_EXTENDS_USING_ASSIGN]()] macro.
+To allow assignment operators to build expression trees, _extends_ overloads the
+assignment operator. However, for the `my_expr` template, the compiler generates
+a default copy assignment operator that hides the ones in _extends_. This is often
+not desired (although it depends on the syntax you want to allow).\n
+新的变化是 [^[macroref BOOST_PROTO_EXTENDS_USING_ASSIGN]()] 宏的使用。它使得赋值操作符可用于构建表达式树，
+_extends_ 重载了赋值操作符。不过，对于 `my_expr` 模板，编译器会生成一个缺省复制赋值操作符，它会隐藏了 _extends_ 中的那个。
+这通常没什么关系(虽然它依赖于你想允许的语法)。
+
+Previously, the recommended usage was to do this:\n
+以前，推荐的用法会这样做：
+
+  // my_expr is an expression extension of the Expr parameter
+  // my_expr 是 Expr 参数的表达式扩展
+  template<typename Expr>
+  struct my_expr
+    : proto::extends<Expr, my_expr<Expr>, my_domain>
+  {
+      my_expr(Expr const &expr = Expr())
+        : proto::extends<Expr, my_expr, my_domain>(expr)
+      {}
+
+      // OLD: don't do it like this anymore.
+      // 旧用法：不要再这样做。
+      using proto::extends<Expr, my_expr, my_domain>::operator=;
+  };
+
+While this works in the majority of cases, it still doesn't suppress the
+implicit generation of the default assignment operator. As a result, expressions
+of the form `a = b` could either build an expression template or do a copy
+assignment depending on whether the types of `a` and `b` happen to be the
+same. That can lead to subtle bugs, so the behavior was changed.\n
+虽然在多数情况下这是有效的，但是它仍然不能制止缺省赋值操作符的隐式生成。结果，形如
+`a = b` 这样的表达式可能会构建一个表达式模板，或是进行一个复制赋值，这取决于 `a` 和 `b`
+的类型是否恰好一致。这会导致微妙的错误，所以我们修改了这一行为。
+
+The [^[macroref BOOST_PROTO_EXTENDS_USING_ASSIGN]()] brings into scope the
+assignment operators defined in _extends_ as well as suppresses the generation
+of the copy assignment operator.\n
+[^[macroref BOOST_PROTO_EXTENDS_USING_ASSIGN]()] 将 _extends_ 中定义的赋值操作符引入当前作用域，
+并制止复制赋值操作符的生成。
+
+Also note that the _literal_ class template, which uses _extends_, has been chaged
+to use [^[macroref BOOST_PROTO_EXTENDS_USING_ASSIGN]()]. The implications are
+highlighted in the sample code below:\n
+还要留意 _literal_ 类模板，它使用了 _extends_，也被改为使用 [^[macroref BOOST_PROTO_EXTENDS_USING_ASSIGN]()].
+这些影响在以下示例代码中被指出：
+
+  proto::literal<int> a(1), b(2); // two non-const proto literals
+  proto::literal<int> const c(3); // a const proto literal
+
+  a = b; // No-op. Builds an expression tree and discards it.
+         // Same behavior in 1.42 and 1.43.
+         // 空操作。构建一个表达式树并忽略它。在 1.42 和 1.43 中有相同的行为。
+  
+  a = c; // CHANGE! In 1.42, this performed copy assignment, causing
+         // a's value to change to 3. In 1.43, the behavior is now
+         // the same as above: build and discard an expression tree.
+         // 有变化！在 1.42 中，这会执行复制赋值，导致 a 的值变为 3.
+         // 在 1.43 中，行为与上一个语句相同：构建并忽略一个表达式树。
+
+[endsect]
