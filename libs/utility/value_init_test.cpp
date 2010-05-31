@@ -9,6 +9,7 @@
 // 21 Ago 2002 (Created) Fernando Cacciola
 // 15 Jan 2008 (Added tests regarding compiler issues) Fernando Cacciola, Niels Dekker
 // 23 May 2008 (Added tests regarding initialized_value) Niels Dekker
+// 21 Ago 2008 (Added swap test) Niels Dekker
 
 #include <cstring>  // For memcmp.
 #include <iostream>
@@ -28,9 +29,9 @@
 //
 struct POD
 {
-  POD () : c(0), i(0), f(0) {}
+  POD () : f(0), c(0), i(0){}
 
-  POD ( char c_, int i_, float f_ ) : c(c_), i(i_), f(f_) {}
+  POD ( char c_, int i_, float f_ ) : f(f_), c(c_), i(i_) {}
 
   friend std::ostream& operator << ( std::ostream& os, POD const& pod )
     { return os << '(' << pod.c << ',' << pod.i << ',' << pod.f << ')' ; }
@@ -181,6 +182,35 @@ struct CopyFunctionCallTester
 };
 
 
+//
+// A struct that allows testing whether its customized swap function is called.
+//
+struct SwapFunctionCallTester
+{
+  bool is_custom_swap_called;
+  int data;
+
+  SwapFunctionCallTester()
+  : is_custom_swap_called(false), data(0) {}
+
+  SwapFunctionCallTester(const SwapFunctionCallTester & arg)
+  : is_custom_swap_called(false), data(arg.data) {}
+
+  void swap(SwapFunctionCallTester & arg)
+  {
+    std::swap(data, arg.data);
+    is_custom_swap_called = true;
+    arg.is_custom_swap_called = true;
+  }
+};
+
+void swap(SwapFunctionCallTester & lhs, SwapFunctionCallTester & rhs)
+{
+  lhs.swap(rhs);
+}
+
+
+
 template<class T>
 void check_initialized_value ( T const& y )
 {
@@ -196,7 +226,7 @@ void check_initialized_value( NonPOD const& )
   // and this type (NonPOD), because the following statement
   // won't compile on this particular compiler version:
   //   NonPOD initializedValue = boost::initialized_value() ;
-//
+  //
   // This is caused by a compiler bug, that is fixed with a newer version
   // of the Borland compiler.  The Release Notes for Delphi(R) 2007 for
   // Win32(R) and C++Builder(R) 2007 (http://dn.codegear.com/article/36575)
@@ -230,7 +260,7 @@ bool test ( T const& y, T const& z )
   boost::value_initialized<T> const x_c ;
   BOOST_CHECK ( y == x_c ) ;
   BOOST_CHECK ( y == boost::get(x_c) ) ;
-  T& x_c_ref = x_c ;
+  T& x_c_ref = const_cast<T&>( boost::get(x_c) ) ;
   x_c_ref = z ;
   BOOST_CHECK ( x_c == z ) ;
 
@@ -261,7 +291,7 @@ int test_main(int, char **)
 {
   BOOST_CHECK ( test( 0,1234 ) ) ;
   BOOST_CHECK ( test( 0.0,12.34 ) ) ;
-  BOOST_CHECK ( test( POD(0,0,0.0), POD('a',1234,56.78) ) ) ;
+  BOOST_CHECK ( test( POD(0,0,0.0), POD('a',1234,56.78f) ) ) ;
   BOOST_CHECK ( test( NonPOD( std::string() ), NonPOD( std::string("something") ) ) ) ;
 
   NonPOD NonPOD_object( std::string("NonPOD_object") );
@@ -323,9 +353,20 @@ int test_main(int, char **)
   BOOST_CHECK ( ! get(copyFunctionCallTester3).is_copy_constructed);
   BOOST_CHECK ( get(copyFunctionCallTester3).is_assignment_called);
 
+  boost::value_initialized<SwapFunctionCallTester> swapFunctionCallTester1;
+  boost::value_initialized<SwapFunctionCallTester> swapFunctionCallTester2;
+  get(swapFunctionCallTester1).data = 1;
+  get(swapFunctionCallTester2).data = 2;
+  boost::swap(swapFunctionCallTester1, swapFunctionCallTester2);
+  BOOST_CHECK( get(swapFunctionCallTester1).data == 2 );
+  BOOST_CHECK( get(swapFunctionCallTester2).data == 1 );
+  BOOST_CHECK( get(swapFunctionCallTester1).is_custom_swap_called );
+  BOOST_CHECK( get(swapFunctionCallTester2).is_custom_swap_called );
+
   return 0;
 }
 
 
 unsigned int expected_failures = 0;
+
 
