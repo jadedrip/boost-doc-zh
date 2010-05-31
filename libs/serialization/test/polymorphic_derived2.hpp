@@ -7,7 +7,7 @@
 #endif
 
 /////////1/////////2/////////3/////////4/////////5/////////6/////////7/////////8
-// derived1.hpp    simple class test
+// polymorphic_derived2.hpp    simple class test
 
 // (C) Copyright 2002 Robert Ramey - http://www.rrsd.com . 
 // Use, modification and distribution is subject to the Boost Software
@@ -21,6 +21,7 @@
 #include <boost/serialization/base_object.hpp>
 #include <boost/serialization/type_info_implementation.hpp>
 #include <boost/serialization/extended_type_info_typeid.hpp>
+
 #include <boost/preprocessor/empty.hpp>
 
 #include "polymorphic_base.hpp"
@@ -43,9 +44,7 @@ class DLL_DECL(BOOST_PP_EMPTY()) polymorphic_derived2 :
     void serialize(
         Archive &ar, 
         const unsigned int /* file_version */
-    ){
-        ar & BOOST_SERIALIZATION_BASE_OBJECT_NVP(polymorphic_base);
-    }
+    );
     virtual const char * get_key() const {
         return "polymorphic_derived2";
     }

@@ -178,14 +178,7 @@ boost 的C++编译器均提供所需的扩展。本库包含了这些编译器�
 <a href="../example/demo_pimpl_A.hpp" target="demo_pimpl"><code style="white-space: normal;">demo_pimpl_A.hpp</code>&nbsp;</a>，这三个文件实现了序列化代码从主程序的完全分离。
 
 
-<h3><a name="dlls">DLLS - 序列化与运行期链接</a></h3>
-Serialization code can be placed in libraries to be linked at runtime.  That is,
-code can be placed in DLLS(Windows) Shared Libraries(*nix), or static libraries
-as well as the main executable.  The best technique is the
-same as that described above for libraries.  The serialization
-library test suite includes the following programs
-to illustrate how this works:
-<br>序列化代码可以置于运行期链接的库中。即，这些代码可以被置于DLLS(Windows)或共享库(*nix)中，或者是与主执行程序一起的静态库中。最好的方法与以上对库的描述一样。本序列化库的测试套件包含了以下程序，示范了如何工作：<p><a href="../test/test_dll_simple.cpp" target="test_dll_simple"><code style="white-space: normal;">test_dll_simple</code> </a>, 和 <a href="../test/dll_a.cpp" target="dll_a"><code style="white-space: normal;">dll_a.cpp</code>&nbsp;</a>是完全从主程序中分离出来的序列化实现，该代码会在运行期装入。在这个例子中，该代码在使用它的程序开始运行时自动装入，不过它也可以通过OS的API调用来装入或卸载。
+<h3><a name="dlls">DLLS - 序列化与运行期链接</a></h3>序列化代码可以置于运行期链接的库中。即，这些代码可以被置于DLLS(Windows)或共享库(*nix)中，或者是与主执行程序一起的静态库中。最好的方法与以上对库的描述一样。本序列化库的测试套件包含了以下程序，示范了如何工作：<p><a href="../test/test_dll_simple.cpp" target="test_dll_simple"><code style="white-space: normal;">test_dll_simple</code> </a>, 和 <a href="../test/dll_a.cpp" target="dll_a"><code style="white-space: normal;">dll_a.cpp</code>&nbsp;</a>是完全从主程序中分离出来的序列化实现，该代码会在运行期装入。在这个例子中，该代码在使用它的程序开始运行时自动装入，不过它也可以通过OS的API调用来装入或卸载。
 </p><p>
 另外还有
 <a href="http://www.boost.org/doc/libs/1_41_0/libs/serialization/test/test_dll_exported.cpp" target="test_dll_exported">
@@ -196,7 +189,18 @@ to illustrate how this works:
 </a>
 它们与上例类似，不过包含了对导出的测试，以及在DLLS语境中的 no_rtti 工具。
 
-</p><p> </p>
+</p><p>要有最好的结果，要让你的代码符合以下要求：
+</p><ul><li>不要在 DLLS 中使用的类中包含 <code>inline</code> 代码。这样会在 DLLS
+和主线中生成重复的代码。这是没有必要的重复代码。更糟的是，可能会有相同代码的不同版本并存。此类错误很难被检测到。最后，它可能会使得被引用的模块要
+显式地卸载，可能导致运行期错误。这是另一个并不反复发生或容易查找的缺陷。对于类成员模板，以头文件使用以下代码
+<pre><code><br>template&lt;class Archive&gt;<br>void serialize(Archive &amp; ar, const unsigned int version);<br></code></pre>并在实现文件中
+
+<pre><code><br>template&lt;class Archive&gt;<br>void myclass::serialize(Archive &amp; ar, const unsigned int version){<br>	...<br>}<br><br>BOOST_EXPORT_CLASS_IMPLEMENT(my_class)<br><br>#include &lt;boost/archive/text_oarchive&gt;<br>#include &lt;boost/archive/text_iarchive&lt;<br>template myclass::serialize(boost::archive::text_oarchive &amp; ar, const unsigned int version);<br>template myclass::serialize(boost::archive::text_iarchive &amp; ar, const unsigned int version);<br>... // repeat for each archive class to be used.<br></code></pre>这将导致所有需要的代码只在一个地方生成。本库不会为你检测此类错误。
+  </li><li>如果 DLLS 被显式地装载和卸载(例如，在 *nix 中使用 <code>dlopen</code>
+ 或是在 Windows 中使用 
+<code>LoadLibrary</code>)。尝试让它们以相反的顺序卸载。这样会保证避免一些问题，即使以上要求未被遵循。
+
+</li></ul>
 <h3><a name="plugins">插件</a></h3>为了实现本库，需要几个工具在运行期对类型进行操作。它们是 <a href="extended_type_info.html" target="detail"><code>extended_type_info</code></a>，用于将类关联到外部标识符串(<b>GUID</b>)，以及 <a href="void_cast.html" target="detail"><code>void_cast</code></a>，用于在相关类型的指针间进行转型。为完成 <a href="extended_type_info.html" target="detail"><code>extended_type_info</code></a> 的功能，加入了构造和销毁相应类型的能力。为了使用这些功能，你必须指定各个类型如何创建。这应该在导出一个类时完成。所以，上述代码的一个更为完整的例子如下： <pre><code><br>#include &lt;boost/archive/text_oarchive.hpp&gt;<br>#include &lt;boost/archive/text_oarchive.hpp&gt;<br>... // 其它存档<br><br>#include "a.hpp" // 类 a 的声明头文件<br><br>// 该类有一个缺省构造函数<br>BOOST_SERIALIZATION_FACTORY_0(a)<br>// 和一个带有单个整数参数的构造函数<br>BOOST_SERIALIZATION_FACTORY_1(a, int)<br><br>// 为该类指定 GUID<br>BOOST_CLASS_EXPORT(a)<br>... // 其它类的头文件和导出<br></code></pre>有了这些，你可以在只知道 <b>GUID</b> 和基类的情况下构造、序列化和销毁一个类。 <h3><a name="multi_threading">多线程</a></h3>序列化的基本目的与多线程的并行读/写单个存档实例是相冲突的。本库的实现假设应用程序会避免这种情形。 
 <p>但是，在不同任务中同时读/写不同的存档则是被允许的，就象每个存档实例(几乎)完全独立于其它存档实例。唯一共享的信息是一些类型表，它们的实现使用了一个无锁的线程安全 <a href="singleton.html" target="detail"><code style="white-space: normal;">单件</code></a>，它在本文档的其它地方描述。 
 </p><p>这个单件实现保证了所有的共享信息在包含它们的代码模块被装入时进行初始化。序列化库负责确保这些数据结构不被修改。有可能产生问题的唯一

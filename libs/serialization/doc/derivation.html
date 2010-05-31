@@ -1,22 +1,18 @@
 <!DOCTYPE HTML PUBLIC "-//W3C//DTD HTML 4.01 Transitional//EN" "http://www.w3.org/TR/html4/loose.dtd">
-<html>
-<head>
-<!--
+<html><head><!--
 (C) Copyright 2002-4 Robert Ramey - http://www.rrsd.com .
 Use, modification and distribution is subject to the Boost Software
 License, Version 1.0. (See accompanying file LICENSE_1_0.txt or copy at
 http://www.boost.org/LICENSE_1_0.txt)
 -->
+
   <meta http-equiv="Content-Type" content="text/html; charset=UTF-8">
 
   <link rel="stylesheet" type="text/css" href="../../../boost.css">
 
   <link rel="stylesheet" type="text/css" href="style.css">
 
-  <title>Serialization - Derivation from an Existing Archive</title>
-</head>
-
-
+  <title>Serialization - Derivation from an Existing Archive</title></head>
 
 <body link="#0000ff" vlink="#800080">
 
@@ -46,76 +42,46 @@ http://www.boost.org/LICENSE_1_0.txt)
 </table>
 
 <hr>
-<dl class="page-index">
+<dl class="page-index"></dl><h3>Log Archive</h3>
 
-  <dt><a target="detail" href="#portable_archives">可移植的二进制存档</a>
-  </dt>
-  <dt><a target="detail" href="#fast_archives">快速二进制存档</a>
-  </dt>
-</dl>
-
-
-<a name="portable_archives">
-</a>
-<h3><a name="portable_archives">可移植的二进制存档</a></h3>
-
-<a name="portable_archives">有可能你想从一个已有的存档类派生创建出一个新的存档类。本库中已经包含了相关的例子程序来示范如何从一个已有的存档类派生一个新的存档类。第一个例子是
-</a><a href="../example/demo_portable_archive.cpp" target="demo_portable_archive_cpp">demo_portable_archive.cpp</a>.
-这个二进制存档将以可移植的格式来保存/导入整数。它派生自原生二进制存档，以特定的版本重载了整数的保存/导入函数，在需要的时候将整数转换为高位在后
-的格式。它还实现了一个异常，用于表示在一个平台上保存的整数在另一个平台导入时数值过大。该例子没有处理浮点类型。该例子示范了必须要处理的几个问题。
-以下讨论仅针对输出存档，不过对于输入存档是相似的。
+有可能你想从一个已有的存档类派生创建出一个新的存档类。本库中已经包含了相关的例子程序来示范如何从一个已有的存档类派生一个新的存档类。第一个例子是
+<a href="../example/demo_log.cpp" target="demo_log_cpp">
+demo_log.cpp</a>.&nbsp;
+<p>这个例子派生自 xml 存档，将输出写至 xml，不带将数据读回至应用程序所需的额外信息。它可用于输出某些数据作为示例 xml 给其它程序使用或用于调试时记录数据。
+</p><p>为此，它派生自本库所含的 xml 存档，针对某些类型的 save 
+函数为此程序进行了特化。  
+</p><p>本序列化库是用 <b>C</b>uriously <b>R</b>ecurring <b>T</b>emplate 
+<b>P</b>attern (<b>CRTP</b>) 实现的。另外，所有共用的代码被提取至独立的模块令代码的重复性最小化。这使得从一个已有存档类派生没有原本可以做到的那么直接。
+</p><p>这个例子示范了在做类似事情时必须解决的几个问题：
+</p>
 
 <ol>
 
-    <li><i>派生自</i> <code style="white-space: normal;">binary_oarchive_impl<portable_binary_oarchive> <span style="font-weight: bold;">而不是</span><b></b> <code style="white-space: normal;">binary_oarchive</code> <br>
-正如
-    <a href="../../../boost/archive/binary_oarchive.hpp" target="binary_oarchive_hpp">binary_oarchive.hpp</a> 中的注释所说，<code style="white-space: normal;">binary_oarchive</code> 其实是 
-    <code style="white-space: normal;">binary_oarchive_impl&lt;binary_oarchive&gt;</code> 的缩写。所以我们应该派生自 <code style="white-space: normal;">binary_oarchive_impl&lt;portable_binary_oarchive&gt;</code> 而不是 <code style="white-space: normal;">binary_oarchive</code>.
+    <li><i>派生自</i> <code style="white-space: normal;">xml_oarchive_impl<portable_binary_oarchive> <span style="font-weight: bold;">而不是</span> xml<code style="white-space: normal;">_oarchive</code> <br></portable_binary_oarchive></code><code style="white-space: normal;"><portable_binary_oarchive>正如</portable_binary_oarchive></code>
+<a href="../../../boost/archive/xml_oarchive.hpp" target="xml_oarchive_hpp">xml_oarchive.hpp</a><code style="white-space: normal;"><portable_binary_oarchive><a href="../../../boost/archive/binary_oarchive.hpp" target="binary_oarchive_hpp"></a> 中的注释所说，<code style="white-space: normal;">xml_oarchive</code> 其实是 <code style="white-space: normal;">xml_oarchive_impl&lt;xml_oarchive&gt;</code> 的缩写。所以我们应该派生自 <code style="white-space: normal;">xml_oarchive_impl&lt;log_oarchive&gt;</code> 而不是 xml<code style="white-space: normal;">_oarchive</code>.
     </portable_binary_oarchive></code>
-    <pre><code>
-class portable_binary_oarchive :
-    // 不要派生自 binary_oarchive !!!
-    public binary_oarchive_impl&lt;portable_binary_oarchive&gt;
-{
-...
+    <pre><code><br></code><code>class log_archive :<br>    // don't derive from xml_oarchive !!!<br>    public xml_oarchive_impl&lt;log_archive&gt;<br>{<br>...<br></code><code>
 </code></pre>
 
     </li>
-  <li><i>注意</i> &lt;&gt;<i> 中的</i> <code style="white-space: normal;">portable_binary_oarchive</code>，这是必须的，以便基类可以将它们的 <code style="white-space: normal;">this</code> 指针向下转型为最底层的派生类。这被称为 <b>C</b>uriously <b>R</b>ecurring
+  <li><i>注意</i> &lt;&gt;<i> 中的</i> <code style="white-space: normal;">log_oarchive</code>，这是必须的，以便基类可以将它们的 <code style="white-space: normal;">this</code> 指针向下转型为最底层的派生类。这被称为 <b>C</b>uriously <b>R</b>ecurring
     <b>T</b>emplate <b>P</b>attern (<b>CRTP</b>) <a href="bibliography.html#11">[11]</a>.  
 用于实现静态的多态。
     </li>
   <li><i>必须显式指明基类可以访问派生类。</i>方法可以是让成员公有，或是包含基类的友元声明。
-    <pre><code>
-    typedef portable_binary_oarchive derived_t;
-    friend class detail::common_oarchive&lt;derived_t&gt;;
-    friend class basic_binary_oarchive&lt;derived_t&gt;;
-    friend class basic_binary_oprimitive&lt;
-        derived_t, 
-        std::ostream::char_type, 
-        std::ostream::traits_type
-    &gt;;
-    friend class boost::serialization::save_access;
+    <pre><code><br></code><code>    friend class detail::common_oarchive&lt;log_archive&gt;;<br>    friend class basic_xml_oarchive&lt;log_archive&gt;;<br>    friend class boost::serialization::save_access;<br></code><code>
 </code></pre>
 
     </li>
-  <li><i>必须显式调用基类函数。</i>我们要为保存基本类型而重载函数名 <code style="white-space: normal;">save</code>.
-这很容易。在派生类中使用一个函数名字会
+  <li>重读 <a target="detail" href="headers.html#archiveinternals">存档内部</a>。它描述了类的层次，让你知道要覆写什么东西。
+    </li><li><i>注意 PFTO 的用法。</i>有些编译器不能提供对函数模板偏序的支持。本序列化库在好几处地方使用 <a target="detail" href="implementation.html#functiontemplateordering">
+<b>函数模板偏序</b></a> 作为变通方法。在存档类中就是如此。在好几个地方都是如此，包括存档类本身。
+    </li><li><i>必须显式调用基类函数。</i>我们要为保存基本类型而重载函数名 <code style="white-space: normal;">save_override</code>.&nbsp;在派生类中使用一个函数名字会
 "隐藏" 基类中的同名函数。即，重载的函数名不会自动包含。为此，我们可以用：
-    <pre><code>
-    using binary_oarchive_impl&lt;derived_t&gt;::save;
-    void save(const unsigned int t);
-    ...
+    <pre><code><br></code><code>    using xml_oarchive_impl&lt;derived_t&gt;::save;<br>    void save(const unsigned int t);<br>    ...<br></code><code>
 </code></pre>
 这在符合标准的编译器下是可用的。不过，我发现以下的等价方法可以用于更多的编译器。
-    <pre><code>
-    // 对于这里未指定的任意类型，缺省会失败
-    template&lt;class T&gt;
-    void save(const T &amp; t){
-        binary_oarchive_impl&lt;derived_t&gt;::save(t);
-    }
-    void save(const unsigned int t);
-    ...
+    <pre><code><br></code><code>    // default fall through for any types not specified here<br>    template&lt;class T&gt;<br>    void save(const T &amp; t){<br>        xml_oarchive_impl&lt;derived_t&gt;::save(t);<br>    }<br>    void save(const unsigned int t);<br>    ...<br></code><code>
 </code></pre>
 所以，这是我用的办法。
     </li>
@@ -124,49 +90,11 @@ class portable_binary_oarchive :
 就是为此目的。没有包含所需的模板定义将会导致程序在链接时产生未定义符号的错误。
     </li>
   <li><i>不进行改造的话，该类不可以再进行派生</i><br>
-用于 <b>CRTP</b> 的基类必须是以最底层派生类为参数的模板。正如这里所示，该类不可以用作基类。为了从该类进一步派生，就必须参照原有的 <code style="white-space: normal;">binary_oarchive</code> 进行改造。应该修改如下：
-    <pre><code>
-template&lt;class Archive&gt;
-class portable_binary_oarchive_impl :
-    // 不要派生自 binary_oarchive !!!
-    public binary_oarchive_impl&lt;Archive&gt;
-{
-    ...
-);
-
-// 不要派生自本类 !!!
-class portable_binary_oarchive : 
-    public portable_binary_oarchive_impl&lt;portable_binary_oarchive&gt;
-{
-public:
-    portable_binary_oarchive(std::ostream &amp; os, unsigned int flags = 0) :
-        portable_binary_oarchive_impl&lt;binary_oarchive&gt;(os, flags)
-    {}
-};
-</code></pre>
-
-
-  </li>
-</ol>
-  
-
-<a name="fast_archives">
-</a>
-<h3><a name="fast_archives">快速二进制存档</a></h3>
-
-<a name="fast_archives">第二个例子 
-</a><a href="../example/demo_fast_archive.cpp" target="demo_fast_archive_cpp">demo_fast_archive.cpp</a>与
-第一个相似。差别在于它会在调用缺省的序列化之前截取序列化。在这个例子中，我们要将C整数数组的缺省序列化替换为一个更快的版本。缺省版本会对数组中的
-每一个元素调用序列化函数。如果这是一个整数数组，而且我们不考虑存档会移植到其它平台，那么我们可以将整个数组作为一个二进制字节串来保存/导入。这要
-比缺省的一个个元素处理更快。
-
-<p>前面提到过的基本类型的保存/导入函数的重载在这里同样适用，所以代码也非常相似。
-</p>
-<hr>
-<p><i>&copy; Copyright <a href="http://www.rrsd.com">Robert Ramey</a> 2002-2004. 
+用于 <b>CRTP</b> 的基类必须是以最底层派生类为参数的模板。正如这里所示，该类不可以用作基类。为了从该类进一步派生，就必须参照原有的 <span style="font-family: Courier,monospace;">xml</span><code style="white-space: normal;">_oarchive</code> 进行改造。应该修改如下：
+    <pre><code></code><code>template&lt;class Archive&gt;<br>class log_archive_impl :<br>    // don't derive from xml_oarchive !!!<br>    public xml_oarchive_impl&lt;Archive&gt;<br>{<br>    ...<br>);<br><br>// do not derived from this class !!!<br>class log_archive : <br>    public log_archive_impl&lt;log_archive&gt;<br>{<br>public:<br>    log_archive(std::ostream &amp; os, unsigned int flags = 0) :<br>        log_archive_impl&lt;xml_oarchive&gt;(os, flags)<br>    {}<br>};</code></pre></li></ol><hr>
+<p><i>© Copyright <a href="http://www.rrsd.com">Robert Ramey</a> 2002-2004. 
 Distributed under the Boost Software License, Version 1.0. (See
 accompanying file LICENSE_1_0.txt or copy at http://www.boost.org/LICENSE_1_0.txt)
 </i></p>
 
-</body>
-</html>
+</body></html>

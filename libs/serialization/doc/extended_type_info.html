@@ -109,7 +109,7 @@ extended_type_info </code></a>记录所对应
 <dt></dt><h4><pre><code><br>static const extended_type_info * find(const char *key);<br></code></pre></h4>
 <dd>给定一个字符串键值或 <strong>GUID</strong>，返回对应的 <code style="white-space: normal;"><a target="extended_type_info.hpp" href="../../../boost/serialization/extended_type_info.hpp">extended_type_info</a></code>
 对象的地址。 </dd></dl>
-<h3><a name="requirements">要求</a></h3>
+<h3><a name="requirements">要求与实现</a></h3>
 为了被 serialization 库使用，一个
 <code style="white-space: normal;">extended_type_info</code>
 的实现(这里称之为 ETI)， 必须派生自 <a href="../../../boost/serialization/extended_type_info.hpp" target="extended_type_info.hpp"><code style="white-space: normal;">extended_type_info </code></a>且实现以下要求：<dl><dt></dt><h4><code style="white-space: normal;"></code><pre>template&lt;class ETI&gt;<br>const extended_type_info *<br>ETI::get_derived_extended_type_info(const T &amp; t) const;<br></pre></h4><dd>返回对应于"真实类型" 
@@ -135,14 +135,31 @@ extended_type_info_no_rtti</a></h4>
 它返回最底层类的唯一字符串。该函数必须是虚拟的，以实现前述
 <code style="white-space: normal;">ETI::get_derived_extended_type_info</code>
 所要求的功能。<br>
-<h3><a name="example">Example</a></h3>
+<h3><a name="example">示例</a></h3>
 测试程序 <code style="white-space: normal;"><a target="test_no_rtti" href="../test/test_no_rtti.cpp">test_no_rtti</a></code>
 根据前述的 <code style="white-space: normal;"><a target="extended_type_info_no_rtti.hpp" href="../../../boost/serialization/extended_type_info_no_rtti.hpp">
 extended_type_info</a></code> API
-实现了这个函数，返回与该类相关联的外部关键字。它要求输出非抽象类。它还示范了在两个不同的 <code style="white-space: normal;">extended_type_info</code> 实现间的互操作性。 
+实现了这个函数，返回与该类相关联的外部关键字。它要求输出非抽象类。它还示范了在两个不同的 <code style="white-space: normal;">extended_type_info</code> 实现间的互操作性。<h3><a name="type_requirements">对各个类型的要求</a></h3>由系统管理的每个类型都必须分别
+"注册"。这由实例化模板来完成。例如，如果类型 T 要使用 type_info 系统，你必须包含以下代码：
+
+<code style="white-space: normal;"></code><pre>namespace boost {<br>namespace serialization {<br>template<br>struct extended_type_info_typeid&gt;T&gt;;<br>template<br>struct extended_type_info_typeid&gt;const T&gt;;<br>} // serialization<br>} // boost<br></pre>对于使用序列化库的情况，这一步可以跳过，因为会自动处理。序列化库包含以下宏：
+
+<code style="white-space: normal;"></code><pre>BOOST_CLASS_TYPE_INFO(<br>    my_type, <br>    extended_type_info_typeid&gt;my_class&gt;<br>)<br></pre>它用于指定哪个 <code>extended_type_info</code> 系统被用于某个给定类型。
+<p>
+<code>extended_type_info</code> 包含了一个工具用于在不知道准确类型时构造某个类型。这由函数 
+<code>
+virtual void * extended_type_info::construct(unsigned int count = 0, 
+...) const;
+</code>
+完成。例如：
+<br>
+<code></code></p><pre>struct base {<br>...<br>};<br>struct derived : public base {<br>...<br>};<br>...<br>extended_type_info *eti = extended_type_info::find("my_class")<br>base * b = eti-&gt;construct(...);<br></pre>
+<br>
+<code>construct</code> 接受一个参数 count 以及最多四个任意类型的参数。这些参数被传递给 "my_class" 的构造函数。一个完整的例子可在
+<a target="test_plugin.cpp" href="test_plugin.cpp">这里</a> 找到。<a target="test_plugin.cpp" href="../../../../boost_doc_43/libs/serialization/doc/test_plugin.cpp"></a> 
 <hr>
 <p><i>© Copyright <a href="http://www.rrsd.com">Robert
-Ramey</a> 2005. Distributed under the Boost Software License,
+Ramey</a> 2005-2009. Distributed under the Boost Software License,
 Version 1.0. (See
 accompanying file LICENSE_1_0.txt or copy at
 http://www.boost.org/LICENSE_1_0.txt)
