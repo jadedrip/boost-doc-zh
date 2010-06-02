@@ -5,11 +5,13 @@
   http://www.boost.org/LICENSE_1_0.txt).
 ]
 
-[section:background Background and Tutorial]
+[section:background Background and Tutorial 背景和指南]
 
 The following is an updated version of the article "C++ Type traits"
 by John Maddock and Steve Cleary that appeared in the October 2000 
-issue of [@http://www.ddj.com Dr Dobb's Journal].
+issue of [@http://www.ddj.com Dr Dobb's Journal].\n
+下面是 John Maddock 和 Steve Cleary 发表在 2000 年 10 月号的 [@http://www.ddj.com Dr Dobb's Journal] 
+上的文章 "C++ Type traits" 的修订版。
 
 Generic programming (writing code which works with any data type meeting a 
 set of requirements) has become the method of choice for providing reusable code. 
@@ -19,7 +21,11 @@ efficient generic implementation. This is when the traits technique
 becomes important - by encapsulating those properties that need to be 
 considered on a type by type basis inside a traits class, we can 
 minimize the amount of code that has to differ from one type to another, 
-and maximize the amount of generic code.
+and maximize the amount of generic code.\n
+泛型编程（写出的代码可以和任何一种符合一系列要求的数据类型一起工作）已经成为提供可复用代码的高品位选择。
+但是，有时泛型编程中的“泛型”却不够好——有时不同类型之间的区别太大了，无法提供高效的泛型实现。
+这就是 traits 技术大展身手的时候——通过将那些需要考虑的基于 type by type 的属性封装在一个 traits 
+类中，我们可以将不得不在不同类型间有所区别的代码量减到最小，并将泛型代码量增到最大。
 
 Consider an example: when working with character strings, one common operation is 
 to determine the length of a null terminated string. Clearly it's possible to 
@@ -32,7 +38,13 @@ properties of `char` and `wchar_t` into the class `char_traits`. Generic code
 that works with character strings can simply use `char_traits<>::length` to 
 determine the length of a null terminated string, safe in the knowledge 
 that specializations of `char_traits` will use the most appropriate method 
-available to them.
+available to them.\n
+考虑一个例子：和字符串一起工作时，一种常见操作是测定以 null 结尾的字符串的长度。
+很显然，写出做这种事情的泛型代码是可能的，但是还有很多更有效率的方法可用：例如，C 库函数 
+strlen 和 wcslen 通常用汇编语言写成，在相应的硬件支持下，比用 C++ 写的泛型版本快得多。
+C++ 标准库的作者认识到了这一点，于是抽象出 `char` 和 `wchar_t` 的属性放到类 `char_traits` 中。
+和字符串一起工作的泛型代码只需要简单地使用 `char_traits<>::length` 就可以确定一个以 null 
+结尾的字符串的长度，根据经验可以肯定，`char_traits` 的特化使用了对于它们来说最适合的方法。
 
 [h4 Type Traits]
 
@@ -46,7 +58,13 @@ The type-traits classes share a unified design: each class inherits from a
 the type __true_type if the type has the specified property and inherits from
 __false_type otherwise. As we will show, these classes can be used in 
 generic programming to determine the properties of a given type and introduce 
-optimizations that are appropriate for that case.
+optimizations that are appropriate for that case.\n
+类 `char_traits` 是收集类型特定属性并包装到一个单独类中的典型示例——Nathan Myers 给出一个术语 /包装类(baggage class)/
+[link background.references \[1\]]。在 Boost type-traits 库中，我们[link background.references \[2\]]写了一套非常详细的 
+traits classes（特征类），每一个封装一个 C++ 类型系统的单一特征。例如，某个类型是一个指针还是一个引用类型？
+或者某个类型是否有一个 trivial（非特殊）的构造函数或者有一个 const 修饰符？这些 type-traits 类共享一个统一的设计：
+如果这个类型具有特定的属性，则从类型 __true_type 继承，否则从 __false_type 继承。
+就像我们将要展示的，这些类可以用在泛型编程中，用于确定一个特定类型的属性，并引入最适合那种情况的优化。
 
 The type-traits library also contains a set of classes that perform a 
 specific transformation on a type; for example, they can remove a 
@@ -54,16 +72,22 @@ top-level const or volatile qualifier from a type. Each class that
 performs a transformation defines a single typedef-member `type` 
 that is the result of the transformation. All of the type-traits 
 classes are defined inside namespace `boost`; for brevity, namespace-qualification 
-is omitted in most of the code samples given.
+is omitted in most of the code samples given.\n
+type-traits 库还包含一套可以对某个类型执行特定转换的类，例如，他们可以从一个类型中移除一个顶层的 const 或 volatile 修饰符。
+每一个执行转换的类都为转换的结果定义了一个单独的 typedef 成员 `type`。
+所有 type-traits 类都定义在名字空间 `boost` 中，为简便起见，在下面给出的大多数代码示例中省略了名字空间限定。
 
-[h4 Implementation]
+[h4 Implementation 实现]
 
 There are far too many separate classes contained in the type-traits library 
 to give a full implementation here - see the source code in the Boost library 
 for the full details - however, most of the implementation is fairly repetitive 
 anyway, so here we will just give you a flavor for how some of the classes are 
 implemented. Beginning with possibly the simplest class in the library, 
-`is_void<T>` inherits from `__true_type` only if `T` is `void`.
+`is_void<T>` inherits from `__true_type` only if `T` is `void`.\n
+有相当多的独立类包含在 type-traits 库中，要在这里给出一个完整的实现是不可能的——关于完整的细节参见 Boost 
+库中的源代码——但是，绝大多数实现以各种不同的方式反复出现，所以在这里我们仅仅给你尝一点关于这些类是如何实现的滋味。
+我们从可能是库中最简单的类 `is_void<T>` 开始，只有当 `T` 为` void`，`is_void<T>` 才从 `__true_type` 继承。
 
    template <typename T> 
    struct __is_void : public __false_type{};
@@ -79,7 +103,12 @@ specialization. This is exactly the situation for which the standards committee
 defined partial template-class specialization. As an example, consider the 
 class `boost::is_pointer<T>`: here we needed a primary version that handles 
 all the cases where T is not a pointer, and a partial specialization to 
-handle all the cases where T is a pointer:
+handle all the cases where T is a pointer:\n
+这里我们定义了模板类 `__is_void` 的一个主体版本，并提供了一个 `T` 为 `void` 时的完全特化。
+虽然模板类的完全特化是一项重要的技术，但是有时我们需要一个位于完全泛化和完全特化之间的解决方案。
+这正好就是标准委员会定义的 partial template-class specialization（模板类偏特化）的用武之地。
+例如，考虑类 `boost::is_pointer<T>`：我们需要一个主体版本用来处理 T 不是一个指针时的所有情况，和一个偏特化版本用来处理 T 
+是一个指针时的所有情况：
 
    template <typename T> 
    struct __is_pointer : public __false_type{};
@@ -95,12 +124,16 @@ class name that contains the partial specialization parameters; these define
 the types that will bind to that partial specialization rather than the 
 default template. The rules for what can appear in a partial specialization 
 are somewhat convoluted, but as a rule of thumb if you can legally write two 
-function overloads of the form:
+function overloads of the form:\n
+偏特化的语法多少有些晦涩，而且如果要全面介绍它可能会占据一篇文章的篇幅，和完全特化一样，为一个类写一个偏特化，你必须先声明主体模板。
+偏特化在类名之后有一个额外的 <...> 用来包含偏特化参数，这些表明这个类型将被绑定到偏特化版本而不是缺省版本。
+对于什么东西能够出现在偏特化版本中的规则多少有些费解，但是作为一条经验法则，如果你能写出如下形式的两个合法的函数重载：
 
    void foo(T);
    void foo(U);
 
-Then you can also write a partial specialization of the form:
+Then you can also write a partial specialization of the form:\n
+你就能写出如下形式的偏特化：
 
    template <typename T>
    class c{ /*details*/ };
@@ -109,12 +142,15 @@ Then you can also write a partial specialization of the form:
    class c<U>{ /*details*/ };
 
 This rule is by no means foolproof, but it is reasonably simple to remember 
-and close enough to the actual rule to be useful for everyday use.
+and close enough to the actual rule to be useful for everyday use.\n
+这个规则相当简单，但是它比较容易记住并非常接近实际规则，适合日常使用。
 
 As a more complex example of partial specialization consider the class 
 `remove_extent<T>`. This class defines a single typedef-member `type` that 
 is the same type as T but with any top-level array bounds removed; 
-this is an example of a traits class that performs a transformation on a type:
+this is an example of a traits class that performs a transformation on a type:\n
+举一个更复杂的偏特化的例子，考虑类 `remove_extent<T>`。这个类只定义一个唯一的 typedef 成员 `type`，它和 T 
+是同一个类型，但会移除任何顶层数组的界限，这是一个在一个对某个类型执行转换的 traits 类的例子：
 
    template <typename T> 
    struct __remove_extent
@@ -132,12 +168,17 @@ This example also shows that the number of template parameters in a
 partial specialization does not have to match the number in the 
 default template. However, the number of parameters that appear after the 
 class name do have to match the number and type of the parameters in the 
-default template.
+default template.\n
+`__remove_extent` 的目的是：设想一个泛型算法被传递过来一个数组类型作为模板参数，`__remove_extent` 
+提供了一个检测这个数组的底层类型的手段。例如 `remove_extent<int[4][5]>::type` 会被检测出类型 `int[5]`。
+这个例子也展示了偏特化中的模板参数的个数和缺省模板中的个数不必相同。
+但是，出现在类名后面的参数的个数和类型必须和缺省模板的参数的个数和类型相同。
 
-[h4 Optimized copy]
+[h4 Optimized copy 优化复制]
 
 As an example of how the type traits classes can be used, consider the 
-standard library algorithm copy:
+standard library algorithm copy:\n
+给一个 type traits 类如何使用的例子，考虑模板库算法 copy：
 
    template<typename Iter1, typename Iter2>
    Iter2 copy(Iter1 first, Iter1 last, Iter2 out);
@@ -146,18 +187,27 @@ Obviously, there's no problem writing a generic version of copy that works
 for all iterator types `Iter1` and `Iter2`; however, there are some 
 circumstances when the copy operation can best be performed by a call to 
 `memcpy`. In order to implement copy in terms of `memcpy` all of the 
-following conditions need to be met:
+following conditions need to be met:\n
+很明显，写一个适用于所有迭代器类型 `Iter1` 和 `Iter2` 的泛型版本没有问题，但是，在一些情形，最好能通过调用 `memcpy` 来执行拷贝操作。
+为了使用 `memcpy` 执行拷贝，需要满足下面的所有条件：
 
-* Both of the iterator types `Iter1` and `Iter2` must be pointers. 
+* Both of the iterator types `Iter1` and `Iter2` must be pointers. \n
+  迭代器类型 `Iter1` 和 `Iter2` 必须都是指针。
 * Both `Iter1` and `Iter2` must point to the same type - excluding const and 
-volatile-qualifiers. 
-* The type pointed to by `Iter1` must have a trivial assignment operator. 
+volatile-qualifiers. \n
+  `Iter1` 和 `Iter2` 必须都指向同样的类型—— const 和 volatile 修饰符可不予考虑。
+* The type pointed to by `Iter1` must have a trivial assignment operator. \n
+  被 `Iter1` 指向的类型必须有一个 trivial（不特殊）的赋值操作符。
 
-By trivial assignment operator we mean that the type is either a scalar type[link background.references \[3\]] or:
+By trivial assignment operator we mean that the type is either a scalar type[link background.references \[3\]] or:\n
+所谓 trivial（非特殊）的赋值操作符，我们指的是这个类型要么是一个 scalar type（标量类型）[link background.references \[3\]] 要么：
 
-* The type has no user defined assignment operator. 
-* The type does not have any data members that are references. 
-* All base classes, and all data member objects must have trivial assignment operators. 
+* The type has no user defined assignment operator. \n
+  这个类型没有用户定义的赋值操作符。
+* The type does not have any data members that are references. \n
+  这个类型没有任何一个数据成员是引用。
+* All base classes, and all data member objects must have trivial assignment operators. \n
+  所有的基类，或所有数据成员对象必须有 trivial（非特殊）的赋值操作符。
 
 If all these conditions are met then a type can be copied using `memcpy` 
 rather than using a compiler generated assignment operator. The type-traits 
@@ -166,61 +216,87 @@ library provides a class `__has_trivial_assign`, such that
 This class "just works" for scalar types, but has to be explicitly 
 specialised for class/struct types that also happen to have a trivial assignment 
 operator. In other words if __has_trivial_assign gives the wrong answer, 
-it will give the "safe" wrong answer - that trivial assignment is not allowable.
+it will give the "safe" wrong answer - that trivial assignment is not allowable.\n
+如果这些条件都被满足，那么这个类型就可以用 `memcpy` 执行拷贝，而不使用编译器生成的赋值操作符。
+type-traits 库提供了一个类 `__has_trivial_assign`，它的意思是只有 T 有一个 trivial（不特殊）
+的赋值操作符，`has_trivial_assign<T>::value` 才成立。这个类仅对标量类型能“正确地工作”，除非为具有一个 
+trivial（非特殊）的赋值操作符的 class/struct 类型进行显式特化。
+换句话说，如果 __has_trivial_assign 给出一个错误答案，它会给出一个“安全的”错误答案——那个 trivial（非特殊）的赋值是不被允许的。
 
 The code for an optimized version of copy that uses `memcpy` where appropriate is 
 given in [link boost_typetraits.examples.copy the examples]. The code begins by defining a template 
 function `do_copy` that performs a "slow but safe" copy.  The last parameter passed
 to this function may be either a `__true_type` or a `__false_type`. Following that 
-there is an overload of do_copy that uses `memcpy`: this time the iterators are required
+there is an overload of `do_copy` that uses `memcpy`: this time the iterators are required
 to actually be pointers to the same type, and the final parameter must be a 
 `__true_type`.  Finally, the version of `copy` calls `do_copy`, passing 
 `__has_trivial_assign<value_type>()` as the final parameter: this will dispatch
 to the optimized version where appropriate, otherwise it will call the 
-"slow but safe version".
+"slow but safe version".\n
+使用 `memcpy` 的 copy 的优化版本代码在 [link boost_typetraits.examples.copy 示例] 中给出。
+代码以定义一个模板函数 `do_copy` 开始，这个函数执行一个“慢但是安全”的拷贝。
+传给这个函数的最后一个参数既可能是一个 `__true_type`，也可能是一个 `__false_type`。
+然后有一个使用 `memcpy` 的 `do_copy` 的重载：这时要求迭代器实际上是一个指向相同类型的指针，而且最后一个参数必须是一个 `__true_type`。
+最后，`copy` 的这个版本调用 `do_copy`，将 `__has_trivial_assign<value_type>()` 作为最后一个参数。
+如果优化版本更合适就会匹配到优化版本，否则就调用“慢但是安全的版本”。
 
-[h4 Was it worth it?]
+[h4 Was it worth it? 这是值得的吗？]
 
 It has often been repeated in these columns that "premature optimization is the 
 root of all evil" [link background.references \[4\]]. So the question must be asked: was our optimization 
 premature? To put this in perspective the timings for our version of copy 
-compared a conventional generic copy[link background.references \[5\]] are shown in table 1.
+compared a conventional generic copy[link background.references \[5\]] are shown in table 1.\n
+有一句名言经常被重复提到：“不成熟的优化是一切罪恶的根源” [link background.references \[4\]]。
+所以必须要问：我们的优化是成熟的吗？我们版本的 copy 和传统泛型 copy [link background.references \[5\]] 的时间比较展示在表1中。
 
 Clearly the optimization makes a difference in this case; but, to be fair, 
 the timings are loaded to exclude cache miss effects - without this 
 accurate comparison between algorithms becomes difficult. However, perhaps 
-we can add a couple of caveats to the premature optimization rule:
+we can add a couple of caveats to the premature optimization rule:\n
+很明显，在这种情况下优化造成了区别，但是，为了公平，表中的时间排除了缓存失误的影响 ——
+如果不排除这一点，算法的精确比较是很困难的。无论如何，也许我们可以增加一些告诫，作为判别不成熟优化的法则：
 
 *If you use the right algorithm for the job in the first place then optimization 
-will not be required; in some cases, memcpy is the right algorithm. 
+will not be required; in some cases, memcpy is the right algorithm. \n
+ 如果你一上来就使用了对于这个任务正确的算法，那么就不需要优化，在某些情况下，memcpy 是正确的算法。
 *If a component is going to be reused in many places by many people then 
 optimizations may well be worthwhile where they would not be so for a single 
 case - in other words, the likelihood that the optimization will be 
 absolutely necessary somewhere, sometime is that much higher. 
 Just as importantly the perceived value of the stock implementation will be 
 higher: there is no point standardizing an algorithm if users reject it on 
-the grounds that there are better, more heavily optimized versions available. 
+the grounds that there are better, more heavily optimized versions available. \n
+ 如果一个组件被很多人在很多地方复用，那么优化就是值得的，即使对其中的单独一种情况来说也许没有必要 —— 
+ 换句话说，优化在是某地是绝对必要的这种可能性还是比较高的。
+ 一个常备实现的可感知价值应该比较高，这是非常重要的：如果用户当场拒绝一个算法，而使用更好的，
+ 优化度更高的版本，那么标准化这个算法就是毫无道理的。
 
-[table Time taken to copy 1000 elements using `copy<const T*, T*>` (times in micro-seconds)
+[table Time taken to copy 1000 elements using `copy<const T*, T*>` (times in micro-seconds) 
+使用 `copy<const T*, T*>` 拷贝1000个元素花费的时间(微秒)
 
-[[Version] [T] [Time]]
-[["Optimized" copy] [char] [0.99]]
-[[Conventional copy] [char] [8.07]]
-[["Optimized" copy] [int] [2.52]]
-[[Conventional copy] [int] [8.02]]
+[[Version 版本] [T] [Time 时间]]
+[["Optimized" copy "优化"复制] [char] [0.99]]
+[[Conventional copy 正常复制] [char] [8.07]]
+[["Optimized" copy "优化"复制] [int] [2.52]]
+[[Conventional copy 正常复制] [int] [8.02]]
 ]
 
-[h4 Pair of References]
+[h4 Pair of References 引用的 Pair]
 The optimized copy example shows how type traits may be used to perform 
 optimization decisions at compile-time. Another important usage of type traits 
 is to allow code to compile that otherwise would not do so unless excessive 
 partial specialization is used. This is possible by delegating partial 
 specialization to the type traits classes. Our example for this form of 
-usage is a pair that can hold references [link background.references \[6\]].
+usage is a pair that can hold references [link background.references \[6\]].\n
+优化拷贝示例展示了 type traits 如何被用于编译时的优化决策。
+type traits 的另一个重要用途是是允许那些如果不使用额外的偏特化就无法编译的代码能够编译。
+通过将偏特化委托给 type traits 类，就可能做到这一点。
+我们为这种使用方式提供的示例是一个可以持有引用的 pair [link background.references \[6\]]。
 
 First, let us examine the definition of `std::pair`, omitting the 
 comparison operators, default constructor, and template copy constructor for 
-simplicity:
+simplicity:\n
+首先，我们先检查一下 `std::pair` 的定义，为了简单，我们忽略比较操作符，缺省构造函数和模板拷贝构造函数：
 
    template <typename T1, typename T2> 
    struct pair 
@@ -239,10 +315,12 @@ Now, this "pair" cannot hold references as it currently stands, because the
 constructor would require taking a reference to a reference, which is 
 currently illegal [link background.references \[7\]]. Let us consider what the constructor's parameters 
 would have to be in order to allow "pair" to hold non-reference types, 
-references, and constant references:
+references, and constant references:\n
+现在，这个 "pair" 不能持有引用作为它的当前支点，因为这样一来构造函数就要接受一个引用的引用，这在当前是非法的 
+[link background.references \[7\]]。我们来考虑一下为了让 "pair" 持有非引用类型，引用，和常引用，构造函数的参数必须是什么样的：
 
-[table Required Constructor Argument Types
-[[Type of `T1`] [Type of parameter to initializing constructor]]
+[table Required Constructor Argument Types 要求的构造函数参数类型
+[[Type of `T1`] [Type of parameter to initializing constructor 传给初始构造函数的参数的类型]]
 [[T] [const T &]]
 [[T &] [T &]]
 [[const T &] [const T &]]
@@ -252,9 +330,11 @@ A little familiarity with the type traits classes allows us to construct a
 single mapping that allows us to determine the type of parameter from the 
 type of the contained class. The type traits classes provide a 
 transformation __add_reference, which adds a reference to its type, 
-unless it is already a reference.
+unless it is already a reference.\n
+和 type traits 类允许我们创建一个单一映射，以便我们我可从 contained class 的类型确定参数的类型有些类似。
+type traits 类提供了一个转换 __add_reference，它可以为一个类型加上引用，除非它已经是一个引用。
 
-[table Using add_reference to synthesize the correct constructor type
+[table Using add_reference to synthesize the correct constructor type 使用 add_reference 合成正确的构造函数型
 [[Type of `T1`] [Type of `const T1`] [Type of `add_reference<const T1>::type`]]
 [[T] [const T] [const T &]]
 [[T &] [T & \[8\]] [T &]]
@@ -262,7 +342,8 @@ unless it is already a reference.
 ]
  
 This allows us to build a primary template definition for `pair` that can 
-contain non-reference types, reference types, and constant reference types:
+contain non-reference types, reference types, and constant reference types:\n
+这就允许我们创建一个可以包含非引用类型，引用类型，和常引用类型的 `pair` 的主模板的定义：
 
    template <typename T1, typename T2> 
    struct pair 
@@ -280,7 +361,8 @@ contain non-reference types, reference types, and constant reference types:
 
 Add back in the standard comparison operators, default constructor, 
 and template copy constructor (which are all the same), and you have a 
-`std::pair` that can hold reference types!
+`std::pair` that can hold reference types!\n
+再加上标准的比较操作符，缺省构造函数，和模板拷贝构造函数（都和原来的一样），你就有了一个能够持有引用类型的 `std::pair`！
 
 This same extension could have been done using partial template specialization 
 of `pair`, but to specialize `pair` in this way would require three partial 
@@ -289,9 +371,12 @@ define a single primary template that adjusts itself auto-magically to
 any of these partial specializations, instead of a brute-force partial 
 specialization approach. Using type traits in this fashion allows 
 programmers to delegate partial specialization to the type traits classes, 
-resulting in code that is easier to maintain and easier to understand.
+resulting in code that is easier to maintain and easier to understand.\n
+同样的扩展可以使用 `pair` 的模板偏特化来做到，但要这样特化 `pair`，一共需要三个偏特化，外加主模板。
+type traits 允许我们定义一个单一的主模板，它可以调整自己像变魔术一样变成以上任何一个偏特化，而不需要强制的偏特化步骤。
+以这种方式使用 type traits 允许程序员将偏特化委托给 type traits 类，使得代码易于维护和理解。
 
-[h4 Conclusion]
+[h4 Conclusion 结论]
 
 We hope that in this article we have been able to give you some idea of 
 what type-traits are all about. A more complete listing of the available 
@@ -299,23 +384,39 @@ classes are in the boost documentation, along with further examples using
 type traits. Templates have enabled C++ uses to take the advantage of the 
 code reuse that generic programming brings; hopefully this article has 
 shown that generic programming does not have to sink to the lowest common 
-denominator, and that templates can be optimal as well as generic.
+denominator, and that templates can be optimal as well as generic.\n
+我们希望我们能在这篇文章中给你一些关于 type-traits 是什么的概念。
+boost 文档中有一个可用类的更完整的列表，那里还有一些使用 type traits 的更进一步的示例。
+模板使得 C++ 能够利用泛型编程带来的代码复用的好处，同时也希望这篇文章向你展示泛型编程并非最不常用的特性，而且模板可以和泛型一样精彩。
 
-[h4 Acknowledgements]
+[h4 Acknowledgements 鸣谢]
 
 The authors would like to thank Beman Dawes and Howard Hinnant for their 
-helpful comments when preparing this article.
+helpful comments when preparing this article.\n
+感谢 Beman Dawes 和 Howard Hinnant 在这篇文章准备过程中提出的帮助性建议。
 
-[h4 [#background.references]References]
+[h4 [#background.references]References 参考资料]
 
 # Nathan C. Myers, C++ Report, June 1995. 
-# The type traits library is based upon contributions by Steve Cleary, Beman Dawes, Howard Hinnant and John Maddock: it can be found at www.boost.org. 
-# A scalar type is an arithmetic type (i.e. a built-in integer or floating point type), an enumeration type, a pointer, a pointer to member, or a const- or volatile-qualified version of one of these types. 
-# This quote is from Donald Knuth, ACM Computing Surveys, December 1974, pg 268. 
-# The test code is available as part of the boost utility library (see algo_opt_examples.cpp), the code was compiled with gcc 2.95 with all optimisations turned on, tests were conducted on a 400MHz Pentium II machine running Microsoft Windows 98. 
-# John Maddock and Howard Hinnant have submitted a "compressed_pair" library to Boost, which uses a technique similar to the one described here to hold references. Their pair also uses type traits to determine if any of the types are empty, and will derive instead of contain to conserve space -- hence the name "compressed". 
-# This is actually an issue with the C++ Core Language Working Group (issue #106), submitted by Bjarne Stroustrup. The tentative resolution is to allow a "reference to a reference to T" to mean the same thing as a "reference to T", but only in template instantiation, in a method similar to multiple cv-qualifiers. 
-# For those of you who are wondering why this shouldn't be const-qualified, remember that references are always implicitly constant (for example, you can't re-assign a reference). Remember also that "const T &" is something completely different. For this reason, cv-qualifiers on template type arguments that are references are ignored.
+# The type traits library is based upon contributions by Steve Cleary, Beman Dawes, Howard Hinnant and John Maddock: it can be found at www.boost.org. \n
+  type traits 库基于 Steve Cleary，Beman Dawes，Howard Hinnant 和 John Maddock 的贡献：它可以在 www.boost.org 找到。
+# A scalar type is an arithmetic type (i.e. a built-in integer or floating point type), an enumeration type, a pointer, a pointer to member, or a const- or volatile-qualified version of one of these types. \n
+  一个 scalar type（标量类型）是一个算术类型（也就是说，一个内建整数或浮点数类型），一个枚举类型，
+  一个指针，一个成员指针，或一个上述类型的带有 const- 或 volatile- 修饰的版本。
+# This quote is from Donald Knuth, ACM Computing Surveys, December 1974, pg 268. \n
+  这句引言出自 Donald Knuth, ACM Computing Surveys, December 1974, pg 268。
+# The test code is available as part of the boost utility library (see algo_opt_examples.cpp), the code was compiled with gcc 2.95 with all optimisations turned on, tests were conducted on a 400MHz Pentium II machine running Microsoft Windows 98. \n
+  测试代码成为 boost utility 库的一部分（参见 algo_opt_examples.cpp），代码由 gcc 2.95 编译，并打开全部优化，测试在一台运行 
+  Microsoft Windows 98 的 400 MHz Pentium II 机器上进行。
+# John Maddock and Howard Hinnant have submitted a "compressed_pair" library to Boost, which uses a technique similar to the one described here to hold references. Their pair also uses type traits to determine if any of the types are empty, and will derive instead of contain to conserve space -- hence the name "compressed". \n
+  John Maddock 和 Howard Hinnant 为 Boost 提交了一个 "compressed_pair" 库，使用了一种类似于这里描述的用以持有引用的技术。
+  它们的 pair 也使用 type traits，用来判断如果任何类型为空，就用派生代替包含以节约空间——因此名为 "compressed"。 
+# This is actually an issue with the C++ Core Language Working Group (issue #106), submitted by Bjarne Stroustrup. The tentative resolution is to allow a "reference to a reference to T" to mean the same thing as a "reference to T", but only in template instantiation, in a method similar to multiple cv-qualifiers. \n
+  这实际上是 C++ 核心语言工作组的一个议题 (issue #106)，由 Bjarne Stroustrup 提交。
+  暂定的解决方案是允许一个“T 的引用的引用”和“T 的引用”意味着同样的东西，但是这仅局限于模板实例化或一个方法中，这就类似于多个 cv 修饰符。
+# For those of you who are wondering why this shouldn't be const-qualified, remember that references are always implicitly constant (for example, you can't re-assign a reference). Remember also that "const T &" is something completely different. For this reason, cv-qualifiers on template type arguments that are references are ignored.\n
+  你可能会觉得奇怪，为什么这里不应该被 const 修饰，记住引用总是隐含常量性的（例如，你不能为一个引用再赋值）。
+  同时，还要记住 "const T &" 是完全不同的东西。因此，在模板类型参数是引用的时候，cv 修饰符是被忽略的。
 
 [endsect]
 
