@@ -40,32 +40,46 @@
 [def __value_factory__ `value_factory`]
 
 
-[section Brief Description]
+[section Brief Description（简介）]
 
 The template __boost__factory__ lets you encapsulate a `new` expression
 as a function object, __boost__value_factory__ encapsulates a constructor
 invocation without `new`.
 
+模板 __boost__factory__可令你以函数对象（仿函数）形式来封装 `new` 表达式,
+而 __boost__value_factory__ 则可以非 `new` 的形式调用构造函数
+
+
     __boost__factory__<T*>()(arg1,arg2,arg3) 
     // same as new T(arg1,arg2,arg3)
+	// 如同调用 new T(arg1,arg2,arg3)
 
     __boost__value_factory__<T>()(arg1,arg2,arg3)
     // same as T(arg1,arg2,arg3)
+	//如同调用 T(arg1,arg2,arg3)
 
 For technical reasons the arguments to the function objects have to be
 LValues. A factory that also accepts RValues can be composed using the
 __boost__forward_adapter__ or __boost__bind__.
 
+出于技术原因的考虑，调用函数对象的参数必须是左值。使用 __boost__forward_adapter__
+或 __boost__bind__ 也可组装成接受右值的工厂类。
+
 [endsect]
 
-[section Background]
+[section Background（背景介绍）]
 
 In traditional Object Oriented Programming a Factory is an object implementing
 an interface of one or more methods that construct objects conforming to known
 interfaces.
 
+在传统的面向对象编程中，工厂是一个可通过一（或多）个方法构造符合要求对象的对象。
+
     // assuming a_concrete_class and another_concrete_class are derived
     // from an_abstract_class
+	
+	//假定具体实现类 a_concrete_class 和 another_concrete_class 都从抽象基类
+	//an_abstract_class 派生
 
     class a_factory
     {
@@ -117,6 +131,10 @@ lots of boilerplate code. In other words there is too much code to express
 a rather simple intention. We could use templates to get rid of some of it
 but the approach remains inflexible: 
 
+以上实现方法有几个缺点，最明显者就是有太多重复死板的代码。换言之，如此多的
+代码与要实现的简单目的相比有些小题大做。使用模板可避免以上某些缺点，
+但仍不够灵活：
+
  o We may want a factory that takes some arguments that are forwarded to
    the constructor,
  o we will probably want to use smart pointers,
@@ -127,23 +145,46 @@ but the approach remains inflexible:
  o we might want to just call the constructor - without `new` to create
    an object on the stack, and
  o finally we might want to use customized memory management.
-
+ 
+ o 可能需要工厂接受参数后能转发（非拷贝语义）至构造函数，
+ o 需要工厂能够产生 smart pointer （智能指针）,
+ o 需要（工厂具备 ）多个成员函数以产生不同类型的对象,
+ o 对于产生的对象而言，甚至多态基类也可能不是必须的,
+ o 我们将会看到，工厂完全不需要一个公共的基类,
+ o 所需的仅仅是调用构造函数，能够在栈上构造而非调用 'new' 并且
+ o 除此之外还能够进行定制化的内存管理。
+ 
+ 
 Experience has shown that using function objects and generic Boost components
 for their composition, Design Patterns that describe callback mechasisms
 (typically requiring a high percentage of boilerplate code with pure Object
 Oriented methodology) become implementable with just few code lines and without
 extra classes. 
 
+
+经验告诉我们，使用函数对象（仿函数）和 Boost 泛型组件组合来实现回调机制的设计模式，
+无需额外的类，寥寥数行即可完。相比之下同样的功能在纯面向对象方法实现中通常需要大量
+的呆板代码。
+
+
 Factories are callback mechanisms for constructors, so we provide two class
 templates, __boost__value_factory__ and __boost__factory__, that encasulate
 object construction via direct application of the constructor and the `new`
 operator, respectively. 
 
+工厂即是对构造函数的一种回调机制，对应于此本库提供了两个类模板, __boost__value_factory__
+ 和 __boost__factory__，对应封装了直接使用构造函数和 `new` 操作符对对象的构造。
+
 We let the function objects forward their arguments to the construction
 expressions they encapsulate. Overthis __boost__factory__ optionally allows 
 the use of smart pointers and __std_allocators__.
 
+我们令函数对象将接受到的参数转发（非拷贝语意）至其封装的构造函数，因此
+ __boost__factory__ 是可以使用 smart pointer （智能指针）和  __std_allocators__的。
+
 Compile-time polymorphism can be used where appropriate,
+
+如果条件允许，亦可使用编译期多态，
 
     template< class T >
     void do_something()
@@ -153,12 +194,19 @@ Compile-time polymorphism can be used where appropriate,
 
         // for conceptually similar objects x we neither need virtual
         // functions nor a common base class in this context.
-        // [...]
+		
+		// 在此语境中，对于构造函数调用与对象 x 类似者，既不需要虚函数
+		// 也不需要公共的基类。
+		
+		// [...]
     }
 
 Now, to allow inhomogenous signaturs for the constructors of the types passed 
 in for `T` we can use __value_factory__ and __boost__bind__ to normalize between
 them. 
+
+现在，为将不同类型签名式的类型传入类型 `T` 的构造函数，可使用 __value_factory__ 
+和 __boost__bind__ 来作出一致的处理。
 
     template< class ValueFactory > 
     void do_something(ValueFactory make_obj = ValueFactory())
@@ -168,7 +216,11 @@ them.
 
         // for conceptually similar objects x we neither need virtual
         // functions nor a common base class in this context.
-        // [...]
+		
+		// 在此语境中，对于构造函数调用与对象 x 类似者，既不需要虚函数
+		// 也不需要公共的基类。
+		
+		// [...]
     }
 
     int main()
@@ -178,12 +230,15 @@ them.
         do_something(__boost__value_factory__<X>());
         do_something(boost::bind(__boost__value_factory__<Y>(),_1,5,_2));
         // construct X(a,b) and Y(a,5,b), respectively.
+		// 相应的构造 X(a,b) 和 Y(a,5,b)。
 
         // [...]
     }
 
 Maybe we want our objects to outlive the function's scope, in this case we
 have to use dynamic allocation;
+
+也许我们需要构建的对象的生命周期长于函数作用域，此时需要动态分配；
 
     template< class Factory >
     whatever do_something(Factory new_obj = Factory())
@@ -199,18 +254,31 @@ have to use dynamic allocation;
         // Note that we are also free to have the type erasure happen 
         // somewhere else (e.g. in the constructor of this function's
         // result type).
+		
+		// 同上，无需公共基类或虚函数,可通过使用
+		// 形如 boost::shared_ptr<base> 
+		// 而不是 typename Factory::result_type
+		// 的代码来确保产生的对象有共同的多态基类。
+		// 请注意到我们也可任意决定究竟何处才进行向上转型（而丢失实际类型）
+		// （比如在此函数返回值类型的构造函数中进行）
 
         // [...]
     }
 
     // [... call do_something like above but with __factory__ instead
     // of __value_factory__]
+	
+	// [... 如同前例一般调用 do_something ，仅将 __value_factory__ 
+	// 替换成 __factory__]    
 
 Although we might have created polymorphic objects in the previous example,
 we have used compile time polymorphism for the factory. If we want to erase
 the type of the factory and thus allow polymorphism at run time, we can
 use __boost_function__ to do so. The first example can be rewritten as 
 follows.
+
+尽管前例中我们建立了多态的对象，但仍在工厂中使用了编译期多态。如果希望在工厂中
+隐藏具体类型而达到运行期多态，则可使用 __boost_function__ 来完成。前例可重写如下。
 
     typedef boost::function< an_abstract_class*() > a_factory;
 
@@ -232,22 +300,26 @@ follows.
 Of course we can just as easy create factories that take arguments and/or
 return __smart_pointers__.
 
+当然也可简单地建立能够接受/返回 __smart_pointers__ （智能指针）的工厂。
+
 [endsect]
 
 
-[section:reference Reference]
+[section:reference Reference（参考）]
 
 
 [section value_factory]
 
-[heading Description]
+[heading Description（概述）]
 
 Function object template that invokes the constructor of the type `T`.
 
-[heading Header]
+调用类型 `T` 构造函数的函数对象模板。
+
+[heading Header（头文件）]
     #include <boost/functional/value_factory.hpp>
 
-[heading Synopsis]
+[heading Synopsis（摘要）]
 
     namespace boost
     {
@@ -255,39 +327,50 @@ Function object template that invokes the constructor of the type `T`.
         class value_factory;
     }
 
-[variablelist Notation
-    [[`T`]         [an arbitrary type with at least one public constructor]]
-    [[`a0`...`aN`] [argument LValues to a constructor of `T`]]
-    [[`F`]         [the type `value_factory<F>`]]
-    [[`f`]         [an instance object of `F`]]
+[variablelist Notation（表示法）
+    [[`T`]         [an arbitrary type with at least one public constructor
+					有至少一个 public 构造函数的任意类]]
+    [[`a0`...`aN`] [argument LValues to a constructor of `T`
+					调用 `T` 构造函数的诸左值参数]]
+    [[`F`]         [the type `value_factory<F>`
+					`value_factory<F>`的类型]]
+    [[`f`]         [an instance object of `F`
+					 `F` 类的一个对象实例]]
 ]
 
-[heading Expression Semantics]
+[heading Expression Semantics（表达式语义）]
 
 [table
-    [[Expression]       [Semantics]]
-    [[`F()`]            [creates an object of type `F`.]]
-    [[`F(f)`]           [creates an object of type `F`.]]
-    [[`f(a0`...`aN)`]   [returns `T(a0`...`aN)`.]]
-    [[`F::result_type`] [is the type `T`.]]
+    [[Expression（表达式）]       [Semantics（语义）]]
+    [[`F()`]            [creates an object of type `F`. 建立类型 `F` 的一个对象。]]
+    [[`F(f)`]           [creates an object of type `F`. 建立类型 `F` 的一个对象。]]
+    [[`f(a0`...`aN)`]   [returns `T(a0`...`aN)`. 返回`T(a0`...`aN)`。]]
+    [[`F::result_type`] [is the type `T`.  `T`的类型]]
 ]
 
-[heading Limits]
+[heading Limits（限制）]
 
 The macro BOOST_FUNCTIONAL_VALUE_FACTORY_MAX_ARITY can be defined to set the
 maximum arity. It defaults to 10.
+
+可定义 BOOST_FUNCTIONAL_VALUE_FACTORY_MAX_ARITY 宏来决定工厂可接受的最多参数值，
+默认值是10。
 
 [endsect]
 
 
 [section factory]
 
-[heading Description]
+[heading Description（概述）]
 
 Function object template that dynamically constructs a pointee object for
 the type of pointer given as template argument. Smart pointers may be used
 for the template argument, given that `boost::pointee<Pointer>::type` yields
 the pointee type.
+
+根据给定的模板参数来动态构建类指针类对象的函数对象模板。可使用 Smart pointer
+（智能指针）作为模板参数，对于 boost 中提供的类指针类，`boost::pointee<Pointer>::type` 
+类型优先于类指针类本身的类型。
 
 If an __allocator__ is given, it is used for memory allocation and the 
 placement form of the `new` operator is used to construct the object.
@@ -296,15 +379,24 @@ with a copy of the Allocator is used for the second constructor argument
 of `Pointer` (thus it must be a __smart_pointer__ that provides a suitable 
 constructor, such as __boost__shared_ptr__).
 
+若给定了 __allocator__ （分配器）参数，则其作为 `new`  操作符构建对象时分配、及其就地分配形式
+的内存管理之用。一个带有 Allocator （分配器）拷贝并用于调用析构函数、回收内存的函数对象将
+作为第二个参数传递给 `Pointer` 类的构造函数（要求一个 __smart_pointer__ （智能指针）必须有
+符合要求的构造函数，比如 __boost__shared_ptr__）。
+
 If a third template argument is `factory_passes_alloc_to_smart_pointer`,
 the allocator itself is used for the third constructor argument of `Pointer`
 (__boost__shared_ptr__ then uses the allocator to manage the memory of its
 seperately allocated reference counter).
 
-[heading Header]
+若给定了 `factory_passes_alloc_to_smart_pointer` 作为第三个模板参数，则
+allocator（分配器）本身将作为第三个参数传递给 `Pointer` 类（__boost__shared_ptr__
+将使用此 allocator（分配器）用于其进行引用计数器的独立分配的内存的管理）。
+
+[heading Header（头文件）]
     #include <boost/functional/factory.hpp>
 
-[heading Synopsis]
+[heading Synopsis（摘要）]
 
     namespace boost
     {
@@ -321,35 +413,44 @@ seperately allocated reference counter).
         class factory;
     }
 
-[variablelist Notation
-    [[`T`]         [an arbitrary type with at least one public constructor]]
-    [[`P`]         [pointer or smart pointer to `T`]]
-    [[`a0`...`aN`] [argument LValues to a constructor of `T`]]
-    [[`F`]         [the type `factory<P>`]]
-    [[`f`]         [an instance object of `F`]]
+[variablelist Notation（表示法）
+    [[`T`]         [an arbitrary type with at least one public constructor]
+					有至少一个 public 构造函数的任意类]]
+    [[`P`]         [pointer or smart pointer to `T`
+					指向 `T` 的指针或 smart pointer （智能指针）]]
+    [[`a0`...`aN`] [argument LValues to a constructor of `T`
+					调用 `T` 构造函数的诸左值参数]]
+    [[`F`]         [the type `factory<P>`
+					`factory<P>` 的类型]]
+	[[`f`]         [an instance object of `F`
+					 `F` 类的一个对象实例]]
 ]
 
-[heading Expression Semantics]
+[heading Expression Semantics（表达式语义）]
 
 [table
-    [[Expression]       [Semantics]]
-    [[`F()`]            [creates an object of type `F`.]]
-    [[`F(f)`]           [creates an object of type `F`.]]
+    [[Expression（表达式）]       [Semantics（语义）]]
+    [[`F()`]            [creates an object of type `F`. 建立类型 `F` 的一个对象。]]
+    [[`F(f)`]           [creates an object of type `F`. 建立类型 `F` 的一个对象。]]
     [[`f(a0`...`aN)`]   [dynamically creates an object of type `T` using 
-        `a0`...`aN` as arguments for the constructor invocation.]]
-    [[`F::result_type`] [is the type `P` with top-level cv-qualifiers removed.]]
+        `a0`...`aN` as arguments for the constructor invocation.
+		使用  `a0`...`aN` 作为参数调用构造函数动态建立一个 `T` 类型的对象。]]
+    [[`F::result_type`] [is the type `P` with top-level cv-qualifiers removed.  `P` 的类型，但顶级的 cv 限定词被移除。]]
 ]
 
-[heading Limits]
+[heading Limits（限制）]
 
 The macro BOOST_FUNCTIONAL_FACTORY_MAX_ARITY can be defined to set the
 maximum arity. It defaults to 10.
 
-[endsect]
+可定义 BOOST_FUNCTIONAL_VALUE_FACTORY_MAX_ARITY 宏来决定工厂可接受的最多参数值，
+默认值是10。
 
 [endsect]
 
-[section Acknowledgements]
+[endsect]
+
+[section Acknowledgements（鸣谢）]
 
 Eric Niebler requested a function to invoke a type's constructor (with the 
 arguments supplied as a Tuple) as a Fusion feature. These Factory utilities are
@@ -365,7 +466,7 @@ details and their evolution.
 
 [endsect]
 
-[section References]
+[section References（参考）]
 
 # [@http://en.wikipedia.org/wiki/Design_Patterns Design Patterns],
   Gamma et al. - Addison Wesley Publishing, 1995
