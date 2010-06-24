@@ -12,42 +12,51 @@
     [last-revision $Date: 2007-11-25 13:38:02 -0500 (Sun, 25 Nov 2007) $]
 ]
 
-[section:moti Motivation]
+[section:moti Motivation 动机]
 
 [c++]
 
 Today many template libraries supply object generators to simplify object creation 
 by utilizing the C++ template argument deduction facility.  Consider `std::pair`.  
 In order to instantiate this class template and create a temporary object of this instantiation, 
-one has to supply template parameters, as well as parameters to the constructor:
+one has to supply template parameters, as well as parameters to the constructor:\n
+如今，很多模板库都提供对象生成器，利用 C++ 模板参数推演设施简化对象的创建过程。考虑一下 `std::pair`。
+为了实例化这个类模板并创建这个实例的一个临时对象，我们必须要提供模板参数，以及参数给构造函数：
 
     std::pair<int, double>(5, 3.14159);
 
 To avoid this duplication, STL supplies the `std::make_pair` object generator.  
-When it is used, the types of template parameters are deduced from supplied function arguments:
+When it is used, the types of template parameters are deduced from supplied function arguments:\n
+为了避免这样的重复，STL 提供了 `std::make_pair` 对象生成器。使用它时，模板参数的类型从提供的函数参数中推演出来：
 
     std::make_pair(5, 3.14159);
 
 For the temporary objects it is enough.  However, when a named object needs to be allocated, 
-the problem appears again:
+the problem appears again:\n
+对于临时对象来说，这足够了。然而，当一个命名对象需要分配内存时，问题又出现了：
 
     std::pair<int, double> p(5, 3.14159);
 
-The object generator no longer helps:
+The object generator no longer helps:\n
+对象生成器无法提供帮助：
 
     std::pair<int, double> p = std::make_pair(5, 3.14159);
 
 It would be nice to deduce the type of the object (on the left) from the expression 
-it is initialized with (on the right), but the current C++ syntax does not allow for this.
+it is initialized with (on the right), but the current C++ syntax does not allow for this.\n
+从对象的初始化表达式（右边的）推演出对象（左边的）的类型应该很不错，但现在的 C++ 语法不允许这样做。
 
 The above example demonstrates the essence of the problem but does not demonstrate its scale.  
 Many libraries, especially expression template libraries, create objects of really complex types, 
-and go a long way to hide this complexity behind object generators.  Consider a nit Boost.Lambda functor:
+and go a long way to hide this complexity behind object generators.  Consider a nit Boost.Lambda functor:\n
+上面的示例示范了问题的本质，但没有示范它的规模。
+很多库，特别是表达式模板库，创建非常复杂的类型的对象，而且主动将这种复杂性隐藏在对象生成器的后面。考虑一个初级的 Boost.Lambda 仿函数：
 
     _1 > 15 && _2 < 20
 
 If one wanted to allocate a named copy of such an innocently looking functor, 
-she would have to specify something like this:
+she would have to specify something like this:\n
+如果有人要分配这样一个简单明了的仿函数的命名拷贝，她必须明确指定这样的东西：
  
     lambda_functor<
         lambda_functor_base<
@@ -81,32 +90,40 @@ Not exactly elegant.  To solve this problem (as well as some other problems),
 the C++ standard committee is considering 
 a few additions to the standard language, such as `typeof/decltype` and `auto` (see 
 [@http://www.open-std.org/jtc1/sc22/wg21/docs/papers/2004/n1607.pdf
-http://www.open-std.org/jtc1/sc22/wg21/docs/papers/2004/n1607.pdf]).
+http://www.open-std.org/jtc1/sc22/wg21/docs/papers/2004/n1607.pdf]).\n
+太不优雅了。为了解决这个问题（以及其它一些问题），C++ 标准委员会考虑将一些东西加入到标准语言中，比如 `typeof/decltype` 和 `auto`
+（参见 [@http://www.open-std.org/jtc1/sc22/wg21/docs/papers/2004/n1607.pdf 
+http://www.open-std.org/jtc1/sc22/wg21/docs/papers/2004/n1607.pdf]）。
 
 The `typeof` operator (or `decltype`, which is a slightly different flavor of `typeof`) 
 allows one to determine the type of an expression at compile time.  Using `typeof`, 
-the above example can be simplified drastically:
+the above example can be simplified drastically:\n
+`typeof` 操作符（或 `decltype`，和 `typeof` 的味道有轻微的不同）允许人们在编译期确定表达式类型。使用 `typeof`，上面的示例可被彻底简化：
 
     typeof(_1 > 15 && _2 < 20) f = _1 > 15 && _2 < 20;
 
-Much better, but some duplication still exists.  The `auto` type solves the rest of the problem:
+Much better, but some duplication still exists.  The `auto` type solves the rest of the problem:\n
+好多了，但是依然有一些重复。`auto` 类型解决剩下的问题：
 
     auto f = _1 > 15 && _2 < 20;
 
 The purpose of the Boost.Typeof library is to provide a library-based solution, 
 which could be used until the language-based facility is added to the Standard
-and becomes widely available.
+and becomes widely available.\n
+Boost.Typeof 库的目标是提供一个基于库的解决方案，它可以使用，直到基于语言的设施被加入标准并被广泛使用。
  
 [endsect]
 
-[section:tuto Tutorial]
+[section:tuto Tutorial 指南]
 
-To start using typeof include the typeof header:
+To start using typeof include the typeof header:\n
+为了开始使用 typeof，要包含 typeof 头文件：
 
     #include <boost/typeof/typeof.hpp>
 
 To deduce the type of an expression at compile time
-use the `BOOST_TYPEOF` macro:
+use the `BOOST_TYPEOF` macro:\n
+为了在编译期推演表达式类型，要使用 `BOOST_TYPEOF` 宏：
 
     namespace ex1
     {
@@ -115,7 +132,8 @@ use the `BOOST_TYPEOF` macro:
         BOOST_STATIC_ASSERT((is_same<type, double>::value));
     }
 
-In the dependent context use `BOOST_TYPEOF_TPL` instead of `BOOST_TYPEOF`:
+In the dependent context use `BOOST_TYPEOF_TPL` instead of `BOOST_TYPEOF`:\n
+在模板上下文中使用 `BOOST_TYPEOF_TPL` 代替 `BOOST_TYPEOF`：
 
     namespace ex2
     {
@@ -134,7 +152,9 @@ The above examples are possible because the Typeof Library knows about
 primitive types, such as `int`, `double`, `char`, etc.  The Typeof Library also
 knows about most types and templates defined by the 
 Standard C++ Library, but the appropriate headers need to be included
-to take advantage of this:
+to take advantage of this:\n
+上面的示例之所以可能，是因为 Typeof 库了解基本类型，比如 `int`, `double`, `char`，等等。
+Typeof 库还了解标准 C++ 库中的大多数类型和模板定义类型，但是为了使用它需要包含适当的头文件：
 
     #include <boost/typeof/std/utility.hpp>
 
@@ -148,11 +168,14 @@ to take advantage of this:
 Here `<boost/typeof/std/utility.hpp>` includes `<utility>` and contains 
 knowledge about templates defined there.  This naming convention 
 applies in general, for example to let the Typeof Library handle `std::vector`,
-include `<boost/typeof/std/vector.hpp>`, etc.
+include `<boost/typeof/std/vector.hpp>`, etc.\n
+这里的 `<boost/typeof/std/utility.hpp>` 包含了 `<utility>`，也包含了在其中定义的模板的信息。
+这种命名惯例基本上适用，例如，为了让 Typeof 库处理 `std::vector`，需要包含 `<boost/typeof/std/vector.hpp>` 等等。
 
 To deduce the type of a variable from the expression, this variable 
 is initialized with, use the `BOOST_AUTO` macro (or `BOOST_AUTO_TPL` 
-in a dependent context:
+in a dependent context:\n
+为了推演表达式中某个变量的类型，这个变量需要使用 `BOOST_AUTO` 宏进行初始化（模板上下文中，使用 `BOOST_AUTO_TPL`）：
 
     #include <boost/typeof/std/string.hpp>
 
@@ -164,7 +187,8 @@ in a dependent context:
     }
 
 Both `BOOST_TYPEOF` and `BOOST_AUTO` strip top-level qualifiers.  
-Therefore, to allocate for example a reference, it has to be specified explicitly: 
+Therefore, to allocate for example a reference, it has to be specified explicitly: \n
+`BOOST_TYPEOF` 和 `BOOST_AUTO` 都除去了顶层修饰符。因此，不如说要分配一个引用，必须显式指定：
 
     namespace ex5
     {
@@ -177,20 +201,25 @@ Therefore, to allocate for example a reference, it has to be specified explicitl
         BOOST_AUTO(&s, hello());
     }
 
-To better understand this syntax, note that this gets expanded into:
+To better understand this syntax, note that this gets expanded into:\n
+为了更好地理解这种语法，注意它可以展开为：
 
     BOOST_TYPEOF(hello()) &s = hello();
 
 If your define your own type, the Typeof Library cannot handle it
 unless you let it know about this type.  You tell the Typeof Library
-about a type (or template) by the means of "registering" this type/template.
+about a type (or template) by the means of "registering" this type/template.\n
+如果你定义了你自己的类型，Typeof 库不能处理它，除非你让它了解这个类型。
+你通过“注册”这个类型/模板的方法将一个类型（或模板）告知 Typeof 库。
 
 Any source or header file where types/templates are registered has to 
-contain the following line before any registration is done:
+contain the following line before any registration is done:\n
+任何有类型/模板被注册的源文件或头文件必须在任何注册之前包含下面这一行：
 
     #include BOOST_TYPEOF_INCREMENT_REGISTRATION_GROUP()
 
-After this a type can be registered:
+After this a type can be registered:\n
+在这之后，一个类型就可以被注册了：
 
     namespace ex6
     {
@@ -201,11 +230,14 @@ After this a type can be registered:
     BOOST_TYPEOF_REGISTER_TYPE(ex6::MyType)
 
 The registration must be done from the context of global namespace; 
-fully qualified type name has to be used.
+fully qualified type name has to be used.\n
+注册必须在全局名字空间上下文中进行，还必须使用全修饰的类型名。
 
-Any number of types can be registered in one file, each on a separate line.
+Any number of types can be registered in one file, each on a separate line.\n
+在一个文件中可以注册任意多个类型，每一个在一个单独的行中。
 
-Once your type is registered, the Typeof Library can handle it in any context:
+Once your type is registered, the Typeof Library can handle it in any context:\n
+一旦你的类型被注册，Typeof 库就可以在任何上下文中处理它：
 
     namespace ex6
     {
@@ -216,7 +248,8 @@ Once your type is registered, the Typeof Library can handle it in any context:
 
 A template is registered by specifying its fully qualified name,
 and describing its parameters.  In the simplest case, when all parameters
-are type parameters, only their number needs to be specified:
+are type parameters, only their number needs to be specified:\n
+一个模板被注册时，要使用全修饰的名字，并描述它的参数。在最简单的情况下，所有的参数都是类型参数，这时只需要指定它们的数量：
 
     namespace ex7
     {
@@ -237,7 +270,8 @@ are type parameters, only their number needs to be specified:
     }
 
 When a template has integral template parameters, all parameters need
-to be described in the preprocessor sequence:
+to be described in the preprocessor sequence:\n
+当一个模板拥有整型模板参数的时候，所有的参数都需要依次在预处理器中进行描述：
 
     namespace ex8
     {
@@ -257,32 +291,37 @@ to be described in the preprocessor sequence:
         >::value));
     }
 
-Please see the reference for more details.
+Please see the reference for more details.\n
+关于更多的细节请参见参考部分。
 
 [endsect]
 
-[section:refe Reference]
+[section:refe Reference 参考]
 
 [section:auto AUTO, AUTO_TPL]
 
-The `BOOST_AUTO` macro emulates the proposed `auto` keyword in C++. 
+The `BOOST_AUTO` macro emulates the proposed `auto` keyword in C++. \n
+`BOOST_AUTO` 宏模仿 C++ 中被提议的 `auto` 关键字。
 
-[h4 Usage]
+[h4 Usage 用法]
 
     BOOST_AUTO(var,expr)
     BOOST_AUTO_TPL(var,expr)
     
-[variablelist Arguments
-[[var][a variable to be initialized with the expression]] 
-[[expr][a valid c++ expression]]
+[variablelist Arguments 参数
+[[var][a variable to be initialized with the expression\n
+一个被表达式初始化的变量]] 
+[[expr][a valid c++ expression\n
+一个合法的 C++ 表达式]]
 ]
 
-[h4 Remarks]
+[h4 Remarks 备注]
 
 If you want to use `auto` in a template-context, use `BOOST_AUTO_TPL(expr)`,
-which takes care of the `typename` keyword inside the `auto` expression.
+which takes care of the `typename` keyword inside the `auto` expression.\n
+如果你要在模板上下文中使用 `auto`，请使用 `BOOST_AUTO_TPL(expr)`，它可以处理 `auto` 表达式中的 `typename` 关键字。
 
-[h4 Sample Code]
+[h4 Sample Code 示例代码]
 
     int main() 
     {
@@ -298,25 +337,29 @@ which takes care of the `typename` keyword inside the `auto` expression.
 The `BOOST_TYPEOF_COMPLIANT` macro can be used to force the emulation mode.  
 Define it if your compiler by default uses another mode, such as native `typeof`
 or Microsoft-specific trick, but you want to use the emulation mode, 
-for example for portability reasons.   
+for example for portability reasons. \n
+`BOOST_TYPEOF_COMPLIANT` 宏可以用于强加仿真方式。如果你的编译器在缺省情况下使用其它方式（诸如原生 `typeof` 
+或微软特有的诀窍），但是你有需要使用仿真方式，比如为了可移植性的原因，你就可以定义它。  
 
 [endsect]
 
 [section:incr INCREMENT_REGISTRATION_GROUP]
 
 The `BOOST_TYPEOF_INCREMENT_REGISTRATION_GROUP` macro ensures that type registrations 
-in different header files receive unique identifiers.
+in different header files receive unique identifiers.\n
+`BOOST_TYPEOF_INCREMENT_REGISTRATION_GROUP` 宏确保在不同的头文件中的类型注册接受唯一的标识符。
 
-[h4 Usage]
+[h4 Usage 用法]
 
     #include BOOST_TYPEOF_INCREMENT_REGISTRATION_GROUP()
     
-[h4 Remarks]
+[h4 Remarks 备注]
 
 specified once in every cpp/hpp file where any registration is performed, 
-before any registration.
+before any registration.\n
+在每一个执行注册的 cpp/hpp 文件中，在任何注册之前，指定一次。
 
-[h4 Sample Code]
+[h4 Sample Code 示例代码]
 
     #include BOOST_TYPEOF_INCREMENT_REGISTRATION_GROUP()
 
@@ -328,26 +371,30 @@ before any registration.
 [section:inte INTEGRAL]
 
 The `BOOST_TYPEOF_INTEGRAL` macro is used when registering an integral
-template parameter using `BOOST_TYPEOF_REGISTER_TEMPLATE`.
+template parameter using `BOOST_TYPEOF_REGISTER_TEMPLATE`.\n
+`BOOST_TYPEOF_INTEGRAL` 宏用于使用 `BOOST_TYPEOF_REGISTER_TEMPLATE` 注册整模板参数的时候。
 
-Useful for `enum`s and dependent integral template parameters.
+Useful for `enum`s and dependent integral template parameters.\n
+对于 `enums` 和附属的整模板参数是很有用的。
 
-[h4 Usage]
+[h4 Usage 用法]
 
     BOOST_TYPEOF_INTEGRAL(x)
 
-[variablelist Arguments
-[[x][a fully qualified integral type or enum]]
+[variablelist Arguments 参数
+[[x][a fully qualified integral type or enum\n
+一个全修饰的整类型或枚举]]
 ]
  
-[h4 Remarks]
+[h4 Remarks 备注]
 
 A short syntax has been implemented for the built in types 
 (int, bool, long, unsigned long, etc.)
 Other non-type template parameters (e.g. pointer to member) 
-are not supported.
+are not supported.\n
+对于内建类型（int, bool, long, unsigned long, 等）实现了一个简短的语法，不支持其它非类型模板参数（譬如指向成员的指针）。
 
-[h4 Sample Code]
+[h4 Sample Code 示例代码]
 
     #include BOOST_TYPEOF_INCREMENT_REGISTRATION_GROUP()
 
@@ -379,7 +426,9 @@ are not supported.
 The `BOOST_TYPEOF_LIMIT_FUNCTION_ARITY` macro defines how many parameters
 are supported for functios, and applies to functions, function pointers,
 function references, and member function pointers.  The default value is 10.
-Redefine if you want the Typeof Library to handle functions with more parameters.
+Redefine if you want the Typeof Library to handle functions with more parameters.\n
+`BOOST_TYPEOF_LIMIT_FUNCTION_ARITY` 宏定义了可以支持的函数参数的个数，适用于函数，函数指针，函数引用，以及成员函数指针。
+缺省值为 10，如果你想要 Typeof 库处理更多参数的函数，就要重新定义。
    
 [endsect]
 
@@ -390,28 +439,34 @@ used to encode a type.  The default value is 50.  Increase it if you want
 the Typeof Library to handle very complex types, although this 
 possibility is limited by the maximum number of template parameters supported
 by your compiler.  On the other hand, if you work only with very simple types, 
-decreasing this number may help to boost compile-time performance.
+decreasing this number may help to boost compile-time performance.\n
+`BOOST_TYPEOF_LIMIT_SIZE` 宏定义了用于编码一个类型的编译期序列的大小。缺省值为 50。
+如果你想要 Typeof 库处理更复杂的类型，可以增加这个数值，但是这可能是你的编译器支持的模板参数的最大数量。
+另一方面，如果你只是使用很简单的类型，减少这个数值可以帮助你提升 boost 的编译期性能。
 
 [endsect]
 
 [section:regtype REGISTER_TYPE]
 
 The `BOOST_TYPEOF_REGISTER_TYPE` macro informs the Typeof Library 
-about the existence of a type
+about the existence of a type\n
+`BOOST_TYPEOF_REGISTER_TYPE` 宏将一个类型的存在通知 Typeof 库。
 
-[h4 Usage]
+[h4 Usage 用法]
 
     BOOST_TYPEOF_REGISTER_TYPE(x)
     
-[variablelist Arguments
-[[x][a fully qualified type]]
+[variablelist Arguments 参数
+[[x][a fully qualified type\n
+一个全修饰的类型]]
 ]
   
-[h4 Remarks]
+[h4 Remarks 备注]
 
-Must be used in the global namespace
+Must be used in the global namespace\n
+必须用于全局名字空间
 
-[h4 Sample Code]
+[h4 Sample Code 示例代码]
 
     #include BOOST_TYPEOF_INCREMENT_REGISTRATION_GROUP()
 
@@ -429,30 +484,38 @@ Must be used in the global namespace
 [section:regtemp REGISTER_TEMPLATE]
 
 The `BOOST_TYPEOF_REGISTER_TEMPLATE` macro informs the Typeof Library 
-about the existence of a template and describes its parameters
+about the existence of a template and describes its parameters\n
+`BOOST_TYPEOF_REGISTER_TEMPLATE` 宏将一个模板的存在通知 Typeof 库，并描述它的参数。
 
-[h4 Usage]
+[h4 Usage 用法]
 
     BOOST_TYPEOF_REGISTER_TEMPLATE(x, n)
     BOOST_TYPEOF_REGISTER_TEMPLATE(x, seq)
     
-[variablelist Arguments
-[[x][a fully qualified template]] 
-[[n][the number of template arguments. Only valid if all template arguments are typenames]]
-[[seq][a sequence of template arguments. Must be used when integral or template template parameters are present]]
+[variablelist Arguments 参数
+[[x][a fully qualified template\n
+一个全修饰的模板]] 
+[[n][the number of template arguments. Only valid if all template arguments are typenames\n
+模板参数的数量。只有所有的模板参数都是 typenames 时，才是合法的]]
+[[seq][a sequence of template arguments. Must be used when integral or template template parameters are present\n
+一个模板参数的序列。在提供整类型或 template template parameters（模板模板参数）时必须使用]]
 ] 
   
-[h4 Remarks]
+[h4 Remarks 备注]
 
-Must be used in the global namespace. 
+Must be used in the global namespace. \n
+必须用于全局名字空间。
 
 The library allows registration of templates with type, integral, 
-and template template parameters:
+and template template parameters:\n
+库允许带有类型，整类型，以及模板模板参数的模板注册：
  
-* A type template parameter is described by the `(class)` or `(typename)` sequence element
+* A type template parameter is described by the `(class)` or `(typename)` sequence element\n
+  一个 type template parameter（类型模板参数）是用 `(class)` 或 `(typename)` 描述的序列中元素
 * A template parameter of a well-known integral type can be described by 
 simply supplying its type, like `(unsigned int)`.  
-The following well-known integral types are supported: 
+The following well-known integral types are supported: \n
+  一个显而易见的整类型模板参数可以通过简单地提供它的类型来描述，比如 `(unsigned int)`。以下是被支持的显而易见的整类型：
     * `[signed/unsigned] char`
     * `[unsigned] short`
     * `[unsigned] int`
@@ -461,13 +524,16 @@ The following well-known integral types are supported:
     * `bool`
     * `size_t`
 * Enums and typedefs of integral types, need to be described explicitly 
-with the `BOOST_TYPEOF_INTEGRAL` macro, like `(BOOST_TYPEOF_INTEGRAL(MyEnum))` 
+with the `BOOST_TYPEOF_INTEGRAL` macro, like `(BOOST_TYPEOF_INTEGRAL(MyEnum))`\n
+  整类型的枚举和 typedefs 需要用 `BOOST_TYPEOF_INTEGRAL` 宏显式描述，比如 `(BOOST_TYPEOF_INTEGRAL(MyEnum))`  
 * Template template parameters are described with the `BOOST_TYPEOF_TEMPLATE` macro, 
 like: `(BOOST_TYPEOF_TEMPLATE((class)(unsigned int)))`.  
 In case of all type parameters this can be shortened to something like `(BOOST_TYPEOF_TEMPLATE(2))`.  
-The nested template template parameters are not supported. 
+The nested template template parameters are not supported. \n
+  template template parameters（模板模板参数）使用 `BOOST_TYPEOF_TEMPLATE` 宏描述，比如：`(BOOST_TYPEOF_TEMPLATE((class)(unsignedint)))`。
+  在全部为类型参数的情况下，这可以简化为形如 `(BOOST_TYPEOF_TEMPLATE(2))` 的样子。不支持嵌套的模板模板参数。
 
-[h4 Sample Code]
+[h4 Sample Code 示例代码]
 
     #include BOOST_TYPEOF_INCREMENT_REGISTRATION_GROUP()
 
@@ -488,23 +554,27 @@ The nested template template parameters are not supported.
 [section:temp TEMPLATE]
 
 The `BOOST_TYPEOF_TEMPLATE` macro is used when registering template template parameters 
-using `BOOST_TYPEOF_REGISTER_TEMPLATE`.
+using `BOOST_TYPEOF_REGISTER_TEMPLATE`.\n
+当注册 template template parameters（模板模板参数）时使用了 `BOOST_TYPEOF_REGISTER_TEMPLATE`，就需要使用 `BOOST_TYPEOF_TEMPLATE` 宏。
  
-[h4 Usage]
+[h4 Usage 用法]
 
     BOOST_TYPEOF_TEMPLATE(n)
     BOOST_TYPEOF_TEMPLATE(seq)
 
-[variablelist Arguments
-[[n][the number of template arguments. Only valid if all template arguments are typenames]]
-[[seq][a sequence of template arguments. Must be used when there are integral constants in the nested template]]
+[variablelist Arguments 参数
+[[n][the number of template arguments. Only valid if all template arguments are typenames\n
+模板参数的数量。只有所有的模板参数都是 typenames 时，才是合法的]]
+[[seq][a sequence of template arguments. Must be used when there are integral constants in the nested template\n
+一个模板参数的序列。当嵌套模板中有整常类型时必须使用]]
 ]
  
-[h4 Remarks]
+[h4 Remarks 备注]
 
-Can not be used to register nested template template parameters.
+Can not be used to register nested template template parameters.\n
+不能用于注册嵌套 template template parameters（模板模板参数）。
 
-[h4 Sample Code]
+[h4 Sample Code 示例代码]
 
     #include BOOST_TYPEOF_INCREMENT_REGISTRATION_GROUP()
 
@@ -533,23 +603,26 @@ Can not be used to register nested template template parameters.
 [section:typo TYPEOF, TYPEOF_TPL]
 
 The `BOOST_TYPEOF` macro calculates the type of an expression, 
-but removes the top-level qualifiers, `const&` 
+but removes the top-level qualifiers, `const&` \n
+`BOOST_TYPEOF` 宏推测一个表达式的类型，但是移除顶层修饰符，`const&`
 
-[h4 Usage]
+[h4 Usage 用法]
 
     BOOST_TYPEOF(expr)
     BOOST_TYPEOF_TPL(expr)
     
-[variablelist Arguments
-[[expr][a valid c++ expression that can be bound to const T&]]
+[variablelist Arguments 参数
+[[expr][a valid c++ expression that can be bound to const T&\n
+一个可以绑定到 const T& 的合法的 C++ 表达式]]
 ]
 
-[h4 Remarks]
+[h4 Remarks 备注]
 
 If you want to use `typeof` in a template-context, use `BOOST_TYPEOF_TPL(expr)`, 
-which takes care of `typename` inside the `typeof` expression.
+which takes care of `typename` inside the `typeof` expression.\n
+如果你想要则模板上下文中使用 `typeof`，请使用 `BOOST_TYPEOF_TPL(expr)`，它可以处理 `typeof` 表达式中的 `typename`。
 
-[h4 Sample Code]
+[h4 Sample Code 示例代码]
 
     template<typename A, typename B>
     struct result_of_conditional 
@@ -568,31 +641,39 @@ which takes care of `typename` inside the `typeof` expression.
 [section:typn TYPEOF_NESTED_TYPEDEF, TYPEOF_NESTED_TYPEDEF_TPL]
 
 The `TYPEOF_NESTED_TYPEDEF` macro works in much the same way as the 'TYPEOF' macro does, but
-workarounds several compiler deficiencies. 
+workarounds several compiler deficiencies. \n
+`TYPEOF_NESTED_TYPEDEF` 宏的工作方法和 'TYPEOF' 宏大体相同，但是弥补了几个编译器的缺陷。
 
-[h4 Usage]
+[h4 Usage 用法]
 
     BOOST_TYPEOF_NESTED_TYPEDEF(name,expr)
     BOOST_TYPEOF_NESTED_TYPEDEF_TPL(name,expr)
     
-[variablelist Arguments
-[[name][a valid identifier to nest the typeof operation inside]
-[expr][a valid c++ expression that can be bound to const T&]]
+[variablelist Arguments 参数
+[[name][a valid identifier to nest the typeof operation inside\n
+一个嵌套在 typeof 操作中内部的合法标识符]
+[expr][a valid c++ expression that can be bound to const T&\n
+一个可以绑定到 const T& 的合法的 C++ 表达式]]
 ]
 
-[h4 Remarks]
+[h4 Remarks 备注]
 
 'typeof_nested_typedef' nests the 'typeof' operation inside a struct. By doing this, the 'typeof' operation
 can be split into two steps, deconfusing several compilers (notably VC7.1 and VC8.0) on the way. 
 This also removes the limitation imposed by `BOOST_TYPEOF_LIMIT_SIZE` and allows you to use 'typeof' on much 
-larger expressions.
+larger expressions.\n
+'typeof_nested_typedef' 将 'typeof' 操作嵌套在一个结构内。通过这样做，'typeof' 操作可以分为两步，这种方法可以避免编译器误解
+（特别是 VC7.1 和 VC8.0）。这样也可以移除由 `BOOST_TYPEOF_LIMIT_SIZE` 强加的限制，并允许你在更大的表达式中使用 'typeof'。
 
 If you want to use `typeof_nested_typedef` in a template-context, use `BOOST_TYPEOF_NESTED_TYPEDEF_TPL(name,expr)`, 
-which takes care of `typename` inside the `typeof` expression.
+which takes care of `typename` inside the `typeof` expression.\n
+如果你要在模板上下文中使用 `typeof_nested_typedef`，请使用 `BOOST_TYPEOF_NESTED_TYPEDEF_TPL(name,expr)`，它可以处理 
+`typeof` 表达式中的 `typename`。
 
-'typeof_nested_typedef' can not be used at function/block scope.
+'typeof_nested_typedef' can not be used at function/block scope.\n
+'typeof_nested_typedef' 不能在函数/块范围内使用。
 
-[h4 Sample Code]
+[h4 Sample Code 示例代码]
 
     template<typename A, typename B>
     struct result_of_conditional 
@@ -611,15 +692,18 @@ which takes care of `typename` inside the `typeof` expression.
 
 [endsect]
 
-[section:other Other considerations and tips]
+[section:other Other considerations and tips 其它考虑和提示]
 
-[section:natem Native typeof support and emulation]
+[section:natem Native typeof support and emulation 原生 typeof 支持及仿真]
 
-Many compilers support typeof already, most noticeable GCC and Metrowerks.
+Many compilers support typeof already, most noticeable GCC and Metrowerks.\n
+很多编译器已经支持了 typeof，最值得关注的是 GCC 和 Metrowerks。
  
 Igor Chesnokov discovered a method that allows to implement `typeof`
 on the VC series of compilers.  It uses a bug in the Microsoft compiler 
-that allows a nested class of base to be defined in a class derived from base:
+that allows a nested class of base to be defined in a class derived from base:\n
+Igor Chesnokov 发现一个允许在 VC 系列编辑器上实现 `typeof` 的方法。
+它利用了微软编译器的一个 bug，这个 bug 允许一个基类的内嵌类定义在从基类派生出的类中：
  
     template<int ID> struct typeof_access
     {
@@ -645,47 +729,60 @@ that allows a nested class of base to be defined in a class derived from base:
     typedef typeof_access::id2type::type type; 
  
 Peder Holt adapted this method to VC7.0, where the nested class 
-is a template class that is specialized in the derived class. 
+is a template class that is specialized in the derived class. \n
+Peder Holt 将这个方法移植到了 VC7.0，其中的内嵌类是一个在派生类中进行特化的类模板。
 
 In VC8.0, it seemed that all the bug-featire had been fixed, but
 Steven Watanabe managed to implement a more rigorous version of the VC7.0 fix that
-enables 'typeof' to be supported 'natively' here as well.
+enables 'typeof' to be supported 'natively' here as well.\n
+在 VC8.0 中，似乎这些bug都被修复了，不过 Steven Watanabe 实现了一个更为严格的 VC7.0 修正版，使得 'typeof' 也可以'原生'地被支持。
  
 For many other compilers neither native `typeof` support 
 nor the trick described above is an option.  For such compilers  
-the emulation method is the only way of implementing `typeof`.
+the emulation method is the only way of implementing `typeof`.\n
+许多其它编译器既没有原生 `typeof` 支持，也没有像上面描述的诀窍作为一种选择。对于这样的编译器仿真方法就是实现 `typeof` 的唯一出路。
 
 According to a rough estimate, at the time of this writing 
 the introduction of the `typeof`, `auto`, etc., into the C++ standard 
 may not happen soon.  Even after it's done, some time still has to pass 
 before most compilers implement this feature.  But even after that, 
 there always are legacy compilers to support (for example now, in 2005, 
-many people are still using VC6, long after VC7.x, and even VC8.0 beta became available).
+many people are still using VC6, long after VC7.x, and even VC8.0 beta became available).\n
+根据一个大体的预测，在写这篇文章的时候，`typeof`，`auto` 等被引入 C++ 标准的事情可能还不会马上发生。
+即使在那之后，依然需要一段时间，大多数编译器才能实现这个特性。但是即使在那之后，总还有一些老旧的编译器需要支持
+（例如，现在，2005 年，VC7.x 出现很长时间了，甚至 VC8.0 beta 已经可以使用了，很多人依然使用 VC6）。
  
 Considering extreme usefulness of the feature right now, 
-it seems to make sense to implement it at the library level.  
+it seems to make sense to implement it at the library level.  \n
+要想立刻使用这个非常有用的特性，把它实现在库的层次显然是很合理的。
 
 The emulation mode seems to be important even if a better option is present
 on some particular compiler.  If a library author wants to develop portable
 code using `typeof`, she needs to use emulation mode and register her types and
 templates.  Those users who have a better option can still take
 advantage of it, since the registration macros are defined as no-op on
-such compilers, while the users for whom emulation is the only option will use it.
+such compilers, while the users for whom emulation is the only option will use it.\n
+仿真方式显然很重要，即使在一些特定编译器上提供了更好的选择。
+如果一个库作者想要使用 `typeof` 开发可移植代码，她需要使用仿真方式并注册她的类型和模板。
+那些仿真是唯一选择的用户可以使用它，而那些有着更好选择的用户也依然可以使用它，因为在这样的编译器上注册宏被定义为 no-op（什么都不做）。
 
 The other consideration applies to the users of VC7.1.  Even though the more 
 convenient `typeof` trick is available, the possibility of upgrade to VC8,
-where emulation remains the only option, should be considered.
+where emulation remains the only option, should be considered.\n
+还有一些其它考虑适用于 VC7.1 的用户。即使有更方便的 typeof 诀窍可用，也应该考虑到升级到 VC8 的可能性，在那个编译器上仿真是唯一的选择。
 
 The emulation mode can be forced on the compilers that don't use it 
-by default by defining the `BOOST_TYPEOF_COMPLIANT` symbol:
+by default by defining the `BOOST_TYPEOF_COMPLIANT` symbol:\n
+通过定义 `BOOST_TYPEOF_COMPLIANT` 符号，可以将仿真模式强加于那些缺省时不使用它的编译器：
 
     g++ -D BOOST_TYPEOF_COMPLIANT -I \boost\boost_1_32_0 main.cpp
 
 [endsect] 
 
-[section:parties The three participating parties]
+[section:parties The three participating parties 有关的三方]
 
-The Lambda example from the Motivation section requires the following registration:
+The Lambda example from the Motivation section requires the following registration:\n
+动机部分的 Lambda 示例需要如下注册：
  
     #include BOOST_TYPEOF_INCREMENT_REGISTRATION_GROUP()
      
@@ -706,68 +803,93 @@ However note that all of the above registration is done only once,
 and after that, any combination of the registered types and templates 
 would be handled.  Moreover, this registration is typically done 
 not by the end-user, but rather by a layer on top of some library 
-(in this example -- Boost.Lambda). 
+(in this example -- Boost.Lambda). \n
+看上去，为了具有发现表达式的类型的能力所付出的代价太高了：需要相当大量的注册。
+然而请注意，上面所有这些注册只需要做一次，在那之后，已注册类型和模板的任意组合都可以被处理。
+此外，这些注册一般不需要最终用户的参与，而是由一些库的建构者来做（在本例中是 Boost.Lambda）。
  
 When thinking about this, it's helpful to consider three parties: the typeof facility, 
 the library (probably built on expression templates principle), and the end-user.  
 The typeof facility is responsible for registering fundamental types.  
-The library can register its own types and templates.
+The library can register its own types and templates.\n
+在考虑这些的时候，考虑一下参与的三方是有帮助的：typeof 设施，库（很可能基于表达式模板法则），和最终用户。
+typeof 设施负责注册基本类型。库可以注册它自己的类型和模板。
  
 In the best-case scenario, if the expressions always consist of only 
 fundamental types and library-defined types and templates, a library author 
 can achieve the impression that the `typeof` is natively supported for her library.  
 On the other hand, the more often expressions contain user-defined types, 
 the more responsibility is put on the end-user, and therefore the less attractive 
-this approach becomes.  
+this approach becomes.  \n
+在最理想的状态下，如果表达式总是由基本类型和库定义的类型与模板组成，一个库的作者可能会觉得 `typeof` 是被它的库原生支持的。
+另一方面，表达式越经常地包含用户定义类型，就有越多的责任落在最终用户身上，并由此这个方法就变得越不吸引人。
  
 Thus, the ratio of user-defined types in the expressions should be the main 
-factor to consider when deciding whether or not to apply the typeof facility. 
+factor to consider when deciding whether or not to apply the typeof facility. \n
+这样一来，当决定是否要应用 typeof 设施时，表达式中用户定义类型的比例成为要考虑的主要因素。
 
 [endsect] 
 
-[section:features Supported features]
+[section:features Supported features 支持的特性]
 
 The Typeof library pre-registers fundamental types.  For these types, 
 and for any other types/templates registered by the user library or end-user, 
-any combination of the following is supported:
+any combination of the following is supported:\n
+Typeof 预先注册了基本类型。对于这些类型，以及由用户库和最终用户注册的任何类型/模板，与以下的任意组合都已被支持：
  
-* Pointers;
-* References (except top-level);
-* Consts (except top-level);
-* Volatiles (except top-level);
-* Arrays;
-* Functions, function pointers, and references;
-* Pointers to member functions;
-* Pointers to data members.
+* Pointers;\n
+  指针；
+* References (except top-level);\n
+  引用（顶层除外）； 
+* Consts (except top-level);\n
+  Consts（顶层除外）； 
+* Volatiles (except top-level);\n
+  Volatiles（顶层除外）； 
+* Arrays;\n
+  数组；
+* Functions, function pointers, and references;\n
+  函数，函数指针，及引用；
+* Pointers to member functions;\n
+  指向成员函数的指针；
+* Pointers to data members.\n
+  指向数据成员的指针。 
  
-For example the following type:
+For example the following type:\n
+例如，下面的类型：
  
     int& (*)(const volatile char*, double[5], void(*)(short))
  
-is supported right away, and something like:
+is supported right away, and something like:\n
+被毫无疑问地支持，而下面这样的：
  
     void (MyClass::*)(int MyClass::*, MyClass[10]) const
  
-is supported provided `MyClass` is registered. 
+is supported provided `MyClass` is registered. \n
+如果 MyClass 被注册，即可被支持。
 
 The Typeof Library also provides registration files for most STL classes/templates.  
 These files are located in the std subdirectory, and named after corresponding STL headers.  
 These files are not included by the typeof system and have to be explicitly included 
-by the user, as needed:
+by the user, as needed:\n
+Typeof 库为大多数 STL 类/模板提供了注册文件。这些文件位于 std 子目录内，命名与相应的 STL 头文件相同。
+这些文件没有被 typeof 系统包含，必须由用户根据需要显式包含：
  
     #include <boost/typeof/std/functional.hpp>
     BOOST_AUTO(fun, std::bind2nd(std::less<int>(), 21)); //create named function object for future use.
 
 [endsect] 
 
-[section:what What needs to be registered?]
+[section:what What needs to be registered? 需要注册什么？]
 
 It is possible to take advantage of the compiler when registering types for the Typeof Library. 
 Even though there is currently no direct support for typeof in the language, 
 the compiler is aware of what the type of an expression is, and gives an error 
 if it encounters an expression that has not been handled correctly. In the `typeof` context, 
 this error message will contain clues to what types needs to be registered with the 
-Typeof Library in order for `BOOST_TYPEOF` to work.
+Typeof Library in order for `BOOST_TYPEOF` to work.\n
+为 Typeof 库注册类型的时候利用编译器是可能的。
+即使当前还没有在语言中直接支持 typeof，如果编译器遇到无法正确处理的表达式，它可以觉察到表达式的类型是什么并给出错误信息。
+在 `typeof` 上下文中，这个错误信息包含的线索能给你一些启发，告诉你为了使 `BOOST_TYPEOF` 可以工作，需要为 Typeof 库注册什么类型。
 
     struct X {};
      
@@ -778,7 +900,8 @@ Typeof Library in order for `BOOST_TYPEOF` to work.
 
     BOOST_AUTO(a,b);
  
-We get the following error message from VC7.1
+We get the following error message from VC7.1\n
+我们从 VC7.1 得到如下错误信息
 
 [pre 
     error C2504: 'boost::type_of::'anonymous-namespace'::encode_type_impl<V,Type_Not_Registered_With_Typeof_System>' : base
@@ -790,11 +913,13 @@ We get the following error message from VC7.1
         \]
 ]
  
-Inspecting this error message, we see that the compiler complains about `X`
+Inspecting this error message, we see that the compiler complains about `X`\n
+检查这个错误信息，我们看到编译器在抱怨 `X`
  
     BOOST_TYPEOF_REGISTER_TYPE(X); //register X with the typeof system
 
-Recompiling, we get a new error message from VC7.1
+Recompiling, we get a new error message from VC7.1\n
+再编译，我们从 VC7.1 得到一个新的错误信息
  
 [pre 
     error C2504: 'boost::type_of::'anonymous-namespace'::encode_type_impl<V,Type_Not_Registered_With_Typeof_System>' : base
@@ -807,23 +932,28 @@ Recompiling, we get a new error message from VC7.1
 ]
  
 Inspecting this error message, we see that the compiler complains about `Y<int,true>`.
-Since `Y` is a template, and contains integral constants, we need to take more care when registering:
+Since `Y` is a template, and contains integral constants, we need to take more care when registering:\n
+检查这个错误信息，我们看到编译器在抱怨 `Y<int,true>`。因为 `Y` 是一个模板，并且包含整型常量，注册时我们需要更加小心：
 
     BOOST_TYPEOF_REGISTER_TEMPLATE(Y,(typename)(bool)); //register template class Y
  
 It is a good idea to look up the exact definition of `Y` when it contains integral constants. 
-For simple template classes containing only typenames, you can rely solely on the compiler error.
+For simple template classes containing only typenames, you can rely solely on the compiler error.\n
+当 `Y` 包含整型常量时，查寻它的精确定义是个好主意。对于只包含 typenames 的简单模板类，你可以完全依赖编译器错误。
 
-The above code now compiles.
+The above code now compiles.\n
+上面的代码现在可以编译了。
 
 This technique can be used to get an overview of which types needs to be registered 
-for a given project in order to support `typeof`.
+for a given project in order to support `typeof`.\n
+这一技术可以用于得到一个“为了让一个给定的项目支持 `typeof`，有哪些类型需要被注册”的概览。
 
 [endsect] 
 
-[section:limi Limitations]
+[section:limi Limitations 限制]
 
-Nested template template parameters are not supported, like:
+Nested template template parameters are not supported, like:\n
+不支持嵌套的 template template parameters（模板模板参数），比如：
  
     template<template<template<class> class> class Tpl> 
     class A; // can't register!
@@ -831,7 +961,9 @@ Nested template template parameters are not supported, like:
 Classes and templates nested inside other templates also can't be registered 
 because of the issue of nondeduced context.  This limitation is most noticeable 
 with regards to standard iterators in Dinkumware STL, which are implemented 
-as nested classes.  Instead, instantiations can be registered:
+as nested classes.  Instead, instantiations can be registered:\n
+嵌套在其它模板中的类和模板也由于 nondeduced context（非推演上下文）的问题而不能注册。
+这一限制在涉及到 Dinkumware STL 的标准迭代器时最应该引起注意，它们被实现为嵌套类。作为替代，它们的实例是可以被注册的：
  
     BOOST_TYPEOF_REGISTER_TYPE(std::list<int>::const_iterator)
     
@@ -839,28 +971,33 @@ as nested classes.  Instead, instantiations can be registered:
 
 [endsect] 
 
-[section:cont Contributed By:]
+[section:cont Contributed By: 发布者：]
 
 * Compliant compilers   --  Arkadiy Vertleyb, Peder Holt
 * MSVC 6.5, 7.0, 7.1    --  Igor Chesnokov, Peder Holt
 
 [endsect]
 
-[section:ackn Acknowledgements]
+[section:ackn Acknowledgements 感谢]
 
 The idea of representing a type as multiple compile-time integers, 
 and passing these integers across function boundaries using sizeof(), 
 was taken from Steve Dewhurst's article "A Bitwise typeof Operator", CUJ 2002.
 This article can also be viewed online, at [@http://www.semantics.org/localarchive.html
-http://www.semantics.org/localarchive.html].
+http://www.semantics.org/localarchive.html].\n
+将一个类型描述为多个编译期整数，并将这些整数传递给函数，用 sizeof() 来划界，这一思想来自 Steve Dewhurst 的文章 
+"A Bitwise typeof Operator", CUJ 2002。这篇文章也可以在线浏览，URL 为 [@http://www.semantics.org/localarchive.html
+http://www.semantics.org/localarchive.html]。
  
 Special thank you to Paul Mensonides, Vesa Karvonen, and Aleksey Gurtovoy 
 for the Boost Preprocessor Library and MPL.  Without these two libraries, 
-this typeof implementation would not exist.  
+this typeof implementation would not exist.  \n
+特别感谢 Paul Mensonides，Vesa Karvonen 和 Aleksey Gurtovoy 的 Preprocessor 库和 MPL。没有这两个库，这个 typeof 实现不可能存在。
   
 The following people provided support, gave valuable comments, 
 or in any other way contributed to the library development 
-(in alphabetical order):
+(in alphabetical order):\n
+以下这些人提供了支持，给出了有价值的意见，或者在其它方面为库的开发做出了贡献（按字母顺序排序）：
  
 * David Abrahams
 * Andrey Beliakov
