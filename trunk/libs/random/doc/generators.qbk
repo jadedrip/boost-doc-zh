@@ -11,7 +11,10 @@ quality of a [prng pseudo random number generator] crucially depends on both
 the algorithm and its parameters. This library implements the algorithms as
 class templates with template value parameters, hidden in
 `namespace boost::random`. Any particular choice of parameters is represented
-as the appropriately specializing `typedef` in `namespace boost`.
+as the appropriately specializing `typedef` in `namespace boost`.\n
+本库提供了数个 [prng 伪随机数生成器]。[prng 伪随机数生成器] 的性质与其算法和参数都有密切的关系。
+生成算法用取数值参数的类模板实现，封装在 `namespace boost::random` 中。
+预先选择好的一组参数通过用 `typedef` 进行专门化来给出，置于`namespace boost` 中。
 
 [prng Pseudo-random number generators] should not be constructed (initialized)
 frequently during program execution, for two reasons. First, initialization
@@ -26,7 +29,13 @@ then-current time as the seed, it is likely that this is at a near-constant
 (non-random) distance from the time given as the seed for first
 initialization. The distance could even be zero if the resolution of the
 clock is low, thus the generator re-iterates the same sequence of random
-numbers. For some applications, this is inappropriate.
+numbers. For some applications, this is inappropriate.\n
+程序执行过程中不应当频繁构造(初始化) [prng 伪随机数生成器]。原因有二：
+其一，生成器的构造要求对其内部状态进行完全的初始化；因此包含大量内部状态的生成器 (详下) 的构造往往是昂贵的。
+其二，生成器的构造需要提供序列的“种子”。取得多个良好的“种子”值往往是困难的。
+取得种子的方法之一是使用精确度尽可能高 (毫秒甚至纳秒) 的系统时间。
+如果再构建一个 [prng 伪随机数生成器] 之后再构建另一个，那么它们所使用的种子值之差会很接近一个常数。
+若系统时间的精确度不够高，这个差值甚至为零，从而得到两个行为相同的生成器。对于很多应用，这样的行为都是不合适的。
 
 Note that all [prng pseudo-random number generators] described below are
 __CopyConstructible and __Assignable. Copying or assigning a generator will
@@ -34,24 +43,31 @@ copy all its internal state, so the original and the copy will generate the
 identical sequence of random numbers. Often, such behavior is not wanted. In
 particular, beware of the algorithms from the standard library such as
 `std::generate`. They take a functor argument by value, thereby invoking the
-copy constructor when called.
+copy constructor when called.\n
+注意以下描述的所有 [prng 伪随机数生成器] 都是 __CopyConstructible 和 __Assignable。
+生成器的复制或赋值将会复制其内部状态，因此原有生成器和副本将会生成完全相同的随机数序列。这种行为往往不是需要的。
+特别注意标准库中的算法，如 `std::generate`。它们取函数对象的值作为参数，因此会调用复制构造函数。
 
 The following table gives an overview of some characteristics of the
 generators. The cycle length is a rough estimate of the quality of the
 generator; the approximate relative speed is a performance measure, higher
-numbers mean faster random number generation.
+numbers mean faster random number generation.\n
+下表给出了生成器某些性质的概览。循环长度是给出了生成器性质的粗略描述；相对速度是性能的量度，值越大表示随机数生成越快。
 
-[table generators
-  [[generator] [length of cycle] [approx. memory requirements] [approx. speed compared to fastest] [comment]]
+[table generators 生成器
+  [[generator 生成器] [length of cycle 循环长度] [approx. memory requirements 近似内存需求] [approx. speed compared to fastest 近似相对速度] [comment 备注]]
   [[__minstd_rand0] [2[sup 31]-2] [`sizeof(int32_t)`] [[minstd_rand0_speed]] [-]]
   [[__minstd_rand] [2[sup 31]-2] [`sizeof(int32_t)`] [[minstd_rand_speed]] [-]]
   [[__rand48][2[sup 48]-1] [`sizeof(uint64_t)`] [[rand48_speed]] [-]]
   [[__ecuyer1988] [approx. 2[sup 61]] [`2*sizeof(int32_t)`] [[ecuyer_combined_speed]] [-]]
   [[__kreutzer1986] [?] [`1368*sizeof(uint32_t)`] [[kreutzer1986_speed]] [-]]
   [[__taus88] [~2[sup 88]] [`3*sizeof(uint32_t)`] [[taus88_speed]] [-]]
-  [[__hellekalek1995] [2[sup 31]-1] [`sizeof(int32_t)`] [[hellekalek1995__inversive__speed]] [good uniform distribution in several dimensions]]
-  [[__mt11213b] [2[sup 11213]-1] [`352*sizeof(uint32_t)`] [[mt11213b_speed]] [good uniform distribution in up to 350 dimensions]]
-  [[__mt19937] [2[sup 19937]-1] [`625*sizeof(uint32_t)`] [[mt19937_speed]] [good uniform distribution in up to 623 dimensions]]
+  [[__hellekalek1995] [2[sup 31]-1] [`sizeof(int32_t)`] [[hellekalek1995__inversive__speed]] [good uniform distribution in several dimensions\n
+  在几个维度中有很好的均匀分布]]
+  [[__mt11213b] [2[sup 11213]-1] [`352*sizeof(uint32_t)`] [[mt11213b_speed]] [good uniform distribution in up to 350 dimensions\n
+  在多达350个维度中有很好的均匀分布]]
+  [[__mt19937] [2[sup 19937]-1] [`625*sizeof(uint32_t)`] [[mt19937_speed]] [good uniform distribution in up to 623 dimensions\n
+  在多达623个维度中有很好的均匀分布]]
   [[__lagged_fibonacci607] [~2[sup 32000]] [`607*sizeof(double)`] [[lagged_fibonacci607_speed]] [-]] 
   [[__lagged_fibonacci1279] [~2[sup 67000]] [`1279*sizeof(double)`] [[lagged_fibonacci1279_speed]] [-]]
   [[__lagged_fibonacci2281] [~2[sup 120000]] [`2281*sizeof(double)`] [[lagged_fibonacci2281_speed]] [-]]
@@ -77,12 +93,17 @@ multitude of generators provided in this library allows the application
 programmer to optimize the trade-off with regard to his application domain.
 Additionally, employing several fundamentally different random number
 generators for a given application of Monte Carlo simulation will improve
-the confidence in the results.
+the confidence in the results.\n
+可以从上表中观察到，选择随机数生成器时往往要在品质、性能、内存三者之间作出权衡。
+本库中提供的大量生成器足以让程序员选择最适合自己应用领域的一个。
+此外，在 Monte Carlo 模拟中使用多个有着根本性不同的随机数生成器将会提高结果的可信度。
 
 If the names of the generators don't ring any bell and you have no idea
 which generator to use, it is reasonable to employ __mt19937 for a start: It
-is fast and has acceptable quality.
+is fast and has acceptable quality.\n
+如果你不知如何选择，不妨先使用 __mt19937：它快速、可靠。
 
 [note These random number generators are not intended for use in applications
 where non-deterministic random numbers are required. See __random_device
-for a choice of (hopefully) non-deterministic random number generators.]
+for a choice of (hopefully) non-deterministic random number generators.\n
+以上随机数生成器不能用于要求使用不确定随机数的应用领域；关于不确定随机数生成器，参看 __random_device。]
