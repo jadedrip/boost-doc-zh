@@ -6,79 +6,102 @@
     [@http://www.concentric.net/~Ttwang/tech/inthash.htm
     Thomas Wang's article on integer hash functions]]
 
-[section:rationale Implementation Rationale]
+[section:rationale Implementation Rationale 实现原理]
 
 The intent of this library is to implement the unordered
 containers in the draft standard, so the interface was fixed. But there are
 still some implementation decisions to make. The priorities are
-conformance to the standard and portability.
+conformance to the standard and portability.\n
+本库的目的是实现标准草案中的无序容器，所以库的接口是固定的。不过还是做一些实现上的决定。首先是与标准的一致性和可移植性。
 
 The [@http://en.wikipedia.org/wiki/Hash_table wikipedia article on hash tables]
-has a good summary of the implementation issues for hash tables in general.
+has a good summary of the implementation issues for hash tables in general.\n
+[@http://en.wikipedia.org/wiki/Hash_table wikipedia中关于散列表的论文] 上有关于通常的散列表实现问题的一个很好的总结。
 
-[h2 Data Structure]
+[h2 Data Structure 数据结构]
 
 By specifying an interface for accessing the buckets of the container the
-standard pretty much requires that the hash table uses chained addressing.
+standard pretty much requires that the hash table uses chained addressing.\n
+通过指定一个接口用于访问容器中的桶，标准几乎就是要求散列表使用链接法。
 
 It would be conceivable to write a hash table that uses another method.  For
 example, it could use open addressing, and use the lookup chain to act as a
-bucket but there are a some serious problems with this: 
+bucket but there are a some serious problems with this: \n
+可以想象编写使用其它方法的散列表。例如，它可以使用开放法，并使用查找链来作为桶，不过这样会存在一些严重的问题：
 
 * The draft standard requires that pointers to elements aren't invalidated, so
   the elements can't be stored in one array, but will need a layer of
   indirection instead - losing the efficiency and most of the memory gain,
-  the main advantages of open addressing.
+  the main advantages of open addressing.\n
+  标准草案要求指向元素的指针不可失效，所以元素不可以被存放在一个数组中，而是需要一个间接层 - 
+  失去了效率和获得的大部分内存，这正是开放地址的主要优势。
 
 * Local iterators would be very inefficient and may not be able to
-  meet the complexity requirements.
+  meet the complexity requirements.\n
+  局部迭代器将会非常低效，可能无法满足复杂度的要求。
   
 * There are also the restrictions on when iterators can be invalidated. Since
   open addressing degrades badly when there are a high number of collisions the
   restrictions could prevent a rehash when it's really needed. The maximum load
   factor could be set to a fairly low value to work around this - but the
-  standard requires that it is initially set to 1.0.
+  standard requires that it is initially set to 1.0.\n
+  在迭代器可以失效时也会有限制。由于在存在大量冲突时，开放法会严重退化，而该限制会在需要时阻止重散列。
+  可以通过将最大负载因子设为一个相当低的值来解决这个问题 - 但标准要求最大负载因子在初始时设为 1.0。
 
 * And since the standard is written with a eye towards chained
-  addressing, users will be surprised if the performance doesn't reflect that.
+  addressing, users will be surprised if the performance doesn't reflect that.\n
+  而且由于标准在编写时是着眼于链接法的，如果最终的性能不能反映这一点，用户将会非常惊讶。
 
-So chained addressing is used.
+So chained addressing is used.\n
+所以我们使用了链接法。
 
 For containers with unique keys I store the buckets in a single-linked list.
 There are other possible data structures (such as a double-linked list)
 that allow for some operations to be faster (such as erasing and iteration)
 but the possible gain seems small compared to the extra memory needed.
 The most commonly used operations (insertion and lookup) would not be improved
-at all.
+at all.\n
+对于唯一键的容器，我将桶保存在一个单链表中。有一些其它的数据结构(如双链表)可以使得某些操作更快(如删除和迭代)，
+不过可能的收益似乎比所需的额外内存开销要小。毕竟最常用的操作(插入和查找)并没有得到提升。
 
 But for containers with equivalent keys a single-linked list can degrade badly
 when a large number of elements with equivalent keys are inserted. I think it's
 reasonable to assume that users who choose to use `unordered_multiset` or
 `unordered_multimap` do so because they are likely to insert elements with
 equivalent keys. So I have used an alternative data structure that doesn't
-degrade, at the expense of an extra pointer per node.
+degrade, at the expense of an extra pointer per node.\n
+但对于非唯一键的容器，使用单链表会在插入大量相同键值的元素时性能严重退化。
+我认为，假设选择使用 `unordered_multiset` 或 `unordered_multimap` 的用户将很可能会插入相等键值的元素，这是很合理的。
+所以我对此种容器使用了另一种性能不会退化的数据结构，其代价是每个节点多用一个指针。
 
 This works by adding storing a circular linked list for each group of equivalent
 nodes in reverse order. This allows quick navigation to the end of a group (since
 the first element points to the last) and can be quickly updated when elements
 are inserted or erased. The main disadvantage of this approach is some hairy code
-for erasing elements.
+for erasing elements.\n
+这是通过为每组相等的节点在相反顺序上增加一个循环的链表来实现的。
+这样可以快速地定位到该组节点的末尾(因为第一个元素指向最后一个)，并且在插入或删除元素时也可以快速更新。
+这种方法的主要缺点是删除元素的代码有点不太好看。
 
-[h2 Number of Buckets]
+[h2 Number of Buckets 桶的数量]
 
 There are two popular methods for choosing the number of buckets in a hash
 table. One is to have a prime number of buckets, another is to use a power
-of 2.
+of 2.\n
+有两种常见的方法来选择在散列表中的桶的数量。一种是让桶的数量为素数，另一种是使用2的幂数。
 
 Using a prime number of buckets, and choosing a bucket by using the modulus
 of the hash function's result will usually give a good result. The downside
-is that the required modulus operation is fairly expensive.
+is that the required modulus operation is fairly expensive.\n
+使用素数个桶，并且通过对散列函数的结果取模来选择桶通常有不错的结果。缺点是模操作的代价有点高。
 
 Using a power of 2 allows for much quicker selection of the bucket
 to use, but at the expense of loosing the upper bits of the hash value.
 For some specially designed hash functions it is possible to do this and
 still get a good result but as the containers can take arbitrary hash
-functions this can't be relied on.
+functions this can't be relied on.\n
+使用2的幂则可以更快地选择要用的桶，但是它的代价是损失了散列值的高位信息。
+对于一些特殊设计的散列函数，这样是可以的，并且结果也还不错，但是考虑到容器可能使用任意的散列函数，所以不能依赖于它。
 
 To avoid this a transformation could be applied to the hash function, for an
 example see __wang__.  Unfortunately, a transformation like Wang's requires
@@ -86,56 +109,76 @@ knowledge of the number of bits in the hash value, so it isn't portable enough.
 This leaves more expensive methods, such as Knuth's Multiplicative Method
 (mentioned in Wang's article). These don't tend to work as well as taking the
 modulus of a prime, and the extra computation required might negate
-efficiency advantage of power of 2 hash tables.
+efficiency advantage of power of 2 hash tables.\n
+为了避免这个问题，可以对散列函数进行一个转换，有关例子请见 __wang__ 关于整数散列函数的论文。
+不幸，象 Wang 所给出的转换方法要求知道散列值中的二进制位数，所以它的可移植性不够。
+还有一些更昂贵的方法，如 Knuth 的相乘法(在 Wang 的论文中提及)。
+它们和对素数取模一样不太好用，而且所需的额外计算可能还会消除2的幂的散列表所带来的性能优势。
 
-So, this implementation uses a prime number for the hash table size.
+So, this implementation uses a prime number for the hash table size.\n
+所以，我们实现使用素数作为散列表的大小。
 
-[h2 Equality operators]
+[h2 Equality operators 相等操作符]
 
 `operator==` and `operator!=` are not included in the standard, but I've
 added them as I think they could be useful and can be implemented
 fairly efficiently. They are specified differently to the other standard
 containers, comparing keys using the equality predicate rather than
-`operator==`.
+`operator==`.\n
+`operator==` 和 `operator!=` 并没有包含在标准中，不过我把它们加了进来，因为我认为它们可能是有用的，也可以高效地实现。
+它们与标准关联式容器是非常不同的，对键值的比较是使用等同性谓词而不是 `operator==` 的。
 
 It's also different to the proposal
 [@http://www.open-std.org/jtc1/sc22/wg21/docs/papers/2009/n2944.pdf n2944].
 which uses the equality operators for the whole of `value_type`. This
 implementation just uses the key equality function for the key,
 and `mapped_type`'s equality operator in `unordered_map` and
-`unordered_multimap` for the mapped part of the element.
+`unordered_multimap` for the mapped part of the element.\n
+这与建议书 [@http://www.open-std.org/jtc1/sc22/wg21/docs/papers/2009/n2944.pdf n2944] 也不一样。
+在建议书中是对整个 `value_type` 使用相等性操作符。而本实现则只对键值使用相等性比较函数，在 `unordered_map` 
+和 `unordered_multimap` 中则对元素中的映射部分使用 `mapped_type` 的相等性操作符。
 
 Also, in `unordered_multimap`, the mapped values for a group of elements with
 equivalent keys are only considered equal if they are in the same order,
 in n2944 they just need to be a permutation of each other. Since the
 order of elements with equal keys is now defined to be stable, it seems to me
-that their order can be considered part of the container's value.
+that their order can be considered part of the container's value.\n
+还有，在 `unordered_multimap` 中，带有相等键值的一组元素的映射值被认为是相等的，如果它们具有相同的顺序，在 n2944 
+中它们只需要互为排列即可。由于具有相等键值的元素顺序现在被定义为稳定的，所以对我来说，它们的顺序可以被认为是容器值的一部分。
 
-[h2 Active Issues and Proposals]
+[h2 Active Issues and Proposals 活跃的问题与建议]
 
-[h3 C++0x allocators]
+[h3 C++0x allocators C++0x分配器]
 
 Recent drafts have included an overhaul of the allocators, but this was
 dependent on concepts which are no longer in the standard.
 [@http://www.open-std.org/jtc1/sc22/wg21/docs/papers/2009/n2946.pdf n2946]
 attempts to respecify them without concepts. I'll try to implement this (or
 an appropriate later version) in a future version of boost, possibly changed
-a little to accomodate non-C++0x compilers.
+a little to accomodate non-C++0x compilers.\n
+最新的草案已经包含了对分配器的一个修改，但它是依赖于尚未进入标准的一些概念的。
+[@http://www.open-std.org/jtc1/sc22/wg21/docs/papers/2009/n2946.pdf n2946] 试图不使用概念来重新实现它们。
+在以后的boost版本中，我会尽力实现它们(或是它们的一个近似版本)，也可能有一点改变，以适应非C++0x标准的编译器。
 
-[h3 Swapping containers with unequal allocators]
+[h3 Swapping containers with unequal allocators 交换具有不同分配器的容器]
 
 It isn't clear how to swap containers when their allocators aren't equal.
 This is 
 [@http://www.open-std.org/jtc1/sc22/wg21/docs/lwg-active.html#431
 Issue 431: Swapping containers with unequal allocators]. This has been resolved
 with the new allocator specification, so this should be fixed when
-support is added.
+support is added.\n
+如果交换具有不同分配器的容器，这一点还不清楚。这正是 [@http://www.open-std.org/jtc1/sc22/wg21/docs/lwg-active.html#431 
+Issue 431: 交换具有不同分配器的容器]。通过新的分配器规范，这个问题已经被解决，所以当可以支持时就可以修正该问题。
 
-[h3 Are insert and erase stable for unordered_multiset and unordered_multimap?]
+[h3 Are insert and erase stable for unordered_multiset and unordered_multimap? 
+对于 unordered_multiset 和 unordered_multimap 来说，插入和删除是稳定的吗？]
 
 It wan't specified if `unordered_multiset` and `unordered_multimap` preserve the order
 of elements with equivalent keys (i.e. if they're stable under `insert` and `erase`).
 Since [@http://www.open-std.org/jtc1/sc22/wg21/docs/papers/2008/n2691.pdf
-n2691] it's been specified that they do and this implementation follows that.
+n2691] it's been specified that they do and this implementation follows that.\n
+没有规定 `unordered_multiset` 和 `unordered_multimap` 是否要保持相等键值元素的顺序(即在 `insert` 和 `erase` 时它们是否稳定)。从 
+[@http://www.open-std.org/jtc1/sc22/wg21/docs/papers/2008/n2691.pdf n2691] 起已规定如此，本实现也遵守这一点。
 
 [endsect]

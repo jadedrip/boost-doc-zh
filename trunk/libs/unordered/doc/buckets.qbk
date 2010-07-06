@@ -2,13 +2,15 @@
  / Distributed under the Boost Software License, Version 1.0. (See accompanying
  / file LICENSE_1_0.txt or copy at http://www.boost.org/LICENSE_1_0.txt) ]
 
-[section:buckets The Data Structure]
+[section:buckets The Data Structure 数据结构]
 
 The containers are made up of a number of 'buckets', each of which can contain
 any number of elements. For example, the following diagram shows an [classref
 boost::unordered_set unordered_set] with 7 buckets containing 5 elements, `A`,
 `B`, `C`, `D` and `E` (this is just for illustration, containers will typically
-have more buckets).
+have more buckets).\n
+这些容器由多个'桶'组成，每个桶可以包含任意数量的元素。例如，下图示范了一个有7个桶、包含5个元素 A, B, C, D 和 E 的  
+[classref boost::unordered_set unordered_set] (这只是用于示例的，通常的容器会有很多桶)。
 
 [diagram buckets]
 
@@ -18,50 +20,60 @@ the hash function, `Hash`, to the element's key (for `unordered_set` and
 so that the same terminology can be used for sets and maps). This returns a
 value of type `std::size_t`.  `std::size_t` has a much greater range of values
 then the number of buckets, so that container applies another transformation to
-that value to choose a bucket to place the element in.
+that value to choose a bucket to place the element in.\n
+为了确定将一个元素放在哪个桶中，容器要将散列函数 `Hash` 用于元素的键值(对于 `unordered_set` 和 
+`unordered_multiset`，键即为整个元素本身，不过我们还是称之为键，与 sets 和 maps 中所使用的术语保持一致)。
+函数返回一个类型为 `std::size_t` 的值。`std::size_t` 拥有比桶的数量更大的值范围，
+所以容器要对这个值应用另一次转换，以选择某一个桶来存放元素。
 
 Retrieving the elements for a given key is simple. The same process is applied
 to the key to find the correct bucket. Then the key is compared with the
 elements in the bucket to find any elements that match (using the equality
 predicate `Pred`).  If the hash function has worked well the elements will be
 evenly distributed amongst the buckets so only a small number of elements will
-need to be examined.
+need to be examined.\n
+根据一个给定键值取回元素也很简单。对该键值应用相同的过程，找到正确的桶。
+然后将键值与桶中的各个元素进行比较，(使用等同性谓词 `Pred`) 找到匹配的元素。
+如果散列函数工作的好的话，各元素将均匀分布在各个桶中，则只需要测试少量的元素。
 
 There is [link unordered.hash_equality more information on hash functions and
-equality predicates in the next section].
+equality predicates in the next section].\n
+在下一节中，有 [link unordered.hash_equality 更多的关于散列函数和等同性谓词的信息]。
 
 You can see in the diagram that `A` & `D` have been placed in the same bucket.
 When looking for elements in this bucket up to 2 comparisons are made, making
 the search slower. This is known as a collision. To keep things fast we try to
-keep collisions to a minimum.
+keep collisions to a minimum.\n
+从图中你可以看到，`A` 和 `D` 被置于同一个桶中。在这个桶中查找元素需要最多2次的比较，这使得查找减慢。
+这一情况被称为冲突。要使得查找更快，我们就要将冲突保持在最小。
 
 '''
-<table frame="all"><title>Methods for Accessing Buckets</title>
+<table frame="all"><title>Methods for Accessing Buckets 桶的访问方法</title>
   <tgroup cols="2">
     <thead><row>
-      <entry><para>Method</para></entry>
-      <entry><para>Description</para></entry>
+      <entry><para>Method 方法</para></entry>
+      <entry><para>Description 说明</para></entry>
     </row></thead>
     <tbody>
       <row>
        <entry>'''`size_type bucket_count() const`'''</entry>
-       <entry>'''The number of buckets.'''</entry>
+       <entry>'''The number of buckets. 桶的数量。'''</entry>
       </row>
       <row>
         <entry>'''`size_type max_bucket_count() const`'''</entry>
-        <entry>'''An upper bound on the number of buckets.'''</entry>
+        <entry>'''An upper bound on the number of buckets. 桶数量的上限。'''</entry>
       </row>
       <row>
         <entry>'''`size_type bucket_size(size_type n) const`'''</entry>
-        <entry>'''The number of elements in bucket `n`.'''</entry>
+        <entry>'''The number of elements in bucket `n`. 桶 `n` 中的元素数量。'''</entry>
       </row>
       <row>
         <entry>'''`size_type bucket(key_type const& k) const`'''</entry>
-        <entry>'''Returns the index of the bucket which would contain k'''</entry>
+        <entry>'''Returns the index of the bucket which would contain k 返回包含k的桶的索引。'''</entry>
       </row>
       <row>
         <entry>'''`local_iterator begin(size_type n);`'''</entry>
-        <entry morerows='5'>'''Return begin and end iterators for bucket `n`.'''</entry>
+        <entry morerows='5'>'''Return begin and end iterators for bucket `n`. 返回桶 `n` 的 begin 和 end 迭代器。'''</entry>
       </row>
       <row>
         <entry>'''`local_iterator end(size_type n);`'''</entry>
@@ -83,26 +95,33 @@ keep collisions to a minimum.
 </table>
 '''
 
-[h2 Controlling the number of buckets]
+[h2 Controlling the number of buckets 控制桶的数量]
 
 As more elements are added to an unordered associative container, the number
 of elements in the buckets will increase causing performance to degrade.
 To combat this the containers increase the bucket count as elements are inserted.
 You can also tell the container to change the bucket count (if required) by
-calling `rehash`.
+calling `rehash`.\n
+当越来越多的元素被加入到无序关联式容器中时，各桶中元素数量的上升会导致性能下降。
+为防止性能的下降，容器要在元素插入时增加桶的数量。你也可以通过调用 `rehash` 来告诉容器(在需要时)改变桶的数量。
 
 The standard leaves a lot of freedom to the implementer to decide how the
 number of buckets are chosen, but it does make some requirements based on the
 container's 'load factor', the average number of elements per bucket.
 Containers also have a 'maximum load factor' which they should try to keep the
-load factor below.
+load factor below.\n
+标准留给实现者很大的自由度来决定桶的数量，不过也有基于容器的'负载因子'的一些要求，'负载因子'即每个桶中元素的平均数量。
+容器还有一个'最大负载因子'，容器会尝试将负载因子保持在'最大因子'之下。
 
 You can't control the bucket count directly but there are two ways to
-influence it:
+influence it:\n
+你不能直接控制桶的数量，但是有两个方法来影响它：
 
 * Specify the minimum number of buckets when constructing a container or
-  when calling `rehash`.
-* Suggest a maximum load factor by calling `max_load_factor`.
+  when calling `rehash`.\n
+  在构造容器时或调用 `rehash` 时指定一个最小桶数。
+* Suggest a maximum load factor by calling `max_load_factor`.\n
+  通过调用 `max_load_factor` 建议一个最大负载因子。
 
 `max_load_factor` doesn't let you set the maximum load factor yourself, it just
 lets you give a /hint/.  And even then, the draft standard doesn't actually
@@ -110,41 +129,50 @@ require the container to pay much attention to this value. The only time the
 load factor is /required/ to be less than the maximum is following a call to
 `rehash`. But most implementations will try to keep the number of elements
 below the max load factor, and set the maximum load factor to be the same as
-or close to the hint - unless your hint is unreasonably small or large.
+or close to the hint - unless your hint is unreasonably small or large.\n
+`max_load_factor` 并不是让你直接设定最大负载因子，它只是让你给定一个 /提示/。
+尽管如此，标准草案并不真正要求容器必须关注这个值。只是在调用 `rehash` 后才 /要求/ 负载因子必须小于最大值。
+不过大多数实现都努力将元素数量保持在最大负载因子之下，并设置最大负载因子必须与提示值相同或相近 - 除非你的提示值不合理地过小或过大。
 
-[table Methods for Controlling Bucket Size
-    [[Method] [Description]]
+[table Methods for Controlling Bucket Size 控制桶大小的方法
+    [[Method 方法] [Description 说明]]
 
     [
         [`X(size_type n)`]
-        [Construct an empty container with at least `n` buckets (`X` is the container type).]
+        [Construct an empty container with at least `n` buckets (`X` is the container type).\n
+        构造一个空容器，带有至少 `n` 个桶(`X` 为容器类型)。]
     ]
     [
         [`X(InputIterator i, InputIterator j, size_type n)`]
         [Construct an empty container with at least `n` buckets and insert elements
-         from the range \[`i`, `j`) (`X` is the container type).]
+         from the range \[`i`, `j`) (`X` is the container type).\n
+         构造一个空容器，带有至少 `n` 个桶，并插入区间 [`i`, `j`) 中的元素(`X` 为容器类型)。]
     ]
     [
         [`float load_factor() const`]
-        [The average number of elements per bucket.]
+        [The average number of elements per bucket.\n
+        每个桶中的元素的平均数量]
     ]
     [
         [`float max_load_factor() const`]
-        [Returns the current maximum load factor.]
+        [Returns the current maximum load factor.\n
+        返回当前的最大负载因子]
     ]
     [
         [`float max_load_factor(float z)`]
-        [Changes the container's maximum load factor, using `z` as a hint.]
+        [Changes the container's maximum load factor, using `z` as a hint.\n
+        修改容器的最大负载因子，以 `z` 作为提示。]
     ]
     [
         [`void rehash(size_type n)`]
         [Changes the number of buckets so that there at least n buckets, and
-        so that the load factor is less than the maximum load factor.]
+        so that the load factor is less than the maximum load factor.\n
+        修改桶的数量，至少为 `n` 个桶，且负载因子小于最大负载因子]
     ]
 
 ]
 
-[h2 Iterator Invalidation]
+[h2 Iterator Invalidation 迭代器的失效]
 
 It is not specified how member functions other than `rehash` affect
 the bucket count, although `insert` is only allowed to invalidate iterators
@@ -152,13 +180,18 @@ when the insertion causes the load factor to be greater than or equal to the
 maximum load factor. For most implementations this means that insert will only
 change the number of buckets when this happens. While iterators can be
 invalidated by calls to `insert` and `rehash`, pointers and references to the
-container's elements are never invalidated.
+container's elements are never invalidated.\n
+除了 `rehash` 以外，其它成员函数如何影响桶的数量并没有规定，`insert` 操作仅当插入导致负载因子大于或等于最大负载因子时允许使得迭代器失效。
+对于多数实现来说，这意味着只有当此事发生时，插入操作才会改变桶的数量。
+因此，迭代器只会在调用 `insert` 和 `rehash` 时才可能失效，而指向容器中的元素的指针和引用则永不失效。
 
 In a similar manner to using `reserve` for `vector`s, it can be a good idea
 to call `rehash` before inserting a large number of elements. This will get
 the expensive rehashing out of the way and let you store iterators, safe in
 the knowledge that they won't be invalidated. If you are inserting `n`
-elements into container `x`, you could first call:
+elements into container `x`, you could first call:\n
+和对 `vectors` 使用 `reserve` 一样，在往无序关联式容器中插入大量元素之前，最好先调用 `rehash`。
+这样可以避免不必要的代价昂贵的重散列，让你可以保存迭代器，并确知它们不会失效。如果你要往容器 `x` 中插入 `n` 个元素，你可以先调用：
 
     x.rehash((x.size() + n) / x.max_load_factor() + 1);
 
@@ -166,6 +199,9 @@ elements into container `x`, you could first call:
 number of elements, which is why the new size is divided by the maximum load factor.  The
 `+ 1` guarantees there is no invalidation; without it, reallocation could occur
 if the number of bucket exactly divides the target size, since the container is
-allowed to rehash when the load factor is equal to the maximum load factor.]
+allowed to rehash when the load factor is equal to the maximum load factor.\n
+注：`rehash` 的参数是桶的最小数量，而不是元素数量，所以新的大小要除以最大负载因子。
+而 `+ 1` 则保证了不会失效；不这样的话，如果桶的数量正好可以整除目标大小，就可能发生重分配，
+因为当负载因子达到最大负载因子时可以允许容器重散列。]
 
 [endsect]
