@@ -2,50 +2,62 @@
 <!DOCTYPE section PUBLIC "-//Boost//DTD BoostBook XML V1.0//EN"
   "http://www.boost.org/tools/boostbook/dtd/boostbook.dtd">
 <section id="variant.design">
-  <title>Design Overview</title>
+  <title>Design Overview 设计概览</title>
 
   <using-namespace name="boost"/>
 
   <section id="variant.design.never-empty">
-    <title>&quot;Never-Empty&quot; Guarantee</title>
+    <title>&quot;Never-Empty&quot; Guarantee &quot;非空&quot;保证</title>
 
     <section id="variant.design.never-empty.guarantee">
-      <title>The Guarantee</title>
+      <title>The Guarantee 保证</title>
 
       <para>All instances <code>v</code> of type
         <code><classname>variant</classname>&lt;T1,T2,...,TN&gt;</code>
         guarantee that <code>v</code> has constructed content of one of the
         types <code>T<emphasis>i</emphasis></code>, even if an operation on
-        <code>v</code> has previously failed.</para>
+        <code>v</code> has previously failed.<sbr/>
+        类型 <code><classname>variant</classname>&lt;T1,T2,...,TN&gt;</code> 的所有实例 
+        <code>v</code> 均保证，<code>v</code> 具有某个类型 <code>T<emphasis>i</emphasis></code> 
+        的已构造内容，即使之前对 <code>v</code><code>v</code> 的某项操作失败了。</para>
 
       <para>This implies that <code>variant</code> may be viewed precisely as
         a union of <emphasis>exactly</emphasis> its bounded types. This
         &quot;never-empty&quot; property insulates the user from the
         possibility of undefined <code>variant</code> content and the
         significant additional complexity-of-use attendant with such a
-        possibility.</para>
+        possibility.<sbr/>
+        这意味着 <code>variant</code> 可以被视为其有界类型的一个联合。
+        这个 &quot;非空&quot; 的特性使得用户不会遇到未定义的 <code>variant</code> 内容，因此也不需要额外的复杂用法。</para>
     </section>
 
     <section id="variant.design.never-empty.problem">
-      <title>The Implementation Problem</title>
+      <title>The Implementation Problem 实现的问题</title>
 
       <para>While the
         <link linkend="variant.design.never-empty.guarantee">never-empty guarantee</link>
         might at first seem &quot;obvious,&quot; it is in fact not even
         straightforward how to implement it in general (i.e., without
         unreasonably restrictive additional requirements on
-        <link linkend="variant.concepts.bounded-type">bounded types</link>).</para>
+        <link linkend="variant.concepts.bounded-type">bounded types</link>).<sbr/>
+        虽然 <link linkend="variant.design.never-empty.guarantee">非空保证</link> 看上去很 &quot;&quot;明显&quot;，
+        实际上如何在通常的情况下(即，不给 <link linkend="variant.concepts.bounded-type">有界类型</link> 增加不合理的限制)
+        实现它却一点都不简单。</para>
 
       <para>The central difficulty emerges in the details of
         <code>variant</code> assignment. Given two instances <code>v1</code>
         and <code>v2</code> of some concrete <code>variant</code> type, there
         are two distinct, fundamental cases we must consider for the assignment
-        <code>v1 = v2</code>.</para>
+        <code>v1 = v2</code>.<sbr/>
+        主要的困难在于 <code>variant</code> 赋值的细节上。给定某个 <code>variant</code> 类型的两个实例 
+        <code>v1</code> 和 <code>v2</code>, 在赋值 <code>v1 = v2</code> 时，我们必须考虑两种截然不同的情形。</para>
 
       <para>First consider the case that <code>v1</code> and <code>v2</code>
         each contains a value of the same type. Call this type <code>T</code>.
         In this situation, assignment is perfectly straightforward: use
-        <code>T::operator=</code>.</para>
+        <code>T::operator=</code>.<sbr/>
+        首先考虑 <code>v1</code> 和 <code>v2</code> 含有相同类型的值的情形。
+        我们称这个类型为 <code>T</code>. 在这种情况下，赋值很简单：使用 <code>T::operator=</code> 就行了。</para>
 
       <para>However, we must also consider the case that <code>v1</code> and
         <code>v2</code> contain values <emphasis>of distinct types</emphasis>.
@@ -56,95 +68,129 @@
         of the right-hand side (i.e., <code>v2</code>). In the end, whereas
         <code>v1</code> began with content of type <code>T</code>, it ends
         with content of type <code>U</code>, namely a copy of the content of
-        <code>v2</code>.</para>
+        <code>v2</code>.<sbr/>
+        不过，我们还必须考虑 <code>v1</code> 和 <code>v2</code> 含有<emphasis>不同类型</emphasis>的值的情形。
+        我们分别称这两类型为 <code>T</code> 和 <code>U</code>. 这时，由于 <code>variant</code> 是在栈上管理其内容的，
+        赋值的左操作数(即 <code>v1</code>)必须销毁其内容并允许就地复制构造右操作数(即 <code>v2</code>)的内容。
+        最后，<code>v1</code> 以类型 <code>T</code> 内容开始而以类型 <code>U</code> 的内容结束，具有 
+        <code>v2</code> 的内容的拷贝。</para>
 
       <para>The crux of the problem, then, is this: in the event that
         copy-construction of the content of <code>v2</code> fails, how can
         <code>v1</code> maintain its &quot;never-empty&quot; guarantee?
         By the time copy-construction from <code>v2</code> is attempted,
-        <code>v1</code> has already destroyed its content!</para>
+        <code>v1</code> has already destroyed its content!<sbr/>
+        该问题的症结在于：如果对 <code>v2</code> 内容的复制构造失败，那么 <code>v1</code> 如何维持其 "非空" 保证？
+        在尝试对 <code>v2</code> 进行复制构造时，<code>v1</code> 已经销毁了它的内容了！</para>
     </section>
 
     <section id="variant.design.never-empty.memcpy-solution">
-      <title>The &quot;Ideal&quot; Solution: False Hopes</title>
+      <title>The &quot;Ideal&quot; Solution: False Hopes &quot;完美的&quot;方案：错误的期望</title>
 
       <para>Upon learning of this dilemma, clever individuals may propose the
-        following scheme hoping to solve the problem:
+        following scheme hoping to solve the problem:<sbr/>
+        在了解了这一困难局面后，聪明的程序员可能会提出以下方法，希望可以解决这个问题：
 
         <orderedlist>
           <listitem>Provide some &quot;backup&quot; storage, appropriately
             aligned, capable of holding values of the contained type of the
-            left-hand side.</listitem>
+            left-hand side.<sbr/>
+            提供一些&quot;后备&quot;存储，进行适当的对齐，用以保存左操作数所含的值。</listitem>
           <listitem>Copy the memory (e.g., using <code>memcpy</code>) of the
-            storage of the left-hand side to the backup storage.</listitem>
+            storage of the left-hand side to the backup storage.<sbr/>
+            将左操作数的存储内存复制(如，使用 <code>memcpy</code>)到后备的存储中。</listitem>
           <listitem>Attempt a copy of the right-hand side content to the
-            (now-replicated) left-hand side storage.</listitem>
+            (now-replicated) left-hand side storage.<sbr/>
+            尝试将右操作数复制到(现在已备份)左操作数的存储中。</listitem>
           <listitem>In the event of an exception from the copy, restore the
             backup (i.e., copy the memory from the backup storage back into
-            the left-hand side storage).</listitem>
+            the left-hand side storage).<sbr/>
+            如果复制操作出现异常，则从备份中进行恢复(即，从后备存储中复制内存到左操作数的存储中)。 </listitem>
           <listitem>Otherwise, in the event of success, now copy the memory
             of the left-hand side storage to another &quot;temporary&quot;
-            aligned storage.</listitem>
+            aligned storage.<sbr/>
+            否则，复制成功，将左操作数的存储内存复制到另一个&quot;临时&quot;的对齐存储中。</listitem>
           <listitem>Now restore the backup (i.e., again copying the memory)
             to the left-hand side storage; with the &quot;old&quot; content
             now restored, invoke the destructor of the contained type on the
-            storage of the left-hand side.</listitem>
+            storage of the left-hand side.<sbr/>
+            现在恢复备份(即再次复制内存)到左操作数的存储中；在&quot;旧的&quot;内容恢复后，
+            调用左操作数所含类型的析构函数。</listitem>
           <listitem>Finally, copy the memory of the temporary storage to the
-            (now-empty) storage of the left-hand side.</listitem>
+            (now-empty) storage of the left-hand side.<sbr/>
+            最后，从临时存储中复制内存到(现在为空)左操作数的存储中。</listitem>
         </orderedlist>
       </para>
 
       <para>While complicated, it appears such a scheme could provide the
         desired safety in a relatively efficient manner. In fact, several
-        early iterations of the library implemented this very approach.</para>
+        early iterations of the library implemented this very approach.<sbr/>
+        虽然有点复杂，但看起来这个方法以相对高效的方式提供了想要的安全性。
+        实际上，本库的几个早期版本正是以这一方法实现的。</para>
 
       <para>Unfortunately, as Dave Abraham's first noted, the scheme results
-        in undefined behavior:
+        in undefined behavior:<sbr/>
+        不幸的是，正如 Dave Abraham 首先指出的，这个方法会导致未定义行为：
 
         <blockquote>
           <para>&quot;That's a lot of code to read through, but if it's
-            doing what I think it's doing, it's undefined behavior.</para>
+            doing what I think it's doing, it's undefined behavior.<sbr/>
+            &quot;从头读下来，这有很多代码，不过，如果这段代码确实是按照我所想的去做的话，它将是一个未定义的行为。</para>
           <para>&quot;Is the trick to move the bits for an existing object
             into a buffer so we can tentatively construct a new object in
             that memory, and later move the old bits back temporarily to
-            destroy the old object?</para>
+            destroy the old object?<sbr/>
+            &quot;将一个已有对象的 bits 移动到另一个缓冲区，好让我们可以试验性地在这片内存中构造一个新的对象，
+            然后再从临时存储中将 bits 移回并销毁旧的对象，这是否是一个骗局？</para>
           <para>&quot;The standard does not give license to do that: only one
             object may have a given address at a time. See 3.8, and
-            particularly paragraph 4.&quot;</para>
+            particularly paragraph 4.&quot;<sbr/>
+            &quot;&quot;标准中并没有允许这样做：在一个时候只能有一个对象可以拥有一个给定的地址。
+            请见标准的 3.8 节，特别是第4段。&quot;&quot;</para>
         </blockquote>
       </para>
 
       <para>Additionally, as close examination quickly reveals, the scheme has
         the potential to create irreconcilable race-conditions in concurrent
-        environments.</para>
+        environments.<sbr/>
+        此外，后来的测试很快就表明，这个方法在并行环境下有可能会创建矛盾的竞争条件。</para>
 
       <para>Ultimately, even if the above scheme could be made to work on
         certain platforms with particular compilers, it is still necessary to
-        find a portable solution.</para>
+        find a portable solution.<sbr/>
+        最后，即使以上方法可以在特定平台的特定编译器上工作，也还需要找到可移植的解决方案。</para>
     </section>
 
     <section id="variant.design.never-empty.double-storage-solution">
-      <title>An Initial Solution: Double Storage</title>
+      <title>An Initial Solution: Double Storage 初步的方案：双存储</title>
 
       <para>Upon learning of the infeasibility of the above scheme, Anthony
         Williams proposed in
         <link linkend="variant.refs.wil02">[Wil02]</link> a scheme that served
         as the basis for a portable solution in some pre-release
-        implementations of <code>variant</code>.</para>
+        implementations of <code>variant</code>.<sbr/>
+        了解到以上方法的不可行之后，Anthony Williams 在 <link linkend="variant.refs.wil02">[Wil02]</link>
+        中提议了另一个方法，作为可移植的 <code>variant</code> 的预发布版本实现。</para>
 
       <para>The essential idea to this scheme, which shall be referred to as
         the &quot;double storage&quot; scheme, is to provide enough space
         within a <code>variant</code> to hold two separate values of any of
-        the bounded types.</para>
+        the bounded types.<sbr/>
+        这个方法的基本思想被称为 &quot;双存储&quot;，为一个 <code>variant</code> 
+        提供足够的空间来保存任意两个有界类型的值。</para>
 
       <para>With the secondary storage, a copy the right-hand side can be
         attempted without first destroying the content of the left-hand side;
         accordingly, the content of the left-hand side remains available in
-        the event of an exception.</para>
+        the event of an exception.<sbr/>
+        有了第二份存储，就可以在不销毁左操作数的内容的前提下尝试对右操作数的复制；
+        因此，在发生异常时左操作数的内容仍保持有效。</para>
 
       <para>Thus, with this scheme, the <code>variant</code> implementation
         needs only to keep track of which storage contains the content -- and
-        dispatch any visitation requests, queries, etc. accordingly.</para>
+        dispatch any visitation requests, queries, etc. accordingly.<sbr/>
+        所以，基于此方法，<code>variant</code> 的实现只需跟踪哪一份存储保存了当前内容 -- 
+        从而对所有访问请示、查询等进行分派。</para>
 
       <para>The most obvious flaw to this approach is the space overhead
         incurred. Though some optimizations could be applied in special cases
@@ -155,15 +201,20 @@
         the use of double storage. In particular, it was noted that the
         overhead of double storage would be at play at all times -- even if
         assignment to <code>variant</code> never occurred. For this reason
-        and others, a new approach was developed.</para>
+        and others, a new approach was developed.<sbr/>
+        这一方法最明显的缺点就是空间的开销。虽然在特殊情况下可以进行一些优化以消除对两份存储的需要 -- 
+        对于特定的有界类型或在某些情形下(相关细节请看 <xref linkend="variant.design.never-empty.optimizations"/>) -- 
+        但是在 Boost 邮件列表中的大多数用户还是强烈反对使用双存储。具体地说，双份存储的的开销几乎在所有时间都需要 -- 
+        即使从未对 <code>variant</code> 进行过赋值。由于这些那些的原因，我们开发了新的方法。</para>
     </section>
 
     <section id="variant.design.never-empty.heap-backup-solution">
-      <title>Current Approach: Temporary Heap Backup</title>
+      <title>Current Approach: Temporary Heap Backup 当前的方法：临时的堆备份</title>
 
       <para>Despite the many objections to the double storage solution, it was
         realized that no replacement would be without drawbacks. Thus, a
-        compromise was desired.</para>
+        compromise was desired.<sbr/>
+        尽管对于双存储方案有很多的反对意见，但是我们还是认识到不存在没有缺点的替代方案。因此，我们需要一些折衷。</para>
 
       <para>To this end, Dave Abrahams suggested to include the following in
         the behavior specification for <code>variant</code> assignment:
@@ -172,20 +223,29 @@
         continue to store its content <emphasis>in situ</emphasis> after
         construction and after assignment involving identical contained types,
         <code>variant</code> would store its content on the heap after
-        assignment involving distinct contained types.</para>
+        assignment involving distinct contained types.<sbr/>
+        最后，Dave Abrahams 建议对 <code>variant</code> 的赋值行为增加以下规定："从一个类型到另一个类型的 
+        <code>variant</code> 赋值可能引起动态分配"。即，虽然 <code>variant</code> 
+        依然保持在构造后以及在赋予相同类型的值后，原位保存其内容，但是如果被赋予不同类型的值，则 
+        <code>variant</code> 可能将其内容保存在堆上。</para>
 
-      <para>The algorithm for assignment would proceed as follows:
+      <para>The algorithm for assignment would proceed as follows:<sbr/>
+      赋值的算法将如下处理：
 
         <orderedlist>
           <listitem>Copy-construct the content of the right-hand side to the
-            heap; call the pointer to this data <code>p</code>.</listitem>
-          <listitem>Destroy the content of the left-hand side.</listitem>
+            heap; call the pointer to this data <code>p</code>.<sbr/>
+            将右操作数的内容复制构造到堆上；该数据的指针称为 <code>p</code>.</listitem>
+          <listitem>Destroy the content of the left-hand side.<sbr/>
+          销毁左操作数的内容。</listitem>
           <listitem>Copy <code>p</code> to the left-hand side
-            storage.</listitem>
+            storage.<sbr/>
+            将 <code>p</code> 复制到左操作数的存储中。</listitem>
         </orderedlist>
 
         Since all operations on pointers are nothrow, this scheme would allow
-        <code>variant</code> to meet its never-empty guarantee.
+        <code>variant</code> to meet its never-empty guarantee.<sbr/>
+        因为所有对指针的操作都是不会抛出的，该方法将使得 <code>variant</code> 满足其非空保证。
       </para>
 
       <para>The most obvious concern with this approach is that while it
@@ -194,19 +254,28 @@
         assignment -- not just in terms of the initial allocation but also
         as a result of the continued storage of the content on the heap. While
         the former problem is unavoidable, the latter problem may be avoided
-        with the following &quot;temporary heap backup&quot; technique:
+        with the following &quot;temporary heap backup&quot; technique:<sbr/>
+        对于这个方法，最值得留意的是，虽然它的确消除了双份存储的空间开销，
+        但是它将动态分配的开销引入到了 <code>variant</code> 的赋值之中 -- 
+        不仅是初始的分配，而且内容将被长期保存在堆上。
+        虽然前一个问题是不可避免的，但后一个问题可以通过以下 "临时的堆备份" 技术得以避免：
 
         <orderedlist>
           <listitem>Copy-construct the content of the
             <emphasis>left</emphasis>-hand side to the heap; call the pointer to
-            this data <code>backup</code>.</listitem>
-          <listitem>Destroy the content of the left-hand side.</listitem>
+            this data <code>backup</code>.<sbr/>
+            将<emphasis>左</emphasis>操作数的内容复制构造到堆上；该数据的指针称为 <code>backup</code>. </listitem>
+          <listitem>Destroy the content of the left-hand side.<sbr/>
+          销毁左操作数的内容。</listitem>
           <listitem>Copy-construct the content of the right-hand side in the
-            (now-empty) storage of the left-hand side.</listitem>
+            (now-empty) storage of the left-hand side.<sbr/>
+            将右操作数的内容复制构造到(现在为空的)左操作数的存储中。</listitem>
           <listitem>In the event of failure, copy <code>backup</code> to the
-            left-hand side storage.</listitem>
+            left-hand side storage.<sbr/>
+            如果失败，则将 <code>backup</code> 复制到左操作数的存储中。</listitem>
           <listitem>In the event of success, deallocate the data pointed to
-            by <code>backup</code>.</listitem>
+            by <code>backup</code>.<sbr/>
+            如果成功，则释放 <code>backup</code> 所指的数据。</listitem>
         </orderedlist>
       </para>
 
@@ -215,7 +284,10 @@
         fails; and 3) after any <emphasis>successful</emphasis> assignment,
         storage within the <code>variant</code> is guaranteed. For the
         purposes of the initial release of the library, these characteristics
-        were deemed a satisfactory compromise solution.</para>
+        were deemed a satisfactory compromise solution.<sbr/>
+        通过这种技术：1) 只使用了单份存储；2) 只有当赋值失败时，堆上的分配才是长期的；
+        3) <emphasis>成功</emphasis>赋值后，<code>variant</code> 的存储得以保证。
+        对于本库的初次发布的目的，这些特性已经可以被认为是一个满意的折衷方案。</para>
 
       <para>There remain notable shortcomings, however. In particular, there
         may be some users for which heap allocation must be avoided at all
@@ -227,11 +299,17 @@
         <emphasis>are</emphasis> certain things the user can do to ensure the
         greatest efficiency for <code>variant</code> instances (see
         <xref linkend="variant.design.never-empty.optimizations"/> for
-        details).</para>
+        details).<sbr/>
+        不过，还有一些值得注意的缺点。具体地说，可能有些用户要求不惜代价必须避免堆分配；
+        而其它用户则要求通过一个用户提供的分配器来进行堆分配。这些问题将在以后解决
+        (请见 <xref linkend="variant.design.never-empty.roadmap"/>)。
+        目前，本库将内容的存储方式作为一个实现细节。虽然如此，就象下一节所要讲述的，
+        有一些事情是用户可以做的，以确保 <code>variant</code> 实例具有最高的效率(详情请见 
+        <xref linkend="variant.design.never-empty.optimizations"/>)。</para>
     </section>
 
     <section id="variant.design.never-empty.optimizations">
-      <title>Enabling Optimizations</title>
+      <title>Enabling Optimizations 进行优化</title>
 
       <para>As described in
         <xref linkend="variant.design.never-empty.problem"/>, the central
@@ -241,11 +319,17 @@
         face this possibility. Similarly, if one of the bounded types of the
         <code>variant</code> is nothrow default-constructible, then such a
         type could be used as a safe &quot;fallback&quot; type in the event of
-        failed copy construction.</para>
+        failed copy construction.<sbr/>
+        正如在 <xref linkend="variant.design.never-empty.problem"/> 中所讲，
+        实现"非空保证"的主要困难在于，在 <code>variant</code> 赋值的过程中有可能发生复制构造的失败。
+        不过，具有不抛出异常的复制构造函数的类型显然不会面临这种可能性。
+        同样，如果 <code>variant</code> 的某个有界类型可以无抛出地缺省构造，
+        那么这一类型就可被用作复制构造失败后的安全 "回退" 类型。</para>
 
       <para>Accordingly, <code>variant</code> is designed to enable the
         following optimizations once the following criteria on its bounded
-        types are met:
+        types are met:<sbr/>
+        因此，<code>variant</code> 被设计为如果其有界类型符合以下标准，就可以使用以下优化：
 
         <itemizedlist>
 
@@ -253,7 +337,10 @@
             copy-constructible (as indicated by
             <code><classname>boost::has_nothrow_copy</classname></code>), the
             library guarantees <code>variant</code> will use only single
-            storage and in-place construction for <code>T</code>.</listitem>
+            storage and in-place construction for <code>T</code>.<sbr/>
+            对于每个可以无抛出复制构造(就象 <code><classname>boost::has_nothrow_copy</classname></code> 
+            那样)的有界类型 <code>T</code>, 本库保证 <code>variant</code> 只使用单份存储且就地进行 
+            <code>T</code> 的构造。</listitem>
 
           <listitem>If <emphasis>any</emphasis> bounded type is nothrow
             default-constructible (as indicated by
@@ -264,7 +351,10 @@
             the event of assignment failure, an unspecified nothrow
             default-constructible bounded type will be default-constructed in
             the left-hand side operand so as to preserve the never-empty
-            guarantee.</listitem>
+            guarantee.<sbr/>
+            如果任一有界类型可以无抛出缺省构造(就象 <code><classname>boost::has_nothrow_constructor</classname></code> 那样)，
+            本库保证 <code>variant</code> 只使用单份存储且可以对 <code>variant</code> 中的每一个有界类型进行就地构造。
+            不过请注意，如果赋值失败，某个不确定的可无抛出缺省构造的有界类型将被缺省构造到左操作数中，以提供非空保证。</listitem>
 
         </itemizedlist>
 
@@ -276,7 +366,11 @@
         by default return <code>false</code> for all <code>class</code> and
         <code>struct</code> types. It is necessary therefore to provide
         specializations of these templates as appropriate for user-defined
-        types, as demonstrated in the following:
+        types, as demonstrated in the following:<sbr/>
+        <emphasis role="bold">警告</emphasis>：在多数平台上，<libraryname>Type Traits</libraryname> 
+        模板 <code>has_nothrow_copy</code> 和 <code>has_nothrow_constructor</code> 缺省对于所有 
+        <code>class</code> 和 <code>struct</code> 类型返回 <code>false</code><code>false</code>. 
+        因此需要为用户自定义类型提供这些模板的适当的特化版本，示范如下：
 
 <programlisting>// ...in your code (at file scope)...
 
@@ -300,17 +394,24 @@ namespace boost {
         bounded type instead of other nothrow default-constructible bounded
         types. (If this is deemed to be a useful feature, it will become part
         of the specification for <code>variant</code>; otherwise, it may be
-        obsoleted. Please provide feedback to the Boost mailing list.)</para>
+        obsoleted. Please provide feedback to the Boost mailing list.)<sbr/>
+        <emphasis role="bold">实现说明</emphasis>：为了使得在遇到异常后 <code>variant</code> 
+        的行为更可预测，当前的实现在 boost::blank 被指定为有界类型时会优先缺省构造 
+        <code><classname>boost::blank</classname></code> 而不是其它可以无抛出缺省构造的有界类型。
+        (如果这一点被认为是有用的，则它将成为 <code>variant</code> 规格的一部分；否则它将被废弃。
+        请向 Boost 邮件列表提供反馈。)</para>
     </section>
 
     <section id="variant.design.never-empty.roadmap">
-      <title>Future Direction: Policy-based Implementation</title>
+      <title>Future Direction: Policy-based Implementation 未来的方向：基于策略的实现</title>
 
       <para>As the previous sections have demonstrated, much effort has been
         expended in an attempt to provide a balance between performance, data
         size, and heap usage. Further, significant optimizations may be
         enabled in <code>variant</code> on the basis of certain traits of its
-        bounded types.</para>
+        bounded types.<sbr/>
+        正如前一节中的示例，我们进行了更多的努力，以在性能、数据大小和堆的使用之间提供一个平衡。
+        而且，基于 <code>variant</code> 的有界类型的特定 traits，还可以进行特殊的优化。</para>
 
       <para>However, there will be some users for whom the chosen compromise
         is unsatisfactory (e.g.: heap allocation must be avoided at all costs;
@@ -319,7 +420,11 @@ namespace boost {
         policy-based implementation of <code>variant</code>. While this will
         not eliminate the problems described in the previous sections, it will
         allow the decisions regarding tradeoffs to be decided by the user
-        rather than the library designers.</para>
+        rather than the library designers.<sbr/>
+        不过，还是有些用户对于选定的折衷不满意(例如：堆的分配必须不惜代价地避免；
+        如果要用堆分配，就必须使用定制的分配器；等等)。因此，本库的未来版本将支持 
+        <code>variant</code> 的一个基于策略的实现。虽然它不能完全解决前面章节中所说的问题，
+        但是它允许折衷的决定由用户而不是库的设计者来作出。</para>
     </section>
 
   </section>

@@ -2,12 +2,12 @@
 <!DOCTYPE section PUBLIC "-//Boost//DTD BoostBook XML V1.0//EN"
   "http://www.boost.org/tools/boostbook/dtd/boostbook.dtd">
 <section id="variant.intro">
-  <title>Introduction</title>
+  <title>Introduction 简介</title>
 
   <using-namespace name="boost"/>
 
 <section id="variant.abstract">
-  <title>Abstract</title>
+  <title>Abstract 概要</title>
 
 <para>The <code>variant</code> class template is a safe, generic, stack-based
 discriminated union container, offering a simple solution for manipulating an
@@ -15,38 +15,51 @@ object from a heterogeneous set of types in a uniform manner. Whereas
 standard containers such as <code>std::vector</code> may be thought of as
 "<emphasis role="bold">multi-value, single type</emphasis>,"
 <code>variant</code> is "<emphasis role="bold">multi-type,
-single value</emphasis>."</para>
+single value</emphasis>."<sbr/>
+<code>variant</code> 类模板是一个安全的、泛型的、基于栈的、可识别的联合容器，
+为以统一风格操作异类类型集合的对象提供了一个简单的方法。
+象 <code>std::vector</code> 这样的标准容器可以被视为 "<emphasis role="bold">多值，单一类型</emphasis>"的，
+而 <code>variant</code> 则是 "<emphasis role="bold">多类型，单值</emphasis>"的。</para>
 
 <para>Notable features of <code><classname>boost::variant</classname></code>
-include:</para>
+include:<sbr/>
+<code><classname>boost::variant</classname></code> 的主要特性包括：</para>
 
 <itemizedlist>
   <listitem>Full value semantics, including adherence to standard
-    overload resolution rules for conversion operations.</listitem>
+    overload resolution rules for conversion operations.<sbr/>
+    完全的值语义，包括遵守转换操作符的标准重载决议规则。</listitem>
   <listitem>Compile-time type-safe value visitation via
-    <code><functionname>boost::apply_visitor</functionname></code>.</listitem>
+    <code><functionname>boost::apply_visitor</functionname></code>.<sbr/>
+    经由 <code><functionname>boost::apply_visitor</functionname></code> 的编译期类型安全的值访问。</listitem>
   <listitem>Run-time checked explicit value retrieval via
-    <code><functionname>boost::get</functionname></code>.</listitem>
+    <code><functionname>boost::get</functionname></code>.<sbr/>
+    经由 <code><functionname>boost::get</functionname></code> 的运行期带检查的显式的值取出。</listitem>
   <listitem>Support for recursive variant types via both
     <code><classname>boost::make_recursive_variant</classname></code> and
-    <code><classname>boost::recursive_wrapper</classname></code>.</listitem>
+    <code><classname>boost::recursive_wrapper</classname></code>.<sbr/>
+    通过 <code><classname>boost::make_recursive_variant</classname></code> 和
+    <code><classname>boost::recursive_wrapper</classname></code> 支持递归的 variant 类型。</listitem>
   <listitem>Efficient implementation -- stack-based when possible (see
-    <xref linkend="variant.design.never-empty"/> for more details).</listitem>
+    <xref linkend="variant.design.never-empty"/> for more details).<sbr/>
+    高效的实现 -- 尽可能基于栈(详情请见 <xref linkend="variant.design.never-empty"/>)。</listitem>
 </itemizedlist>
 
 </section>
 
 <section id="variant.motivation">
-  <title>Motivation</title>
+  <title>Motivation 动机</title>
 
 <section id="variant.motivation.problem">
-  <title>Problem</title>
+  <title>Problem 问题</title>
 
 <para>Many times, during the development of a C++ program, the
 programmer finds himself in need of manipulating several distinct
 types in a uniform manner. Indeed, C++ features direct language
 support for such types through its <code>union</code> 
-keyword:</para>
+keyword:<sbr/>
+很多时候，在开发一个C++程序时，程序员会发现需要以统一的风格来操作多个不同的类型。
+确实，C++以 <code>union</code> 关键字直接提供了这种支持：</para>
 
 <programlisting>union { int i; double d; } u;
 u.d = 3.14;
@@ -57,7 +70,9 @@ useless in an object-oriented environment. The construct entered
 the language primarily as a means for preserving compatibility with
 C, which supports only POD (Plain Old Data) types, and so does not
 accept types exhibiting non-trivial construction or
-destruction:</para>
+destruction:<sbr/>
+但是，C++的 <code>union</code> 结构在面向对象的环境下几乎是不可用的。
+该结构得以保存下来，主要是为了与C兼容，它只能支持 POD 类型，不可以使用带有非平凡构造或析构的类型：</para>
 
 <programlisting>union {
   int i;
@@ -71,35 +86,48 @@ manipulated through a common base type (often a virtual base class
 or, more dangerously, a <code>void*</code>). Objects of
 concrete type may be then retrieved by way of a polymorphic downcast
 construct (e.g., <code>dynamic_cast</code>,
-<code><functionname>boost::any_cast</functionname></code>, etc.).</para>
+<code><functionname>boost::any_cast</functionname></code>, etc.).<sbr/>
+显然，我们需要另一种方法。典型的方法是对对象进行动态分配，随之而来就是要通过一个公共基类
+(通常是一个虚基类[<link linkend="variant.refs.hen01">Hen01</link>] 或者是更危险的 <code>void*</code>)来进行操作。
+然后通过一个多态的向下转型结构(如 <code>dynamic_cast</code>,
+<code><functionname>boost::any_cast</functionname></code>, 等等)来取回具体类型的对象。</para>
 
 <para>However, solutions of this sort are highly error-prone, due
-to the following:</para>
+to the following:<sbr/>
+但是，这类方法是非常容易出错的，因为以下原因：</para>
 
 <itemizedlist>
   <listitem><emphasis>Downcast errors cannot be detected at
     compile-time.</emphasis> Thus, incorrect usage of downcast
-    constructs will lead to bugs detectable only at run-time.</listitem>
+    constructs will lead to bugs detectable only at run-time.<sbr/>
+    <emphasis>向下转型的错误不能在编译期被检测到。</emphasis>
+    因此，对向下转型结构的错误使用将导致只能在运行期被检查出来的 bug。</listitem>
   <listitem><emphasis>Addition of new concrete types may be 
     ignored.</emphasis> If a new concrete type is added to the
     hierarchy, existing downcast code will continue to work as-is,
     wholly ignoring the new type. Consequently, the programmer must
     manually locate and modify code at numerous locations, which often
-    results in run-time errors that are difficult to find.</listitem>
+    results in run-time errors that are difficult to find.<sbr/>
+    <emphasis>新加入的具体类可能被忽略。</emphasis>
+    如果一个新的具体类被加入到类层次中，已有的向下转型代码可以继续工作，完全忽略掉了新的类型。
+    因此，程序员必须手工定位和修改多处代码，这通常会导致运行期错误且难以觉察。</listitem>
 </itemizedlist>
 
 <para>Furthermore, even when properly implemented, these solutions tend
 to incur a relatively significant abstraction penalty due to the use of
-the heap, virtual function calls, and polymorphic downcasts.</para>
+the heap, virtual function calls, and polymorphic downcasts.<sbr/>
+此外，即使被正确地实现，这类方法还是会由于使用了堆、虚拟函数调用和多态向下转型而导致相对严重的开销。</para>
 
 </section>
 
 <section id="variant.motivation.solution">
-  <title>Solution: A Motivating Example</title>
+  <title>Solution: A Motivating Example 解决方法：一个例子</title>
 
 <para>The <code><classname>boost::variant</classname></code> class template
 addresses these issues in a safe, straightforward, and efficient manner. The
-following example demonstrates how the class can be used:</para>
+following example demonstrates how the class can be used:<sbr/>
+<code><classname>boost::variant</classname></code> 类模板以安全、简单和高效的方法解决了这个问题。
+以下例子示范了如何使用这个类：</para>
 
 <programlisting>#include "boost/variant.hpp"
 #include &lt;iostream&gt;
