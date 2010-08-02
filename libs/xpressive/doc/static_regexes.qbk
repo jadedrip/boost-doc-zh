@@ -5,54 +5,70 @@
  / file LICENSE_1_0.txt or copy at http://www.boost.org/LICENSE_1_0.txt)
  /]
 
-[section Static Regexes]
+[section:static_regexes Static Regexes 静态Regexes]
 
-[h2 Overview]
+[h2 Overview 概述]
 
 The feature that really sets xpressive apart from other C/C++ regular
 expression libraries is the ability to author a regular expression using C++
 expressions. xpressive achieves this through operator overloading, using a
 technique called ['expression templates] to embed a mini-language dedicated
 to pattern matching within C++. These "static regexes" have many advantages
-over their string-based brethren. In particular, static regexes:
+over their string-based brethren. In particular, static regexes:\n
+真正使得xpressive不同于其它的C/C++正则表达式库的特性是，它可以用C++表达式来编写一个正则表达式。
+xpressive通过操作符重载来实现这一功能，它使用一种被称为 ['表达式模板] 的技术来将一个专用于模式匹配的小型语言嵌入到C++中。
+这些"静态regexes"与基于字符串的正则表达式相比，具有多种优点。尤其是，静态 regexes：
 
 * are syntax-checked at compile-time; they will never fail at run-time due to
-  a syntax error.
+  a syntax error.\n
+  编译期进行语法检查；它们不会在运行期因为语法错误了失败。
 * can naturally refer to other C++ data and code, including other regexes,
   making it simple to build grammars out of regular expressions and bind
-  user-defined actions that execute when parts of your regex match.
+  user-defined actions that execute when parts of your regex match.\n
+  可以自然地引用其它C++数据和代码，包括其它regexes，可以很简单地构建正则表达式之外的语法和绑定一些用户自定义的动作，
+  在你的regex部分匹配时去执行。
 * are statically bound for better inlining and optimization. Static regexes
   require no state tables, virtual functions, byte-code or calls through
-  function pointers that cannot be resolved at compile time.
+  function pointers that cannot be resolved at compile time.\n
+  它们是静态绑定的，可以更好地内联和优化。静态regexes不需要状态表、虚函数、字节编码或通过不能在编译期进行决议的函数指针进行调用。
 * are not limited to searching for patterns in strings. You can declare a
-  static regex that finds patterns in an array of integers, for instance.
+  static regex that finds patterns in an array of integers, for instance.\n
+  它们不限于仅在字符串中进行模式查找。比如，你可以声明一个静态regex来在一个整数数组中进行模式查找。
 
 Since we compose static regexes using C++ expressions, we are constrained by
 the rules for legal C++ expressions. Unfortunately, that means that
 "classic" regular expression syntax cannot always be mapped cleanly into
 C++. Rather, we map the regex ['constructs], picking new syntax that is
-legal C++.
+legal C++.\n
+因为我们是用C++表达式来构成静态regexes的，所以我们受制于合法C++表达式的规则。
+很不幸，这意味着"传统的"正则表达式语法并不总是能清晰地映射到C++中。在一定程度上，我们映射regex ['结构]，选择新的语法以符合C++。 
 
-[h2 Construction and Assignment]
+[h2 Construction and Assignment 构造和赋值]
 
 You create a static regex by assigning one to an object of type _basic_regex_.
 For instance, the following defines a regex that can be used to find patterns
-in objects of type `std::string`:
+in objects of type `std::string`:\n
+你要通过将某个东西赋值给一个 _basic_regex_ 对象来创建一个静态regex。
+例如，以下定义了一个可以用于在 `std::string` 对象中进行模式查找的regex：
 
     sregex re = '$' >> +_d >> '.' >> _d >> _d;
 
-Assignment works similarly.
+Assignment works similarly.\n
+赋值操作与之相似。
 
-[h2 Character and String Literals]
+[h2 Character and String Literals 字符和字符串文字常量]
 
 In static regexes, character and string literals match themselves. For
 instance, in the regex above, `'$'` and `'.'` match the characters `'$'` and
 `'.'` respectively. Don't be confused by the fact that [^$] and [^.] are
-meta-characters in Perl. In xpressive, literals always represent themselves.
+meta-characters in Perl. In xpressive, literals always represent themselves.\n
+在静态regexes中，字符和字符串文字常量匹配它们自身。例如，上述regex中，`'$'` 和 `'.'` 分别匹配字符 `'$'` 和 `'.'`。
+不要将这与Perl中的元字符 [^$] 和 [^.] 相混淆。在xpressive中，文字常量总是表示它们自身。
 
 When using literals in static regexes, you must take care that at least one
 operand is not a literal. For instance, the following are ['not] valid
-regexes:
+regexes:\n
+在静态regexes中使用文字常量时，你必须要小心，至少要有一个操作数不是文字常量。例如，以下就['不]是有效的regexes：
 
     sregex re1 = 'a' >> 'b';         // ERROR!
     sregex re2 = +'a';               // ERROR!
@@ -64,27 +80,33 @@ respectively. That's not what we want. To get operator overloading to kick
 in, at least one operand must be a user-defined type. We can use xpressive's
 `as_xpr()` helper function to "taint" an expression with regex-ness, forcing
 operator overloading to find the correct operators. The two regexes above
-should be written as:
+should be written as:\n
+二元 `>>` 操作符的两个操作数都是文字常量，而一元 `+` 操作符的操作数也是一个文字常量，
+所以这两个语句会分别调用C++原本的二元右移操作符和一元加操作符。那不是我们想要的。
+要触发操作符的重载，必须至少有一个操作数是用户自定义类型。我们可以使用xpressive和 `as_xpr()` 
+辅助函数来将一个表达式"变为"regex-化，迫使操作符重载去查找正确的操作符。以上两个regexes应写为：
 
     sregex re1 = as_xpr('a') >> 'b'; // OK
     sregex re2 = +as_xpr('a');       // OK
 
-[h2 Sequencing and Alternation]
+[h2 Sequencing and Alternation 序列和选择]
 
 As you've probably already noticed, sub-expressions in static regexes must
 be separated by the sequencing operator, `>>`. You can read this operator as
-"followed by".
+"followed by".\n
+你可能已经留意到，静态regexes中的子表达式必须用序列操作符 `>>` 来分隔。你可以将这个操作符念成"后随"。 
 
-    // Match an 'a' followed by a digit
+    // Match an 'a' followed by a digit 匹配一个'a'后随一个数字
     sregex re = 'a' >> _d;
 
 Alternation works just as it does in Perl with the `|` operator. You can
-read this operator as "or". For example:
+read this operator as "or". For example:\n
+选择操作则和Perl中一样，使用 `|` 操作符。你可以将这个操作符念成"或"。例如：
 
-    // match a digit character or a word character one or more times
+    // match a digit character or a word character one or more times 匹配一个数字或单词字符一次或多次
     sregex re = +( _d | _w );
 
-[h2 Grouping and Captures]
+[h2 Grouping and Captures 分组和捕获]
 
 In Perl, parentheses `()` have special meaning. They group, but as a
 side-effect they also create back\-references like [^$1] and [^$2]. In C++,
@@ -92,32 +114,42 @@ parentheses only group \-\- there is no way to give them side\-effects. To
 get the same effect, we use the special `s1`, `s2`, etc. tokens. Assigning
 to one creates a back-reference. You can then use the back-reference later
 in your expression, like using [^\1] and [^\2] in Perl. For example,
-consider the following regex, which finds matching HTML tags:
+consider the following regex, which finds matching HTML tags:\n
+在Perl中，括号 `()` 具有特别的意义。它们进行分组，但是有一个副作用，它们同时创建后向引用，如 [^$1] 和 [^$2]。
+在C++中，括号只能进行分组 \-\- 无法产生相应的副作用。要得到相同的效果，我们要使用特殊的记号，如 `s1`, `s2`, 等等。
+每赋值一个就创建一个后向引用。然后你就可以在你的表达式中使用这些后向引用，和在Perl中使用 [^\1] 和 [^\2] 一样。
+例如，以下regex可以查找成对的HTML标签：
 
     "<(\\w+)>.*?</\\1>"
 
-In static xpressive, this would be:
+In static xpressive, this would be:\n
+在静态xpressive中，它们可以这样写：
 
     '<' >> (s1= +_w) >> '>' >> -*_ >> "</" >> s1 >> '>'
 
 Notice how you capture a back-reference by assigning to `s1`, and then you
-use `s1` later in the pattern to find the matching end tag.
+use `s1` later in the pattern to find the matching end tag.\n
+留意你要如何通过赋值给 `s1` 来捕获一个后向引用，以及如何在模式中使用 `s1` 来匹配结束标签。
 
-[tip [*Grouping without capturing a back-reference] \n\n In
+[tip [*Grouping without capturing a back-reference  分组但不捕获后向引用] \n\n In
 xpressive, if you just want grouping without capturing a back-reference, you
 can just use `()` without `s1`. That is the equivalent of Perl's [^(?:)]
-non-capturing grouping construct.]
+non-capturing grouping construct.\n
+在xpressive中，如果你只是想分组而不捕获后向引用，你可以使用不带 `s1` 的 `()`。这等价于Perl的 [^(?:)] 非捕获分组结构。]
 
-[h2 Case-Insensitivity and Internationalization]
+[h2 Case-Insensitivity and Internationalization 大小写不敏感和国际化]
 
 Perl lets you make part of your regular expression case-insensitive by using
 the [^(?i:)] pattern modifier. xpressive also has a case-insensitivity
-pattern modifier, called `icase`. You can use it as follows:
+pattern modifier, called `icase`. You can use it as follows:\n
+Perl可以让你通过使用 [^(?i:)] 模式修改符来将部分正则表达式变为大小写不敏感。
+xpressive也有一个大小写不敏感的模式修改符，称为 `icase`。你可以象以下这样使用它：
 
     sregex re = "this" >> icase( "that" );
 
 In this regular expression, `"this"` will be matched exactly, but `"that"`
-will be matched irrespective of case.
+will be matched irrespective of case.\n
+在这个正则表达式中，`"this"` 将被精确匹配，而 `"that"` 则在匹配时不考虑大小写。
 
 Case-insensitive regular expressions raise the issue of
 internationalization: how should case-insensitive character comparisons be
@@ -126,7 +158,11 @@ characters are matched by `digit` and which are matched by `alpha`? The
 answer depends on the `std::locale` object the regular expression object is
 using. By default, all regular expression objects use the global locale. You
 can override the default by using the `imbue()` pattern modifier, as
-follows:
+follows:\n
+大小写不敏感的正则表达式引起了一个国际化的问题：大小写不敏感的字符应该如何比较其相等性？
+而且，许多字符类都是指定locale的。哪些字符匹配 `digit` 而哪些字符匹配 `alpha` 呢？
+答案取决于正则表达式对象所使用的 `std::locale` 对象。缺省地，所有正则表达式对象使用全局locale。
+你可以用 `imbue()` 模式修改符来覆盖这一缺省值，如下：
 
     std::locale my_locale = /* initialize a std::locale object */;
     sregex re = imbue( my_locale )( +alpha >> +digit );
@@ -134,12 +170,15 @@ follows:
 This regular expression will evaluate `alpha` and `digit` according to
 `my_locale`. See the section on [link boost_xpressive.user_s_guide.localization_and_regex_traits
 Localization and Regex Traits] for more information about how to customize
-the behavior of your regexes.
+the behavior of your regexes.\n
+这个正则表达式将依据 `my_locale` 来求值 `alpha` 和 `digit`。有关如何定制你的regexes的行为的更多信息，请看 
+[link boost_xpressive.user_s_guide.localization_and_regex_traits 本地化和Regex Traits] 一节。
 
-[h2 Static xpressive Syntax Cheat Sheet]
+[h2 Static xpressive Syntax Cheat Sheet 静态 xpressive 语法对照表]
 
 The table below lists the familiar regex constructs and their equivalents in
-static xpressive.
+static xpressive.\n
+下表列出了常见的regex结构以及在静态xpressive中的等价物。
 
 [def _s1_       [globalref boost::xpressive::s1 s1]]
 [def _bos_      [globalref boost::xpressive::bos bos]]
@@ -171,61 +210,115 @@ static xpressive.
 [def _keep_     [funcref boost::xpressive::keep keep]]
 
 [table Perl syntax vs. Static xpressive syntax
-    [[Perl]               [Static xpressive]                              [Meaning]]
-    [[[^.]]               [[globalref boost::xpressive::_ `_`]]           [any character (assuming Perl's /s modifier).]]
-    [[[^ab]]              [`a >> b`]                                      [sequencing of [^a] and [^b] sub-expressions.]]
-    [[[^a|b]]             [`a | b`]                                       [alternation of [^a] and [^b] sub-expressions.]]
-    [[[^(a)]]             [`(_s1_= a)`]                                   [group and capture a back-reference.]]
-    [[[^(?:a)]]           [`(a)`]                                         [group and do not capture a back-reference.]]
-    [[[^\1]]              [`_s1_`]                                        [a previously captured back-reference.]]
-    [[[^a*]]              [`*a`]                                          [zero or more times, greedy.]]
-    [[[^a+]]              [`+a`]                                          [one or more times, greedy.]]
-    [[[^a?]]              [`!a`]                                          [zero or one time, greedy.]]
-    [[[^a{n,m}]]          [`_repeat_<n,m>(a)`]                            [between [^n] and [^m] times, greedy.]]
-    [[[^a*?]]             [`-*a`]                                         [zero or more times, non-greedy.]]
-    [[[^a+?]]             [`-+a`]                                         [one or more times, non-greedy.]]
-    [[[^a??]]             [`-!a`]                                         [zero or one time, non-greedy.]]
-    [[[^a{n,m}?]]         [`-_repeat_<n,m>(a)`]                           [between [^n] and [^m] times, non-greedy.]]
-    [[[^^]]               [`_bos_`]                                       [beginning of sequence assertion.]]
-    [[[^$]]               [`_eos_`]                                       [end of sequence assertion.]]
-    [[[^\b]]              [`_b_`]                                         [word boundary assertion.]]
-    [[[^\B]]              [`~_b_`]                                        [not word boundary assertion.]]
-    [[[^\\n]]             [`_n_`]                                         [literal newline.]]
-    [[[^.]]               [`~_n_`]                                        [any character except a literal newline (without Perl's /s modifier).]]
-    [[[^\\r?\\n|\\r]]     [`_ln_`]                                        [logical newline.]]
-    [[[^\[^\\r\\n\]]]     [`~_ln_`]                                       [any single character not a logical newline.]]
-    [[[^\w]]              [`_w_`]                                         [a word character, equivalent to set\[alnum | '_'\].]]
-    [[[^\W]]              [`~_w_`]                                        [not a word character, equivalent to ~set\[alnum | '_'\].]]
-    [[[^\d]]              [`_d_`]                                         [a digit character.]]
-    [[[^\D]]              [`~_d_`]                                        [not a digit character.]]
-    [[[^\s]]              [`_s_`]                                         [a space character.]]
-    [[[^\S]]              [`~_s_`]                                        [not a space character.]]
-    [[[^\[:alnum:\]]]     [`_alnum_`]                                     [an alpha-numeric character.]]
-    [[[^\[:alpha:\]]]     [`_alpha_`]                                     [an alphabetic character.]]
-    [[[^\[:blank:\]]]     [`_blank_`]                                     [a horizontal white-space character.]]
-    [[[^\[:cntrl:\]]]     [`_cntrl_`]                                     [a control character.]]
-    [[[^\[:digit:\]]]     [`_digit_`]                                     [a digit character.]]
-    [[[^\[:graph:\]]]     [`_graph_`]                                     [a graphable character.]]
-    [[[^\[:lower:\]]]     [`_lower_`]                                     [a lower-case character.]]
-    [[[^\[:print:\]]]     [`_print_`]                                     [a printing character.]]
-    [[[^\[:punct:\]]]     [`_punct_`]                                     [a punctuation character.]]
-    [[[^\[:space:\]]]     [`_space_`]                                     [a white-space character.]]
-    [[[^\[:upper:\]]]     [`_upper_`]                                     [an upper-case character.]]
-    [[[^\[:xdigit:\]]]    [`_xdigit_`]                                    [a hexadecimal digit character.]]
-    [[[^\[0-9\]]]         [`_range_('0','9')`]                            [characters in range `'0'` through `'9'`.]]
-    [[[^\[abc\]]]         [`as_xpr('a') | 'b' |'c'`]                      [characters `'a'`, `'b'`, or `'c'`.]]
-    [[[^\[abc\]]]         [`(_set_= 'a','b','c')`]                        [['same as above]]]
-    [[[^\[0-9abc\]]]      [`_set_[ _range_('0','9') | 'a' | 'b' | 'c' ]`] [characters `'a'`, `'b'`, `'c'` or  in range `'0'` through `'9'`.]]
-    [[[^\[0-9abc\]]]      [`_set_[ _range_('0','9') | (_set_= 'a','b','c') ]`]  [['same as above]]]
-    [[[^\[^abc\]]]        [`~(_set_= 'a','b','c')`]                       [not characters `'a'`, `'b'`, or `'c'`.]]
-    [[[^(?i:['stuff])]]   [`_icase_(`[^['stuff]]`)`]                      [match ['stuff] disregarding case.]]
-    [[[^(?>['stuff])]]    [`_keep_(`[^['stuff]]`)`]                       [independent sub-expression, match ['stuff] and turn off backtracking.]]
-    [[[^(?=['stuff])]]    [`_before_(`[^['stuff]]`)`]                     [positive look-ahead assertion, match if before ['stuff] but don't include ['stuff] in the match.]]
-    [[[^(?!['stuff])]]    [`~_before_(`[^['stuff]]`)`]                    [negative look-ahead assertion, match if not before ['stuff].]]
-    [[[^(?<=['stuff])]]   [`_after_(`[^['stuff]]`)`]                      [positive look-behind assertion, match if after ['stuff] but don't include ['stuff] in the match. (['stuff] must be constant-width.)]]
-    [[[^(?<!['stuff])]]   [`~_after_(`[^['stuff]]`)`]                     [negative look-behind assertion, match if not after ['stuff]. (['stuff] must be constant-width.)]]
-    [[[^(?P<['name]>['stuff])]]     [`_mark_tag_ `[^['name]]`(`['n]`);`\n ...\n `(`[^['name]]`= `[^['stuff]]`)`]      [Create a named capture.]]
-    [[[^(?P=['name])]]              [`_mark_tag_ `[^['name]]`(`['n]`);`\n ...\n [^['name]]]                           [Refer back to a previously created named capture.]]
+    [[Perl]               [Static xpressive]                              [Meaning 含义]]
+    [[[^.]]               [[globalref boost::xpressive::_ `_`]]           [any character (assuming Perl's /s modifier).\n
+    任意字符(假定有Perl的/s修改符)。]]
+    [[[^ab]]              [`a >> b`]                                      [sequencing of [^a] and [^b] sub-expressions.\n
+    [^a] 和 [^b] 子表达式的顺序序列。]]
+    [[[^a|b]]             [`a | b`]                                       [alternation of [^a] and [^b] sub-expressions.\n
+    [^a] 和 [^b] 子表达式的二选一。]]
+    [[[^(a)]]             [`(_s1_= a)`]                                   [group and capture a back-reference.\n
+    分组并捕获一个后向引用。]]
+    [[[^(?:a)]]           [`(a)`]                                         [group and do not capture a back-reference.\n
+    分组但不捕获后向引用。]]
+    [[[^\1]]              [`_s1_`]                                        [a previously captured back-reference.\n
+    之前捕获的一个后向引用。]]
+    [[[^a*]]              [`*a`]                                          [zero or more times, greedy.\n
+    零次或多次，贪心式。]]
+    [[[^a+]]              [`+a`]                                          [one or more times, greedy.\n
+    一次或多次，贪心式。]]
+    [[[^a?]]              [`!a`]                                          [zero or one time, greedy.\n
+    零次或一次，贪心式。]]
+    [[[^a{n,m}]]          [`_repeat_<n,m>(a)`]                            [between [^n] and [^m] times, greedy.\n
+    [^n] 至 [^m] 次，贪心式。]]
+    [[[^a*?]]             [`-*a`]                                         [zero or more times, non-greedy.\n
+    零次或多次，非贪心式。]]
+    [[[^a+?]]             [`-+a`]                                         [one or more times, non-greedy.\n
+    一次或多次，非贪心式。]]
+    [[[^a??]]             [`-!a`]                                         [zero or one time, non-greedy.\n
+    零次或一次，非贪心式。]]
+    [[[^a{n,m}?]]         [`-_repeat_<n,m>(a)`]                           [between [^n] and [^m] times, non-greedy.\n
+    [^n] 至 [^m] 次，非贪心式。]]
+    [[[^^]]               [`_bos_`]                                       [beginning of sequence assertion.\n
+    序列起点断言。]]
+    [[[^$]]               [`_eos_`]                                       [end of sequence assertion.\n
+    序列末点断言。]]
+    [[[^\b]]              [`_b_`]                                         [word boundary assertion.\n
+    单词边界断言。]]
+    [[[^\B]]              [`~_b_`]                                        [not word boundary assertion.\n
+    非单词边界断言。]]
+    [[[^\\n]]             [`_n_`]                                         [literal newline.\n
+    字面换行。]]
+    [[[^.]]               [`~_n_`]                                        [any character except a literal newline (without Perl's /s modifier).\n
+    除字面换行外的任意字符(不带Perl的/s修改符)。]]
+    [[[^\\r?\\n|\\r]]     [`_ln_`]                                        [logical newline.\n
+    逻辑换行。]]
+    [[[^\[^\\r\\n\]]]     [`~_ln_`]                                       [any single character not a logical newline.\n
+    非逻辑换行外的任意字符。]]
+    [[[^\w]]              [`_w_`]                                         [a word character, equivalent to set\[alnum | '_'\].\n
+    一个单词字符，等价于 set\[alnum | '_'\].]]
+    [[[^\W]]              [`~_w_`]                                        [not a word character, equivalent to ~set\[alnum | '_'\].\n
+    不是一个单词字符，等价于 ~set\[alnum | '_'\].]]
+    [[[^\d]]              [`_d_`]                                         [a digit character.\n
+    数字字符。]]
+    [[[^\D]]              [`~_d_`]                                        [not a digit character.\n
+    非数字字符。]]
+    [[[^\s]]              [`_s_`]                                         [a space character.\n
+    空白字符。]]
+    [[[^\S]]              [`~_s_`]                                        [not a space character.\n
+    非空白字符。]]
+    [[[^\[:alnum:\]]]     [`_alnum_`]                                     [an alpha-numeric character.\n
+    字母-数字字符。]]
+    [[[^\[:alpha:\]]]     [`_alpha_`]                                     [an alphabetic character.\n
+    字母字符。]]
+    [[[^\[:blank:\]]]     [`_blank_`]                                     [a horizontal white-space character.\n
+    水平空白字符。]]
+    [[[^\[:cntrl:\]]]     [`_cntrl_`]                                     [a control character.\n
+    控制字符。]]
+    [[[^\[:digit:\]]]     [`_digit_`]                                     [a digit character.\n
+    数字字符。]]
+    [[[^\[:graph:\]]]     [`_graph_`]                                     [a graphable character.\n
+    图形字符。]]
+    [[[^\[:lower:\]]]     [`_lower_`]                                     [a lower-case character.\n
+    小写字符。]]
+    [[[^\[:print:\]]]     [`_print_`]                                     [a printing character.\n
+    打印字符。]]
+    [[[^\[:punct:\]]]     [`_punct_`]                                     [a punctuation character.\n
+    标点字符。]]
+    [[[^\[:space:\]]]     [`_space_`]                                     [a white-space character.\n
+    空白字符。]]
+    [[[^\[:upper:\]]]     [`_upper_`]                                     [an upper-case character.\n
+    大写字符。]]
+    [[[^\[:xdigit:\]]]    [`_xdigit_`]                                    [a hexadecimal digit character.\n
+    十六进制数字字符。]]
+    [[[^\[0-9\]]]         [`_range_('0','9')`]                            [characters in range `'0'` through `'9'`.\n
+    从 `'0'` 至 `'9'` 间的字符。]]
+    [[[^\[abc\]]]         [`as_xpr('a') | 'b' |'c'`]                      [characters `'a'`, `'b'`, or `'c'`.\n
+    字符 `'a'`, `'b'`, 或 `'c'`.]]
+    [[[^\[abc\]]]         [`(_set_= 'a','b','c')`]                        [['same as above]\n
+    ['同上]]]
+    [[[^\[0-9abc\]]]      [`_set_[ _range_('0','9') | 'a' | 'b' | 'c' ]`] [characters `'a'`, `'b'`, `'c'` or  in range `'0'` through `'9'`.\n
+    `'a'`, `'b'`, `'c'` 或 `'0'` 至 `'9'` 间的字符。]]
+    [[[^\[0-9abc\]]]      [`_set_[ _range_('0','9') | (_set_= 'a','b','c') ]`]  [['same as above]\n
+    ['同上]]]
+    [[[^\[^abc\]]]        [`~(_set_= 'a','b','c')`]                       [not characters `'a'`, `'b'`, or `'c'`.\n
+    非 `'a'`, `'b'`, 或 `'c'` 的字符。]]
+    [[[^(?i:['stuff])]]   [`_icase_(`[^['stuff]]`)`]                      [match ['stuff] disregarding case.\n
+    忽略大小写匹配 ['stuff].]]
+    [[[^(?>['stuff])]]    [`_keep_(`[^['stuff]]`)`]                       [independent sub-expression, match ['stuff] and turn off backtracking.\n
+    独立子表达式，匹配 ['stuff] 并关闭反向跟踪。]]
+    [[[^(?=['stuff])]]    [`_before_(`[^['stuff]]`)`]                     [positive look-ahead assertion, match if before ['stuff] but don't include ['stuff] in the match.\n
+    正顺序环视断言，如果在 ['stuff] 之前但不含 stuff 时匹配。]]
+    [[[^(?!['stuff])]]    [`~_before_(`[^['stuff]]`)`]                    [negative look-ahead assertion, match if not before ['stuff].\n
+    负顺序环视断言，不在 ['stuff] 之前时匹配。]]
+    [[[^(?<=['stuff])]]   [`_after_(`[^['stuff]]`)`]                      [positive look-behind assertion, match if after ['stuff] but don't include ['stuff] in the match. (['stuff] must be constant-width.)\n
+    正逆序环视断言，如果在 ['stuff] 之后但不含 ['stuff] 时匹配。(['stuff] 必须是常数宽度)]]
+    [[[^(?<!['stuff])]]   [`~_after_(`[^['stuff]]`)`]                     [negative look-behind assertion, match if not after ['stuff]. (['stuff] must be constant-width.)\n
+    负逆序环视，不在 ['stuff] 之后时匹配。(['stuff] 必须是常数宽度)]]
+    [[[^(?P<['name]>['stuff])]]     [`_mark_tag_ `[^['name]]`(`['n]`);`\n ...\n `(`[^['name]]`= `[^['stuff]]`)`]      [Create a named capture.\n
+    创建一个命名捕获。]]
+    [[[^(?P=['name])]]              [`_mark_tag_ `[^['name]]`(`['n]`);`\n ...\n [^['name]]]                           [Refer back to a previously created named capture.\n
+    后向引用至之前创建的某个命名捕获。]]
 ]
 \n
 

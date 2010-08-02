@@ -5,21 +5,24 @@
  / file LICENSE_1_0.txt or copy at http://www.boost.org/LICENSE_1_0.txt)
  /]
 
-[section Semantic Actions and User-Defined Assertions]
+[section:semantic_actions_and_user_defined_assertions Semantic Actions and User-Defined Assertions 语义动作与用户自定义断言]
 
-[h2 Overview]
+[h2 Overview 概述]
 
 Imagine you want to parse an input string and build a `std::map<>` from it. For
 something like that, matching a regular expression isn't enough. You want to
 /do something/ when parts of your regular expression match. Xpressive lets
 you attach semantic actions to parts of your static regular expressions. This
-section shows you how.
+section shows you how.\n
+想象你想分析一个输入串并从中构建一个 `std::map<>`。对于这种事情，仅仅匹配一个正则表达式是不够的。
+你想要在你的正则表达式部分匹配时做些事情。Xpressive让你可以为你的静态正则表达式的某个部分添加语义动作。本节将向你展示怎么做。
 
-[h2 Semantic Actions]
+[h2 Semantic Actions 语义动作]
 
 Consider the following code, which uses xpressive's semantic actions to parse
 a string of word/integer pairs and stuffs them into a `std::map<>`. It is
-described below.
+described below.\n
+我们来看以下代码，它使用xpressive的语义动作来分析一个由单词/整数对组成的串，并将它们存入一个 `std::map<>`。后文有说明。
 
     #include <string>
     #include <iostream>
@@ -51,7 +54,8 @@ described below.
         return 0;
     }
 
-This program prints the following:
+This program prints the following:\n
+程序输出如下：
 
 [pre
 1
@@ -64,10 +68,14 @@ pattern says to match a word, capturing it in sub-match 1, and an integer,
 capturing it in sub-match 2, separated by `"=>"`. The action is the part in
 square brackets: `[ ref(result)[s1] = as<int>(s2) ]`. It says to take sub-match
 one and use it to index into the `results` map, and assign to it the result of
-converting sub-match 2 to an integer.
+converting sub-match 2 to an integer.\n
+正则表达式 `pair` 有两部分：模式和动作。其模式部分指出，匹配一个单词并把它放入子匹配1，然后是一个整数并放入子匹配2，它们之间由 
+`"=>"` 分隔。动作部分是由方括号括起来的部分：`[ ref(result)[s1] = as<int>(s2) ]`。它表示，取出子匹配 1并用它作为 `results` 
+map的索引，然后将由子匹配2转换为整数的结果赋给它。
 
 [note To use semantic actions with your static regexes, you must
-`#include <boost/xpressive/regex_actions.hpp>`]
+`#include <boost/xpressive/regex_actions.hpp>`\n
+要对你的静态regex使用语义动作，你必须 `#include <boost/xpressive/regex_actions.hpp>`]
 
 How does this work? Just as the rest of the static regular expression, the part
 between brackets is an expression template. It encodes the action and executes
@@ -77,7 +85,12 @@ Later, when this action is getting executed, `s1` gets replaced with the
 first _sub_match_. Likewise, when `as<int>(s2)` gets executed, `s2` is replaced
 with the second _sub_match_. The `as<>` action converts its argument to the
 requested type using Boost.Lexical_cast. The effect of the whole action is to
-insert a new word/integer pair into the map.
+insert a new word/integer pair into the map.\n
+这是如何工作的呢？正如这个静态正则表达式后一部分那样，在方括号中的是一个表达式模板。
+它对动作编码并延后执行它。表达式 `ref(result)` 创建了一个 `result` 对象的延迟引用。
+较大一些的表达式 `ref(result)[s1]` 则是一个延迟的map索引操作。当这个动作稍后被执行时，`s1` 
+会被第一个 _sub_match_ 所替代。同样，当 `as<int>(s2)` 被执行时，s2 会替换为第二个 _sub_match_。
+动作 `as<>` 使用Boost.Lexical_cast将它的参数转换为所要求的类型。整个动作的效果就是，插入一个新的单词/整数对到map中。
 
 [note There is an important difference between the function `boost::ref()` in
 `<boost/ref.hpp>` and `boost::xpressive::ref()` in
@@ -86,26 +99,35 @@ insert a new word/integer pair into the map.
 reference. By contrast, `boost::xpressive::ref()` returns a /lazy/ reference
 that you can use in expressions that are executed lazily. That is why we can
 say `ref(result)[s1]`, even though `result` doesn't have an `operator[]` that
-would accept `s1`.]
+would accept `s1`.\n
+`<boost/ref.hpp>` 中的函数 `boost::ref()` 与 `<boost/xpressive/regex_actions.hpp>` 中的 
+`boost::xpressive::ref()` 有很大的差别。前者返回一个简单的 `reference_wrapper<>`，其行为在许多方面都与普通的引用相似。
+相比之下，`boost::xpressive::ref()` 返回一个/延迟/的引用，你可以把它用于延后执行的表达式之中。
+这正是我们可以写 `ref(result)[s1]` 的原因，即使 `result` 并没有一个接受 `s1` 的 `operator[]`。]
 
 In addition to the sub-match placeholders `s1`, `s2`, etc., you can also use
 the placeholder `_` within an action to refer back to the string matched by
 the sub-expression to which the action is attached. For instance, you can use
 the following regex to match a bunch of digits, interpret them as an integer
-and assign the result to a local variable:
+and assign the result to a local variable:\n
+除了子匹配占位符 `s1`, `s2` 等，你还可以在动作中使用占位符 `_` 来反向引用至附加该动作的子表达式所匹配的字符串。
+例如，你可以用以下regex来匹配一串数字，把它们解释为整数并把结果赋值给一个局部变量：
 
     int i = 0;
     // Here, _ refers back to all the
     // characters matched by (+_d)
     sregex rex = (+_d)[ ref(i) = as<int>(_) ];
 
-[h3 Lazy Action Execution]
+[h3 Lazy Action Execution 延迟的动作执行]
 
 What does it mean, exactly, to attach an action to part of a regular expression
 and perform a match? When does the action execute? If the action is part of a
 repeated sub-expression, does the action execute once or many times? And if the
 sub-expression initially matches, but ultimately fails because the rest of the
-regular expression fails to match, is the action executed at all?
+regular expression fails to match, is the action executed at all?\n
+把一个动作附加至一个正则表达式的某个部分并执行匹配，其正确的意义是什么？该动作何时被执行？
+如果这个动作是一个重复的子表达式的一部分，它会被执行一次还是多次？
+还有，如果这个子表达式开始的时候是被匹配的，但是最终却因为正则表达式的其它部分匹配失败而失败，这个动作还会被执行吗？
 
 The answer is that by default, actions are executed /lazily/. When a sub-expression
 matches a string, its action is placed on a queue, along with the current
@@ -113,10 +135,14 @@ values of any sub-matches to which the action refers. If the match algorithm
 must backtrack, actions are popped off the queue as necessary. Only after the
 entire regex has matched successfully are the actions actually exeucted. They
 are executed all at once, in the order in which they were added to the queue,
-as the last step before _regex_match_ returns.
+as the last step before _regex_match_ returns.\n
+答案是，缺省地，动作是被/延迟/执行的。当一个子表达式匹配一个字符串时，它的动作和该动作所引用的所有子匹配的值一起，会被放入一个队列中。
+如果匹配算法必须回溯，该动作会视需要从队列中弹出。只有当整个regex被成功地匹配，这些动作才会被执行。
+它们会按照它们加入到队列中的顺序，作为 _regex_match_ 返回之前的最后一个步骤，被一次性地执行。 
 
 For example, consider the following regex that increments a counter whenever
-it finds a digit.
+it finds a digit.\n
+例如，考虑以下regex，它在发现一个数字时递增一个计数器。
 
     int i = 0;
     std::string str("1!2!3?");
@@ -129,9 +155,11 @@ it finds a digit.
 The action `++ref(i)` is queued three times: once for each found digit. But
 it is only /executed/ twice: once for each digit that precedes a `'!'`
 character. When the `'?'` character is encountered, the match algorithm
-backtracks, removing the final action from the queue.
+backtracks, removing the final action from the queue.\n
+动作 `++ref(i)` 将被三次加入队列：每发现一个数字一次。但它仅被/执行/两次：每个带 `'!'` 字符的数字一次。
+当遇到 `'?'` 字符时，匹配算法会回溯，把最后一个动作移出队列。
 
-[h3 Immediate Action Execution]
+[h3 Immediate Action Execution 即时的动作执行]
 
 When you want semantic actions to execute immediately, you can wrap the
 sub-expression containing the action in a [^[funcref boost::xpressive::keep keep()]].
@@ -140,7 +168,11 @@ any actions queued by the sub-expression to execute at the end of the `keep()`.
 It is as if the sub-expression in the `keep()` were compiled into an
 independent regex object, and matching the `keep()` is like a separate invocation
 of `regex_search()`. It matches characters and executes actions but never backtracks
-or unwinds. For example, imagine the above example had been written as follows:
+or unwinds. For example, imagine the above example had been written as follows:\n
+如果你想让一个语义动作立即执行，你可以把含有该动作的子表达式包入一个 [^[funcref boost::xpressive::keep keep()]] 中。
+`keep()` 关闭了对此子表达式的回溯，不过它也会引起由该子表达式放入队列的所有动作在 `keep()` 之后执行。
+它就象在 `keep()` 中的子表达式被编译为一个独立的regex对象，匹配该 `keep()` 就象一次 `regex_search()` 的单独调用。
+它匹配字符并执行动作，但不会回溯或展开。例如，想象上述例子被改为如下：
 
     int i = 0;
     std::string str("1!2!3?");
@@ -152,20 +184,27 @@ or unwinds. For example, imagine the above example had been written as follows:
 We have wrapped the sub-expression `_d [ ++ref(i) ]` in `keep()`. Now, whenever
 this regex matches a digit, the action will be queued and then immediately
 executed before we try to match a `'!'` character. In this case, the action
-executes three times.
+executes three times.\n
+我们把子表达式 `_d [ ++ref(i) ]` 包入 `keep()` 中。现在，当这个regex匹配到一个数字时，该动作就会被加入队列，然后在我们试图匹配 
+`'!'` 字符之前立即执行。在此情况下，该动作被执行三次。
 
 [note Like `keep()`, actions within [^[funcref boost::xpressive::before before()]]
 and [^[funcref boost::xpressive::after after()]] are also executed early when their
-sub-expressions have matched.]
+sub-expressions have matched.\n
+和 `keep()` 相似，在 [^[funcref boost::xpressive::before before()]] 和 
+[^[funcref boost::xpressive::after after()]] 中的动作也会在它们的子表达式被匹配时提前执行。]
 
-[h3 Lazy Functions]
+[h3 Lazy Functions 延迟函数]
 
 So far, we've seen how to write semantic actions consisting of variables and
 operators. But what if you want to be able to call a function from a semantic
-action? Xpressive provides a mechanism to do this.
+action? Xpressive provides a mechanism to do this.\n
+到目前为止，我们已经看过如何编写一个由变量和操作符组成的语义动作。
+但是如果你想在一个语义动作中调用某个函数，那要怎么做呢？Xpressive提供了一个机制来实现它。
 
 The first step is to define a function object type. Here, for instance, is a
-function object type that calls `push()` on its argument:
+function object type that calls `push()` on its argument:\n
+第一步是定义一个函数对象类型。例如，以下是一个对其参数调用 `push()` 的函数对象类型：
 
     struct push_impl
     {
@@ -180,14 +219,17 @@ function object type that calls `push()` on its argument:
     };
 
 The next step is to use xpressive's `function<>` template to define a function
-object named `push`:
+object named `push`:\n
+下一步是用xpressive的 `function<>` 模板来定义一个名为 `push` 的函数对象：
 
     // Global "push" function object.
     function<push_impl>::type const push = {{}};
 
 The initialization looks a bit odd, but this is because `push` is being
 statically initialized. That means it doesn't need to be constructed
-at runtime. We can use `push` in semantic actions as follows:
+at runtime. We can use `push` in semantic actions as follows:\n
+这里的初始化看起来有点奇怪，这是因为 `push` 是被静态初始化的。这意味着它不需要在运行期进行构造。
+我们可以在语义动作中使用 `push`，如下：
 
     std::stack<int> ints;
     // Match digits, cast them to an int
@@ -197,17 +239,22 @@ at runtime. We can use `push` in semantic actions as follows:
 You'll notice that doing it this way causes member function invocations
 to look like ordinary function invocations. You can choose to write your
 semantic action in a different way that makes it look a bit more like
-a member function call:
+a member function call:\n
+你会留意到，用这种方法来做会使得成员函数的调用看起来象一个普通函数的调用。
+你可以选择以其它方式来编写你的语义动作，令它看起来更象成员函数调用一点：
 
     sregex rex = (+_d)[ref(ints)->*push(as<int>(_))];
 
 Xpressive recognizes the use of the `->*` and treats this expression
-exactly the same as the one above.
+exactly the same as the one above.\n
+Xpressive会认得 `->*` 并把这个表达式视为与上一个完全一样。
 
 When your function object must return a type that depends on its
 arguments, you can use a `result<>` member template instead of the
 `result_type` typedef. Here, for example, is a `first` function object
-that returns the `first` member of a `std::pair<>` or _sub_match_:
+that returns the `first` member of a `std::pair<>` or _sub_match_:\n
+如果你的函数对象必须根据其参数决定返回的类型，那么你可以使用 `result<>` 成员模板来替代 `result_type` typedef。
+例如，以下是一个 `first` 函数对象，它返回一个 `std::pair<>` 或 _sub_match_ 的 `first` 成员：
 
     // Function object that returns the
     // first element of a pair.
@@ -234,13 +281,16 @@ that returns the `first` member of a `std::pair<>` or _sub_match_:
     // of the sub-match referred to by s1.
     function<first_impl>::type const first = {{}};
 
-[h3 Referring to Local Variables]
+[h3 Referring to Local Variables 引用局部变量]
 
 As we've seen in the examples above, we can refer to local variables within
 an actions using `xpressive::ref()`. Any such variables are held by reference
 by the regular expression, and care should be taken to avoid letting those
 references dangle. For instance, in the following code, the reference to `i`
-is left to dangle when `bad_voodoo()` returns:
+is left to dangle when `bad_voodoo()` returns:\n
+正如我们在上例中所看到的，我们可以用 `xpressive::ref()` 在一个动作内引用某个局部变量。
+所有这样的变量都会被正则表达式以引用方式保存，并要小心避免让它们变为悬空的引用。
+例如，在以下代码中，到 `i` 的引用会在 `bad_voodoo()` 返回时悬空：
 
     sregex bad_voodoo()
     {
@@ -254,7 +304,8 @@ is left to dangle when `bad_voodoo()` returns:
 
 When writing semantic actions, it is your responsibility to make sure that
 all the references do not dangle. One way to do that would be to make the
-variables shared pointers that are held by the regex by value.
+variables shared pointers that are held by the regex by value.\n
+在编写语义动作时，你要负责确保所有引用不会悬空。一种解决方法是，把变量变为由regex以值方式持有的共享指针。
 
     sregex good_voodoo(boost::shared_ptr<int> pi)
     {
@@ -268,11 +319,16 @@ In the above code, we use `xpressive::val()` to hold the shared pointer by
 value. That's not normally necessary because local variables appearing in
 actions are held by value by default, but in this case, it is necessary. Had
 we written the action as `++*pi`, it would have executed immediately. That's
-because `++*pi` is not an expression template, but `++*val(pi)` is.
+because `++*pi` is not an expression template, but `++*val(pi)` is.\n
+在以上代码中，我们用 `xpressive::val()` 来以值方式持有该共享指针。
+通常这是不需要的，因为在动作中出现的局部变量缺省是以值方式持有的，不过在这个例子中，这样做是必须的。
+如果我们把这个动作写为 `++*pi`，它就会立即执行。这是因为 `++*pi` 不是一个表达式模板，而 `++*val(pi)` 是。
 
 It can be tedious to wrap all your variables in `ref()` and `val()` in your
 semantic actions. Xpressive provides the `reference<>` and `value<>` templates
-to make things easier. The following table shows the equivalencies:
+to make things easier. The following table shows the equivalencies:\n
+在语义动作中把所有变量都用 `ref()` 和 `val()` 包起来是很乏味的。
+Xpressive提供了 `reference<>` 和 `value<>` 模板，可以使得这件事情容易些。下表列出这两个模板：
 
 [table reference<> and value<>
 [[This ...][... is equivalent to this ...]]
@@ -290,7 +346,9 @@ sregex rex = +( _d [ ++*vpi ] >> '!' );``]]
 
 As you can see, when using `reference<>`, you need to first declare a local
 variable and then declare a `reference<>` to it. These two steps can be combined
-into one using `local<>`.
+into one using `local<>`.\n
+如你所见，使用 `reference<>` 的时候，你要首先声明一个局部变量，然后声明对它一个 `reference<>`。
+这两个步骤可以用 `local<>` 合并为一步。
 
 [table local<> vs. reference<>
 [[This ...][... is equivalent to this ...]]
@@ -301,7 +359,8 @@ reference<int> ri(i);
 sregex rex = +( _d [ ++ri ] >> '!' );``]]
 ]
 
-We can use `local<>` to rewrite the above example as follows:
+We can use `local<>` to rewrite the above example as follows:\n
+我们可以用 `local<>` 重写前面的例子，如下：
 
     local<int> i(0);
     std::string str("1!2!3?");
@@ -313,9 +372,10 @@ We can use `local<>` to rewrite the above example as follows:
 
 Notice that we use `local<>::get()` to access the value of the local
 variable. Also, beware that `local<>` can be used to create a dangling
-reference, just as `reference<>` can.
+reference, just as `reference<>` can.\n
+注意，我们用了 `local<>::get()` 来访问这个局部变量的值。还有，要小心 `local<>` 也可能被用于创建一个悬空的引用，象 `reference<>` 那样。
 
-[h3 Referring to Non-Local Variables]
+[h3 Referring to Non-Local Variables 引用非局部变量]
 
 In the beginning of this
 section, we used a regex with a semantic action to parse a string of
@@ -327,7 +387,13 @@ _regex_match_ algorithm rather than embed a reference to it directly in
 the regex object. What we can do instead is define a placeholder and use
 that in the semantic action instead of the map itself. Later, when we
 call one of the regex algorithms, we can bind the reference to an actual
-map object. The following code shows how.
+map object. The following code shows how.\n
+在本节的开始，我们用一个带语义动作的regex来分析一个由单词/整数对组成的串，并将它们存入一个 `std::map<>` 中。
+这就要求这个map和这个regex要一起定义，并且在它们的任何一个超出作用域之前使用。
+如果我们想定义regex一次并用它来填充多个不同的 map，应该怎么办呢？
+我们应该把这个map传入 _regex_match_ 算法，而不是直接在regex对象中嵌入一个引用。
+我们可以做的是，定义一个占位符并在语义动作当中用它来替换map本身。
+然后，当我们调用某个 regex算法时，我们就可以将这个引用绑定到一个实际的map对象。以下代码示范了要怎么做。
 
     // Define a placeholder for a map object:
     placeholder<std::map<std::string, int> > _map;
@@ -359,7 +425,8 @@ map object. The following code shows how.
         std::cout << result["ccc"] << '\n';
     }
 
-This program displays:
+This program displays:\n
+程序输出：
 
 [pre
 1
@@ -372,18 +439,25 @@ We use `placeholder<>` here to define `_map`, which stands in for a
 it were a map. Then, we define a _match_results_ struct and bind an actual map
 to the placeholder with "`what.let( _map = result );`". The _regex_match_ call
 behaves as if the placeholder in the semantic action had been replaced with a
-reference to `result`.
+reference to `result`.\n
+这里我们用 `placeholder<>` 来定义 `_map`，用于代替 `std::map<>` 变量。我们在语义动作中可以象用一个map那样使用这个占位符。
+然后，我们定义一个 _match_results_ 结构并用 `"what.let( _map = result );"` 把一个实际的map绑定至这个占位符。
+_regex_match_ 调用的行为就象语义动作中的占位符被替换为 `result` 的一个引用一样。
 
 [note Placeholders in semantic actions are not /actually/ replaced at runtime
 with references to variables. The regex object is never mutated in any way
 during any of the regex algorithms, so they are safe to use in multiple
-threads.]
+threads.\n
+语义动作中的占位符并不是在运行期/真的/被替换为某个变量的引用。
+在任何regex算法执行期间，regex对象都不会被修改，所以它们可以在多线程环境中安全地使用。]
 
 The syntax for late-bound action arguments is a little different if you are
 using _regex_iterator_ or _regex_token_iterator_. The regex iterators accept
 an extra constructor parameter for specifying the argument bindings. There is
 a `let()` function that you can use to bind variables to their placeholders.
-The following code demonstrates how.
+The following code demonstrates how.\n
+如果你要用 _regex_iterator_ 或 _regex_token_iterator_，那么动作参数的延迟绑定语法要有一点不同。
+regex迭代器接受一个额外的构造函数参数，以指定要绑定的参数。你可以用一个 `let()` 函数来将变量绑定至它们的占位符。以下代码示范了要怎么做。
 
     // Define a placeholder for a map object:
     placeholder<std::map<std::string, int> > _map;
@@ -412,7 +486,8 @@ The following code demonstrates how.
     std::cout << result["bbb"] << '\n';
     std::cout << result["ccc"] << '\n';
 
-This program displays:
+This program displays:\n
+程序输出：
 
 [pre
 1
@@ -420,19 +495,24 @@ This program displays:
 456
 ]
 
-[h2 User-Defined Assertions]
+[h2 User-Defined Assertions 用户自定义断言]
 
 You are probably already familiar with regular expression /assertions/. In
 Perl, some examples are the [^^] and [^$] assertions, which you can use to
 match the beginning and end of a string, respectively. Xpressive lets you
 define your own assertions. A custom assertion is a contition which must be
 true at a point in the match in order for the match to succeed. You can check
-a custom assertion with xpressive's _check_ function.
+a custom assertion with xpressive's _check_ function.\n
+可能你对正则表达式断言已经非常熟悉。在Perl中，可以以 [^^] 和 [^$] 断言为例，你可以用它们来分别匹配字符串的开始与结尾。
+Xpressive可以让你定义自己的断言。客户化断言是指为了令匹配成功而在匹配点上必须为真的一个条件。
+你可以用xpressive的 _check_ 函数来检查一个客户化断言。 
 
 There are a couple of ways to define a custom assertion. The simplest is to
 use a function object. Let's say that you want to ensure that a sub-expression
 matches a sub-string that is either 3 or 6 characters long. The following
-struct defines such a predicate:
+struct defines such a predicate:\n
+有多种方法来下定义一个客户化断言。最简单的方法是用一个函数对象。
+我们假定你要确认某个子表达式匹配一个长度为3或6的子串。以下结构定义了这样的一个谓词： 
 
     // A predicate that is true IFF a sub-match is
     // either 3 or 6 characters long.
@@ -444,7 +524,8 @@ struct defines such a predicate:
         }
     };
 
-You can use this predicate within a regular expression as follows:
+You can use this predicate within a regular expression as follows:\n
+你可以在一个正则表达式中用这个谓词，如下：
 
     // match words of 3 characters or 6 characters.
     sregex rx = (bow >> +_w >> eow)[ check(three_or_six()) ] ;
@@ -452,26 +533,32 @@ You can use this predicate within a regular expression as follows:
 The above regular expression will find whole words that are either 3 or 6
 characters long. The `three_or_six` predicate accepts a _sub_match_ that refers
 back to the part of the string matched by the sub-expression to which the
-custom assertion is attached.
+custom assertion is attached.\n
+以上正则表达式将找出长度为3或6个字符的完整单词。谓词 `three_or_six` 接受一个 
+_sub_match_，它引向由该客户化断言所附着的子表达式所匹配的部分字符串。
 
 [note The custom assertion participates in determining whether the match
 succeeds or fails. Unlike actions, which execute lazily, custom assertions
-execute immediately while the regex engine is searching for a match.]
+execute immediately while the regex engine is searching for a match.\n
+客户化断言参与了对当前匹配是否成功的判断。与延迟执行的动作不同，客户化断言是在regex引擎查找到一个匹配时立即执行的。]
 
 Custom assertions can also be defined inline using the same syntax as for
-semantic actions. Below is the same custom assertion written inline:
+semantic actions. Below is the same custom assertion written inline:\n
+客户化断言还可以使用与语义动作相同的语法来内联定义。以下是以内联方式编写的同一个客户化断言：
 
     // match words of 3 characters or 6 characters.
     sregex rx = (bow >> +_w >> eow)[ check(length(_)==3 || length(_)==6) ] ;
 
 In the above, `length()` is a lazy function that calls the `length()` member
 function of its argument, and `_` is a placeholder that receives the
-`sub_match`.
+`sub_match`.\n
+在上例中，`length()` 是一个延迟函数，它调用其参数的 `length()` 成员函数，而 `_` 是接收 `sub_match` 的占位符。
 
 Once you get the hang of writing custom assertions inline, they can be
 very powerful. For example, you can write a regular expression that
 only matches valid dates (for some suitably liberal definition of the
-term ["valid]).
+term ["valid]).\n
+一旦学会编写内联式的客户化断言，它们可以非常强大。例如，你可以写一个只匹配有效日期的正则表达式(对术语["有效]的定义适当宽松了一些)。 
 
     int const days_per_month[] =
         {31, 29, 31, 30, 31, 30, 31, 31, 30, 31, 31, 31};
@@ -504,7 +591,8 @@ term ["valid]).
         std::cout << what[0] << std::endl;
     }
 
-The above program prints out the following:
+The above program prints out the following:\n
+以上程序输出如下：
 
 [pre
 2/28/2006
@@ -513,6 +601,8 @@ The above program prints out the following:
 Notice how the inline custom assertions are used to range-check the values for
 the month, day and year. The regular expression doesn't match `"99/99/9999"` or
 `"2/30/2006"` because they are not valid dates. (There is no 99th month, and
-February doesn't have 30 days.)
+February doesn't have 30 days.)\n
+留意这里的内联式客户化断言如何用来对月、日、年的值进行范围检查。该正则表达式不匹配 `"99/99/9999"` 
+或 `"2/30/2006"`，因为它们不是有效的日期。(没有第99个月，二月份也没有30天)。
 
 [endsect]
