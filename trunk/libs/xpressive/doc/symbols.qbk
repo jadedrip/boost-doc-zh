@@ -5,24 +5,30 @@
  / file LICENSE_1_0.txt or copy at http://www.boost.org/LICENSE_1_0.txt)
  /]
 
-[section Symbol Tables and Attributes]
+[section:symbol_tables_and_attributes Symbol Tables and Attributes 符号表和属性]
 
-[h2 Overview]
+[h2 Overview 概述]
 
 Symbol tables can be built into xpressive regular expressions with just a
 `std::map<>`. The map keys are the strings to be matched and the map values are
 the data to be returned to your semantic action. Xpressive attributes, named
 `a1`, `a2`, through `a9`, hold the value corresponding to a matching key so
 that it can be used in a semantic action. A default value can be specified
-for an attribute if a symbol is not found.
+for an attribute if a symbol is not found.\n
+可以用 `std::map<>` 在xpressive正则表达式中构建符号表。map的键值是匹配到的字符串，而map的值则是被返回到你的语义动作的数据。
+Xpressive属性，其命名为 `a1`, `a2`, ... `a9`, 分别存有与匹配键相对应的值，可以被用于某个语义动作中。
+如果某个符号找不到，可以为属性指定一个缺省值。
 
-[h2 Symbol Tables]
+[h2 Symbol Tables 符号表]
 
 An xpressive symbol table is just a `std::map<>`, where the key is a string type
 and the value can be anything. For example, the following regular expression
 matches a key from map1 and assigns the corresponding value to the attribute
 `a1`. Then, in the semantic action, it assigns the value stored in attribute
-`a1` to an integer result.
+`a1` to an integer result.\n
+一个xpressive符号表就是一个 `std::map<>`，其键类型为字符串，值类型可以是任意类型。
+例如，以下正则表达式从map1匹配一个键值，并且将对应的值赋给属性 `a1`。
+然后，在语义动作中，再将保存在属性 `a1` 中的值赋给一个整数结果。
 
     int result;
     std::map<std::string, int> map1;
@@ -31,7 +37,8 @@ matches a key from map1 and assigns the corresponding value to the attribute
 
 Consider the following example code,
 which translates number names into integers. It is
-described below.
+described below.\n
+看以下代码示例，它将数字名翻译为整数。说明见后。
 
     #include <string>
     #include <iostream>
@@ -61,7 +68,8 @@ described below.
         return 0;
     }
 
-This program prints the following:
+This program prints the following:\n
+该程序输出如下：
 
 [pre
 3
@@ -75,18 +83,27 @@ expression using an attribute `a1` to represent the result of the symbol table
 lookup. In the semantic action, the attribute is assigned to an integer
 variable `result`. If the symbol was not found, a default value of `-1` is
 assigned to `result`. A wildcard, `*_`, makes sure the regex matches even if
-the symbol is not found.
+the symbol is not found.\n
+首先，该程序建立一个数字map，以数字名作为字符串键值，以对应的整数为值。
+然后它构造一个静态正则表达式，用一个属性 `a1` 来表示从符号表中查找得到的结果。
+在语义动作中，该属性被赋给一个整数变量 `result`。如果没有找到相应符号，则将缺省值 `-1` 赋给 `result`。
+通配符 `*_` 确保即使找不到相应符号，regex也可以匹配成功。
 
 A more complete version of this example can be found in
 [^libs/xpressive/example/numbers.cpp][footnote Many thanks to David Jenkins,
-who contributed this example.]. It translates number names up to "nine hundred
+who contributed this example.\n
+非常感谢 David Jenkins 贡献了这个例子。]. It translates number names up to "nine hundred
 ninety nine million nine hundred ninety nine thousand nine hundred ninety nine"
-along with some special number names like "dozen".
+along with some special number names like "dozen".\n
+在 [^libs/xpressive/example/numbers.cpp] 中可以找到这个例子的一个更完整的版本。
+它可以翻译最大至"nine hundred ninety nine million nine hundred ninety nine thousand 
+nine hundred ninety nine"的数字名以及一些特殊的数字名，如 "dozen"。
 
 Symbol table matches are case sensitive by default, but they can be made
-case-insensitive by enclosing the expression in `icase()`.
+case-insensitive by enclosing the expression in `icase()`.\n
+符号表匹配缺省是大小写敏感的，不过可以通过将表达式放入 `icase()` 中来使它们变为大小写不敏感。
 
-[h2 Attributes]
+[h2 Attributes 属性]
 
 [def __default_value__ '''<replaceable>default-value</replaceable>''']
 
@@ -94,17 +111,23 @@ Up to nine attributes can be used in a regular expression. They are named
 `a1`, `a2`, ..., `a9` in the `boost::xpressive` namespace. The attribute type
 is the same as the second component of the map that is assigned to it. A
 default value for an attribute can be specified in a semantic action with the
-syntax `(a1 | __default_value__)`.
+syntax `(a1 | __default_value__)`.\n
+在一个正则表达式中，最多可以使用九个属性。它们分别命名为 `a1`, `a2`, ..., `a9`，位于 `boost::xpressive` 名字空间中。
+属性的类型与赋值给它的map的第二个元素相同。属性的缺省值可以在语义动作中用语法 `(a1 | __default_value__)` 来指定。
 
 Attributes are properly scoped, so you can do crazy things like:
 `( (a1=sym1) >> (a1=sym2)[ref(x)=a1] )[ref(y)=a1]`. The inner semantic action
 sees the inner `a1`, and the outer semantic action sees the outer one. They can
-even have different types.
+even have different types.\n
+属性是被正确地定域的，所以你可以做出象以下这样的疯狂事情：`( (a1=sym1) >> (a1=sym2)[ref(x)=a1] )[ref(y)=a1]`。
+内层的语义动作可以看到内层的 `a1`，而外层的语义动作则看到外层的那个。它们甚至可以具有不同的类型。
 
 [note Xpressive builds a hidden ternary search trie from the map so it can
 search quickly. If BOOST_DISABLE_THREADS is defined,
 the hidden ternary search trie "self adjusts", so after each
 search it restructures itself to improve the efficiency of future searches
-based on the frequency of previous searches.]
+based on the frequency of previous searches.\n
+Xpressive会从map中构建一个隐藏的三元搜索树，以便可以快速地查找。如果定义了 BOOST_DISABLE_THREADS，
+则隐藏的三元搜索树会"自我调整"，在每次搜索后它会基于之前的搜索频率进行重组，以提高后面的搜索效率。]
 
 [endsect]
