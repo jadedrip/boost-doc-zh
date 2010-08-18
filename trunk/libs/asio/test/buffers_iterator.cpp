@@ -16,6 +16,7 @@
 // Test that header file is self-contained.
 #include <boost/asio/buffers_iterator.hpp>
 
+#include <boost/array.hpp>
 #include <boost/asio/buffer.hpp>
 #include "unit_test.hpp"
 
@@ -212,18 +213,57 @@ void test()
     bi11 += 1;
     bi12 += 1;
 
-    static_cast<std::ptrdiff_t>(bi13 - bi1);
-    static_cast<std::ptrdiff_t>(bi14 - bi2);
-    static_cast<std::ptrdiff_t>(bi15 - bi3);
-    static_cast<std::ptrdiff_t>(bi16 - bi4);
-    static_cast<std::ptrdiff_t>(bi17 - bi5);
-    static_cast<std::ptrdiff_t>(bi18 - bi6);
-    static_cast<std::ptrdiff_t>(bi19 - bi7);
-    static_cast<std::ptrdiff_t>(bi20 - bi8);
-    static_cast<std::ptrdiff_t>(bi21 - bi9);
-    static_cast<std::ptrdiff_t>(bi22 - bi10);
-    static_cast<std::ptrdiff_t>(bi23 - bi11);
-    static_cast<std::ptrdiff_t>(bi24 - bi12);
+    bi1 = bi1 - 1;
+    bi2 = bi2 - 1;
+    bi3 = bi3 - 1;
+    bi4 = bi4 - 1;
+    bi5 = bi5 - 1;
+    bi6 = bi6 - 1;
+    bi7 = bi7 - 1;
+    bi8 = bi8 - 1;
+    bi9 = bi9 - 1;
+    bi10 = bi10 - 1;
+    bi11 = bi11 - 1;
+    bi12 = bi12 - 1;
+
+    bi1 = bi1 + 1;
+    bi2 = bi2 + 1;
+    bi3 = bi3 + 1;
+    bi4 = bi4 + 1;
+    bi5 = bi5 + 1;
+    bi6 = bi6 + 1;
+    bi7 = bi7 + 1;
+    bi8 = bi8 + 1;
+    bi9 = bi9 + 1;
+    bi10 = bi10 + 1;
+    bi11 = bi11 + 1;
+    bi12 = bi12 + 1;
+
+    bi1 = (-1) + bi1;
+    bi2 = (-1) + bi2;
+    bi3 = (-1) + bi3;
+    bi4 = (-1) + bi4;
+    bi5 = (-1) + bi5;
+    bi6 = (-1) + bi6;
+    bi7 = (-1) + bi7;
+    bi8 = (-1) + bi8;
+    bi9 = (-1) + bi9;
+    bi10 = (-1) + bi10;
+    bi11 = (-1) + bi11;
+    bi12 = (-1) + bi12;
+
+    (void)static_cast<std::ptrdiff_t>(bi13 - bi1);
+    (void)static_cast<std::ptrdiff_t>(bi14 - bi2);
+    (void)static_cast<std::ptrdiff_t>(bi15 - bi3);
+    (void)static_cast<std::ptrdiff_t>(bi16 - bi4);
+    (void)static_cast<std::ptrdiff_t>(bi17 - bi5);
+    (void)static_cast<std::ptrdiff_t>(bi18 - bi6);
+    (void)static_cast<std::ptrdiff_t>(bi19 - bi7);
+    (void)static_cast<std::ptrdiff_t>(bi20 - bi8);
+    (void)static_cast<std::ptrdiff_t>(bi21 - bi9);
+    (void)static_cast<std::ptrdiff_t>(bi22 - bi10);
+    (void)static_cast<std::ptrdiff_t>(bi23 - bi11);
+    (void)static_cast<std::ptrdiff_t>(bi24 - bi12);
   }
   catch (std::exception&)
   {
