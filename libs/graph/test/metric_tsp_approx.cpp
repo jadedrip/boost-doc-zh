@@ -65,7 +65,7 @@ void connectAllEuclidean(VertexListGraph& g,
                     pow(static_cast<double>(points[vmap[*dest]].y -
                         points[vmap[*src]].y), 2.0)));
 
-                tie(e, inserted) = add_edge(*src, *dest, g);
+                boost::tie(e, inserted) = add_edge(*src, *dest, g);
 
                 wmap[e] = weight;
             }
@@ -91,9 +91,9 @@ void testScalability(unsigned numpts)
     typedef set<simple_point<double>, cmpPnt<double> > PointSet;
     typedef vector< Vertex > Container;
 
-    mt19937 rng(time(0));
+    boost::mt19937 rng(time(0));
     uniform_real<> range(0.01, (numpts * 2));
-    variate_generator<mt19937&, uniform_real<> >
+    variate_generator<boost::mt19937&, uniform_real<> >
         pnt_gen(rng, range);
 
     PointSet points;
@@ -152,7 +152,7 @@ void checkAdjList(PositionVec v)
     //create vertex index map
     VItr vi, ve;
     int idx(0);
-    for (tie(vi, ve) = vertices(g); vi != ve; ++vi)
+    for (boost::tie(vi, ve) = vertices(g); vi != ve; ++vi)
     {
         Vertex v(*vi);
         v_pmap[v] = idx;
