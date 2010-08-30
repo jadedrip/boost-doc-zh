@@ -59,6 +59,32 @@ void test_unordered_interface()
     c.rehash(1000);
 } 
 
+
+
+template< class PtrSet > 
+void test_erase()
+{
+    PtrSet s;
+    typedef typename PtrSet::key_type T;
+
+    T t;
+    s.insert ( new T );
+    T* t2 = t.clone();
+    s.insert ( t2 );
+    s.insert ( new T );
+    BOOST_CHECK_EQUAL( s.size(), 3u ); 
+    BOOST_CHECK_EQUAL( hash_value(t), hash_value(*t2) );
+    BOOST_CHECK_EQUAL( t, *t2 );
+
+    typename PtrSet::iterator i = s.find( t );
+
+    BOOST_CHECK( i != s.end() );
+    unsigned n = s.erase( t );
+    BOOST_CHECK( n > 0 );   
+}
+
+
+
 void test_set()
 {    
     srand( 0 );
@@ -80,12 +106,16 @@ void test_set()
 
     BOOST_CHECK_THROW( set.insert( 0 ), bad_ptr_container_operation );
     set.insert( new int(0) );
-    set.insert( std::auto_ptr<int>( new int(1) ) );
+    std::auto_ptr<int> ap( new int(1) );
+    set.insert( ap );
     BOOST_CHECK_THROW( (set.replace(set.begin(), 0 )), bad_ptr_container_operation );
     BOOST_CHECK_THROW( (set.replace(set.begin(), std::auto_ptr<int>(0) )), bad_ptr_container_operation );
 
     test_unordered_interface< ptr_unordered_set<Base>, Derived_class >();
     test_unordered_interface< ptr_unordered_multiset<Base>, Derived_class >();
+
+    test_erase< ptr_unordered_set<Base> >();
+    test_erase< ptr_unordered_multiset<Base> >();
 }
 
 using boost::unit_test::test_suite;
