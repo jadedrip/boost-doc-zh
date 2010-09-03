@@ -183,7 +183,7 @@ struct int_data
 namespace boost { namespace spirit { namespace traits
 {
     template <>
-    struct transform_attribute<int_data const, int>
+    struct transform_attribute<int_data const, int, karma::domain>
     {
         typedef int type;
         static int pre(int_data const& d) { return d.i; }
@@ -462,6 +462,19 @@ int main()
         //[reference_karma_omit
         std::pair<double, double> p (1.0, 2.0);
         test_generator_attr("2.0", omit[double_] << double_, p);
+        //]
+    }
+
+    {
+        //[reference_karma_using_declarations_duplicate
+        using boost::spirit::karma::double_;
+        using boost::spirit::karma::duplicate;
+        using boost::spirit::karma::space;
+        //]
+
+        //[reference_karma_duplicate
+        test_generator_attr("2.02.0", duplicate[double_ << double_], 2.0);
+        test_generator_attr_delim("2.0 2.0 ", duplicate[double_ << double_], space, 2.0);
         //]
     }
 

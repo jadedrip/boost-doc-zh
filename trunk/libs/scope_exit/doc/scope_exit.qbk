@@ -1,0 +1,559 @@
+[library Boost.ScopeExit
+    [copyright 2006-2009 Alexander Nasonov]
+    [purpose execute arbitrary code at scope exit]
+    [license
+        Distributed under the Boost Software License, Version 1.0.
+        (See accompanying file LICENSE_1_0.txt or copy at
+        <ulink url="http://www.boost.org/LICENSE_1_0.txt">
+            http://www.boost.org/LICENSE_1_0.txt
+        </ulink>)
+    ]
+    [authors [Nasonov, Alexander]]
+    [category utility]
+    [id scope_exit]
+    [dirname scope_exit]
+]
+
+[/  Images   ]
+
+[def _note_                         [$images/note.png]]
+
+[/  Links   ]
+
+[def _scope_exit_ [link scope_exit ScopeExit]]
+[def _Tutorial_ [link scope_exit.tutorial Tutorial]]
+[def _Reference_ [link scope_exit.ref Reference]]
+[def _lambda_ [@../../../../libs/lambda/index.html Boost.Lambda]]
+[def _typeof_ [@../../../../libs/typeof/index.html Boost.Typeof]]
+[def _typeof_emulation_ [@../../../../libs/typeof/index.html typeof emulation]]
+[def _typeof_REGISTER_TYPE_ [@../../../../doc/html/typeof/refe.html#typeof.regtype BOOST_TYPEOF_REGISTER_TYPE]]
+[def _typeof_REGISTER_TEMPLATE_ [@../../../../doc/html/typeof/refe.html#typeof.regtemp BOOST_TYPEOF_REGISTER_TEMPLATE]]
+[def _pp_ [@../../../../libs/preprocessor/index.html Boost.Preprocessor]]
+[def _pp_seq_ [@../../../../libs/preprocessor/index.html Boost.Preprocessor sequence]]
+[def _ptr_container_ [@../../../../libs/ptr_container/doc/ptr_container.html Boost Pointer Container Library]]
+[def _multi_index_ [@../../../../libs/multi_index/doc/index.html Boost Multi-Index Containers Library]]
+[def _scope_guard_ [@http://www.ddj.com/dept/cpp/184403758 ScopeGuard]]
+[def _D_ [@http://www.digitalmars.com/d/index.html D]]
+[def _D_scope_exit_ [@http://www.digitalmars.com/d/2.0/statement.html#ScopeGuardStatement scope(exit)]]
+[def _RAII_ [@http://www.research.att.com/~bs/glossary.html#Gresource-acquisition-is-initialization RAII]]
+[def _strong_guarantee_ [@http://www.research.att.com/~bs/glossary.html#Gstrong-guarantee strong guarantee]]
+
+[section:intro Introduction 简介]
+
+Nowadays, every C++ developer is familiar with _RAII_ technique.
+It binds resource acquisition and release to initialization and
+destruction of a variable that holds the resource. But there are
+times when writing a special class for such variable is not worth
+the effort.\n
+当前，每一个C++开发者都会很熟悉 _RAII_ 技术。它将资源的获取及释放绑定至持有该资源的变量的初始化及析构。
+但是，有时候为此类变量写一个专用的类是不值得的。
+
+This is when _scope_exit_ macro comes into play. You put resource
+acquisition directly in your code and next to it you write a code
+that releases the resource.\n
+这正是 _scope_exit_ 宏发挥作用的时候了。你可以将资源获取直接写入你的代码，并接着编写释放资源的代码。
+
+Read _Tutorial_ to find out how to write programs with
+_scope_exit_ or jump straight to the _Reference_ section.\n
+请阅读 _Tutorial_ 以学习如何用 _scope_exit_ 来编写程序，或者直接跳到 _Reference_ 一节。
+
+[endsect]
+
+[section:tutorial Tutorial 教程]
+
+Imagine that you want to make many modifications to data members
+of the `World` class in the `World::addPerson` function.
+You start with adding a new `Person` object to a vector of persons:\n
+想象一下，你要在 `World::addPerson` 函数中对 `World` 类的数据成员作大量修改。
+首先，你要增加一个新的 `Person` 对象到一个 persons 向量中：
+
+	void World::addPerson(Person const& person) {
+	    bool commit = false;
+	    m_persons.push_back(person);  // (1) direct action 直接动作
+
+Some operation down the road may throw an exception and all changes
+to involved objects should be rolled back. This all-or-nothing semantic
+is also known as _strong_guarantee_.\n
+接下来的一些操作有可能会抛出异常，这时所有相关对象的修改应该要回滚。
+这是"全部或没有"的语义，被称为 _strong_guarantee_。
+
+In particular, last added person must be deleted from `m_persons` when
+the function throws. All you need is to define a delayed action (release
+of a resource) right after the direct action (resource acquisition):\n
+在这个例子中，当函数抛出异常时，最后加入的 person 必须要从 `m_persons` 中删掉。
+你要做的就是，紧接在直接动作(资源获取)后定义一个延迟动作(资源释放)： 
+
+	void World::addPerson(Person const& aPerson) {
+	    bool commit = false;
+	    m_persons.push_back(aPerson);  // (1) direct action 直接动作
+	    BOOST_SCOPE_EXIT( (&commit)(&m_persons) )
+	    {
+	        if(!commit)
+	            m_persons.pop_back(); // (2) rollback action 回滚动作
+	    } BOOST_SCOPE_EXIT_END
+	
+	    // ...                        // (3) other operations 其它操作
+	    
+	    commit = true;                // (4) turn all rollback actions into no-op 将所有回滚动作变为空操作
+	}
+
+The block below point `(1)` is a _scope_exit_ declaration.
+Unlike point `(1)`, an execution of the _scope_exit_ body will be
+delayed until the end of the current scope. In this case it will be
+executed either after point `(4)` or on any exception.\n
+在 `(1)` 之后的代码块是一个 _scope_exit_ 声明。与 `(1)` 不同，_scope_exit_ 块的执行将被延迟至当前作用域的结尾处。
+在这个例子中，它会在 `(4)` 之后或者异常抛出之后执行。
+
+The _scope_exit_ declaration starts with `BOOST_SCOPE_EXIT` macro
+invocation which accepts _pp_seq_ of captured variables. If a capture
+starts with the ampersand sign `&`, a reference to the captured variable
+will be available inside the _scope_exit_ body; otherwise, a copy of the
+variable will be made after the point `(1)` and only the copy will be
+available inside the body.\n
+_scope_exit_ 声明以一个 `BOOST_SCOPE_EXIT` 宏调用开头，该宏接受一个由捕获变量组成的 _pp_seq_。
+如果捕获变量是以 `&` 符号开头，则可以在 _scope_exit_ 块中使用该捕获变量的引用；
+否则将在 `(1)` 之后创建该变量的一份拷贝，且在代码块中只可使用该拷贝。
+
+In the example above, variables `commit` and `m_persons` are passed
+by reference because the final value of the `commit` variable should
+be used to determine whether to execute rollback action or not and
+the action should modify the `m_persons` object, not its copy.
+This is a most common case but passing a variable by value is
+sometimes useful as well.\n
+在上例中，变量 `commit` 和 `m_persons` 是以引用方式传递的，因为变量 `commit` 
+的最终值要用于决定是否执行回滚动作，且回滚动作要修改 `m_persons` 对象而不是它的拷贝。
+这是最常见的情况，不过以值方式传递变量有时也是有用的。
+
+Consider a more complex case where `World::addPerson` can save intermediate
+states at some points and roll back to the last saved state. You can
+use `Person::m_evolution` to store a version of changes and increment it
+to cancel all rollback actions associated with those changes.\n
+想象一个更复杂的情况，`World::addPerson` 可以在某些点上保存中间状态，并且可以回滚到最后保存的状态。
+你可以用 `Person::m_evolution` 来保存变量的一个版本并对它进行递增，以取消与这些变化相关的所有回滚动作。
+
+If you pass a current value of `m_evolution` stored in the `checkpoint`
+variable by value, it will remain unchanged until the end of aa  scope
+and you can compare it with the final value of the `m_evolution`.
+If the latter wasn't incremented since you saved it, the rollback action
+inside the block should be executed:\n
+如果你以传值的方式来传递保存在 `checkpoint` 变量中的 `m_evolution` 当前值，则直至 aa 
+作用域结束之前，它都会保持不变，你可以将它与 `m_evolution` 的最终值进行比较。
+如果后者在你保存之后未曾递增，则块中的回滚动作将被执行：
+
+	void World::addPerson(Person const& aPerson) {
+	    m_persons.push_back(aPerson);
+	
+	    // This block must be no-throw 这一块必须无抛出
+	    Person& person = m_persons.back();
+	    Person::evolution_t checkpoint = person.m_evolution;
+	
+	    BOOST_SCOPE_EXIT( (checkpoint)(&person)(&m_persons) )
+	    {
+	        if(checkpoint == person.m_evolution)
+	            m_persons.pop_back();
+	    } BOOST_SCOPE_EXIT_END
+	
+	    // ...
+	
+	    checkpoint = ++person.m_evolution;
+	
+	    // Assign new id to the person 将新的 id 赋给 person
+	    World::id_t const prev_id = person.m_id;
+	    person.m_id = m_next_id++;
+	    BOOST_SCOPE_EXIT( (checkpoint)(&person)(&m_next_id)(prev_id) )
+	    {
+	        if(checkpoint == person.m_evolution) {
+	            m_next_id = person.m_id;
+	            person.m_id = prev_id;
+	        }
+	    } BOOST_SCOPE_EXIT_END
+	
+	    // ...
+	
+	    checkpoint = ++person.m_evolution;
+	}
+
+Full code listing can be found in [@../../example/world.cpp world.cpp].\n
+完整的代码列表可以在 [@../../example/world.cpp world.cpp] 找到。
+
+[endsect]
+
+[section:alternatives Alternatives 其它选择]
+
+[h3 try-catch]
+
+This is an example of using a badly designed `File` class.  An
+instance of `File` doesn't close a file in a destructor, a programmer
+is expected to call the `close` member function explicitly.\n
+以下是一个例子，它使用了一个设计得很差的 `File` 类。这个 `File` 
+的实例不会在析构函数中关闭文件，程序员要明确地调用 `close` 成员函数。
+
+	File passwd;
+	try {
+	    passwd.open("/etc/passwd");
+	    // ...
+	    passwd.close();
+	}
+	catch(...) {
+	    log("could not get user info");
+	    if(passwd.is_open())
+	        passwd.close();
+	    throw;
+	}
+
+Note the following:\n
+注意以下问题：
+
+* the `passwd` object is defined outside of the `try` block because
+this object is required inside the `catch` block to close the file,\n
+  `passwd` 对象是在 `try` 块以外定义的，因为这个对象要在 `catch` 块中用于关闭文件，
+* the `passwd` object is not fully constructed until after the `open`
+member function returns, and\n
+  `passwd` 对象在 `open` 成员函数返回之前是未完全构造的，而且
+* if opening throws, the `passwd.close()` should not be called,
+hence the call to `passwd.is_open()`.\n
+  如果打开文件时有异常抛出，不会调用 `passwd.close()`，而是会调用 `passwd.is_open()`。 
+
+_scope_exit_ doesn't have any of these problems:\n
+_scope_exit_ 没有这些问题：
+
+	try {
+	    File passwd("/etc/passwd");
+	    BOOST_SCOPE_EXIT( (&passwd) ) {
+	        passwd.close();
+	    } BOOST_SCOPE_EXIT_END
+	    // ...
+	}
+	catch(...) {
+	    log("could not get user info");
+	    throw;
+	}
+
+[h3 RAII]
+
+_RAII_ is absolutely perfect for the `File` class introduced above.
+Use of a properly designed `File` class would look like:\n
+对于前面所说的 `File` 类，_RAII_ 绝对是完美的。使用一个正确设计的 `File` 类，应该是这样的：
+
+	try {
+	    File passwd("/etc/passwd");
+	    // ...
+	}
+	catch(...) {
+	    log("could not get user info");
+	    throw;
+	}
+
+However, using _RAII_ to build up a _strong_guarantee_ could introduce
+a lot of non-reusable _RAII_ types. For example:\n
+不过，使用 _RAII_ 来建立 强异常安全保证 可能要引入大量不可复用的 _RAII_ 类型。例如：
+
+	m_persons.push_back(person);
+	pop_back_if_not_commit pop_back_if_not_commit_guard(commit, m_persons);
+
+The `pop_back_if_not_commit` class is either defined out of the scope or
+as a local class:\n
+类 `pop_back_if_not_commit` 要么在作用域之外定义，要么定义为一个局部类：
+
+	class pop_back_if_not_commit {
+	    bool m_commit;
+	    std::vector<Person>& m_vec;
+	    // ...
+	    ~pop_back_if_not_commit() {
+	        if(!m_commit)
+	            m_vec.pop_back();
+	    }
+	};
+
+In some cases _strong_guarantee_ can be accomplished with standard utilities:\n
+在某些情况下，_strong_guarantee_ 可以用标准的工具来实现：
+
+	std::auto_ptr<Person> spSuperMan(new Superman); 
+	m_persons.push_back(spSuperMan.get());
+	spSuperMan.release(); // m_persons successfully took ownership.
+
+or with specialized containers such as _ptr_container_ or
+_multi_index_.\n
+或者用专用的容器，如 _ptr_container_ 库 或 _multi_index_ 库。
+
+[h3 _scope_guard_]
+
+Imagine that you add a new currency rate:\n
+假设你增加了一个新的货币汇率：
+
+	bool commit = false;
+	std::string currency("EUR");
+	double rate = 1.3326;
+	std::map<std::string, double> rates;
+	bool currency_rate_inserted =
+	    rates.insert(std::make_pair(currency, rate)).second;
+	
+and then continue a transaction. If it cannot be completed, you erase
+the currency from `rates`. This is how you can do this with _scope_guard_
+and _lambda_:\n
+然后进行一个交易。如果交易不能完成，你要从 `rates` 中删除该货币。以下是如何用 _scope_guard_ 和 _lambda_ 来实现的方法：
+	
+	using namespace boost::lambda;
+	
+	ON_BLOCK_EXIT(
+	    if_(currency_rate_inserted && !_1) [
+	        bind(
+	            static_cast<
+	                std::map<std::string,double>::size_type (std::map<std::string,double>::*)(std::string const&)
+	            >(&std::map<std::string,double>::erase)
+	          , &rates
+	          , currency
+	          )
+	    ]
+	  , boost::cref(commit)
+	  );
+	
+	// ...
+	
+	commit = true;
+
+Note that\n
+注意：
+
+* Boost.lambda expressions are hard to write correctly, for example,
+overloaded function must be explicitly casted, as demonstrated in
+this example,\n
+  Boost.lambda 表达式很难被写对，例如，重载函数必须显式转型，就象这个例子中所示范的一样，
+* condition in `if_` expression refers to `commit` variable indirectly
+through the `_1` placeholder,\n
+  在 `if_` 表达式中的条件要间接通过 `_1` 占位符来引用 `commit` 变量，
+* setting a breakpoint inside `if_[ ... ]` requires in-depth knowledge
+of _lambda_ and debugging techniques.\n
+  在 `if_[ ... ]` 内部设置断点需要对 _lambda_ 和调试技巧有深入了解。
+
+This code will look much better with native lambda expressions proposed
+for C++0x:\n
+如果使用C++0x所建议的原生 lambda 表达式，代码会好看一些：
+
+	ON_BLOCK_EXIT(
+	    [currency_rate_inserted, &commit, &rates, &currency]() -> void
+	    {
+	        if(currency_rate_inserted && !commit)
+	            rates.erase(currency);
+	    }
+	);
+
+With _scope_exit_ you can simply do\n
+如果用 _scope_exit_，你只要这样：
+
+	BOOST_SCOPE_EXIT( (currency_rate_inserted)(&commit)(&rates)(&currency) )
+	{
+	    if(currency_rate_inserted && !commit)
+	        rates.erase(currency);
+	} BOOST_SCOPE_EXIT_END
+	
+	// ...
+	
+	commit = true;
+
+[h3 C++0x]
+
+In future releases _scope_exit_ will take advantages of C++0x features.\n
+未来的 _scope_exit_ 版本将会利用C++0x特性的优点。 
+
+* Passing capture list as _pp_seq_ will be replaced with a traditional
+macro invocation style:\n
+  以 _pp_seq_ 来传递捕获变量列表将被替代为传统的宏调用风格：
+
+	BOOST_SCOPE_EXIT(currency_rate_inserted, &commit, &rates, &currency)
+	{
+	    if(currency_rate_inserted && !commit)
+	        rates.erase(currency);
+	} BOOST_SCOPE_EXIT_END
+	
+* `BOOST_SCOPE_EXIT_END` will be replaced with a semicolon:\n
+  `BOOST_SCOPE_EXIT_END` 将被代之以分号：
+
+	BOOST_SCOPE_EXIT(currency_rate_inserted, &commit, &rates, &currency)
+	{
+	    if(currency_rate_inserted && !commit)
+	        rates.erase(currency);
+	};
+
+* Users will be able to capture local variables implicitly with lambda
+capture defaults `&` and `=`:\n
+  用户可以用 lambda 捕获缺省的 `&` 和 `=` 来隐式捕获局部变量：
+
+	BOOST_SCOPE_EXIT(&, currency_rate_inserted)
+	{
+	    if(currency_rate_inserted && !commit)
+	        rates.erase(currency);
+	};
+
+* It will be possible to capture `this` pointer.\n
+  有可能可以捕获 `this` 指针。
+
+[h3 The D Programming Language  D语言]
+
+_ScopeExit_ is similar to _D_scope_exit_ feature built
+into the _D_ programming language.\n
+_ScopeExit_ 类似于在 _D_ 语言中内建的 _D_scope_exit_ 特性。
+
+A curious reader may notice that the library doesn't implement
+`scope(success)` and `scope(failure)` of the _D_ language.
+Unfortunately, it's not possible in C++ because failure or success
+condition cannot be determined by calling `std::uncaught_exception`.
+It's not a big problem, though. These two constructs can be
+expressed in terms of _D_scope_exit_ and a `bool commit` variable
+as explained in _Tutorial_. Refer to
+[@http://www.gotw.ca/gotw/047.htm Guru of the Week #47]
+for more details about `std::uncaught_exception` and if it has
+any good use at all.\n
+好奇的读者可能已经注意到，本库没有实现 _D_ 语言的 `scope(success)` 和 `scope(failure)`。
+很不幸，在C++中它们是不可能实现的，因为不可能通过调用 `std::uncaught_exception` 来确定失败或成功的条件。
+不过这不是一个大问题。这两个结构可以根据 _D_scope_exit_ 和一个 `bool commit` 变量来表示，正如在 _Tutorial_ 中所介绍的。
+关于 `std::uncaught_exception` 的更多细节，以及好的用法，请参考 [@http://www.gotw.ca/gotw/047.htm Guru of the Week #47]。
+
+[endsect]
+
+[section:compilers Supported Compilers 支持的编译器]
+
+The library should be usable on any compiler that supports _typeof_
+except\n
+本库应该可以用于任何支持 _typeof_ 的编译器，除了：
+
+* MSVC 7.1 and 8.0 fail to link if a function with _scope_exit_
+is included by multiple translation units.\n
+  MSVC 7.1 和 8.0 会链接失败，如果一个带 _scope_exit_ 的函数被多个编译单元包含。
+* GCC 3.3 can't compile _scope_exit_ inside a template. See
+[@http://lists.boost.org/Archives/boost/2007/02/116235.php this thread]
+for more details.\n
+  GCC 3.3 不能编译在模板内的 _scope_exit_。更多细节请见 [@http://lists.boost.org/Archives/boost/2007/02/116235.php 此帖]。
+
+The author tested the library on GCC 3.3, 3.4, 4.1, 4.2 and Intel 10.1.\n
+作者已在 GCC 3.3, 3.4, 4.1, 4.2 和 Intel 10.1 上测试过本库。
+
+[endsect]
+
+[section:conf Configuration 配置]
+
+Normally, no configuration is required for the library but
+note that the library depends on _typeof_ and you may want
+to configure or enforce _typeof_emulation_.\n
+基本上，本库不需要什么配置，不过要注意，本库依赖于 _typeof_，你可能需要配置或强制 _typeof_emulation_。
+
+[endsect]
+
+[section:ref Reference 参考手册]
+
+[h3 BOOST_SCOPE_EXIT]
+
+A _scope_exit_ declaration has the following synopsis:\n
+一个 _scope_exit_ 声明具有以下语法：
+
+	#include <boost/scope_exit.hpp>
+
+	BOOST_SCOPE_EXIT ( scope-exit-capture-list )
+	    function-body
+	BOOST_SCOPE_EXIT_END
+
+where\n
+其中
+
+	scope-exit-capture-list:
+	    ( scope-exit-capture )
+	    scope-exit-capture-list ( scope-exit-capture )
+	
+	scope-exit-capture:
+	    identifier
+	    &identifier
+	
+The _scope_exit_ declaration schedules an execution of `scope-exit-body`
+at the end of the current scope. The `scope-exit-body` statements are
+executed in the reverse order of _scope_exit_ declarations in the given
+scope. The scope must be local.\n
+_scope_exit_ 声明将 `scope-exit-body` 的执行时间分配至当前作用域的结束处。
+`scope-exit-body` 语句按给作用域中的 _scope_exit_ 声明的相反顺序来执行。作用域必须是局部的。
+
+Each `identifier` in `scope-exit-capture-list` must be a valid name
+in enclosing scope and it must appear exactly once in the list.
+If a `scope-exit-capture` starts with the ampersand sign `&`, the
+corresponding `identifier` will be available inside `scope-exit-body`;
+otherwise, a copy of it will be made at the point of _scope_exit_
+declaration and that copy will be available inside `scope-exit-body`.
+In the latter case, the `idenitifer` must be `CopyConstructible`.\n
+在 `scope-exit-capture-list` 中的每一个 `identifier` 必须是其所在作用域中的一个有效名字，且必须只在列表中出现刚好一次。
+如果一个 `scope-exit-capture` 是以 `&` 符号打头的，则相对应的 `identifier` 在 `scope-exit-body` 中是可用的；
+否则，就在 _scope_exit_ 声明处创建一份拷贝，并在 `scope-exit-body` 中使用该拷贝。
+在后一种情况下，`idenitifer` 必须是 `CopyConstructible` 的。
+
+Only identifiers listed in `scope-exit-capture-list`, static variables,
+`extern` variables and functions, and enumerations from the enclosing
+scope can be used inside the `scope-exit-body`.\n
+只有在 `scope-exit-capture-list` 中列出的标识符、静态变量、`extern` 
+变量和函数，以及所在作用域中的枚举值，可以在 `scope-exit-body` 中使用。
+
+[note `this` pointer is not an identifier and cannot be passed to
+` scope-exit-capture-list`.\n
+`this` 指针不是标识符，不能被传递给 `scope-exit-capture-list`. ]
+
+The _scope_exit_ uses _typeof_ to determine types of
+`scope-exit-capture-list` elements. In order to compile code in
+_typeof_emulation_ mode, all types should be registered with
+_typeof_REGISTER_TYPE_ or _typeof_REGISTER_TEMPLATE_ macros,
+or appropriate _typeof_ headers should be included.\n
+_scope_exit_ 使用了 _typeof_ 来判断 `scope-exit-capture-list` 元素的类型。
+为了可以在 _typeof_emulation_ 模式下编译代码，所有类型都要用 `BOOST_TYPEOF_REGISTER_TYPE` 
+或 `BOOST_TYPEOF_REGISTER_TEMPLATE` 宏来注册，或者包含正确的 _typeof_ 头文件。
+
+[h3 BOOST_SCOPE_EXIT_TPL]
+
+This macro is a workaround for various versions of gcc. These compilers
+don't compile _scope_exit_ declaration inside function templates. As a
+workaround, the `_TPL` suffix should be appended to `BOOST_SCOPE_EXIT`.\n
+这个宏是多个 gcc 版本的变通方法。这些编译器不能编译在函数模板内部的 _scope_exit_ 声明。
+作为变通的办法，将 `_TPL` 后缀添加到 `BOOST_SCOPE_EXIT` 上。
+
+The problem boils down to the following code:\n
+这个问题可以归结至以下代码：
+
+	template<class T> void foo(T const& t) {
+	    int i = 0;
+	    struct Local {
+	        typedef __typeof__(i) typeof_i;
+	        typedef __typeof__(t) typeof_t;
+	    };
+	    typedef Local::typeof_i i_type;
+	    typedef Local::typeof_t t_type;
+	}
+	
+	int main() { foo(0); }
+
+This can be fixed by adding `typename` in front of `Local::typeof_i` and
+`Local::typeof_t`.\n
+这可以通过在 `Local::typeof_i` 和 `Local::typeof_t` 前面增加 `typename` 来解决。
+
+See also [@http://gcc.gnu.org/bugzilla/show_bug.cgi?id=37920 GCC bug 37920].\n
+参见 [@http://gcc.gnu.org/bugzilla/show_bug.cgi?id=37920 GCC bug 37920]. 
+
+[note Although `BOOST_SCOPE_EXIT_TPL` has the same suffix as the
+`BOOST_TYPEOF_TPL`, it doesn't follow a convention of the _typeof_.\n
+虽然 `BOOST_SCOPE_EXIT_TPL` 具有与 `BOOST_TYPEOF_TPL` 相同的后缀，不过它并不遵循 _typeof_ 的协定。]
+
+[endsect]
+
+[section:acknowledge Acknowledge 鸣谢]
+
+(in chronological order)
+
+Maxim Yegorushkin for sending me a code where he used a local struct
+to clean up resources.
+
+Andrei Alexandrescu for pointing me to _D_scope_exit_ construct of
+the _D_ programming language.
+
+Pavel Vozenilek and Maxim Yanchenko for reviews of early drafts of
+the library.
+
+Steven Watanabe for his valuable ideas.
+
+Jody Hagins for good comments that helped to significantly improve the documentation.
+
+Richard Webb for testing the library on MSVC compiler.
+
+[endsect]
