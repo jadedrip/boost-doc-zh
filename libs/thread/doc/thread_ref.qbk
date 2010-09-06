@@ -251,6 +251,7 @@ __thread_id__ 的比较操作生成每个不同线程ID的全序。
     };
 
     void swap(thread& lhs,thread& rhs);
+    detail::thread_move_t<thread> move(detail::thread_move_t<thread> t);
 
 [section:default_constructor Default Constructor 默认构造函数]
 
@@ -260,6 +261,44 @@ __thread_id__ 的比较操作生成每个不同线程ID的全序。
 
 [[Effects:] [Constructs a __thread__ instance that refers to __not_a_thread__.\n
 创建一个表示 __not_a_thread__ 的 __thread__ 对象。]]
+
+[[Throws:] [Nothing\n
+无]]
+
+]
+
+[endsect]
+
+[section:move_constructor Move Constructor 转移构造函数]
+
+    thread(detail::thread_move_t<thread> other);
+
+[variablelist
+
+[[Effects:] [Transfers ownership of the thread managed by `other` (if any) to the newly constructed __thread__ instance.\n
+将由 `other` 管理的线程(如果有)的所有权转移给新构造的 __thread__ 实例。]]
+
+[[Postconditions:] [`other->get_id()==thread::id()`]]
+
+[[Throws:] [Nothing\n
+无]]
+
+]
+
+[endsect]
+
+[section:move_assignment Move assignment operator 转移赋值操作符]
+
+    thread& operator=(detail::thread_move_t<thread> other);
+
+[variablelist
+
+[[Effects:] [Transfers ownership of the thread managed by `other` (if
+any) to `*this`. If there was a thread previously associated with
+`*this` then that thread is detached.\n
+将由 `other` 管理的线程(如果有)的所有权转移给 `*this`。如果 `*this` 之前关联了一个线程，将该线程被分离。]]
+
+[[Postconditions:] [`other->get_id()==thread::id()`]]
 
 [[Throws:] [Nothing\n
 无]]
@@ -601,6 +640,27 @@ value as `this->get_id()` prior to the call.\n
 
 [endsect]
 
+[section:non_member_move Non-member function `move()`]
+
+    #include <boost/thread/thread.hpp>
+
+    detail::thread_move_t<thread> move(detail::thread_move_t<thread> t)
+
+[variablelist
+
+[[Returns:] [`t`.]]
+
+]
+
+Enables moving thread objects. e.g.\n
+可以转移线程对象。例如
+
+    extern void some_func();
+    boost::thread t(some_func);
+    boost::thread t2(boost::move(t)); // transfer thread from t to t2
+
+[endsect]
+
 
 [section:id Class `boost::thread::id`]
 
@@ -858,12 +918,15 @@ instances of __thread_id__ `a` and `b` is the same if `a==b`, and different if `
     {
         template<typename TimeDuration>
         void sleep(TimeDuration const& rel_time);
+        void sleep(system_time const& abs_time)
     }
 
 [variablelist
 
-[[Effects:] [Suspends the current thread until the specified time has elapsed.\n
-将调用线程挂起指定的时间。]]
+[[Effects:] [Suspends the current thread until the time period
+specified by `rel_time` has elapsed or the time point specified by
+`abs_time` has been reached.\n
+将当前线程挂起，直至达到由 `rel_time` 指定的时间长度，或是达到由 `abs_time` 指定的时间点。]]
 
 [[Throws:] [__thread_interrupted__ if the current thread of execution is interrupted.\n
 如果线程被中断，抛出 __thread_interrupted__ 异常。]]
