@@ -1,8 +1,6 @@
 <!DOCTYPE HTML PUBLIC "-//W3C//DTD HTML 4.01 Transitional//EN">
 <html><head>
-<meta http-equiv="Content-Type" content="text/html; charset=UTF-8"><title>Header boost/utility.hpp Documentation</title>
-
-</head>
+<meta http-equiv="Content-Type" content="text/html; charset=UTF-8"><title>Header boost/utility.hpp Documentation</title></head>
 <body style="color: rgb(0, 0, 0); background-color: rgb(255, 255, 255);">
 <h1><img src="../../boost.png" alt="boost.png (6897 bytes)" align="middle" height="86" width="277">头文件 <a href="../../boost/utility.hpp">boost/utility.hpp</a></h1>
 <p>头文件 <code><a href="../../boost/utility.hpp">&lt;boost/utility.hpp&gt;</a></code>
@@ -88,25 +86,37 @@ F 的左值 <code>f</code> 和类型 <code>T1</code>, <code>T2</code>,
 <code>t2</code>, ..., <code>t<em>N</em></code>
 ，类型 <code>result_of&lt;F(T1, T2, ..., T<em>N</em>)&gt;::type</code>
 定义了表达式 <code>f(t1, t2, ...,t<em>N</em>)</code>
-的类型。该实现允许类型 <code>F</code> 是函数指针、函数引用、成员函数指针或类类型。如果 <code>F</code>
+的类型。该实现允许类型 <code>F</code> 是函数指针、函数引用、成员函数指针或类类型。缺省情况下，<em>N</em> 可以是 0 到
+                10 之间的任意值。要修改上限，请定义宏
+                <code>BOOST_RESULT_OF_NUM_ARGS</code> 为 <em>N</em> 的最大值。类模板 <code>result_of</code>
+                位于头文件 <code>&lt;<a href="../../boost/utility/result_of.hpp">boost/utility/result_of.hpp</a>&gt;</code> 中。
+
+                </p><p>如果你的编译器支持 <code>decltype</code>,
+                则你可以通过定义宏 <code>BOOST_RESULT_OF_USE_DECLTYPE</code> 来激活自动的结果类型推断，如下例中所示。</p>
+
+                <blockquote>
+                <pre>#define BOOST_RESULT_OF_USE_DECLTYPE<br>#include &lt;boost/utility/result_of.hpp&gt;<br><br>struct functor {<br>    template&lt;class T&gt;<br>    T operator()(T x)<br>    {<br>        return x;<br>    }<br>};<br><br>typedef boost::result_of&lt;<br>    functor(int)<br>&gt;::type type;</pre>
+                </blockquote>
+
+                如果 <code>decltype</code> 不可用，则函数对象的自动结果类型推断是不可能的。这时，<code>result_of</code>
+                使用以下协议来让程序员指定某种类型。如果 <code>F</code>
 是一个类类型，带有成员类型 <code>result_type</code>, 则 <code>result_of&lt;F(T1,
 T2, ..., T<em>N</em>)&gt;</code> 为 <code>F::result_type</code>.
-否则，<code>result_of&lt;F(T1, T2, ..., T<em>N</em>)&gt;</code>
+当 <code>F</code> 不带有 <code>result_type</code> 时，<code></code><code>result_of&lt;F(T1, T2, ..., T<em>N</em>)&gt;</code>
 当 <code><em>N</em> &gt; 0</code> 时为 <code>F::result&lt;F(T1,
 T2, ..., T<em>N</em>)&gt;::type</code>，当 <code><em>N</em>
-= 0</code> 时为 <code>void</code>. 有关 <code>result_of</code>
-的更多信息，请看 C++ Library TR，<a href="http://www.open-std.org/jtc1/sc22/wg21/docs/papers/2005/n1836.pdf">N1836</a>，
-有关动机和设计原理，请看 <code>result_of</code><code></code>
-<a href="http://anubis.dkuug.dk/jtc1/sc22/wg21/docs/papers/2003/n1454.html">提
-议书</a>。</p>
-<p>类模板 <code>result_of</code> 位于头文件 <code>&lt;<a href="../../boost/utility/result_of.hpp">boost/utility/result_of.hpp</a>&gt;</code>.
-缺省地，<em>N</em> 可以是0到10之间的任意值。要修改上限，请将宏 <code>BOOST_RESULT_OF_NUM_ARGS</code>
-定义为 <em>N</em> 的最大值。</p>
-<a name="BOOST_NO_RESULT_OF"></a>
+= 0</code> 时为 <code>void</code>. 注意，程序员有责任确保函数对象准确地按照本协议通报其结果类型，如下例所示。
+
+                <blockquote>
+                <pre>struct functor {<br>    template&lt;class&gt; struct result;<br><br>    template&lt;class F, class T&gt;<br>    struct result&lt;F(T)&gt; {<br>        typedef T type;<br>    };<br><br>    template&lt;class T&gt;<br>    T operator()(T x)<br>    {<br>        return x;<br>    }<br>};<br><br>typedef boost::result_of&lt;<br>    functor(int)<br>&gt;::type type;</pre>
+                </blockquote><a name="BOOST_NO_RESULT_OF"></a>
 <p><code>result_of</code>
 的实现需要类模板偏特化、正确分析函数类型的能力，以及支持 SFINAE. 如果你的编译器不支持 <code>result_of</code>,
 包含头文件 <code>boost/utility/result_of.hpp</code> 将定义宏 <code>BOOST_NO_RESULT_OF</code>.
-这是由 Doug Gregor 贡献的。</p>
+
+
+                </p><p>有关 <code>result_of</code> 的更多信息，请见 C++ 库技术报告
+                <a href="http://www.open-std.org/jtc1/sc22/wg21/docs/papers/2005/n1836.pdf">N1836</a>,&nbsp;相关的动机和设计原理见 <code>result_of</code> <a href="http://anubis.dkuug.dk/jtc1/sc22/wg21/docs/papers/2003/n1454.html">建议书</a>。</p><p>这是由 Doug Gregor 贡献的。</p>
 <h2>支持 Base-from-Member 惯用法的类模板</h2>
 <p>请看 <a href="base_from_member.html">单独的文档</a>。</p>
 <h2><a name="BOOST_BINARY">宏&nbsp;BOOST_BINARY</a></h2>
