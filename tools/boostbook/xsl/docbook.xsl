@@ -98,14 +98,14 @@
 
               <itemizedlist>
                 <xsl:for-each select="concept">
-                  <listitem>
+                  <listitem><simpara>
                     <xsl:call-template name="internal-link">
                       <xsl:with-param name="to">
                         <xsl:call-template name="generate.id"/>
                       </xsl:with-param>
                       <xsl:with-param name="text" select="@name"/>
                     </xsl:call-template>
-                  </listitem>
+                  </simpara></listitem>
                 </xsl:for-each>
               </itemizedlist>
             </section>
@@ -178,24 +178,6 @@
 
   <xsl:template match="*" mode="passthrough">
     <xsl:copy-of select="."/>
-  </xsl:template>
-
-  <!-- Syntax highlighting -->
-  <xsl:template name="highlight-keyword">
-    <xsl:param name="keyword"/>
-    <xsl:choose>
-      <xsl:when test="$boost.syntax.highlight='1'">
-        <emphasis role="bold"><xsl:value-of select="$keyword"/></emphasis>
-      </xsl:when>
-      <xsl:otherwise>
-        <xsl:value-of select="$keyword"/>
-      </xsl:otherwise>
-    </xsl:choose>
-  </xsl:template>
-
-  <xsl:template name="highlight-comment">
-    <xsl:param name="text"/>
-    <emphasis><xsl:copy-of select="$text"/></emphasis>
   </xsl:template>
 
   <xsl:template name="monospaced">

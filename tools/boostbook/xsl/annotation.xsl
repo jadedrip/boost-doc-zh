@@ -374,6 +374,14 @@
     </xsl:choose>
   </xsl:template>
 
+  <xsl:template match="programlisting" mode="annotation">
+    <programlisting>
+      <xsl:apply-templates mode="annotation">
+        <xsl:with-param name="highlight" select="true()"/>
+      </xsl:apply-templates>
+    </programlisting>
+  </xsl:template>
+  
   <xsl:template match="code" mode="annotation">
     <computeroutput>
       <xsl:apply-templates mode="annotation"/>
@@ -387,6 +395,10 @@
   </xsl:template>
 
   <xsl:template match="description" mode="annotation">
+    <xsl:apply-templates mode="annotation"/>
+  </xsl:template>
+
+  <xsl:template match="type" mode="annotation">
     <xsl:apply-templates mode="annotation"/>
   </xsl:template>
 
