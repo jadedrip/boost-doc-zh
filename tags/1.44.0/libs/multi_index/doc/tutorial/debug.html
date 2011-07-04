@@ -1,0 +1,255 @@
+<!DOCTYPE HTML PUBLIC "-//W3C//DTD HTML 4.0.1 Transitional//EN">
+<html>
+<head>
+
+  <meta http-equiv="Content-Type" content="text/html; charset=UTF-8">
+
+
+  <title>Boost.MultiIndex Documentation - Tutorial -Debugging support</title>
+  <link rel="stylesheet" href="../style.css" type="text/css">
+
+  <link rel="start" href="../index.html">
+
+  <link rel="prev" href="creation.html">
+
+  <link rel="up" href="index.html">
+
+  <link rel="next" href="techniques.html">
+</head>
+
+
+
+<body>
+
+<h1><img src="../../../../boost.png" alt="boost.png (6897 bytes)" align="middle" height="86" width="277">Boost.MultiIndex 指南: 测试的支持</h1>
+
+
+<div class="prev_link"><a href="creation.html"><img src="../prev.gif" alt="container creation" border="0"><br>
+
+Container creation容器的创建
+</a></div>
+
+<div class="up_link"><a href="index.html"><img src="../up.gif" alt="Boost.MultiIndex tutorial" border="0"><br>
+
+Boost.MultiIndex 指南
+</a></div>
+
+<div class="next_link"><a href="techniques.html"><img src="../next.gif" alt="techniques" border="0"><br>
+
+Techniques技巧
+</a></div>
+<br style="" clear="all">
+
+
+<hr>
+
+<h2>Contents目录</h2>
+
+
+<ul>
+
+  <li><a href="#debugging_support">Debugging support测试的支持</a></li>
+
+  <li><a href="#safe_mode">Safe mode安全模式</a>
+    
+    <ul>
+
+       <li><a href="#serialization_and_safe_mode">Serialization and safe mode序列化与安全模式</a></li>
+
+    
+    </ul>
+
+  </li>
+
+  <li><a href="#invariant_check">Invariant-checking mode不变式检查模式</a></li>
+
+</ul>
+
+
+<h2><a name="debugging_support">Debugging support测试的支持</a></h2>
+
+
+<p><i>&ldquo;按契约设计</i><i>Design by Contract</i><i>&rdquo;</i>的概念最早见于 Bertrand Meyer的 <a href="http://www.eiffel.com/">Eiffel</a> 
+语言，在库的使用者与实现者之间明确一份<i>契约contract</i>，使用者负责传给库中的函数的参数值应满足<i>前提条件preconditions</i>，实现者保证返回的结果满足<i>后续条件postconditions</i>，同时确保函数内部的一致性规则，即<i>不变式invariants</i>。Eiffel 
+支持契约的这三个部分，分别称为 <code>require</code>, <code>ensure</code> 和 
+<code>invariant。</code>
+</p>
+
+
+<p>C++ 并不直接支持&ldquo;按契约设计&rdquo;的技术：它们通常用来断言来实现，而且由于性能原因通常会在发布版本中被去掉。按照同样的方法，Boost.MultiIndex 
+提供两种不同的调试模式：
+</p>
+<ul>
+
+  <li><i>安全模式Safe mode</i>，在调用时检查前提条件；</li>
+
+  <li><i>不变量检查模式invariant-checking mode</i>，对库所保证的内部一致性进行事后检查。</li>
+
+</ul>
+这两种模式相互并不依赖，可以分别打开或关闭。需要注意的是，安全模式检测到的错误应该归究于用户程序的代码问题，而不变量检查模式检测到的错误则可能是Boost.MultiIndex实现的<span style="font-style: italic;">内部</span>缺陷。
+
+
+<h2><a name="safe_mode">Safe mode安全模式</a></h2>
+
+
+<p>给STL增加前提条件检查的功能以帮助调试的想法最早由 Cay S. Horstmann 在他的 <a href="http://www.horstmann.com/safestl.html">Safe STL</a> 库中提出，后来被 <a href="http://www.stlport.org/doc/debug_mode.html">STLport Debug Mode</a> 
+所采用。类似地，Boost.MultiIndex 也提供了同样的功能，称为<i>安全模式</i>，在处理迭代器和调用库的函数中检查各种前提条件。
+</p>
+
+
+<p>Boost.MultiIndex 安全模式通过定义全局宏 <code>BOOST_MULTI_INDEX_ENABLE_SAFE_MODE</code> 
+激活。错误条件通过宏 <code>BOOST_MULTI_INDEX_SAFE_MODE_ASSERT</code> 来检测，该宏缺省就是调用 <a href="../../../../libs/utility/assert.html">
+<code>BOOST_ASSERT</code></a>.
+</p>
+
+
+<p>如果用户决定定义自己的 <code>BOOST_MULTI_INDEX_SAFE_MODE_ASSERT</code> 版本，必须采用以下格式：
+</p>
+
+
+<blockquote>
+  <pre><span class="identifier">BOOST_MULTI_INDEX_SAFE_MODE_ASSERT</span><span class="special">(</span><span class="identifier">expr</span><span class="special">,</span><span class="identifier">error_code</span><span class="special">)</span>
+  </pre>
+</blockquote>
+
+
+<p>其中 <code>expr</code> 为要检查的条件，<code>error_code</code> 为枚举类型 
+<code>safe_mode::error_code</code> 的某个值：
+</p>
+
+
+<blockquote>
+  <pre><span class="keyword">namespace</span> <span class="identifier">boost</span><span class="special">{</span>
+
+<span class="keyword">namespace</span> <span class="identifier">multi_index</span><span class="special">{</span>
+
+<span class="keyword">namespace</span> <span class="identifier">safe_mode</span><span class="special">{</span>
+
+<span class="keyword">enum</span> <span class="identifier">error_code</span>
+<span class="special">{</span>
+  <span class="identifier">invalid_iterator</span><span class="special">,</span>             <span class="comment">// </span><span class="comment">迭代器为缺省构造或指向已删除元素</span><span class="comment"></span>
+  <span class="identifier">not_dereferenceable_iterator</span><span class="special">,</span> <span class="comment">// </span><span class="comment">迭代器不能解引用</span><span class="comment"></span>
+  <span class="identifier">not_incrementable_iterator</span><span class="special">,</span>   <span class="comment">// </span><span class="comment">迭代器指向序列尾部</span><span class="comment"></span>
+  <span class="identifier">not_decrementable_iterator</span><span class="special">,</span>   <span class="comment">// </span><span class="comment">迭代器指向序列头部</span><br>  <span class="identifier">not_owner</span><span class="special">,</span>                    <span class="comment">// </span><span class="comment">迭代器不属于容器</span><span class="comment"></span>
+  <span class="identifier">not_same_owner</span><span class="special">,</span>               <span class="comment">// </span><span class="comment">迭代器属于不同的容器</span><span class="comment"></span>
+  <span class="identifier">invalid_range</span><span class="special">,</span>                <span class="comment">// </span><span class="comment">last 不能从 first 到达</span><span class="comment"></span>
+  <span class="identifier">inside_range</span><span class="special">,</span>                 <span class="comment">// </span><span class="comment">迭代器在区间内(而这不允许)</span><span class="comment"></span>
+  <span class="identifier">out_of_bounds</span><span class="special">,</span>                <span class="comment">// 试图超出容器的边界</span>
+  <span class="identifier">same_container</span>                <span class="comment">// </span><span class="comment">容器应该不同</span><span class="comment"></span>
+<span class="special">};</span>
+
+<span class="special">}</span> <span class="comment">// namespace multi_index::safe_mode</span>
+
+<span class="special">}</span> <span class="comment">// namespace multi_index</span>
+
+<span class="special">}</span> <span class="comment">// namespace boost</span>
+  </pre>
+</blockquote>
+
+
+<p>例如，以下<code>BOOST_MULTI_INDEX_SAFE_MODE_ASSERT</code> 以抛出异常代替断言：
+</p>
+
+
+<blockquote>
+  <pre><span class="preprocessor">#include</span> <span class="special">&lt;</span><span class="identifier">boost</span><span class="special">/</span><span class="identifier">multi_index_container</span><span class="special">/</span><span class="identifier">safe_mode_errors</span><span class="special">.</span><span class="identifier">hpp</span><span class="special">&gt;</span>
+
+<span class="keyword">struct</span> <span class="identifier">safe_mode_exception</span>
+<span class="special">{</span>
+  <span class="identifier">safe_mode_exception</span><span class="special">(</span><span class="identifier">boost</span><span class="special">::</span><span class="identifier">multi_index</span><span class="special">::</span><span class="identifier">safe_mode</span><span class="special">::</span><span class="identifier">error_code</span> <span class="identifier">error_code</span><span class="special">):</span>
+    <span class="identifier">error_code</span><span class="special">(</span><span class="identifier">error_code</span><span class="special">)</span>
+  <span class="special">{}</span>
+
+  <span class="identifier">boost</span><span class="special">::</span><span class="identifier">multi_index</span><span class="special">::</span><span class="identifier">safe_mode</span><span class="special">::</span><span class="identifier">error_code</span> <span class="identifier">error_code</span><span class="special">;</span>
+<span class="special">};</span>
+
+<span class="preprocessor">#define</span> <span class="identifier">BOOST_MULTI_INDEX_SAFE_MODE_ASSERT</span><span class="special">(</span><span class="identifier">expr</span><span class="special">,</span><span class="identifier">error_code</span><span class="special">)</span> <span class="special">\</span>
+<span class="keyword">if</span><span class="special">(!(</span><span class="identifier">expr</span><span class="special">)){</span><span class="keyword">throw</span> <span class="identifier">safe_mode_exception</span><span class="special">(</span><span class="identifier">error_code</span><span class="special">);}</span>
+
+<span class="comment">// </span><span class="comment">这段代码必须在 Boost.MultiIndex 的任何头文件之前，除了</span><span class="comment">safe_error_codes.hpp</span><span class="comment"></span>
+  </pre>
+</blockquote>
+
+
+<p>其它方式，如输出到日志或产生某种告警，也是可以实现的。
+</p>
+
+
+<p>
+<b>警告：</b>安全模式会显著增加程序的空间和时间占用，因此通常在<code>NDEBUG</code>建造时不打开。另外，该模式仅用于辅助调试，不应被用于程序的正常执行流中：尤其是，库并不保证所有前提条件的错误都已被检测，以及在库的不同版本间这些检测保持稳定。
+</p>
+
+
+<h3><a name="serialization_and_safe_mode">Serialization and safe mode</a>序列化与安全模式</h3>
+
+
+<p>从归档中恢复的迭代器并没有进行安全模式检查。这是由于它们不可能仅由序列化信息中自动获知相关联的 
+<code>multi_index_container</code>。不过如果你想要，可以用以下方法把一个恢复的迭代器转换为已检测值：
+</p>
+
+
+<blockquote>
+  <pre><span class="identifier">employee_set</span> <span class="identifier">es</span><span class="special">;</span>
+<span class="identifier">employee_set</span><span class="special">::</span><span class="identifier">nth_index</span><span class="special">&lt;</span><span class="number">1</span><span class="special">&gt;::</span><span class="identifier">iterator</span> <span class="identifier">it</span><span class="special">;</span>
+
+<span class="comment">// </span><span class="comment">从归档ar中恢复es和it</span><span class="comment"></span>
+<span class="identifier">ar</span><span class="special">&gt;&gt;</span><span class="identifier">es</span><span class="special">;</span>
+<span class="identifier">ar</span><span class="special">&gt;&gt;</span><span class="identifier">it</span><span class="special">;</span> <span class="comment">// </span><span class="comment">it没有进行安全模式检查</span><span class="comment"><br><br>// </span><span class="comment">将it变为已检测值，为Boost.MultiIndex提供相关联的容器的信息</span><span class="comment"><br>// 如果安全模式被关闭，这一语句实际上是零代价的</span>
+<span class="identifier">it</span><span class="special">=</span><span class="identifier">es</span><span class="special">.</span><span class="identifier">project</span><span class="special">&lt;</span><span class="number">1</span><span class="special">&gt;(</span><span class="identifier">it</span><span class="special">);</span>
+  </pre>
+</blockquote>
+
+
+<h2><a name="invariant_check">Invariant-checking mode</a>不变量检查模式</h2>
+
+
+<p>Boost.MultiIndex的 <i>不变量检查模式invariant-checking mode</i> 可以通过定义全局宏 
+<code>BOOST_MULTI_INDEX_ENABLE_INVARIANT_CHECKING</code> 
+激活。当该模式被激活，Boost.MultiIndex 的所有公用函数都将对其内部数据结构的不变式执行事后检查。
+</p>
+
+
+<p>如果某个不变式测试失败，Boost.MultiIndex 将通过一元宏 
+<code>BOOST_MULTI_INDEX_INVARIANT_ASSERT</code> 来指出错误。除非用户提供了该宏的其它定义，否则该宏缺省为 <a href="../../../../libs/utility/assert.html"><code>BOOST_ASSERT</code></a>。任何此类断言失败都应视为库的缺陷。请将该错误连同相关信息和代码报告给库的维护者。
+</p>
+
+
+<p>我们建议 Boost.MultiIndex 的使用者在调试构建阶段总是打开不变量检查模式。
+</p>
+
+
+<hr>
+
+<div class="prev_link"><a href="creation.html"><img src="../prev.gif" alt="container creation" border="0"><br>
+
+Container creation容器的创建
+</a></div>
+
+<div class="up_link"><a href="index.html"><img src="../up.gif" alt="Boost.MultiIndex tutorial" border="0"><br>
+
+Boost.MultiIndex 指南
+</a></div>
+
+<div class="next_link"><a href="techniques.html"><img src="../next.gif" alt="techniques" border="0"><br>
+
+Techniques技巧
+</a></div>
+<br style="" clear="all">
+
+
+<br>
+
+
+<p>Revised February 6th 2006</p>
+
+
+<p>&copy; Copyright 2003-2006 Joaqu&iacute;n M L&oacute;pez Mu&ntilde;oz.
+Distributed under the Boost Software 
+License, Version 1.0. (See accompanying file <a href="../../../../LICENSE_1_0.txt">
+LICENSE_1_0.txt</a> or copy at <a href="http://www.boost.org/LICENSE_1_0.txt">
+http://www.boost.org/LICENSE_1_0.txt</a>)
+</p>
+
+
+</body>
+</html>

@@ -1,0 +1,400 @@
+<!DOCTYPE HTML PUBLIC "-//W3C//DTD HTML 4.01 Transitional//EN" "http://www.w3.org/TR/html4/loose.dtd">
+<html><head>
+  <meta http-equiv="Content-Language" content="en-us">
+  <meta http-equiv="Content-Type" content="text/html; charset=UTF-8">
+  <link href="pool.css" rel="stylesheet" type="text/css">
+
+  <title>Pool Concepts</title></head>
+<body>
+  <img src="../../../boost.png" alt="C++ Boost" height="86" width="276">
+
+  <h1 align="center">Pool Concepts 内存池概念</h1>
+
+  <blockquote>
+    "Dynamic memory allocation has been a fundamental part of most computer
+    systems since roughly 1960..."<sup><a href="concepts.html#ref1">1</a></sup>
+    <br>"从大约1960年以来，动态内存分配已经成为绝大多数计算机系统的基础部分..."<sup><a href="#ref1">1</a></sup>
+  </blockquote>
+
+  <p>Everyone uses dynamic memory allocation. If you have ever called
+  <span class="code">malloc</span> or <span class="code">new</span>, then you
+  have used dynamic memory allocation. Most programmers have a tendency to
+  treat the heap as a "magic bag": we ask it for memory, and it magically
+  creates some for us. Sometimes we run into problems because the heap is
+  <em>not</em> magic.<br>每个人都要使用动态内存分配。如果你曾经调用过
+  <span class="code">malloc</span> 或 <span class="code">new</span>，那么你就已经使用过动态内存分配。许多程序员倾向于将堆看成一个"魔术包"：我们向它请求内存，它就会象有魔法一样为我们创建一些内存。不过，有些时候我们会陷入麻烦，因为堆并不具有魔法。</p>
+
+  <p>The heap is limited. Even on large systems (i.e., not embedded) with
+  huge amounts of virtual memory available, there is a limit. Everyone is
+  aware of the physical limit, but there is a more subtle, "virtual" limit,
+  that limit at which your program (or the entire system) slows down due to
+  the use of virtual memory. This virtual limit is much closer to your
+  program than the physical limit, especially if you are running on a
+  multitasking system. Therefore, when running on a large system, it is
+  considered "nice" to make your program use as few resources as necessary,
+  and release them as soon as possible. When using an embedded system,
+  programmers usually have no memory to waste.<br>堆
+是有限的。即使是在那些有大量虚拟内存可用的大型系统(即非嵌入式系统)中，也是有限的。任何人都知道物理限制，但是"虚拟"限制更为微妙，使用虚拟内存
+时将会限制你的程序(或整个系统)慢下来。这个虚拟限制比物理限制更靠近你的程序，尤其是当你运行在一个多任务系统中的时候。因此，在一个大型系统中运行
+时，让你的程序只按需使用尽量少的资源，并尽快释放，这种习惯被认为是"好的"习惯。当使用嵌入式系统时，程序员通常没有内存可以浪费。</p>
+
+  <p>The heap is complicated. It has to satisfy any type of memory request,
+  for any size, and do it <em>fast</em>. The common approaches to memory
+  management have to do with splitting the memory up into portions, and
+  keeping them ordered by size in some sort of a tree or list structure. Add
+  in other factors, such as locality and estimating lifetime, and heaps
+  quickly become very complicated. So complicated, in fact, that there is no
+  known "perfect" answer to the problem of how to do dynamic memory
+  allocation. The diagrams below illustrate how most common memory managers
+  work: for each chunk of memory, it uses part of that memory to maintain its
+  internal tree or list structure. Even when a chunk is <span class="code">malloc</span>'ed out to a program, the memory manager must "save"
+  some information in it — usually just its size. Then, when the block
+  is <span class="code">free</span>'d, the memory manager can easily tell how
+  large it is.<br>堆
+也是复杂的。它必须满足任意类型、任意大小的内存请求，而且还要快速。内存管理的常用方法必定会把内存分隔为一块块，并且按大小顺序排列成某种树或链表的
+结构。再加其它因素，如局部化和生命周期预估等，堆很快就会变得非常复杂。实际上，由于其复杂性，迄今为止都没有一个"完美"的答案来解决动态内存分配的
+问题。以下图表说明了最常见的内存管理是如何工作的：对于每一大块内存，使用其中一部分内存来管理其内部的树或链表结构。即使这一大块内存已经分配给了某
+个程序，内存管理器也必须在它里面"保存"一些信息 — 通常只是它的大小。然后，当该区块被释放时，内存管理器可以很容易地得知它有多大。</p>
+
+  <table style="float: left; clear: both;" summary="" border="3" cellspacing="0" rules="none">
+    <caption>
+      <em>Memory block, not allocated 未分配的内存块</em>
+    </caption>
+
+    <tbody><tr>
+      <td style="background-color: red; text-align: center;">Memory not
+      belonging to process 不属于进程的内存</td>
+    </tr>
+
+    <tr>
+      <td style="padding: 1em 0em; background-color: silver; text-align: center;">
+      Memory used internally by memory allocator algorithm (usually 8-12
+      bytes)<br>内存分配器算法内部使用的内存(通常为8-12字节)</td>
+    </tr>
+
+    <tr>
+      <td style="padding: 2em 0em; background-color: gray; text-align: center;">Unused
+      memory 未用内存</td>
+    </tr>
+
+    <tr>
+      <td style="background-color: red; text-align: center;">Memory not
+      belonging to process 不属于进程的内存</td>
+    </tr>
+  </tbody></table>
+
+  <table style="float: right; clear: both;" summary="" border="3" cellspacing="0" rules="none">
+    <caption>
+      <em>Memory block, allocated (used by program) 已分配的内存块(被程序使用)</em>
+    </caption>
+
+    <tbody><tr>
+      <td style="background-color: red; text-align: center;">Memory not
+      belonging to process 不属于进程的内存</td>
+    </tr>
+
+    <tr>
+      <td style="background-color: silver; text-align: center;">Memory used
+      internally by memory allocator algorithm (usually 4 bytes)<br>内存分配器算法内部使用的内存(通常为4字节)</td>
+    </tr>
+
+    <tr>
+      <td style="padding: 3em 0em; background-color: yellow; text-align: center;">Memory
+      usable by program 程序使用的内存</td>
+    </tr>
+
+    <tr>
+      <td style="background-color: red; text-align: center;">Memory not
+      belonging to process 不属于进程的内存</td>
+    </tr>
+  </tbody></table>
+
+  <p>Because of the complication of dynamic memory allocation, it is often
+  inefficient in terms of time and/or space. Most memory allocation
+  algorithms store some form of information with each memory block, either
+  the block size or some relational information, such as its position in the
+  internal tree or list structure. It is common for such "header fields" to
+  take up one machine word in a block that is being used by the program. The
+  obvious problem, then, is when small objects are dynamically allocated. For
+  example, if <span class="code">int</span>s were dynamically allocated, then
+  automatically the algorithm will reserve space for the header fields as
+  well, and we end up with a 50% waste of memory. Of course, this is a
+  worst-case scenario. However, more modern programs are making use of small
+  objects on the heap; and that is making this problem more and more
+  apparent. Wilson <em>et. al.</em> state that an average-case memory
+  overhead is about ten to twenty percent<sup><a href="#ref2">2</a></sup>.
+  This memory overhead will grow higher as more programs use more smaller
+  objects. It is this memory overhead that brings programs closer to the
+  virtual limit.<br>因
+为动态内存分配的复杂性，它在时间和空间方面通常都是很低效的。多数内存分配算法在每个内存块中保存某种形式的信息，块大小或其它相关信息，如它在内部树
+或链表结构中的位置。通常，这类"标题域"会占用分配给程序使用的内存块中的一个机器字。这样，最明显的问题就是动态分配小型对象的时候。例如，如果动态
+分配一些int，且由算法自动保留用于标题域的空间，那么我们最终将浪费50%的内存。当然，这是最坏的情况。但是，多数现代的程序都会使用堆上的小型对
+象；这使得该问题越来越明显。Wilson等人表明，平均情况下的内存开销约为10-20%<sup><a href="concepts.html#ref2">2</a></sup>。如果更多的程序使用更多的小型对象，这个开销将会更高。正是这种内存开销，使得程序更接近于虚拟限制。
+  </p>
+
+  <p>In larger systems, the memory overhead is not as big of a problem
+  (compared to the amount of time it would take to work around it), and thus
+  is often ignored. However, there are situations where many allocations
+  and/or deallocations of smaller objects are taking place as part of a
+  time-critical algorithm, and in these situations, the system-supplied
+  memory allocator is often too slow.<br>在大型系统中，内存开销不是一个大问题(与它的运行时间以及它的工作环境相对比而言)，所以常常被忽略。但是，有些情形是，在一个时间关键的算法中要大量分配和/或释放小型的对象，这时，系统所提供的内存分配器通常都会太慢了。</p>
+
+  <p>Simple segregated storage addresses both of these issues. Almost all
+  memory overhead is done away with, and all allocations can take place in a
+  small amount of (amortized) constant time. However, this is done at the
+  loss of generality; simple segregated storage only can allocate memory
+  chunks of a single size.<br>简单的分隔存储可以解决以上两个问题。几乎所有的内存开销都没有了，且所有分配都可以在一个很小的(分摊)常量时间内完成。不过，其代价是损失了通用性；简单的分隔存储只能分配单一大小的内存块。</p>
+  <hr>
+
+  <h1 align="center">Simple Segregated Storage 简单分隔存储</h1>
+
+  <p>Simple Segregated Storage is the basic idea behind the Boost Pool
+  library. Simple Segregated Storage is the simplest, and probably the
+  fastest, memory allocation/deallocation algorithm. It begins by
+  <em>partitioning</em> a memory <em>block</em> into fixed-size
+  <em>chunks</em>. Where the block comes from is not important until
+  implementation time. A <em>Pool</em> is some object that uses Simple
+  Segregated Storage in this fashion. To illustrate:<br>简单分隔存储是 Boost Pool 库背后的基本思想。简单分隔存储是最简单的，可能也是最快的内存分配/释放算法。它先将一个内存块<em>(block)</em>分为固定大小的区块<em>(chunks)</em>。至于内存块来自何处，在到实现之前是不重要的。内存池<em>(Pool)</em>是以这种方式使用简单分隔存储的一些对象。举例如下：</p>
+
+  <table style="clear: both;" summary="" align="center" border="3" cellspacing="0" rules="none">
+    <caption>
+      <em>Memory block, split into chunks 分隔为区块的内存块</em>
+    </caption>
+
+    <tbody><tr>
+      <td style="background-color: red; text-align: center;">Memory not
+      belonging to process</td>
+    </tr>
+
+    <tr>
+      <td style="padding: 1em 0em; background-color: gray; text-align: center;">Chunk
+      0</td>
+    </tr>
+
+    <tr>
+      <td style="padding: 1em 0em; background-color: gray; text-align: center;">Chunk
+      1</td>
+    </tr>
+
+    <tr>
+      <td style="padding: 1em 0em; background-color: gray; text-align: center;">Chunk
+      2</td>
+    </tr>
+
+    <tr>
+      <td style="padding: 1em 0em; background-color: gray; text-align: center;">Chunk
+      3</td>
+    </tr>
+
+    <tr>
+      <td style="background-color: red; text-align: center;">Memory not
+      belonging to process</td>
+    </tr>
+  </tbody></table>
+
+  <p>Each of the chunks in any given block are <strong>always</strong> the
+  same size. This is the fundamental restriction of Simple Segregated
+  Storage: you cannot ask for chunks of different sizes. For example, you
+  cannot ask a Pool of integers for a character, or a Pool of characters for
+  an integer (assuming that characters and integers are different sizes).<br>任一给定内存块中的各个区块<span style="font-weight: bold;">总是</span>相同大小的。这是简单分隔存储的基本限制：你不能请求不同大小的区块。例如，你不能向一个整数内存池请求一个字符，或者向一个字符内存池请求一个整数(假定字符和整数的大小不同)。</p>
+
+  <p>Simple Segregated Storage works by interleaving a <em>free list</em>
+  within the unused chunks. For example:<br>简单分隔存储通过维护未用区块内的一个<span style="font-style: italic;">可用链表</span>来工作。例如：</p>
+
+  <table style="float: left; clear: both;" summary="" border="3" cellspacing="0" rules="none">
+    <caption>
+      <em>Memory block, with no chunks allocated 未有区块被分配的内存块</em>
+    </caption>
+
+    <tbody><tr>
+      <td style="background-color: red; text-align: center;">Memory not
+      belonging to process</td>
+    </tr>
+
+    <tr>
+      <td style="padding: 1em 0em; background-color: gray; text-align: center;">Chunk
+      0; points to Chunk 1</td>
+    </tr>
+
+    <tr>
+      <td style="padding: 1em 0em; background-color: gray; text-align: center;">Chunk
+      1; points to Chunk 2</td>
+    </tr>
+
+    <tr>
+      <td style="padding: 1em 0em; background-color: gray; text-align: center;">Chunk
+      2; points to Chunk 3</td>
+    </tr>
+
+    <tr>
+      <td style="padding: 1em 0em; background-color: gray; text-align: center;">Chunk
+      3; end-of-list</td>
+    </tr>
+
+    <tr>
+      <td style="background-color: red; text-align: center;">Memory not
+      belonging to process</td>
+    </tr>
+  </tbody></table>
+
+  <table style="float: right; clear: both;" summary="" border="3" cellspacing="0" rules="none">
+    <caption>
+      <em>Memory block, with two chunks allocated 有两个区块被分配的内存块</em>
+    </caption>
+
+    <tbody><tr>
+      <td style="background-color: red; text-align: center;">Memory not
+      belonging to process</td>
+    </tr>
+
+    <tr>
+      <td style="padding: 1em 0em; background-color: gray; text-align: center;">Chunk
+      0; points to Chunk 2</td>
+    </tr>
+
+    <tr>
+      <td style="padding: 1em 0em; background-color: silver; text-align: center;">Chunk
+      1 (in use by process)</td>
+    </tr>
+
+    <tr>
+      <td style="padding: 1em 0em; background-color: gray; text-align: center;">Chunk
+      2; end-of-list</td>
+    </tr>
+
+    <tr>
+      <td style="padding: 1em 0em; background-color: silver; text-align: center;">Chunk
+      3 (in use by process)</td>
+    </tr>
+
+    <tr>
+      <td style="background-color: red; text-align: center;">Memory not
+      belonging to process</td>
+    </tr>
+  </tbody></table>
+
+  <p>By interleaving the free list inside the chunks, each Simple Segregated
+  Storage only has the overhead of a single pointer (the pointer to the first
+  element in the list). It has <em>no</em> memory overhead for chunks that
+  are in use by the process.通过维持区块内的一个可用链表，每个简单分隔存储只有单个指针的开销(该指针指向链表中的第一个元素)。对于被进程使用的区块则没有内存开销。</p>
+
+  <p>Simple Segregated Storage is also extremely fast. In the simplest case,
+  memory allocation is merely removing the first chunk from the free list, a
+  O(1) operation. In the case where the free list is empty, another block may
+  have to be acquired and partitioned, which would result in an amortized
+  O(1) time. Memory deallocation may be as simple as adding that chunk to the
+  front of the free list, a O(1) operation. However, more complicated uses of
+  Simple Segregated Storage may require a sorted free list, which makes
+  deallocation O(N).<br>简
+单分隔存储也非常快。在最简单的情况下，内存分配只不过是将第一个区块移离可用链表，这是一个O(1)操作。如果可用链表为空，则需要申请另一个内存块并
+进行分隔，这是一个分摊的O(1)时间复杂度的操作。内存的释放也很简单，只是将区块重新加到可用链表的开始，这是一个O(1)操作。但是，对简单分隔存
+储的更为复杂的使用可能需要一个已排序的可用链表，这将使得释放操作变为O(N)复杂度。</p>
+
+  <p>Simple Segregated Storage gives faster execution and less memory
+  overhead than a system-supplied allocator, but at the loss of generality. A
+  good place to use a Pool is in situations where many (noncontiguous) small
+  objects may be allocated on the heap, or if allocation and deallocation of
+  the same-sized objects happens repeatedly.<br>简单分隔存储比系统提供的分配器执行得更快，内存开销也更少，但是损失了通用性。使用内存池的一个好地方是，要在堆上分配多个(非连续的)小型对象的情形，或者是对相同大小的对象的分配和释放反复发生的情形。<br clear="all"></p>
+  <hr>
+
+  <h2>References 参考资料</h2>
+
+  <ol>
+    <li><a name="ref1" id="ref1">Doug Lea, <em>A Memory Allocator</em>.</a>
+    Available on the web at <a href="http://gee.cs.oswego.edu/dl/html/malloc.html">http://gee.cs.oswego.edu/dl/html/malloc.html</a></li>
+
+    <li><a name="ref2" id="ref2">Paul R. Wilson, Mark S. Johnstone, Michael
+    Neely, and David Boles, "Dynamic Storage Allocation: A Survey and
+    Critical Review" in <em>International Workshop on Memory Management</em>,
+    September 1995, pg. 28, 36.</a> Available on the web at <a href="ftp://ftp.cs.utexas.edu/pub/garbage/allocsrv.ps">ftp://ftp.cs.utexas.edu/pub/garbage/allocsrv.ps</a></li>
+  </ol>
+
+  <h2>Other Implementations 其它实现</h2>
+
+  <p>Pool allocators are found in many programming languages, and in many
+  variations. The beginnings of many implementations may be found in common
+  programming literature; some of these are given below. Note that none of
+  these are complete implementations of a Pool; most of these leave some
+  aspects of a Pool as a user exercise. However, in each case, even though
+  some aspects are missing, these examples use the same underlying concept of
+  a Simple Segregated Storage described in this document.<br>内
+存池分配器在许多编程语言中都可以找到，有许多变种。在初期的许多实现中可以找到相同的程序文字；其中一些在以下列出。注意，它们之中没有一个是内存池的
+完整实现；其中的大多数把内存池的某些方面留作用户的练习。不过，在每一个实现中，虽然都有某个方面的缺失，但是这个范例都使用了在本文档中所描述的简单
+分隔存储的基本概念。</p>
+
+  <ul>
+    <li>"The C++ Programming Language", 3rd ed., by Bjarne Stroustrup,
+    Section 19.4.2. Missing aspects:<br>"The C++ Programming Language", 第三版，Bjarne Stroustrup,
+    第19.4.2节。缺点：
+
+      <ol>
+        <li>Not portable<br>不可移植</li>
+
+        <li>Cannot handle allocations of arbitrary numbers of objects (this
+        was left as an exercise)<br>不能处理任意数量的对象的分配(这个问题被留作练习了)</li>
+
+        <li>Not thread-safe<br>非线程安全的</li>
+
+        <li>Suffers from the static initialization problem<br>存在静态初始化问题</li>
+      </ol>
+    </li>
+
+    <li>"MicroC/OS-II: The Real-Time Kernel", by Jean J. Labrosse, Chapter 7
+    and Appendix B.04. This is an example of the Simple Segregated Storage
+    scheme at work in the internals of an actual OS. Missing aspects:<br>"MicroC/OS-II: The Real-Time Kernel", Jean J. Labrosse, 第7章和附录B.04. 这是一个在操作系统内部建立简单分隔存储机制的例子。缺点：
+
+      <ol>
+        <li>Not portable (though this is OK, since it's part of its own
+        OS)<br>不可移植(由于它是操作系统的一部分，这还是OK的)</li>
+
+        <li>Cannot handle allocations of arbitrary numbers of blocks (which
+        is also OK, since this feature is not needed)<br>不能处理任意数量的对象的分配(由于不需要此特性，所以也还OK)</li>
+
+        <li>Requires non-intuitive user code to create and destroy the
+        Pool<br>要求非介入式用户代码创建和销毁内存池</li>
+      </ol>
+    </li>
+
+    <li>"Efficient C++: Performance Programming Techniques", by Dov Bulka and
+    David Mayhew, Chapters 6 and 7. This is a good example of iteratively
+    developing a Pool solution; however, their premise (that the
+    system-supplied allocation mechanism is hopelessly inefficient) is flawed
+    on every system I've tested on. Run their timings on your system before
+    you accept their conclusions. Missing aspects:<br>"Efficient
+C++: Performance Programming Techniques", Dov Bulka 和 David Mayhew,
+第6、7章。这是迭代式开发一个内存池方案的好例子；不过，它们的前提(系统提供的分配机制极其低效)在我所测试的每个系统中都是有缺陷的。在你接受他们
+的结论之前，最好先在你的系统中运行一下他们的计时程序。缺点：
+
+      <ol>
+        <li>Requires non-intuitive user code to create and destroy the
+        Pool<br>要求非介入式用户代码创建和销毁内存池</li>
+      </ol>
+    </li>
+
+    <li>"Advanced C++: Programming Styles and Idioms", by James O. Coplien,
+    Section 3.6. This has examples of both static and dynamic pooling.
+    Missing aspects:<br>"Advanced C++: Programming Styles and Idioms",&nbsp;James O. Coplien,
+    第3.6节。这里有静态和动态内存池的例子。缺点：
+
+      <ol>
+        <li>Not thread-safe<br>非线程安全的</li>
+
+        <li>The static pooling example is not portable<br>静态的内存池例子不可移植</li>
+      </ol>
+    </li>
+  </ul>
+  <hr>
+
+  <p><a href="http://validator.w3.org/check?uri=referer"><img style="border: 0px solid ; width: 88px; height: 31px;" src="../../../valid-html401.png" alt="Valid HTML 4.01 Transitional"></a></p>
+
+  <p>Revised 
+  <!--webbot bot="Timestamp" s-type="EDITED" s-format="%d %B, %Y" startspan -->05
+  December, 2006<!--webbot bot="Timestamp" endspan i-checksum="38516" --></p>
+
+  <p><i>Copyright © 2000, 2001 Stephen Cleary (scleary AT jerviswebb DOT
+  com)</i></p>
+
+  <p><i>Distributed under the Boost Software License, Version 1.0. (See
+  accompanying file <a href="../../../LICENSE_1_0.txt">LICENSE_1_0.txt</a> or
+  copy at <a href="http://www.boost.org/LICENSE_1_0.txt">http://www.boost.org/LICENSE_1_0.txt</a>)</i></p>
+</body></html>

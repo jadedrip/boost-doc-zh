@@ -1,0 +1,284 @@
+<!DOCTYPE HTML PUBLIC "-//W3C//DTD HTML 4.01 Transitional//EN" "http://www.w3.org/TR/html4/loose.dtd">
+<html><head><!--
+(C) Copyright 2002-4 Robert Ramey - http://www.rrsd.com . 
+Use, modification and distribution is subject to the Boost Software
+License, Version 1.0. (See accompanying file LICENSE_1_0.txt or copy at
+http://www.boost.org/LICENSE_1_0.txt)
+-->
+
+
+
+
+  
+  
+  
+  <meta http-equiv="Content-Type" content="text/html; charset=UTF-8">
+
+
+
+
+  
+  
+  
+  <link rel="stylesheet" type="text/css" href="../../../boost.css">
+
+
+
+
+  
+  
+  
+  <link rel="stylesheet" type="text/css" href="style.css">
+
+
+
+
+  
+  
+  
+  <title>Seriealization - Rationale</title></head>
+<body link="#0000ff" vlink="#800080">
+
+
+
+
+<table summary="header" border="0" cellpadding="7" cellspacing="0" width="100%">
+
+
+
+
+  <tbody>
+
+
+
+    <tr>
+
+
+
+ 
+    <td valign="top" width="300"> 
+      
+      
+      
+      
+      <h3><a href="http://www.boost.org"><img alt="C++ Boost" src="../../../boost.png" border="0" height="86" width="277"></a></h3>
+
+
+
+
+    </td>
+
+
+
+
+    <td valign="top"> 
+      
+      
+      
+      
+      <h1 align="center">Serialization序列化</h1>
+
+
+
+
+      
+      
+      
+      
+      <h2 align="center">基本原理</h2>
+
+
+
+
+    </td>
+
+
+
+
+  </tr>
+
+
+
+
+  
+  
+  
+  </tbody>
+</table>
+
+
+
+
+<hr>
+<dl class="index">
+
+
+
+
+  <dt><a href="#serialization">术语 "serialization" 优于 "persistence"</a></dt>
+
+
+
+
+  <dt><a href="#archives">存档不是一种流</a></dt>
+
+
+
+
+  <dt><a href="#strings">在文本存档中对字符串的特殊处理</a></dt>
+
+
+
+
+  <dt><a href="#typeid"><code style="white-space: normal;">typeid</code> 信息不包含于存档中</a></dt><!--
+  <dt><a href="#footnotes">Footnotes</a></dt>
+  -->
+</dl>
+
+
+
+
+<h2><a name="serialization"></a>术语 "serialization" 优于 "persistence"</h2>
+
+
+
+
+<p>我发现 persistence 常常被用于表示另外一些很不同的意思。例如，在数据库 schema 中的类实例(对象)存储<a href="bibliography.html#4">[4]</a>。这个库是用于 persistence 以外的一些环境中的。最明显的例子是对数据进行整编以传送到其它系统。
+</p>
+
+
+
+<h2><a name="archives"></a>存档不是一种流</h2>
+
+
+
+
+<p>存档类并不是派生自流的，虽然它们在语法上有点类似。
+</p>
+
+
+
+<ul>
+
+
+
+
+    <li>存档类并不是某一种流，虽然它的实现要依赖于流。其中的区别请看 <a href="bibliography.html#5">[5]</a> 中的 item 41。</li>
+
+
+
+  <li>我们不想让用户直接插入数据到流中或者直接从流中取出数据。这样会破坏存档。如果存档派生自流，就有可能这样做。所以存档类只定义了安全和必须的操作。
+    </li>
+
+
+
+  <li>在本库中我们用流来实现存档类，仅仅是为了方便 - 而不是必须的。库的用户如果想定义自己的存档格式，完全可以不使用流。
+  </li>
+
+
+
+</ul>
+
+
+
+
+<h2><a name="primitives"></a>存档成员是模板而不是虚拟函数</h2>
+
+本库的旧版本中，为所有基本类型定义了虚拟函数。它们会被每个存档类所覆写。这样就存在两个问题：
+
+    
+<ul>
+  <li>有些人不喜欢虚拟函数，因为这要增加程序的执行时间开销。
+    </li>
+  <li>这会导致实现困难，由于在不同的平台间，基本数据类型是不一样的。为了定义正确的虚拟函数集，(想象一下 <code style="white-space: normal;">long long</code>, 
+    <code style="white-space: normal;">__int64</code>, 等等)，会导致杂乱和脆弱的代码。以模板来代替虚拟函数，让编译器为要用的基本类型生成代码，可以解决这个问题。当然，这种设计的改变具有重大意义，可以生成更小、更快、更易于维护的代码。
+
+  
+  
+  </li>
+</ul>
+
+
+
+
+<li>
+  <h2><a name="strings"></a><code style="white-space: normal;"></code>在文本存档中对 <code style="white-space: normal;">std::string </code>的特殊处理</h2>
+
+
+
+
+  
+  
+  
+  <p>将字符串当作 STL 向量来处理可以得到最小的代码。不这样做的原因是：
+  </p>
+
+
+
+  
+  
+  
+  <ul>
+
+
+
+
+     <li>在文本存档中应该可以将字符串显示出来。我们的文本存档实现将单个字符保存为整数。将字符串按字符向量来保存既浪费空间，又不利于对存档进行调试。
+     </li>
+
+
+
+    <li>流的实现对于 <code style="white-space: normal;">std::string</code> 和 <code style="white-space: normal;">std::wstring</code> 都有特殊的处理函数。它们有可能都经过了优化。
+     </li>
+
+
+
+    <li><code style="white-space: normal;">std::basic_string</code> 的其它规格其实和元素类型的向量一致。
+    </li>
+
+
+
+  
+  
+  
+  </ul>
+
+
+
+
+
+  
+  
+  
+  <h2><a name="typeid"></a><code style="white-space: normal;">typeid</code> 信息不包含于存档中</h2>
+
+
+
+
+  
+  
+  
+  <p>原来我曾经想将由 <code style="white-space: normal;">std::type_of::name()</code> 得到的类名保存到存档中。但是这有困难，由于 <code style="white-space: normal;">std::type_of::name()</code> 不是可移植的，也不保证返回的是类名。这对于实现存档的可移植性毫无用处。该主题的详细解释请见
+  <a href="bibliography.html#6">[7] 第206页</a>。所以它不是必须的。只要对象严格按照保存时的顺序来导入，那么导入时的类型就是有效的。唯一的例外发生在遇到从未导入/保存过的多态指针时。这种情况的解决方法是 <code style="white-space: normal;">register_type()</code>
+和/或在参考中介绍的 <code style="white-space: normal;">export</code> 工具。实际，<code style="white-space: normal;">export</code> 生成了一个可移植的
+  <code style="white-space: normal;">typeid</code> 等效物。</p>
+  
+  
+  
+  <hr>
+  
+  
+  
+  <p><i>© Copyright <a href="http://www.rrsd.com">Robert Ramey</a> 2002-2004. 
+Distributed under the Boost Software License, Version 1.0. (See
+accompanying file LICENSE_1_0.txt or copy at http://www.boost.org/LICENSE_1_0.txt)
+  </i></p>
+
+
+
+
+</li>
+
+
+
+</body></html>

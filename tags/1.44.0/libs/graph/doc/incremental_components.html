@@ -1,0 +1,254 @@
+<!DOCTYPE HTML PUBLIC "-//W3C//DTD HTML 4.01 Transitional//EN">
+<html><head><meta content="text/html; charset=UTF-8" http-equiv="content-type"><!--
+  -- Copyright (c) Jeremy Siek, Lie-Quan Lee, and Andrew Lumsdaine 2000
+  --
+  -- Distributed under the Boost Software License, Version 1.0.
+  -- (See accompanying file LICENSE_1_0.txt or copy at
+  -- http://www.boost.org/LICENSE_1_0.txt)
+  -->
+<title>Boost Graph Library: Incremental Connected Components</title></head>
+<body alink="#ff0000" bgcolor="#ffffff" link="#0000ee" text="#000000" vlink="#551a8b"> 
+<img src="../../../boost.png" alt="C++ Boost" height="86" width="277"> 
+
+<br clear="">
+
+<h1>Incremental Connected Components 增量连通分支</h1>
+
+<p>
+本节介绍一组函数和类，它们共同协作完成对一个无向图的连通分支的计算。这里所用的算法是基于不相交集合(快速合并-查找)数据结构的[<a href="bibliography.html#clr90">8</a>,<a href="bibliography.html#tarjan83:_data_struct_network_algo">27</a>]，在图不断增长(加入新边)以及需要不断更新连通分支信息的情况下，这是一种好方法。不过这种方法不能用于既有加边也有减边的情况，因此它被称为 <b><i>增量的</i></b><a href="bibliography.html#eppstein97:dynamic_graph">[42]</a> (不是完全动态的)。不相交集合类在 <a href="../../disjoint_sets/disjoint_sets.html">不相交集合</a> 一节中介绍。
+
+</p><p>以下五种操作是用于计算和维护连通分支的基本函数。这里所用的对象有图 <tt>g</tt>, 不相交集合结构 <tt>ds</tt>, 以及顶点 <tt>u</tt> 和 <tt>v</tt>。
+
+</p><ul>
+<li><tt>initialize_incremental_components(g, ds)</tt> 
+<br>对不相交集合结构的基本初始化。图 <tt>g</tt> 中的每个顶点对应自身的一个集合。
+</li>
+<li><tt>incremental_components(g, ds)</tt> 
+<br>基于图
+    <tt>g</tt> 中的边以及 <tt>ds</tt> 中的信息计算连通分支。
+</li>
+<li><tt>ds.find_set(v)</tt> 
+<br>从不相交集合中获取顶点 <tt>v</tt> 的分支信息。
+</li>
+<li><tt>ds.union_set(u, v)</tt> 
+<br>在边 <i>(u,v)</i> 被加入至图中时，更新不相交集合结构。
+</li>
+</ul>
+
+<p>
+
+</p><h3>Complexity 复杂度</h3>
+
+<p>整个过程的时间复杂度为 <i>O(V + E
+alpha(E,V))</i>，其中 <i>E</i> 为图中的总边数(整个过程结束后)，<i>V</i> 为顶点数。<i>alpha</i> 是逆 Ackermann 函数，Ackermann 函数具有爆炸性的递归指数增长。因此逆 Ackermann 函数增长非常缓慢。对于所有有实际意义的输入，<i>alpha(m,n) &lt;= 4</i>，这意味着时间复杂度仅仅轻微大于 <i>O(V + E)</i>。
+
+</p><p>
+
+</p><h3>Example 示例</h3>
+
+<p>使用不相交集合数据结构，在往一个图中增加边时，维护其连通分支。该例子的完整源代码可以在 <a href="../example/incremental_components.cpp"><tt>examples/incremental_components.cpp</tt></a> 中找到。
+
+</p><pre>using namespace boost;<br><br>int main(int argc, char* argv[]) <br>{<br>  typedef adjacency_list <vecs ,="" undirecteds="" vecs=""> Graph;<br>  typedef graph_traits<graph>::vertex_descriptor Vertex;<br>  typedef graph_traits<graph>::vertices_size_type VertexIndex;<br><br>  const int VERTEX_COUNT = 6;<br>  Graph graph(VERTEX_COUNT);<br><br>  std::vector<vertexindex> rank(num_vertices(graph));<br>  std::vector<vertex> parent(num_vertices(graph));<br><br>  typedef VertexIndex* Rank;<br>  typedef Vertex* Parent;<br><br>  disjoint_sets<rank ,="" parent=""> ds(&amp;rank[0], &amp;parent[0]);<br><br>  initialize_incremental_components(graph, ds);<br>  incremental_components(graph, ds);<br><br>  graph_traits<graph>::edge_descriptor edge;<br>  bool flag;<br><br>  boost::tie(edge, flag) = add_edge(0, 1, graph);<br>  ds.union_set(0,1);<br><br>  boost::tie(edge, flag) = add_edge(1, 4, graph);<br>  ds.union_set(1,4);<br><br>  boost::tie(edge, flag) = add_edge(4, 0, graph);<br>  ds.union_set(4,0);<br><br>  boost::tie(edge, flag) = add_edge(2, 5, graph);<br>  ds.union_set(2,5);<br>    <br>  std::cout &lt;&lt; "An undirected graph:" &lt;&lt; std::endl;<br>  print_graph(graph, get(boost::vertex_index, graph));<br>  std::cout &lt;&lt; std::endl;<br>    <br>  BOOST_FOREACH(Vertex current_vertex, vertices(graph)) {<br>    std::cout &lt;&lt; "representative[" &lt;&lt; current_vertex &lt;&lt; "] = " &lt;&lt;<br>      ds.find_set(current_vertex) &lt;&lt; std::endl;<br>  }<br><br>  std::cout &lt;&lt; std::endl;<br><br>  typedef component_index<vertexindex> Components;<br><br>  // NOTE: Because we're using vecS for the graph type, we're<br>  // effectively using identity_property_map for a vertex index map.<br>  // If we were to use listS instead, the index map would need to be<br>  // explicity passed to the component_index constructor.<br>  Components components(parent.begin(), parent.end());<br><br>  // Iterate through the component indices<br>  BOOST_FOREACH(VertexIndex current_index, components) {<br>    std::cout &lt;&lt; "component " &lt;&lt; current_index &lt;&lt; " contains: ";<br><br>    // Iterate through the child vertex indices for [current_index]<br>    BOOST_FOREACH(VertexIndex child_index,<br>                  components[current_index]) {<br>      std::cout &lt;&lt; child_index &lt;&lt; " ";<br>    }<br><br>    std::cout &lt;&lt; std::endl;<br>  }<br><br>  return (0);<br>}</vertexindex></graph></rank></vertex></vertexindex></graph></graph></vecs><br></pre>
+
+<p>
+</p><hr>
+<p>
+
+</p><h2><a name="sec:initialize-incremental-components"></a>
+<tt>initialize_incremental_components</tt>
+</h2>
+
+<p>
+</p><div align="left">
+<table border="1" cellpadding="3">
+<tbody><tr><th align="left"><b>图：</b></th>
+<td align="left">无向</td>
+</tr>
+<tr><th align="left"><b>属性：</b></th>
+<td align="left">秩，(在不相交集合中的)父节点</td>
+</tr>
+<tr><th align="left"><b>复杂度：</b></th>
+<td></td>
+</tr>
+</tbody></table>
+</div>
+
+<p>
+</p><pre>template &lt;class VertexListGraph, class DisjointSets&gt; <br>void initialize_incremental_components(VertexListGraph&amp; G, DisjointSets&amp; ds)<br></pre>
+
+<p>为增量连通分支算法准备不相交集合数据结构，将图中每个顶点作为其自身分支(或集合)的成员。
+
+</p><p>
+
+</p><h3>Where Defined 定义于</h3>
+
+<p>
+<a href="../../../boost/graph/incremental_components.hpp"><tt>boost/graph/incremental_components.hpp</tt></a>
+
+</p><p>
+</p><hr>
+<p>
+
+</p><h2><a name="sec:incremental-components"></a>
+<tt>incremental_components</tt>
+</h2>
+
+<p>
+</p><div align="left">
+<table border="1" cellpadding="3">
+<tbody><tr><th align="left"><b>图：</b></th>
+<td align="left">无向</td>
+</tr>
+<tr><th align="left"><b>属性：</b></th>
+<td align="left">秩，(在不相交集合中的)父节点</td>
+</tr>
+<tr><th align="left"><b>复杂度：</b></th>
+<td align="left"><i>O(E)</i></td>
+</tr>
+</tbody></table>
+</div>
+
+<p>
+</p><pre>template &lt;class EdgeListGraph, class DisjointSets&gt;<br>void incremental_components(EdgeListGraph&amp; g, DisjointSets&amp; ds)<br></pre>
+
+<p>该函数计算该图的连通分支，将结果嵌入到不相交集合的数据结构中。
+
+</p><p>
+
+</p><h3>Where Defined 定义于</h3>
+
+<p>
+<a href="../../../boost/graph/incremental_components.hpp"><tt>boost/graph/incremental_components.hpp</tt></a>
+
+</p><p>
+
+</p><h3>Requirements on Types 对类型的要求</h3>
+
+<ul>
+<li>图的类型必须符合 <a href="./EdgeListGraph.html">边列表图EdgeListGraph</a>。
+</li>
+</ul>
+
+<p>
+</p><hr>
+<p>
+
+</p><h2><a name="sec:same-component">
+<tt>same_component</tt></a>
+</h2>
+
+<p>
+</p><div align="left">
+<table border="1" cellpadding="3">
+<tbody><tr><th align="left"><b>属性：</b></th>
+<td align="left">秩，(在不相交集合中的)父节点</td>
+</tr>
+<tr><th align="left"><b>复杂度：</b></th>
+<td align="left"><i>O(alpha(E,V))</i></td>
+</tr>
+</tbody></table>
+</div>
+
+<p>
+</p><pre>template &lt;class Vertex, class DisjointSet&gt;<br>bool same_component(Vertex u, Vertex v, DisjointSet&amp; ds)<br></pre>
+
+<p>该函数判断 <tt>u</tt> 与 <tt>v</tt> 是否属于同一个分支。
+
+</p><p>
+
+</p><h3>Where Defined 定义于</h3>
+
+<p>
+<a href="../../../boost/graph/incremental_components.hpp"><tt>boost/graph/incremental_components.hpp</tt></a>
+
+</p><p>
+
+</p><h3>Requirements on Types 对类型的要求</h3>
+
+<ul>
+<li><tt>Vertex</tt> 必须兼容于 <tt>DisjointSets</tt> 数据结构的 rank 和 parent
+    属性映射。
+</li>
+</ul>
+
+<p>
+</p><hr>
+<p>
+
+</p><h2><a name="sec:component-index"></a>
+<tt>component_index</tt>
+</h2>
+
+<p>
+</p><pre>component_index&lt;Index&gt;<br></pre><p>类 <tt>component_index</tt> 为图的分支提供一个类似于STL容器的视图。每个分支是一个类似于容器的对象，<tt>component_index</tt> 对象提供通过 <tt>operator[]</tt>&nbsp;对分支对象的访问。<tt>component_index</tt>
+对象是用从 <tt>incremental_components()</tt> 函数计算得到的不相交集合中的父节点属性进行初始化的。可以可选地传入一个 vertex -&gt; index 属性映射(缺省情况下使用 <tt>identity_property_map</tt>)。 </p><h3>Where Defined 定义于</h3>
+
+<p>
+<a href="../../../boost/graph/incremental_components.hpp"><tt>boost/graph/incremental_components.hpp</tt></a>
+
+</p><p>
+
+</p><h3>Members 成员</h3>
+
+<p>
+ 
+<table border="1">
+
+<tbody><tr>
+<th>成员</th> <th>说明</th>
+</tr>
+
+
+
+
+<tr>
+<td><tt>value_type/size_type</tt></td>
+<td>分支索引的类型(和 <tt>Index</tt> 相同)。
+</td>
+</tr>
+ 
+<tr><td><tt>size_type size()</tt></td>
+<td>返回图中的分支数量。 </td></tr>
+
+<tr>
+<td><tt>iterator/const_iterator</tt></td>
+<td>迭代器，用于遍历有效的分支索引 [0 to 
+<tt>size()</tt>).
+</td>
+</tr>
+
+
+
+<tr>
+<td><tt>iterator&nbsp;begin() const</tt></td>
+<td>返回一个迭代器，指向开始分支的索引 (0). 
+</td>
+</tr>
+
+<tr>
+<td><tt>iterator&nbsp;end() const</tt></td>
+<td>返回一个迭代器，指向开始分支的索引 (<tt>size()</tt>). 
+</td>
+</tr><tr>
+
+</tr><tr><td><tt>std::pair&lt;component_iterator, component_iterator&gt; 
+operator[size_type index] const</tt></td>
+<td>返回一对迭代器，指向索引位于 [0, <tt>size()</tt>) 的分支。 </td></tr>
+
+
+
+</tbody></table> 
+
+<br>
+</p><hr>
+<table>
+<tbody><tr valign="top">
+<td nowrap="nowrap">Copyright © 2000-2001</td><td>
+<a href="http://www.boost.org/people/jeremy_siek.htm">Jeremy Siek</a>,
+Indiana University (<a href="mailto:jsiek@osl.iu.edu">jsiek@osl.iu.edu</a>)<br>
+<a href="http://www.boost.org/people/liequan_lee.htm">Lie-Quan Lee</a>, Indiana University (<a href="mailto:llee@cs.indiana.edu">llee@cs.indiana.edu</a>)<br>
+<a href="http://www.osl.iu.edu/%7Elums">Andrew Lumsdaine</a>,
+Indiana University (<a href="mailto:lums@osl.iu.edu">lums@osl.iu.edu</a>)
+</td></tr></tbody></table>
+
+</body></html>

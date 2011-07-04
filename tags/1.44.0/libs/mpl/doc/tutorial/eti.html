@@ -1,0 +1,152 @@
+<!DOCTYPE html PUBLIC "-//W3C//DTD XHTML 1.0 Transitional//EN" "http://www.w3.org/TR/xhtml1/DTD/xhtml1-transitional.dtd">
+<html xmlns="http://www.w3.org/1999/xhtml" xml:lang="en" lang="en">
+<head>
+<!-- Copyright Aleksey Gurtovoy 2006. Distributed under the Boost --><!-- Software License, Version 1.0. (See accompanying --><!-- file LICENSE_1_0.txt or copy at http://www.boost.org/LICENSE_1_0.txt) -->
+
+  
+  <meta http-equiv="Content-Type" content="text/html; charset=utf-8" />
+
+
+  
+  <meta name="generator" content="Docutils 0.3.6: http://docutils.sourceforge.net/" />
+
+
+
+  
+  
+  <title>THE BOOST MPL LIBRARY: ETI</title>
+  <link rel="stylesheet" href="../style.css" type="text/css" />
+</head>
+
+
+<body class="docframe">
+
+
+<table class="header">
+
+  <tbody>
+
+    <tr class="header">
+
+      <td class="header-group navigation-bar"><span class="navigation-group"><a href="./incomplete-support-for.html" class="navigation-link">Prev</a>&nbsp;<a href="./resources.html" class="navigation-link">Next</a></span><span class="navigation-group-separator">&nbsp;|&nbsp;</span><span class="navigation-group"><a href="./incomplete-support-for.html" class="navigation-link">Back</a>&nbsp;Along</span><span class="navigation-group-separator">&nbsp;|&nbsp;</span><span class="navigation-group"><a href="./portability.html" class="navigation-link">Up</a>&nbsp;<a href="../index.html" class="navigation-link">Home</a></span><span class="navigation-group-separator">&nbsp;|&nbsp;</span><span class="navigation-group"><a href="./tutorial_toc.html" class="navigation-link">Full TOC</a></span></td>
+
+
+      <td class="header-group page-location"><a href="../index.html" class="navigation-link">标题页</a> / <a href="technical-details.html" class="navigation-link">技术细节</a>&nbsp;/ <a href="portability.html" class="navigation-link">可移植性</a>&nbsp;/ <a href="./eti.html" class="navigation-link">ETI</a></td>
+
+
+    </tr>
+
+  
+  </tbody>
+</table>
+
+<div class="header-separator"></div>
+
+
+<div class="section" id="eti">
+<h1><a class="toc-backref" href="./portability.html#id76" name="eti">ETI</a></h1>
+
+
+<p>在C++模板问题的语境中，ETI 是 "Early
+Template Instantiation" 的缩写 &mdash; 一个 Microsoft Visual C++
+特有的问题，这一问题成为了在该平台上以模板进行严肃的开发工作的障碍，直到 Microsoft 的开发人员在 Visual C++ 7.1
+(2003
+.NET)中对其进行了修正。虽然只要采用正确的技术，这个问题可以相对容易地回避掉，但是解决的方法也非常乏味和浪费时间。所以，如果有一天你发现你在
+这个问题上花费了太多时间，请考虑升级到较新版本的编译器。你真的应该认真考虑这件事。所获得的好处包括节省时间、金钱、避免挫折，这些都值得升级的代价
+了。</p>
+
+
+<div class="section" id="eti-the-problem">
+<h2><a name="eti-the-problem">问题</a></h2>
+
+
+<p>以下是对 MSVC 6.x 的这个问题的一个简短的示例：</p>
+
+
+<pre class="literal-block">template&lt; typename F, typename T &gt; struct apply1<br />{<br />    typedef typename F::template apply&lt;T&gt;::type type;<br />};<br /></pre>
+
+
+<p>尝试编译这段看起来没有问题的代码，我们会得到：</p>
+
+
+<pre class="literal-block">portability.cpp(4) : error C2903: 'apply' : symbol is neither a class template <br />            nor a function template<br />        portability.cpp(5) : see reference to class template instantiation <br />            'apply1&lt;F,T&gt;' being compiled<br />portability.cpp(4) : error C2143: syntax error : missing ',' before '&lt;'<br />        portability.cpp(5) : see reference to class template instantiation <br />            'apply1&lt;F,T&gt;' being compiled<br />portability.cpp(4) : error C2059: syntax error : '&lt;'<br />        portability.cpp(5) : see reference to class template instantiation <br />            'apply1&lt;F,T&gt;' being compiled<br /></pre>
+
+
+<p>错误提示 "symbol is neither a class template nor a function template" 通常就表明是 ETI-相关的问题。另一个典型的错误信息通常是说，某种这样或那样的嵌套类型不是一个全局名字空间的成员。</p>
+
+
+<p>这两种情况是同一个编译器缺陷的两个方面，即我们所说的
+"Early template instantiation": 编译器由于内部的原因，为了处理类模板的定义，以某个虚构的模板参数(<tt class="literal"><span class="pre">int</span></tt>'s)对类模板进行实例化。这可能发生在分析模板定义时(这种错误较容易确认并修正 &mdash;
+只是模板定义本身不能编译，前面的例子就属于这种情形)，或者是发生在模板实例时，这种情形较难发觉 &mdash; 缺陷只在某些特定的上下文中触发。</p>
+
+
+<!-- namespace-scope: nested templates are immune? -->
+<p>在分析名字空间范围的模板定义时，总会执行 ETI，这基本上意味着任何以 <tt class="literal"><span class="pre">int</span></tt>s 替代其模板参数后会无效的模板定义都不能编译，这正好发生在我们的例子中：</p>
+
+
+<pre class="literal-block">template&lt; typename F, typename T &gt; struct apply1<br />{<br />    // typedef typename F::template apply&lt;T&gt;::type type;<br />    // ETI 会生成: <br />    typedef typename int::template apply&lt;int&gt;::type type;<br />};<br /></pre>
+
+
+<p>如果你编译这些代码，你将得到我们前面看到的错误信息。</p>
+
+
+<p>注意，我们说的是 "可能不能编译"，因为... 唔，简单的回答是，"它是有条件的"。我们没有对此进行分析，不能准确地告诉你什么条件下
+ETI 会导致错误以及什么条件下不会，不过这并不重要 &mdash;
+如果它有错误，你就修复它(我们待会将示范如何修复)，如果它没有错误，则保持原状。如果某一天潜在的问题变成了真正的问题，那么你就使用我们告诉你的办
+法吧。</p>
+
+
+</div>
+
+
+<div class="section" id="eti-the-symptoms">
+<h2><a name="eti-the-symptoms">征兆</a></h2>
+
+
+<p>我们已经看到了典型的错误提示，不再重复了。我们要提醒的是，事实上，很多 MSVC 的 INTERNAL COMPILER ERRORs (ICEs) 都是由ETI-相关的问题引起的。</p>
+
+
+</div>
+
+
+<div class="section" id="eti-the-solution">
+<h2><a name="eti-the-solution">解决的方法</a></h2>
+
+
+<p>在这种情形下，我们没有办法改变编译器的行为，所以我们必须做的就是修改我们的模板并使它还是完成我们想要做的事情。令人惊奇的是，在多数情形下这种修正很简单：</p>
+
+
+<pre class="literal-block">// 可能不安全<br />template&lt; typename F &gt; struct apply0<br />{<br />    typedef typename F::type type;<br />};<br /><br />// 现在是 ETI-安全的<br />template&lt;&gt; struct apply0&lt;int&gt;<br />{<br />    typedef int type;<br />};<br /></pre>
+
+
+<p>为了原先的模板再不会被使用 <tt class="literal"><span class="pre">int</span></tt> 来实例化，只需提供一个简短的 <tt class="literal"><span class="pre">int</span></tt> 特化就可以了。</p>
+
+
+<!-- Looks like you're missing lots of stuff, like ETI_BASE - - no? -->
+</div>
+
+
+</div>
+
+
+
+<div class="footer-separator"></div>
+
+
+<table class="footer">
+
+  <tbody>
+
+    <tr class="footer">
+
+      <td class="header-group navigation-bar"><span class="navigation-group"><a href="./incomplete-support-for.html" class="navigation-link">Prev</a>&nbsp;<a href="./resources.html" class="navigation-link">Next</a></span><span class="navigation-group-separator">&nbsp;|&nbsp;</span><span class="navigation-group"><a href="./incomplete-support-for.html" class="navigation-link">Back</a>&nbsp;Along</span><span class="navigation-group-separator">&nbsp;|&nbsp;</span><span class="navigation-group"><a href="./portability.html" class="navigation-link">Up</a>&nbsp;<a href="../index.html" class="navigation-link">Home</a></span><span class="navigation-group-separator">&nbsp;|&nbsp;</span><span class="navigation-group"><a href="./tutorial_toc.html" class="navigation-link">Full TOC</a></span></td>
+
+
+    </tr>
+
+  
+  </tbody>
+</table>
+
+</body>
+</html>

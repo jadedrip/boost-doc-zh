@@ -1,0 +1,688 @@
+<!DOCTYPE HTML PUBLIC "-//W3C//DTD HTML 4.01 Transitional//EN">
+<html><head>
+<meta http-equiv="Content-Type" content="text/html; charset=UTF-8">
+
+<title>Containers with custom ValueTraits</title><link rel="stylesheet" href="../boostbook.css" type="text/css">
+<meta name="generator" content="DocBook XSL Stylesheets V1.73.2">
+<link rel="start" href="../index.html" title="The Boost C++ Libraries BoostBook Documentation Subset">
+<link rel="up" href="../intrusive.html" title="Chapter&nbsp;10.&nbsp;Boost.Intrusive">
+<link rel="prev" href="node_algorithms.html" title="Node algorithms with custom NodeTraits">
+<link rel="next" href="thread_safety.html" title="Thread safety guarantees"></head>
+<body alink="#0000ff" bgcolor="white" link="#0000ff" text="black" vlink="#840084">
+<table cellpadding="2" width="100%"><tbody><tr>
+<td valign="top"><img alt="Boost C++ Libraries" src="../../../boost.png" height="86" width="277"></td>
+<td align="center"><a href="../../../index.html">Home</a></td>
+<td align="center"><a href="../../../libs/libraries.htm">Libraries</a></td>
+<td align="center"><a href="http://www.boost.org/users/people.html">People</a></td>
+<td align="center"><a href="http://www.boost.org/users/faq.html">FAQ</a></td>
+<td align="center"><a href="../../../more/index.htm">More</a></td>
+</tr></tbody></table>
+<hr>
+<div class="spirit-nav">
+<a accesskey="p" href="node_algorithms.html"><img src="../../../doc/html/images/prev.png" alt="Prev"></a><a accesskey="u" href="../intrusive.html"><img src="../../../doc/html/images/up.png" alt="Up"></a><a accesskey="h" href="../index.html"><img src="../../../doc/html/images/home.png" alt="Home"></a><a accesskey="n" href="thread_safety.html"><img src="../../../doc/html/images/next.png" alt="Next"></a>
+</div>
+<div class="section" lang="en">
+<div class="titlepage"><div><div><h2 class="title" style="clear: both;">
+<a name="intrusive.value_traits"></a><a class="link" href="value_traits.html" title="Containers with custom ValueTraits"> Containers with custom ValueTraits 带定制化 ValueTraits 的容器</a>
+</h2></div></div></div>
+<div class="toc"><dl>
+<dt><span class="section"><a href="value_traits.html#intrusive.value_traits.value_traits_interface"> ValueTraits
+      interface &nbsp;ValueTraits 接口</a></span></dt>
+<dt><span class="section"><a href="value_traits.html#intrusive.value_traits.value_traits_example"> Custom
+      ValueTraits example 定制化 ValueTraits 的例子</a></span></dt>
+<dt><span class="section"><a href="value_traits.html#intrusive.value_traits.reusing_node_algorithms"> Reusing
+      node algorithms for different values 为不同值重用节点算法</a></span></dt>
+<dt><span class="section"><a href="value_traits.html#intrusive.value_traits.simplifying_value_traits"> Simplifying
+      value traits definition 简化 value traits 的定义</a></span></dt>
+<dt><span class="section"><a href="value_traits.html#intrusive.value_traits.stateful_value_traits"> Stateful
+      value traits 有状态的值 traits</a></span></dt>
+</dl></div>
+<p>
+      As explained in the <a class="link" href="concepts.html" title="Concepts explained">Concepts</a> section,
+      <span class="bold"><strong>Boost.Intrusive</strong></span> containers need a <code class="computeroutput"><span class="identifier">ValueTraits</span></code> class to perform transformations
+      between nodes and user values. <code class="computeroutput"><span class="identifier">ValueTraits</span></code>
+      can be explicitly configured (using the <code class="computeroutput"><span class="identifier">value_traits</span><span class="special">&lt;&gt;</span></code> option) or implicitly configured (using
+      hooks and their <code class="computeroutput"><span class="identifier">base_hook</span><span class="special">&lt;&gt;</span></code>/<code class="computeroutput"><span class="identifier">member_hook</span><span class="special">&lt;&gt;</span></code>
+      options). <code class="computeroutput"><span class="identifier">ValueTraits</span></code> contains
+      all the information to glue the <code class="computeroutput"><span class="identifier">value_type</span></code>
+      of the containers and the node to be used in node algorithms, since these types
+      can be different. Apart from this, <code class="computeroutput"><span class="identifier">ValueTraits</span></code>
+      also stores information about the link policy of the values to be inserted.<br>正如在 <a class="link" href="concepts.html" title="Concepts explained">概念</a> 一节所说的，<span class="bold"><strong>Boost.Intrusive</strong></span> 容器需要一个 <code class="computeroutput"><span class="identifier">ValueTraits</span></code> 类来执行节点与用户值之间的转换。<code class="computeroutput"><span class="identifier">ValueTraits</span></code>
+      可以显式配置(使用 <code class="computeroutput"><span class="identifier">value_traits</span><span class="special">&lt;&gt;</span></code> 选项)或隐式配置(使用钩子和它们的 <code class="computeroutput"><span class="identifier">base_hook</span><span class="special">&lt;&gt;</span></code>/<code class="computeroutput"><span class="identifier">member_hook</span><span class="special">&lt;&gt;</span></code>
+      选项)。<code class="computeroutput"><span class="identifier">ValueTraits</span></code> 包含了用于将容器的 <code class="computeroutput"><span class="identifier">value_type</span></code>
+      与节点算法中所使用的节点粘合起来的所有信息，因为这两种类型是不同的。除此之外，<code class="computeroutput"><span class="identifier">ValueTraits</span></code>
+      还保存了有关被插入的值的链接策略的信息。
+    </p>
+<p>
+      Instead of using <span class="bold"><strong>Boost.Intrusive</strong></span> predefined
+      hooks a user might want to develop customized containers, for example, using
+      nodes that are optimized for a specific application or that are compatible
+      with a a legacy ABI. A user might want to have only two additional pointers
+      in his class and insert the class in a doubly linked list sometimes and in
+      a singly linked list in other situations. You can't achieve this using <span class="bold"><strong>Boost.Intrusive</strong></span> predefined hooks. Now, instead of using
+      <code class="computeroutput"><span class="identifier">base_hook</span><span class="special">&lt;...&gt;</span></code>
+      or <code class="computeroutput"><span class="identifier">member_hook</span><span class="special">&lt;...&gt;</span></code>
+      options the user will specify the <code class="computeroutput"><span class="identifier">value_traits</span><span class="special">&lt;...&gt;</span></code> options. Let's see how we can do
+      this:<br>用户可能不想使用 <span class="bold"><strong>Boost.Intrusive</strong></span> 预定义的钩子，而想开发定制化的容器，例如，使用一些为特定应用优化的节点，或者是兼容于遗留ABI的节点。用户可能只是想为他的类增加两个指针，并且有时将这个类插入到一个双链表中，有时又插入到一个单链表中。你不能用 <span class="bold"><strong>Boost.Intrusive</strong></span>&nbsp;预定义的钩子来完成这一任务。现在，不要使用
+      <code class="computeroutput"><span class="identifier">base_hook</span><span class="special">&lt;...&gt;</span></code> 或 <code class="computeroutput"><span class="identifier">member_hook</span><span class="special">&lt;...&gt;</span></code>
+      选项，用户要给出 <code class="computeroutput"><span class="identifier">value_traits</span><span class="special">&lt;...&gt;</span></code> 选项。我们来看看该怎样做：
+    </p>
+<div class="section" lang="en">
+<div class="titlepage"><div><div><h3 class="title">
+<a name="intrusive.value_traits.value_traits_interface"></a><a class="link" href="value_traits.html#intrusive.value_traits.value_traits_interface" title="ValueTraits interface"> ValueTraits
+      interface &nbsp;ValueTraits 接口</a>
+</h3></div></div></div>
+
+<p>
+        <code class="computeroutput"><span class="identifier">ValueTraits</span></code> has the following
+        interface:<br><code class="computeroutput"><span class="identifier">ValueTraits</span></code> 具有以下接口：</p>
+<pre class="programlisting"><span class="preprocessor">#include</span> <span class="special">&lt;</span><span class="identifier">boost</span><span class="special">/</span><span class="identifier">pointer_to_other</span><span class="special">.</span><span class="identifier">hpp</span><span class="special">&gt;</span>
+<span class="preprocessor">#include</span> <span class="special">&lt;</span><span class="identifier">boost</span><span class="special">/</span><span class="identifier">intrusive</span><span class="special">/</span><span class="identifier">link_mode</span><span class="special">.</span><span class="identifier">hpp</span><span class="special">&gt;</span>
+
+<span class="keyword">struct</span> <span class="identifier">my_value_traits</span>
+<span class="special">{</span>
+   <span class="keyword">typedef</span> <span class="identifier">implementation_defined</span>                                    <span class="identifier">node_traits</span><span class="special">;</span>
+   <span class="keyword">typedef</span> <span class="identifier">implementation_defined</span>                                    <span class="identifier">value_type</span><span class="special">;</span>
+   <span class="keyword">typedef</span> <span class="identifier">node_traits</span><span class="special">::</span><span class="identifier">node_ptr</span>                                     <span class="identifier">node_ptr</span><span class="special">;</span>
+   <span class="keyword">typedef</span> <span class="identifier">node_traits</span><span class="special">::</span><span class="identifier">const_node_ptr</span>                               <span class="identifier">const_node_ptr</span><span class="special">;</span>
+   <span class="keyword">typedef</span> <span class="identifier">boost</span><span class="special">::</span><span class="identifier">pointer_to_other</span><span class="special">&lt;</span><span class="identifier">node_ptr</span><span class="special">,</span> <span class="identifier">value_type</span><span class="special">&gt;::</span><span class="identifier">type</span>       <span class="identifier">pointer</span><span class="special">;</span>
+   <span class="keyword">typedef</span> <span class="identifier">boost</span><span class="special">::</span><span class="identifier">pointer_to_other</span><span class="special">&lt;</span><span class="identifier">node_ptr</span><span class="special">,</span> <span class="keyword">const</span> <span class="identifier">value_type</span><span class="special">&gt;::</span><span class="identifier">type</span> <span class="identifier">const_pointer</span><span class="special">;</span>
+
+   <span class="keyword">static</span> <span class="keyword">const</span> <span class="identifier">link_mode_type</span> <span class="identifier">link_mode</span> <span class="special">=</span> <span class="identifier">some_linking_policy</span><span class="special">;</span>
+
+   <span class="keyword">static</span> <span class="identifier">node_ptr</span>       <span class="identifier">to_node_ptr</span>    <span class="special">(</span><span class="identifier">value_type</span> <span class="special">&amp;</span><span class="identifier">value</span><span class="special">);</span>
+   <span class="keyword">static</span> <span class="identifier">const_node_ptr</span> <span class="identifier">to_node_ptr</span>    <span class="special">(</span><span class="keyword">const</span> <span class="identifier">value_type</span> <span class="special">&amp;</span><span class="identifier">value</span><span class="special">);</span>
+   <span class="keyword">static</span> <span class="identifier">pointer</span>        <span class="identifier">to_value_ptr</span>   <span class="special">(</span><span class="identifier">node_ptr</span> <span class="identifier">n</span><span class="special">);</span>
+   <span class="keyword">static</span> <span class="identifier">const_pointer</span>  <span class="identifier">to_value_ptr</span>   <span class="special">(</span><span class="identifier">const_node_ptr</span> <span class="identifier">n</span><span class="special">);</span>
+<span class="special">};</span>
+</pre>
+<p>
+        Let's explain each type and function:<br>我们来解释一下各个类型和函数：
+      </p>
+<div class="itemizedlist"><ul type="disc">
+<li>
+<span class="bold"><strong><span class="emphasis"><em>node_traits</em></span></strong></span>: The
+          node configuration that is needed by node algorithms. These node traits
+          and algorithms are described in the previous chapter: <a class="link" href="node_algorithms.html" title="Node algorithms with custom NodeTraits">Node
+          Algorithms</a>.<br><span class="bold"><strong><span class="emphasis"><em>node_traits</em></span></strong></span>: 节点算法所需的节点配置信息。这些节点 traits
+          和算法在前面的章节中已有说明：<a class="link" href="node_algorithms.html" title="Node algorithms with custom NodeTraits">节点算法</a>。
+          <div class="itemizedlist"><ul type="circle">
+<li>
+              If my_value_traits is meant to be used with <code class="computeroutput"><a class="link" href="../boost/intrusive/slist.html" title="Class template slist">slist</a></code>,
+              <code class="computeroutput"><span class="identifier">node_traits</span></code> should
+              follow the interface needed by <code class="computeroutput"><a class="link" href="../boost/intrusive/circular_slist_algorithms.html" title="Class template circular_slist_algorithms">circular_slist_algorithms</a></code>.<br>如果 my_value_traits 打算要用于 <code class="computeroutput"><a class="link" href="../boost/intrusive/slist.html" title="Class template slist">slist</a></code>，则
+              <code class="computeroutput"><span class="identifier">node_traits</span></code> 应遵循 <code class="computeroutput"><a class="link" href="../boost/intrusive/circular_slist_algorithms.html" title="Class template circular_slist_algorithms">circular_slist_algorithms</a></code> 所需的接口。
+            </li>
+<li>
+              If my_value_traits is meant to be used with <code class="computeroutput"><a class="link" href="../boost/intrusive/list.html" title="Class template list">list</a></code>,
+              <code class="computeroutput"><span class="identifier">node_traits</span></code> should
+              follow the interface needed by <code class="computeroutput"><a class="link" href="../boost/intrusive/circular_list_algorithms.html" title="Class template circular_list_algorithms">circular_list_algorithms</a></code>.<br>如果 my_value_traits 打算要用于 <code class="computeroutput"><a class="link" href="../boost/intrusive/list.html" title="Class template list">list</a></code>，则
+              <code class="computeroutput"><span class="identifier">node_traits</span></code> 应遵循 <code class="computeroutput"><a class="link" href="../boost/intrusive/circular_list_algorithms.html" title="Class template circular_list_algorithms">circular_list_algorithms</a></code> 所需的接口。
+            </li>
+<li>
+              If my_value_traits is meant to be used with <code class="computeroutput"><a class="link" href="../boost/intrusive/set.html" title="Class template set">set</a></code>/<code class="computeroutput"><a class="link" href="../boost/intrusive/multiset.html" title="Class template multiset">multiset</a></code>, <code class="computeroutput"><span class="identifier">node_traits</span></code> should follow the interface
+              needed by <code class="computeroutput"><a class="link" href="../boost/intrusive/rbtree_algorithms.html" title="Class template rbtree_algorithms">rbtree_algorithms</a></code>.<br>如果 my_value_traits 打算要用于 <code class="computeroutput"><a class="link" href="../boost/intrusive/set.html" title="Class template set">set</a></code>/<code class="computeroutput"><a class="link" href="../boost/intrusive/multiset.html" title="Class template multiset">multiset</a></code>，则 <code class="computeroutput"><span class="identifier">node_traits</span></code> 应遵循 <code class="computeroutput"><a class="link" href="../boost/intrusive/rbtree_algorithms.html" title="Class template rbtree_algorithms">rbtree_algorithms</a></code> 所需的接口。
+            </li>
+<li>
+              If my_value_traits is meant to be used with <code class="computeroutput"><a class="link" href="../boost/intrusive/unordered_set.html" title="Class template unordered_set">unordered_set</a></code>/
+              <code class="computeroutput"><a class="link" href="../boost/intrusive/unordered_multiset.html" title="Class template unordered_multiset">unordered_multiset</a></code>,
+              <code class="computeroutput"><span class="identifier">node_traits</span></code> should
+              follow the interface needed by <code class="computeroutput"><a class="link" href="../boost/intrusive/circular_slist_algorithms.html" title="Class template circular_slist_algorithms">circular_slist_algorithms</a></code>.<br>如果 my_value_traits 打算要用于 <code class="computeroutput"><a class="link" href="../boost/intrusive/unordered_set.html" title="Class template unordered_set">unordered_set</a></code>/
+              <code class="computeroutput"><a class="link" href="../boost/intrusive/unordered_multiset.html" title="Class template unordered_multiset">unordered_multiset</a></code>，则 <code class="computeroutput"><span class="identifier">node_traits</span></code> 应遵循 <code class="computeroutput"><a class="link" href="../boost/intrusive/circular_slist_algorithms.html" title="Class template circular_slist_algorithms">circular_slist_algorithms</a></code> 所需的接口。
+            </li>
+</ul></div>
+</li>
+<li>
+<span class="bold"><strong><span class="emphasis"><em>node_ptr</em></span></strong></span>: A typedef
+          for <code class="computeroutput"><span class="identifier">node_traits</span><span class="special">::</span><span class="identifier">node_ptr</span></code>.<br><span class="bold"><strong><span class="emphasis"><em>node_ptr</em></span></strong></span>:&nbsp;<code class="computeroutput"><span class="identifier">node_traits</span><span class="special">::</span><span class="identifier">node_ptr</span></code> 的 typedef。 
+        </li>
+<li>
+<span class="bold"><strong><span class="emphasis"><em>const_node_ptr</em></span></strong></span>: A
+          typedef for <code class="computeroutput"><span class="identifier">node_traits</span><span class="special">::</span><span class="identifier">const_node_ptr</span></code>.<br><span class="bold"><strong><span class="emphasis"><em>const_node_ptr</em></span></strong></span>:&nbsp;<code class="computeroutput"><span class="identifier">node_traits</span><span class="special">::</span><span class="identifier">const_node_ptr</span></code>&nbsp;的 typedef。
+        </li>
+<li>
+<span class="bold"><strong><span class="emphasis"><em>value_type</em></span></strong></span>: The type
+          that the user wants to insert in the container. This type can be the same
+          as <code class="computeroutput"><span class="identifier">node_traits</span><span class="special">::</span><span class="identifier">node</span></code> but it can be different (for example,
+          <code class="computeroutput"><span class="identifier">node_traits</span><span class="special">::</span><span class="identifier">node</span></code> can be a member type of <code class="computeroutput"><span class="identifier">value_type</span></code>). If <code class="computeroutput"><span class="identifier">value_type</span></code>
+          and <code class="computeroutput"><span class="identifier">node_traits</span><span class="special">::</span><span class="identifier">node</span></code> are the same type, the <code class="computeroutput"><span class="identifier">to_node_ptr</span></code> and <code class="computeroutput"><span class="identifier">to_value_ptr</span></code>
+          functions are trivial.<br><span class="bold"><strong><span class="emphasis"><em>value_type</em></span></strong></span>: 用户想要插入到容器中的类型。该类型可以与 <code class="computeroutput"><span class="identifier">node_traits</span><span class="special">::</span><span class="identifier">node</span></code> 相同，也可以不同(例如，<code class="computeroutput"><span class="identifier">node_traits</span><span class="special">::</span><span class="identifier">node</span></code> 可以是 <code class="computeroutput"><span class="identifier">value_type</span></code> 的一个成员类型)。如果 <code class="computeroutput"><span class="identifier">value_type</span></code> 和 <code class="computeroutput"><span class="identifier">node_traits</span><span class="special">::</span><span class="identifier">node</span></code> 为相同类型，则 <code class="computeroutput"><span class="identifier">to_node_ptr</span></code> 和 <code class="computeroutput"><span class="identifier">to_value_ptr</span></code>
+          函数就是平凡的。
+        </li>
+<li>
+<span class="bold"><strong><span class="emphasis"><em>pointer</em></span></strong></span>: The type
+          of a pointer to a <code class="computeroutput"><span class="identifier">value_type</span></code>.
+          It must be the same pointer type as <code class="computeroutput"><span class="identifier">node_ptr</span></code>:
+          If <code class="computeroutput"><span class="identifier">node_ptr</span></code> is <code class="computeroutput"><span class="identifier">node</span><span class="special">*</span></code>,
+          <code class="computeroutput"><span class="identifier">pointer</span></code> must be <code class="computeroutput"><span class="identifier">value_type</span><span class="special">*</span></code>.
+          If <code class="computeroutput"><span class="identifier">node_ptr</span></code> is <code class="computeroutput"><span class="identifier">smart_ptr</span><span class="special">&lt;</span><span class="identifier">node_traits</span><span class="special">::</span><span class="identifier">node</span><span class="special">&gt;</span></code>,
+          <code class="computeroutput"><span class="identifier">pointer</span></code> must be <code class="computeroutput"><span class="identifier">smart_ptr</span><span class="special">&lt;</span><span class="identifier">value_type</span><span class="special">&gt;</span></code>.
+          This can be generically achieved using <code class="computeroutput"><span class="identifier">boost</span><span class="special">::</span><span class="identifier">pointer_to_other</span></code>
+          utility from <span class="bold"><strong>Boost SmartPointers</strong></span> defined
+          in <code class="computeroutput"><span class="special">&lt;</span><span class="identifier">boost</span><span class="special">/</span><span class="identifier">pointer_to_other</span><span class="special">.</span><span class="identifier">hpp</span><span class="special">&gt;</span></code>.<br><span class="bold"><strong><span class="emphasis"><em>pointer</em></span></strong></span>:&nbsp;<code class="computeroutput"><span class="identifier">value_type</span></code> 的指针类型。它必须是与 <code class="computeroutput"><span class="identifier">node_ptr</span></code> 相同的指针类型：如果 <code class="computeroutput"><span class="identifier">node_ptr</span></code> 为 <code class="computeroutput"><span class="identifier">node</span><span class="special">*</span></code>，则 <code class="computeroutput"><span class="identifier">pointer</span></code> 必须是 <code class="computeroutput"><span class="identifier">value_type</span><span class="special">*</span></code>。如果 <code class="computeroutput"><span class="identifier">node_ptr</span></code> 是 <code class="computeroutput"><span class="identifier">smart_ptr</span><span class="special">&lt;</span><span class="identifier">node_traits</span><span class="special">::</span><span class="identifier">node</span><span class="special">&gt;</span></code>，则
+          <code class="computeroutput"><span class="identifier">pointer</span></code> 必须是 <code class="computeroutput"><span class="identifier">smart_ptr</span><span class="special">&lt;</span><span class="identifier">value_type</span><span class="special">&gt;</span></code>。这可以用 <span class="bold"><strong>Boost SmartPointers</strong></span> 中的 <code class="computeroutput"><span class="identifier">boost</span><span class="special">::</span><span class="identifier">pointer_to_other</span></code> 工具来泛型地实现，其定义在 <code class="computeroutput"><span class="special">&lt;</span><span class="identifier">boost</span><span class="special">/</span><span class="identifier">pointer_to_other</span><span class="special">.</span><span class="identifier">hpp</span><span class="special">&gt;</span></code>。
+        </li>
+<li>
+<span class="bold"><strong><span class="emphasis"><em>const_pointer</em></span></strong></span>: The
+          type of a pointer to a <code class="computeroutput"><span class="keyword">const</span> <span class="identifier">value_type</span></code>. It must be the same pointer
+          type as <code class="computeroutput"><span class="identifier">node_ptr</span></code>: If <code class="computeroutput"><span class="identifier">node_ptr</span></code> is <code class="computeroutput"><span class="identifier">node</span><span class="special">*</span></code>, <code class="computeroutput"><span class="identifier">const_pointer</span></code>
+          must be <code class="computeroutput"><span class="keyword">const</span> <span class="identifier">value_type</span><span class="special">*</span></code>. If <code class="computeroutput"><span class="identifier">node_ptr</span></code>
+          is <code class="computeroutput"><span class="identifier">smart_ptr</span><span class="special">&lt;</span><span class="identifier">node_traits</span><span class="special">::</span><span class="identifier">node</span><span class="special">&gt;</span></code>,
+          <code class="computeroutput"><span class="identifier">const_pointer</span></code> must be
+          <code class="computeroutput"><span class="identifier">smart_ptr</span><span class="special">&lt;</span><span class="keyword">const</span> <span class="identifier">value_type</span><span class="special">&gt;</span></code> This can be generically achieved using
+          <code class="computeroutput"><span class="identifier">boost</span><span class="special">::</span><span class="identifier">pointer_to_other</span></code> utility from <span class="bold"><strong>Boost SmartPointers</strong></span> defined in <code class="computeroutput"><span class="special">&lt;</span><span class="identifier">boost</span><span class="special">/</span><span class="identifier">pointer_to_other</span><span class="special">.</span><span class="identifier">hpp</span><span class="special">&gt;</span></code>.<br><span class="bold"><strong><span class="emphasis"><em>const_pointer</em></span></strong></span>:&nbsp;<code class="computeroutput"><span class="keyword">const</span> <span class="identifier">value_type</span></code> 的指针类型。它必须是与 <code class="computeroutput"><span class="identifier">node_ptr</span></code> 相同的指针类型：如果 <code class="computeroutput"><span class="identifier">node_ptr</span></code> 为 <code class="computeroutput"><span class="identifier">node</span><span class="special">*</span></code>，则 <code class="computeroutput"><span class="identifier">const_pointer</span></code> 必须是 <code class="computeroutput"><span class="keyword">const</span> <span class="identifier">value_type</span><span class="special">*</span></code>。如果 <code class="computeroutput"><span class="identifier">node_ptr</span></code> 是 <code class="computeroutput"><span class="identifier">smart_ptr</span><span class="special">&lt;</span><span class="identifier">node_traits</span><span class="special">::</span><span class="identifier">node</span><span class="special">&gt;</span></code>，则
+          <code class="computeroutput"><span class="identifier">const_pointer</span></code> 必须是
+          <code class="computeroutput"><span class="identifier">smart_ptr</span><span class="special">&lt;</span><span class="keyword">const</span> <span class="identifier">value_type</span><span class="special">&gt;</span></code>。这可以用 <span class="bold"><strong>Boost SmartPointers</strong></span> 中的 <code class="computeroutput"><span class="identifier">boost</span><span class="special">::</span><span class="identifier">pointer_to_other</span></code> 工具来泛型地实现，其定义在 <code class="computeroutput"><span class="special">&lt;</span><span class="identifier">boost</span><span class="special">/</span><span class="identifier">pointer_to_other</span><span class="special">.</span><span class="identifier">hpp</span><span class="special">&gt;</span></code>。
+        </li>
+<li>
+<span class="bold"><strong><span class="emphasis"><em>link_mode</em></span></strong></span>: Indicates
+          that <code class="computeroutput"><span class="identifier">value_traits</span></code> needs
+          some additional work or checks from the container. The types are enumerations
+          defined in the <code class="computeroutput"><span class="identifier">link_mode</span><span class="special">.</span><span class="identifier">hpp</span></code>
+          header. These are the possible types:<br><span class="bold"><strong><span class="emphasis"><em>link_mode</em></span></strong></span>: 表示 <code class="computeroutput"><span class="identifier">value_traits</span></code> 需要来自容器的其它工作或检查。该类型是枚举类型，定义于 <code class="computeroutput"><span class="identifier">link_mode</span><span class="special">.</span><span class="identifier">hpp</span></code> 头文件。有以下可能的类型：
+          <div class="itemizedlist"><ul type="circle">
+<li>
+<span class="bold"><strong><code class="computeroutput"><span class="identifier">normal_link</span></code></strong></span>:
+              If this linking policy is specified in a <code class="computeroutput"><span class="identifier">ValueTraits</span></code>
+              class as the link mode, containers configured with such <code class="computeroutput"><span class="identifier">ValueTraits</span></code> won't set the hooks of
+              the erased values to a default state. Containers also won't check that
+              the hooks of the new values are default initialized.<br><span class="bold"><strong><code class="computeroutput"><span class="identifier">normal_link</span></code></strong></span>:
+              如果在一个 <code class="computeroutput"><span class="identifier">ValueTraits</span></code>
+              类中指定此链接策略为链接模式，那么以这个 <code class="computeroutput"><span class="identifier">ValueTraits</span></code> 配置的容器不会将移除值的钩子设置为缺省状态。容器也不会检查某个新值的钩子是否为缺省初始化。
+            </li>
+<li>
+<span class="bold"><strong><code class="computeroutput"><span class="identifier">safe_link</span></code></strong></span>:
+              If this linking policy is specified as the link mode in a <code class="computeroutput"><span class="identifier">ValueTraits</span></code> class, containers configured
+              with this <code class="computeroutput"><span class="identifier">ValueTraits</span></code>
+              will set the hooks of the erased values to a default state. Containers
+              also will check that the hooks of the new values are default initialized.<br><span class="bold"><strong><code class="computeroutput"><span class="identifier">safe_link</span></code></strong></span>:
+              如果在一个 <code class="computeroutput"><span class="identifier">ValueTraits</span></code> 类中指定此链接策略为链接模式，那么以这个 <code class="computeroutput"><span class="identifier">ValueTraits</span></code>
+              配置的容器将会把移除值的钩子设置为缺省状态。容器也会检查新值的钩子是否为缺省初始化。
+            </li>
+<li>
+<span class="bold"><strong><code class="computeroutput"><span class="identifier">auto_unlink</span></code></strong></span>:
+              Same as "safe_link" but containers with constant-time size
+              features won't be compatible with <code class="computeroutput"><span class="identifier">ValueTraits</span></code>
+              configured with this policy. Containers also know that a value can
+              be silently erased from the container without using any function provided
+              by the containers.<br><span class="bold"><strong><code class="computeroutput"><span class="identifier">auto_unlink</span></code></strong></span>:
+              与 "safe_link" 相同，但是带有常量时间 size
+              函数的容器不兼容于以此策略配置的 <code class="computeroutput"><span class="identifier">ValueTraits</span></code>
+             。容器也将得知它所含的值可以不通过容器所提供的函数就被悄悄地移除。
+            </li>
+</ul></div>
+</li>
+<li>
+<span class="bold"><strong><span class="emphasis"><em>static node_ptr to_node_ptr (value_type
+          &amp;value)</em></span></strong></span> and <span class="bold"><strong><span class="emphasis"><em>static
+          const_node_ptr to_node_ptr (const value_type &amp;value)</em></span></strong></span>:
+          These functions take a reference to a value_type and return a pointer to
+          the node to be used with node algorithms.<br><span class="bold"><strong><span class="emphasis"><em>static node_ptr to_node_ptr (value_type
+          &amp;value)</em></span></strong></span> 和 <span class="bold"><strong><span class="emphasis"><em>static
+          const_node_ptr to_node_ptr (const value_type &amp;value)</em></span></strong></span>:
+          这两个函数接受一个 value_type 的引用，返回一个可用于节点算法的、指向该节点的指针。
+        </li>
+<li>
+<span class="bold"><strong><span class="emphasis"><em>static pointer to_value_ptr (node_ptr n)</em></span></strong></span>
+          and <span class="bold"><strong><span class="emphasis"><em>static const_pointer to_value_ptr (const_node_ptr
+          n)</em></span></strong></span>: These functions take a pointer to a node and
+          return a pointer to the value that contains the node.<br><span class="bold"><strong><span class="emphasis"><em>static node_ptr to_node_ptr (value_type
+          &amp;value)</em></span></strong></span> 和 <span class="bold"><strong><span class="emphasis"><em>static
+          const_node_ptr to_node_ptr (const value_type &amp;value)</em></span></strong></span>:
+          这两个函数接受一个节点指针，返回指向包含该节点的值的指针。
+        </li>
+</ul></div>
+</div>
+<div class="section" lang="en">
+<div class="titlepage"><div><div><h3 class="title">
+<a name="intrusive.value_traits.value_traits_example"></a><a class="link" href="value_traits.html#intrusive.value_traits.value_traits_example" title="Custom ValueTraits example"> Custom
+      ValueTraits example 定制化 ValueTraits 的例子</a>
+</h3></div></div></div>
+
+
+<p>
+        Let's define our own <code class="computeroutput"><span class="identifier">value_traits</span></code>
+        class to be able to use <span class="bold"><strong>Boost.Intrusive</strong></span>
+        containers with an old C structure whose definition can't be changed. That
+        legacy type has two pointers that can be used to build singly and doubly
+        linked lists: in singly linked lists we only need a pointer, whereas in doubly
+        linked lists, we need two pointers. Since we only have two pointers, we can't
+        insert the object in both a singly and a doubly linked list at the same time.
+        This is the definition of the old node:<br>下面我们用一个不可修改定义的、旧的C结构来定义一个我们自己的、可用于 <span class="bold"><strong>Boost.Intrusive</strong></span> 的 <code class="computeroutput"><span class="identifier">value_traits</span></code>
+        类。这个旧的类型有两个指针可用于构建单链表和双链表：在单链表中我们只需要一个指针，而在双链表中我们需要两个指针。因为我们只有两个指针，所以我们不能将这个对象同时插入到一个单链表和一个双链表中。以下是旧节点结构的定义：</p>
+<pre class="programlisting"><span class="preprocessor">#include</span> <span class="special">&lt;</span><span class="identifier">boost</span><span class="special">/</span><span class="identifier">intrusive</span><span class="special">/</span><span class="identifier">link_mode</span><span class="special">.</span><span class="identifier">hpp</span><span class="special">&gt;</span>
+<span class="preprocessor">#include</span> <span class="special">&lt;</span><span class="identifier">boost</span><span class="special">/</span><span class="identifier">intrusive</span><span class="special">/</span><span class="identifier">list</span><span class="special">.</span><span class="identifier">hpp</span><span class="special">&gt;</span>
+<span class="preprocessor">#include</span> <span class="special">&lt;</span><span class="identifier">boost</span><span class="special">/</span><span class="identifier">intrusive</span><span class="special">/</span><span class="identifier">slist</span><span class="special">.</span><span class="identifier">hpp</span><span class="special">&gt;</span>
+<span class="preprocessor">#include</span> <span class="special">&lt;</span><span class="identifier">vector</span><span class="special">&gt;</span>
+
+<span class="comment">//This node is the legacy type we can't modify and we want to insert in<br></span><span class="comment">//intrusive list and slist containers using only two pointers, since<br></span><span class="comment">//we know the object will never be at the same time in both lists. <br>//该节点是一个我们不能修改的旧类型，而我们想将它插入到介入式的 list 和 slist 容器中，<br>//只使用两个指针，因为我们知道这个对象不会被同时插入到两个链表中。<br></span><span class="keyword">struct</span> <span class="identifier">legacy_value</span>
+<span class="special">{</span>
+   <span class="identifier">legacy_value</span> <span class="special">*</span><span class="identifier">prev_</span><span class="special">;</span>
+   <span class="identifier">legacy_value</span> <span class="special">*</span><span class="identifier">next_</span><span class="special">;</span>
+   <span class="keyword">int</span> <span class="identifier">id_</span><span class="special">;</span>
+<span class="special">};</span>
+</pre>
+
+
+
+
+<p>
+        Now we have to define a NodeTraits class that will implement the functions/typedefs
+        that will make the legacy node compatible with <span class="bold"><strong>Boost.Intrusive</strong></span>
+        algorithms. After that, we'll define a ValueTraits class that will configure
+        <span class="bold"><strong>Boost.Intrusive</strong></span> containers:<br>现在我们必须定义一个 NodeTraits 类来实现一些函数和 typedefs，以使得这个旧节点可以兼容于 <span class="bold"><strong>Boost.Intrusive</strong></span>
+        的算法。之后，我们将定义一个 ValueTraits 类，用于配置
+        <span class="bold"><strong>Boost.Intrusive</strong></span> 容器：</p>
+<pre class="programlisting"><span class="comment">//Define our own NodeTraits that will configure singly and doubly linked<br></span><span class="comment">//list algorithms. Note that this node traits is compatible with<br></span><span class="comment">//circular_slist_algorithms and circular_list_algorithms.<br>//定义我们自己的 NodeTraits，它可以用于配置单链表算法和双链表算法。注意，这个<br>//节点 traits 兼容于</span><span class="comment"> circular_slist_algorithms 和 circular_list_algorithms。</span><span class="comment"><br></span>
+<span class="keyword">namespace</span> <span class="identifier">bi</span> <span class="special">=</span> <span class="identifier">boost</span><span class="special">::</span><span class="identifier">intrusive</span><span class="special">;</span>
+
+<span class="keyword">struct</span> <span class="identifier">legacy_node_traits</span>
+<span class="special">{</span>
+   <span class="keyword">typedef</span> <span class="identifier">legacy_value</span>                            <span class="identifier">node</span><span class="special">;</span>
+   <span class="keyword">typedef</span> <span class="identifier">legacy_value</span> <span class="special">*</span>                          <span class="identifier">node_ptr</span><span class="special">;</span>
+   <span class="keyword">typedef</span> <span class="keyword">const</span> <span class="identifier">legacy_value</span> <span class="special">*</span>                    <span class="identifier">const_node_ptr</span><span class="special">;</span>
+
+   <span class="keyword">static</span> <span class="identifier">node</span> <span class="special">*</span><span class="identifier">get_next</span><span class="special">(</span><span class="keyword">const</span> <span class="identifier">node</span> <span class="special">*</span><span class="identifier">n</span><span class="special">)</span>            <span class="special">{</span>  <span class="keyword">return</span> <span class="identifier">n</span><span class="special">-&gt;</span><span class="identifier">next_</span><span class="special">;</span>  <span class="special">}</span>  <br>   <span class="keyword">static</span> <span class="keyword">void</span> <span class="identifier">set_next</span><span class="special">(</span><span class="identifier">node</span> <span class="special">*</span><span class="identifier">n</span><span class="special">,</span> <span class="identifier">node</span> <span class="special">*</span><span class="identifier">next</span><span class="special">)</span>       <span class="special">{</span>  <span class="identifier">n</span><span class="special">-&gt;</span><span class="identifier">next_</span> <span class="special">=</span> <span class="identifier">next</span><span class="special">;</span>  <span class="special">}</span>  <br>   <span class="keyword">static</span> <span class="identifier">node</span> <span class="special">*</span><span class="identifier">get_previous</span><span class="special">(</span><span class="keyword">const</span> <span class="identifier">node</span> <span class="special">*</span><span class="identifier">n</span><span class="special">)</span>        <span class="special">{</span>  <span class="keyword">return</span> <span class="identifier">n</span><span class="special">-&gt;</span><span class="identifier">prev_</span><span class="special">;</span>  <span class="special">}</span>  <br>   <span class="keyword">static</span> <span class="keyword">void</span> <span class="identifier">set_previous</span><span class="special">(</span><span class="identifier">node</span> <span class="special">*</span><span class="identifier">n</span><span class="special">,</span> <span class="identifier">node</span> <span class="special">*</span><span class="identifier">prev</span><span class="special">)</span>   <span class="special">{</span>  <span class="identifier">n</span><span class="special">-&gt;</span><span class="identifier">prev_</span> <span class="special">=</span> <span class="identifier">prev</span><span class="special">;</span>  <span class="special">}</span>  <br><span class="special">};</span>
+
+<span class="comment">//This ValueTraits will configure list and slist. In this case,<br></span><span class="comment">//legacy_node_traits::node is the same as the <br></span><span class="comment">//legacy_value_traits::value_type so to_node_ptr/to_value_ptr<br></span><span class="comment">//functions are trivial.<br>//这个 ValueTraits 将用于配置 list 和 slist。此时，</span><span class="comment">legacy_node_traits::node <br>//与 </span><span class="comment">legacy_value_traits::value_type 相同，因此 to_node_ptr/to_value_ptr</span><span class="comment"> 函数是平凡的。</span><span class="comment"><br></span><span class="keyword">struct</span> <span class="identifier">legacy_value_traits</span>
+<span class="special">{</span>
+   <span class="keyword">typedef</span> <span class="identifier">legacy_node_traits</span>                                  <span class="identifier">node_traits</span><span class="special">;</span>
+   <span class="keyword">typedef</span> <span class="identifier">node_traits</span><span class="special">::</span><span class="identifier">node_ptr</span>                               <span class="identifier">node_ptr</span><span class="special">;</span>
+   <span class="keyword">typedef</span> <span class="identifier">node_traits</span><span class="special">::</span><span class="identifier">const_node_ptr</span>                         <span class="identifier">const_node_ptr</span><span class="special">;</span>
+   <span class="keyword">typedef</span> <span class="identifier">legacy_value</span>                                        <span class="identifier">value_type</span><span class="special">;</span>
+   <span class="keyword">typedef</span> <span class="identifier">legacy_value</span> <span class="special">*</span>                                      <span class="identifier">pointer</span><span class="special">;</span>
+   <span class="keyword">typedef</span> <span class="keyword">const</span> <span class="identifier">legacy_value</span> <span class="special">*</span>                                <span class="identifier">const_pointer</span><span class="special">;</span>
+   <span class="keyword">static</span> <span class="keyword">const</span> <span class="identifier">bi</span><span class="special">::</span><span class="identifier">link_mode_type</span> <span class="identifier">link_mode</span> <span class="special">=</span> <span class="identifier">bi</span><span class="special">::</span><span class="identifier">normal_link</span><span class="special">;</span>
+   <span class="keyword">static</span> <span class="identifier">node_ptr</span> <span class="identifier">to_node_ptr</span> <span class="special">(</span><span class="identifier">value_type</span> <span class="special">&amp;</span><span class="identifier">value</span><span class="special">)</span>             <span class="special">{</span>  <span class="keyword">return</span> <span class="identifier">node_ptr</span><span class="special">(&amp;</span><span class="identifier">value</span><span class="special">);</span> <span class="special">}</span>
+   <span class="keyword">static</span> <span class="identifier">const_node_ptr</span> <span class="identifier">to_node_ptr</span> <span class="special">(</span><span class="keyword">const</span> <span class="identifier">value_type</span> <span class="special">&amp;</span><span class="identifier">value</span><span class="special">)</span> <span class="special">{</span>  <span class="keyword">return</span> <span class="identifier">const_node_ptr</span><span class="special">(&amp;</span><span class="identifier">value</span><span class="special">);</span> <span class="special">}</span>
+   <span class="keyword">static</span> <span class="identifier">pointer</span> <span class="identifier">to_value_ptr</span><span class="special">(</span><span class="identifier">node_ptr</span> <span class="identifier">n</span><span class="special">)</span>                     <span class="special">{</span>  <span class="keyword">return</span> <span class="identifier">pointer</span><span class="special">(</span><span class="identifier">n</span><span class="special">);</span> <span class="special">}</span>
+   <span class="keyword">static</span> <span class="identifier">const_pointer</span> <span class="identifier">to_value_ptr</span><span class="special">(</span><span class="identifier">const_node_ptr</span> <span class="identifier">n</span><span class="special">)</span>         <span class="special">{</span>  <span class="keyword">return</span> <span class="identifier">const_pointer</span><span class="special">(</span><span class="identifier">n</span><span class="special">);</span> <span class="special">}</span>
+<span class="special">};</span>
+
+</pre>
+
+
+
+<p>
+        Defining a value traits class that simply defines <code class="computeroutput"><span class="identifier">value_type</span></code>
+        as <code class="computeroutput"><span class="identifier">legacy_node_traits</span><span class="special">::</span><span class="identifier">node</span></code> is a common approach when defining
+        customized intrusive containers, so <span class="bold"><strong>Boost.Intrusive</strong></span>
+        offers a templatized <code class="computeroutput"><a class="link" href="../boost/intrusive/trivial_value_traits.html" title="Struct template trivial_value_traits">trivial_value_traits</a></code>
+        class that does exactly what we want:<br>在定义定制化的介入式容器时，定义一个值 traits 类，并将其中的 <code class="computeroutput"><span class="identifier">value_type</span></code> 简单地定义为 <code class="computeroutput"><span class="identifier">legacy_node_traits</span><span class="special">::</span><span class="identifier">node</span></code> 是一个常见的方法，因此 <span class="bold"><strong>Boost.Intrusive</strong></span>
+        提供了一个模板化的 <code class="computeroutput"><a class="link" href="../boost/intrusive/trivial_value_traits.html" title="Struct template trivial_value_traits">trivial_value_traits</a></code>
+        类来完成我们想要做的事情：</p>
+<pre class="programlisting"><span class="preprocessor">#include</span> <span class="special">&lt;</span><span class="identifier">boost</span><span class="special">/</span><span class="identifier">intrusive</span><span class="special">/</span><span class="identifier">trivial_value_traits</span><span class="special">.</span><span class="identifier">hpp</span><span class="special">&gt;</span>
+
+<span class="comment">//Now we can define legacy_value_traits just with a single line<br>//现在我们可以只用一行来定义 legacy_value_traits<br></span><span class="keyword">using</span> <span class="keyword">namespace</span> <span class="identifier">boost</span><span class="special">::</span><span class="identifier">intrusive</span><span class="special">;</span>
+<span class="keyword">typedef</span> <span class="identifier">trivial_value_traits</span><span class="special">&lt;</span><span class="identifier">legacy_node_traits</span><span class="special">,</span> <span class="identifier">normal_link</span><span class="special">&gt;</span> <span class="identifier">legacy_value_traits</span><span class="special">;</span>
+</pre>
+
+
+<p>
+        Now we can just define the containers that will store the legacy abi objects
+        and write a little test:<br>现在我们可以定义保存这个传统 abi 对象的容器并编写一个小的测试：</p>
+<pre class="programlisting"><span class="comment">//Now define an intrusive list and slist that will store legacy_value objects<br>//现在定义一个介入式 list 和 slist，保存 legacy_value 对象<br></span><span class="keyword">typedef</span> <span class="identifier">bi</span><span class="special">::</span><span class="identifier">value_traits</span><span class="special">&lt;</span><span class="identifier">legacy_value_traits</span><span class="special">&gt;</span>      <span class="identifier">ValueTraitsOption</span><span class="special">;</span>
+<span class="keyword">typedef</span> <span class="identifier">bi</span><span class="special">::</span><span class="identifier">list</span><span class="special">&lt;</span><span class="identifier">legacy_value</span><span class="special">,</span> <span class="identifier">ValueTraitsOption</span><span class="special">&gt;</span>  <span class="identifier">LegacyAbiList</span><span class="special">;</span>
+<span class="keyword">typedef</span> <span class="identifier">bi</span><span class="special">::</span><span class="identifier">slist</span><span class="special">&lt;</span><span class="identifier">legacy_value</span><span class="special">,</span> <span class="identifier">ValueTraitsOption</span><span class="special">&gt;</span> <span class="identifier">LegacyAbiSlist</span><span class="special">;</span>
+
+<span class="keyword">template</span><span class="special">&lt;</span><span class="keyword">class</span> <span class="identifier">List</span><span class="special">&gt;</span>
+<span class="keyword">bool</span> <span class="identifier">test_list</span><span class="special">()</span>
+<span class="special">{</span>
+   <span class="keyword">typedef</span> <span class="identifier">std</span><span class="special">::</span><span class="identifier">vector</span><span class="special">&lt;</span><span class="identifier">legacy_value</span><span class="special">&gt;</span> <span class="identifier">Vect</span><span class="special">;</span>
+
+   <span class="comment">//Create legacy_value objects, with a different internal number<br>   //以不同的内部数字创建 legacy_value 对象<br></span>   <span class="identifier">Vect</span> <span class="identifier">legacy_vector</span><span class="special">;</span>
+   <span class="keyword">for</span><span class="special">(</span><span class="keyword">int</span> <span class="identifier">i</span> <span class="special">=</span> <span class="number">0</span><span class="special">;</span> <span class="identifier">i</span> <span class="special">&lt;</span> <span class="number">100</span><span class="special">;</span> <span class="special">++</span><span class="identifier">i</span><span class="special">){</span>
+      <span class="identifier">legacy_value</span> <span class="identifier">value</span><span class="special">;</span>     <span class="identifier">value</span><span class="special">.</span><span class="identifier">id_</span> <span class="special">=</span> <span class="identifier">i</span><span class="special">;</span>    <span class="identifier">legacy_vector</span><span class="special">.</span><span class="identifier">push_back</span><span class="special">(</span><span class="identifier">value</span><span class="special">);</span>
+   <span class="special">}</span>
+
+   <span class="comment">//Create the list with the objects 用这些对象创建 list<br></span>   <span class="identifier">List</span> <span class="identifier">mylist</span><span class="special">(</span><span class="identifier">legacy_vector</span><span class="special">.</span><span class="identifier">begin</span><span class="special">(),</span> <span class="identifier">legacy_vector</span><span class="special">.</span><span class="identifier">end</span><span class="special">());</span>
+
+   <span class="comment">//Now test both lists 现在测试两个链表<br></span>   <span class="keyword">typename</span> <span class="identifier">List</span><span class="special">::</span><span class="identifier">const_iterator</span> <span class="identifier">bit</span><span class="special">(</span><span class="identifier">mylist</span><span class="special">.</span><span class="identifier">begin</span><span class="special">()),</span> <span class="identifier">bitend</span><span class="special">(</span><span class="identifier">mylist</span><span class="special">.</span><span class="identifier">end</span><span class="special">());</span>
+   <span class="keyword">typename</span> <span class="identifier">Vect</span><span class="special">::</span><span class="identifier">const_iterator</span> <span class="identifier">it</span><span class="special">(</span><span class="identifier">legacy_vector</span><span class="special">.</span><span class="identifier">begin</span><span class="special">()),</span> <span class="identifier">itend</span><span class="special">(</span><span class="identifier">legacy_vector</span><span class="special">.</span><span class="identifier">end</span><span class="special">());</span>
+
+   <span class="comment">//Test the objects inserted in our list 测试插入到链表中的元素<br></span>   <span class="keyword">for</span><span class="special">(;</span> <span class="identifier">it</span> <span class="special">!=</span> <span class="identifier">itend</span><span class="special">;</span> <span class="special">++</span><span class="identifier">it</span><span class="special">,</span> <span class="special">++</span><span class="identifier">bit</span><span class="special">)</span>
+      <span class="keyword">if</span><span class="special">(&amp;*</span><span class="identifier">bit</span> <span class="special">!=</span> <span class="special">&amp;*</span><span class="identifier">it</span><span class="special">)</span> <span class="keyword">return</span> <span class="keyword">false</span><span class="special">;</span>
+   <span class="keyword">return</span> <span class="keyword">true</span><span class="special">;</span>
+<span class="special">}</span>
+
+<span class="keyword">int</span> <span class="identifier">main</span><span class="special">()</span>
+<span class="special">{</span>
+   <span class="keyword">return</span> <span class="identifier">test_list</span><span class="special">&lt;</span><span class="identifier">LegacyAbiList</span><span class="special">&gt;()</span> <span class="special">&amp;&amp;</span> <span class="identifier">test_list</span><span class="special">&lt;</span><span class="identifier">LegacyAbiSlist</span><span class="special">&gt;()</span> <span class="special">?</span> <span class="number">0</span> <span class="special">:</span> <span class="number">1</span><span class="special">;</span>
+<span class="special">}</span>
+</pre>
+
+
+<p>
+        As seen, several key elements of <span class="bold"><strong>Boost.Intrusive</strong></span>
+        can be reused with custom user types, if the user does not want to use the
+        provided <span class="bold"><strong>Boost.Intrusive</strong></span> facilities.<br>可见，<span class="bold"><strong>Boost.Intrusive</strong></span>
+        的多个关键元素都可以重用于用户类型，如果用户不想使用已提供的 <span class="bold"><strong>Boost.Intrusive</strong></span> 工具。
+      </p>
+</div>
+<div class="section" lang="en">
+<div class="titlepage"><div><div><h3 class="title">
+<a name="intrusive.value_traits.reusing_node_algorithms"></a><a class="link" href="value_traits.html#intrusive.value_traits.reusing_node_algorithms" title="Reusing node algorithms for different values"> Reusing
+      node algorithms for different values 为不同值重用节点算法</a>
+</h3></div></div></div>
+<p>
+        In the previous example, <code class="computeroutput"><span class="identifier">legacy_node_traits</span><span class="special">::</span><span class="identifier">node</span></code>
+        type and <code class="computeroutput"><span class="identifier">legacy_value_traits</span><span class="special">::</span><span class="identifier">value_type</span></code>
+        are the same type, but this is not necessary. It's possible to have several
+        <code class="computeroutput"><span class="identifier">ValueTraits</span></code> defining the
+        same <code class="computeroutput"><span class="identifier">node_traits</span></code> type (and
+        thus, the same <code class="computeroutput"><span class="identifier">node_traits</span><span class="special">::</span><span class="identifier">node</span></code>).
+        This reduces the number of node algorithm instantiations, but now <code class="computeroutput"><span class="identifier">ValueTraits</span><span class="special">::</span><span class="identifier">to_node_ptr</span></code> and <code class="computeroutput"><span class="identifier">ValueTraits</span><span class="special">::</span><span class="identifier">to_value_ptr</span></code>
+        functions need to offer conversions between both types. Let's see a small
+        example:<br>在前面的例子中，<code class="computeroutput"><span class="identifier">legacy_node_traits</span><span class="special">::</span><span class="identifier">node</span></code>
+        类型和 <code class="computeroutput"><span class="identifier">legacy_value_traits</span><span class="special">::</span><span class="identifier">value_type</span></code>
+        是同一个类型，但这不是必需的。可以有多个
+        <code class="computeroutput"><span class="identifier">ValueTraits</span></code> 都定义相同的 <code class="computeroutput"><span class="identifier">node_traits</span></code> 类型(即，相同的 <code class="computeroutput"><span class="identifier">node_traits</span><span class="special">::</span><span class="identifier">node</span></code>)。这减少了节点算法实例化的数量，不过现在 <code class="computeroutput"><span class="identifier">ValueTraits</span><span class="special">::</span><span class="identifier">to_node_ptr</span></code> 和 <code class="computeroutput"><span class="identifier">ValueTraits</span><span class="special">::</span><span class="identifier">to_value_ptr</span></code>
+        函数必须提供两种类型之间的转换。我们来看一个小例子：
+      </p>
+
+
+<p>
+        First, we'll define the node to be used in the algorithms. For a linked list,
+        we just need a node that stores two pointers:<br>首先，我们定义要在算法中使用的节点。对于一个链表而言，我们只需要一个保存两个指针的节点：</p>
+<pre class="programlisting"><span class="preprocessor">#include</span> <span class="special">&lt;</span><span class="identifier">boost</span><span class="special">/</span><span class="identifier">intrusive</span><span class="special">/</span><span class="identifier">link_mode</span><span class="special">.</span><span class="identifier">hpp</span><span class="special">&gt;</span>
+<span class="preprocessor">#include</span> <span class="special">&lt;</span><span class="identifier">boost</span><span class="special">/</span><span class="identifier">intrusive</span><span class="special">/</span><span class="identifier">list</span><span class="special">.</span><span class="identifier">hpp</span><span class="special">&gt;</span>
+<span class="preprocessor">#include</span> <span class="special">&lt;</span><span class="identifier">vector</span><span class="special">&gt;</span>
+
+<span class="comment">//This is the node that will be used with algorithms. 这是将被算法使用的节点。<br></span><span class="keyword">struct</span> <span class="identifier">simple_node</span>
+<span class="special">{</span>
+   <span class="identifier">simple_node</span> <span class="special">*</span><span class="identifier">prev_</span><span class="special">;</span>
+   <span class="identifier">simple_node</span> <span class="special">*</span><span class="identifier">next_</span><span class="special">;</span>
+<span class="special">};</span>
+</pre>
+
+
+
+
+<p>
+        Now we'll define two different types that will be inserted in intrusive lists
+        and a templatized <code class="computeroutput"><span class="identifier">ValueTraits</span></code>
+        that will work for both types:<br>现在，我们来定义两个要插入到介入式链表中的不同类型，以及一个与这两个类型一起使用的模板化 <code class="computeroutput"><span class="identifier">ValueTraits</span></code>：</p>
+<pre class="programlisting"><span class="keyword">class</span> <span class="identifier">base_1</span><span class="special">{};</span>
+<span class="keyword">class</span> <span class="identifier">base_2</span><span class="special">{};</span>
+
+<span class="keyword">struct</span> <span class="identifier">value_1</span> <span class="special">:</span>  <span class="keyword">public</span> <span class="identifier">base_1</span><span class="special">,</span> <span class="keyword">public</span> <span class="identifier">simple_node</span>   <br><span class="special">{</span>  <span class="keyword">int</span>   <span class="identifier">id_</span><span class="special">;</span>  <span class="special">};</span>
+
+<span class="keyword">struct</span> <span class="identifier">value_2</span> <span class="special">:</span>  <span class="keyword">public</span> <span class="identifier">base_1</span><span class="special">,</span> <span class="keyword">public</span> <span class="identifier">base_2</span><span class="special">,</span> <span class="keyword">public</span> <span class="identifier">simple_node</span>
+<span class="special">{</span>  <span class="keyword">float</span> <span class="identifier">id_</span><span class="special">;</span>  <span class="special">};</span>
+
+<span class="comment">//Define the node traits. A single node_traits will be enough.<br>//定义节点 traits。一个 node_traits 就足够了。<br></span><span class="keyword">struct</span> <span class="identifier">simple_node_traits</span>
+<span class="special">{</span>
+   <span class="keyword">typedef</span> <span class="identifier">simple_node</span>                             <span class="identifier">node</span><span class="special">;</span>
+   <span class="keyword">typedef</span> <span class="identifier">node</span> <span class="special">*</span>                                  <span class="identifier">node_ptr</span><span class="special">;</span>
+   <span class="keyword">typedef</span> <span class="keyword">const</span> <span class="identifier">node</span> <span class="special">*</span>                            <span class="identifier">const_node_ptr</span><span class="special">;</span>
+   <span class="keyword">static</span> <span class="identifier">node</span> <span class="special">*</span><span class="identifier">get_next</span><span class="special">(</span><span class="keyword">const</span> <span class="identifier">node</span> <span class="special">*</span><span class="identifier">n</span><span class="special">)</span>            <span class="special">{</span>  <span class="keyword">return</span> <span class="identifier">n</span><span class="special">-&gt;</span><span class="identifier">next_</span><span class="special">;</span>  <span class="special">}</span>  <br>   <span class="keyword">static</span> <span class="keyword">void</span> <span class="identifier">set_next</span><span class="special">(</span><span class="identifier">node</span> <span class="special">*</span><span class="identifier">n</span><span class="special">,</span> <span class="identifier">node</span> <span class="special">*</span><span class="identifier">next</span><span class="special">)</span>       <span class="special">{</span>  <span class="identifier">n</span><span class="special">-&gt;</span><span class="identifier">next_</span> <span class="special">=</span> <span class="identifier">next</span><span class="special">;</span>  <span class="special">}</span>  <br>   <span class="keyword">static</span> <span class="identifier">node</span> <span class="special">*</span><span class="identifier">get_previous</span><span class="special">(</span><span class="keyword">const</span> <span class="identifier">node</span> <span class="special">*</span><span class="identifier">n</span><span class="special">)</span>        <span class="special">{</span>  <span class="keyword">return</span> <span class="identifier">n</span><span class="special">-&gt;</span><span class="identifier">prev_</span><span class="special">;</span>  <span class="special">}</span>  <br>   <span class="keyword">static</span> <span class="keyword">void</span> <span class="identifier">set_previous</span><span class="special">(</span><span class="identifier">node</span> <span class="special">*</span><span class="identifier">n</span><span class="special">,</span> <span class="identifier">node</span> <span class="special">*</span><span class="identifier">prev</span><span class="special">)</span>   <span class="special">{</span>  <span class="identifier">n</span><span class="special">-&gt;</span><span class="identifier">prev_</span> <span class="special">=</span> <span class="identifier">prev</span><span class="special">;</span>  <span class="special">}</span>  <br><span class="special">};</span>
+
+<span class="comment">//A templatized value traits for value_1 and value_2<br>//用于 value_1 和 value_2 的模板化 value_traits<br></span><span class="keyword">template</span><span class="special">&lt;</span><span class="keyword">class</span> <span class="identifier">ValueType</span><span class="special">&gt;</span>
+<span class="keyword">struct</span> <span class="identifier">simple_value_traits</span>
+<span class="special">{</span>
+   <span class="keyword">typedef</span> <span class="identifier">simple_node_traits</span>                                  <span class="identifier">node_traits</span><span class="special">;</span>
+   <span class="keyword">typedef</span> <span class="identifier">node_traits</span><span class="special">::</span><span class="identifier">node_ptr</span>                               <span class="identifier">node_ptr</span><span class="special">;</span>
+   <span class="keyword">typedef</span> <span class="identifier">node_traits</span><span class="special">::</span><span class="identifier">const_node_ptr</span>                         <span class="identifier">const_node_ptr</span><span class="special">;</span>
+   <span class="keyword">typedef</span> <span class="identifier">ValueType</span>                                           <span class="identifier">value_type</span><span class="special">;</span>
+   <span class="keyword">typedef</span> <span class="identifier">ValueType</span> <span class="special">*</span>                                         <span class="identifier">pointer</span><span class="special">;</span>
+   <span class="keyword">typedef</span> <span class="keyword">const</span> <span class="identifier">ValueType</span> <span class="special">*</span>                                   <span class="identifier">const_pointer</span><span class="special">;</span>
+   <span class="keyword">static</span> <span class="keyword">const</span> <span class="identifier">boost</span><span class="special">::</span><span class="identifier">intrusive</span><span class="special">::</span><span class="identifier">link_mode_type</span> <span class="identifier">link_mode</span> <span class="special">=</span> <span class="identifier">boost</span><span class="special">::</span><span class="identifier">intrusive</span><span class="special">::</span><span class="identifier">normal_link</span><span class="special">;</span>
+   <span class="keyword">static</span> <span class="identifier">node_ptr</span> <span class="identifier">to_node_ptr</span> <span class="special">(</span><span class="identifier">value_type</span> <span class="special">&amp;</span><span class="identifier">value</span><span class="special">)</span>             <span class="special">{</span>  <span class="keyword">return</span> <span class="identifier">node_ptr</span><span class="special">(&amp;</span><span class="identifier">value</span><span class="special">);</span> <span class="special">}</span>
+   <span class="keyword">static</span> <span class="identifier">const_node_ptr</span> <span class="identifier">to_node_ptr</span> <span class="special">(</span><span class="keyword">const</span> <span class="identifier">value_type</span> <span class="special">&amp;</span><span class="identifier">value</span><span class="special">)</span> <span class="special">{</span>  <span class="keyword">return</span> <span class="identifier">const_node_ptr</span><span class="special">(&amp;</span><span class="identifier">value</span><span class="special">);</span> <span class="special">}</span>
+   <span class="keyword">static</span> <span class="identifier">pointer</span> <span class="identifier">to_value_ptr</span><span class="special">(</span><span class="identifier">node_ptr</span> <span class="identifier">n</span><span class="special">)</span>                     <span class="special">{</span>  <span class="keyword">return</span> <span class="keyword">static_cast</span><span class="special">&lt;</span><span class="identifier">value_type</span><span class="special">*&gt;(</span><span class="identifier">n</span><span class="special">);</span> <span class="special">}</span>
+   <span class="keyword">static</span> <span class="identifier">const_pointer</span> <span class="identifier">to_value_ptr</span><span class="special">(</span><span class="identifier">const_node_ptr</span> <span class="identifier">n</span><span class="special">)</span>         <span class="special">{</span>  <span class="keyword">return</span> <span class="keyword">static_cast</span><span class="special">&lt;</span><span class="keyword">const</span> <span class="identifier">value_type</span><span class="special">*&gt;(</span><span class="identifier">n</span><span class="special">);</span> <span class="special">}</span>
+<span class="special">};</span>
+</pre>
+
+
+
+
+<p>
+        Now define two containers. Both containers will instantiate the same list
+        algorithms (<code class="computeroutput"><span class="identifier">circular_list_algorithms</span><span class="special">&lt;</span><span class="identifier">simple_node_traits</span><span class="special">&gt;</span></code>), due to the fact that the value traits
+        used to define the containers provide the same <code class="computeroutput"><span class="identifier">node_traits</span></code>
+        type:<br>现在再定义两个容器。这两个容器都将实例化同一个链表算法(<code class="computeroutput"><span class="identifier">circular_list_algorithms</span><span class="special">&lt;</span><span class="identifier">simple_node_traits</span><span class="special">&gt;</span></code>)，因为用于定义这两个容器的值 traits 实际上提供了同一个 <code class="computeroutput"><span class="identifier">node_traits</span></code> 类型：</p>
+<pre class="programlisting"><span class="comment">//Now define two intrusive lists. Both lists will use the same algorithms:<br></span><span class="comment">// circular_list_algorithms&lt;simple_node_traits&gt;<br>//现在定义两个介入式链表。这两个链表都将使用相同的算法：</span><span class="comment"> circular_list_algorithms&lt;simple_node_traits&gt;</span><span class="comment"> <br></span>
+<span class="keyword">using</span> <span class="keyword">namespace</span> <span class="identifier">boost</span><span class="special">::</span><span class="identifier">intrusive</span><span class="special">;</span>
+<span class="keyword">typedef</span> <span class="identifier">list</span> <span class="special">&lt;</span><span class="identifier">value_1</span><span class="special">,</span> <span class="identifier">value_traits</span><span class="special">&lt;</span><span class="identifier">simple_value_traits</span><span class="special">&lt;</span><span class="identifier">value_1</span><span class="special">&gt;</span> <span class="special">&gt;</span> <span class="special">&gt;</span> <span class="identifier">Value1List</span><span class="special">;</span>
+<span class="keyword">typedef</span> <span class="identifier">list</span> <span class="special">&lt;</span><span class="identifier">value_2</span><span class="special">,</span> <span class="identifier">value_traits</span><span class="special">&lt;</span><span class="identifier">simple_value_traits</span><span class="special">&lt;</span><span class="identifier">value_2</span><span class="special">&gt;</span> <span class="special">&gt;</span> <span class="special">&gt;</span> <span class="identifier">Value2List</span><span class="special">;</span>
+</pre>
+
+
+<p>
+        All <span class="bold"><strong>Boost.Intrusive</strong></span> containers using predefined
+        hooks use this technique to minimize code size: all possible <code class="computeroutput"><a class="link" href="../boost/intrusive/list.html" title="Class template list">list</a></code>
+        containers created with predefined hooks that define the same <code class="computeroutput"><span class="identifier">VoidPointer</span></code> type share the same list algorithms.<br>所有使用预定义钩子的 <span class="bold"><strong>Boost.Intrusive</strong></span> 容器都使用了这一技巧来最小化代码的大小：以定义了相同的 <code class="computeroutput"><span class="identifier">VoidPointer</span></code> 类型的预定义钩子所创建出来的所有可能的 <code class="computeroutput"><a class="link" href="../boost/intrusive/list.html" title="Class template list">list</a></code>
+        容器都共享同一个链表算法。
+      </p>
+</div>
+<div class="section" lang="en">
+<div class="titlepage"><div><div><h3 class="title">
+<a name="intrusive.value_traits.simplifying_value_traits"></a><a class="link" href="value_traits.html#intrusive.value_traits.simplifying_value_traits" title="Simplifying value traits definition"> Simplifying
+      value traits definition 简化 value traits 的定义</a>
+</h3></div></div></div>
+
+<p>
+        The previous example can be further simplified using the <code class="computeroutput"><a class="link" href="../boost/intrusive/derivation_value_traits.html" title="Struct template derivation_value_traits">derivation_value_traits</a></code>
+        class to define a value traits class with a value that stores the <code class="computeroutput"><span class="identifier">simple_node</span></code> as a base class:<br>前面的例子还可以进一步简化，用 <code class="computeroutput"><a class="link" href="../boost/intrusive/derivation_value_traits.html" title="Struct template derivation_value_traits">derivation_value_traits</a></code>
+        类来为将 <code class="computeroutput"><span class="identifier">simple_node</span></code> 作为基类保存的值定义 value traits 类：</p>
+<pre class="programlisting"><span class="preprocessor">#include</span> <span class="special">&lt;</span><span class="identifier">boost</span><span class="special">/</span><span class="identifier">intrusive</span><span class="special">/</span><span class="identifier">derivation_value_traits</span><span class="special">.</span><span class="identifier">hpp</span><span class="special">&gt;</span>
+
+<span class="comment">//value_1, value_2, simple_node and simple_node_traits are defined<br></span><span class="comment">//as in the previous example...<br>//和前面的例子一样，定义 value_1, value_2, simple_node 和 simple_node_traits<br></span><span class="comment">//...<br></span>
+<span class="keyword">using</span> <span class="keyword">namespace</span> <span class="identifier">boost</span><span class="special">::</span><span class="identifier">intrusive</span><span class="special">;</span>
+
+<span class="comment">//Now define the needed value traits using 现在定义所需的 value traits<br></span><span class="keyword">typedef</span> <span class="identifier">derivation_value_traits</span><span class="special">&lt;</span><span class="identifier">value_1</span><span class="special">,</span> <span class="identifier">simple_node_traits</span><span class="special">,</span> <span class="identifier">normal_link</span><span class="special">&gt;</span> <span class="identifier">ValueTraits1</span><span class="special">;</span>
+<span class="keyword">typedef</span> <span class="identifier">derivation_value_traits</span><span class="special">&lt;</span><span class="identifier">value_2</span><span class="special">,</span> <span class="identifier">simple_node_traits</span><span class="special">,</span> <span class="identifier">normal_link</span><span class="special">&gt;</span> <span class="identifier">ValueTraits2</span><span class="special">;</span>
+
+<span class="comment">//Now define the containers 现在定义容器<br></span><span class="keyword">typedef</span> <span class="identifier">list</span> <span class="special">&lt;</span><span class="identifier">value1</span><span class="special">,</span> <span class="identifier">value_traits</span><span class="special">&lt;</span><span class="identifier">ValueTraits1</span><span class="special">&gt;</span> <span class="special">&gt;</span> <span class="identifier">Value1List</span><span class="special">;</span>
+<span class="keyword">typedef</span> <span class="identifier">list</span> <span class="special">&lt;</span><span class="identifier">value2</span><span class="special">,</span> <span class="identifier">value_traits</span><span class="special">&lt;</span><span class="identifier">ValueTraits2</span><span class="special">&gt;</span> <span class="special">&gt;</span> <span class="identifier">Value2List</span><span class="special">;</span>
+</pre>
+
+
+<p>
+        We can even choose to store <code class="computeroutput"><span class="identifier">simple_node</span></code>
+        as a member of <code class="computeroutput"><span class="identifier">value_1</span></code> and
+        <code class="computeroutput"><span class="identifier">value_2</span></code> classes and use
+        <code class="computeroutput"><a class="link" href="../boost/intrusive/member_value_traits.html" title="Struct template member_value_traits">member_value_traits</a></code>
+        to define the needed value traits classes:<br>我们甚至可以选择将 <code class="computeroutput"><span class="identifier">simple_node</span></code>
+        作为 <code class="computeroutput"><span class="identifier">value_1</span></code> 和
+        <code class="computeroutput"><span class="identifier">value_2</span></code> 类的成员来保存，并使用
+        <code class="computeroutput"><a class="link" href="../boost/intrusive/member_value_traits.html" title="Struct template member_value_traits">member_value_traits</a></code>
+        来定义所需的 value traits 类：</p>
+<pre class="programlisting"><span class="keyword">class</span> <span class="identifier">base_1</span><span class="special">{};</span>
+<span class="keyword">class</span> <span class="identifier">base_2</span><span class="special">{};</span>
+
+<span class="keyword">struct</span> <span class="identifier">value_1</span> <span class="special">:</span>  <span class="keyword">public</span> <span class="identifier">base_1</span><span class="special">,</span> <span class="keyword">public</span> <span class="identifier">simple_node</span>   <br><span class="special">{</span>
+   <span class="keyword">int</span>   <span class="identifier">id_</span><span class="special">;</span>
+   <span class="identifier">simple_node</span> <span class="identifier">node_</span><span class="special">;</span>
+<span class="special">};</span>
+
+<span class="keyword">struct</span> <span class="identifier">value_2</span> <span class="special">:</span>  <span class="keyword">public</span> <span class="identifier">base_1</span><span class="special">,</span> <span class="keyword">public</span> <span class="identifier">base_2</span><span class="special">,</span> <span class="keyword">public</span> <span class="identifier">simple_node</span>
+<span class="special">{</span>
+   <span class="identifier">simple_node</span> <span class="identifier">node_</span><span class="special">;</span>
+   <span class="keyword">float</span> <span class="identifier">id_</span><span class="special">;</span>
+<span class="special">};</span>
+
+<span class="keyword">using</span> <span class="keyword">namespace</span> <span class="identifier">boost</span><span class="special">::</span><span class="identifier">intrusive</span><span class="special">;</span>
+
+<span class="keyword">typedef</span> <span class="identifier">member_value_traits</span>
+   <span class="special">&lt;</span><span class="identifier">value_1</span><span class="special">,</span> <span class="identifier">simple_node_traits</span><span class="special">,</span> <span class="special">&amp;</span><span class="identifier">value_1</span><span class="special">::</span><span class="identifier">node_</span><span class="special">,</span> <span class="identifier">normal_link</span><span class="special">&gt;</span> <span class="identifier">ValueTraits1</span><span class="special">;</span>
+<span class="keyword">typedef</span> <span class="identifier">member_value_traits</span>
+<span class="special">&lt;</span><span class="identifier">value_2</span><span class="special">,</span> <span class="identifier">simple_node_traits</span><span class="special">,</span> <span class="special">&amp;</span><span class="identifier">value_2</span><span class="special">::</span><span class="identifier">node_</span><span class="special">,</span> <span class="identifier">normal_link</span><span class="special">&gt;</span> <span class="identifier">ValueTraits2</span><span class="special">;</span>
+
+<span class="comment">//Now define two intrusive lists. Both lists will use the same algorithms:<br></span><span class="comment">// circular_list_algorithms&lt;simple_node_traits&gt;<br>//现在定义两个介入式链表。这两个链表都将使用相同的算法：</span><span class="comment"> circular_list_algorithms&lt;simple_node_traits&gt;</span><span class="comment"> <br></span><span class="keyword">typedef</span> <span class="identifier">list</span> <span class="special">&lt;</span><span class="identifier">value_1</span><span class="special">,</span> <span class="identifier">value_traits</span><span class="special">&lt;</span><span class="identifier">ValueTraits1</span><span class="special">&gt;</span> <span class="special">&gt;</span> <span class="identifier">Value1List</span><span class="special">;</span>
+<span class="keyword">typedef</span> <span class="identifier">list</span> <span class="special">&lt;</span><span class="identifier">value_2</span><span class="special">,</span> <span class="identifier">value_traits</span><span class="special">&lt;</span><span class="identifier">ValueTraits2</span><span class="special">&gt;</span> <span class="special">&gt;</span> <span class="identifier">Value2List</span><span class="special">;</span>
+</pre>
+<p>
+        </p>
+<p>
+      </p>
+</div>
+<div class="section" lang="en">
+<div class="titlepage"><div><div><h3 class="title">
+<a name="intrusive.value_traits.stateful_value_traits"></a><a class="link" href="value_traits.html#intrusive.value_traits.stateful_value_traits" title="Stateful value traits"> Stateful
+      value traits 有状态的 value traits</a>
+</h3></div></div></div>
+<p>
+        Until now all shown custom value traits are stateless, that is, <span class="bold"><strong>the transformation between nodes and values is implemented in
+        terms of static functions</strong></span>. It's possible to use <span class="bold"><strong>stateful</strong></span>
+        value traits so that we can separate nodes and values and <span class="bold"><strong>avoid
+        modifying types to insert nodes</strong></span>. <span class="bold"><strong>Boost.Intrusive</strong></span>
+        differentiates between stateful and stateless value traits by checking if all 
+Node &lt;-&gt; Value transformation functions are static or not (except for 
+Visual 7.1, since overloaded static function detection is not possible, in this 
+case the implementation checks if the class is empty):<br>到目前为止，所有看到的定制化 value traits 都是无状态的，即<span class="bold"><strong>节点与值之间的转换是以静态函数来实现的</strong></span>。我们也可以使用<span class="bold"><strong>有状态的</strong></span>
+        value traits，这样我们就可以把节点和值独立开，并<span class="bold"><strong>避免修改类型以插入节点</strong></span>。<span class="bold"><strong>Boost.Intrusive</strong></span>
+        是通过检查是否所有&nbsp;节点 &lt;-&gt; 值  变换函数都是静态的来区分有状态和无状态的 value traits 的(除了 
+Visual 7.1, 因为重载静态函数的检测是不可用的，这时我们会检查该类是否为空)：
+      </p>
+<div class="itemizedlist"><ul type="disc">
+<li>If all Node &lt;-&gt; Value transformation functions are 
+static , a <span class="bold"><strong>stateless</strong></span> value traits is 
+assumed. transformations must be static functions.<br>如果所有 节点 &lt;-&gt; 值 转换函数都是静态的，则假设为 <span class="bold"><strong>无状态</strong></span> value
+          traits。
+        </li>
+<li>Otherwise a <span class="bold"><strong>stateful</strong></span> value traits is 
+assumed.&nbsp;<br>否则假设为 <span class="bold"><strong>有状态</strong></span> value
+          traits。
+        </li>
+</ul></div>
+<p>
+        Using stateful value traits it's possible to create containers of non-copyable/moveble
+        objects <span class="bold"><strong>without modifying</strong></span> the definition
+        of the class to be inserted. This interesting property is achieved without
+        using global variables (stateless value traits could use global variables
+        to achieve the same goal), so:<br>使用有状态的 value traits，可以创建不可复制/不可移动对象的容器，而<span class="bold"><strong>无需修改</strong></span>被插入类的定义。这个有趣的特性无需使用全局变量即可实现(无状态 value traits 可以通过使用全局变量实现相同的目标)，因此：
+      </p>
+<div class="itemizedlist"><ul type="disc">
+<li>
+<span class="bold"><strong>Thread-safety guarantees</strong></span>: Better thread-safety
+          guarantees can be achieved with stateful value traits, since accessing
+          global resources might require syncronization primitives that can be avoided
+          when using internal state.<br><span class="bold"><strong>线程安全性保证</strong></span>：使用有状态 value traits 可以实现更好的线程安全性保证，因为访问全局变量有可能需要同步原语，而使用内部状态则可以避免它。
+        </li>
+<li>
+<span class="bold"><strong>Flexibility</strong></span>: A stateful value traits type
+          can be configured at run-time.<br><span class="bold"><strong>灵活性</strong></span>：有状态 value traits 类型可以在运行期进行配置。
+        </li>
+<li>
+<span class="bold"><strong>Run-time polymorphism</strong></span>: A value traits
+          might implement node &lt;-&gt; value transformations as virtual functions.
+          A single container type could be configured at run-time to use different
+          node &lt;-&gt; value relatioships.<br><span class="bold"><strong>运行期多态</strong></span>：value traits 可以将节点 &lt;-&gt; 值的转换实现为虚拟函数。一个容器类型可以在运行期配置为使用不同的节点 &lt;-&gt; 值关系。
+        </li>
+</ul></div>
+<p>
+        Stateful value traits have many advantages but also some downsides:<br>有状态的 value traits 具有很多优点，但是也有缺点：
+      </p>
+<div class="itemizedlist"><ul type="disc">
+<li>
+<span class="bold"><strong>Performance</strong></span>: Value traits operations should
+          be very efficient since they are basic operations used by containers.
+          <span class="bold"><strong>A heavy node &lt;-&gt; value transformation will
+          hurt intrusive containers' performance</strong></span>.<br><span class="bold"><strong>性能</strong></span>：Value traits 操作应该是非常高效的，因为它们是容器要使用的基本操作。<span class="bold"><strong>一个笨重的节点 &lt;-&gt; 值转换会损害介入式容器的性能</strong></span>。
+        </li>
+<li>
+<span class="bold"><strong>Exception guarantees</strong></span>: The stateful ValueTraits
+          must maintain no-throw guarantees, otherwise, the container invariants
+          won't be preserved.<br><span class="bold"><strong>异常安全性</strong></span>：有状态 ValueTraits
+          必须提供无抛出的保证，否则容器的不变式将得不到保护。
+        </li>
+<li>
+<span class="bold"><strong>Static functions</strong></span>: Some static functions
+          offered by intrusive containers are not available because node &lt;-&gt;
+          value transformations are not static.<br><span class="bold"><strong>静态函数</strong></span>：介入式容器提供的某些静态函数将会无效，因为节点 &lt;-&gt;
+          值的转换是非静态的。
+        </li>
+<li>
+<span class="bold"><strong>Bigger iterators</strong></span>: The size of some iterators
+          is increased because the iterator needs to store a pointer to the stateful
+          value traits to implement node to value tranformations (e.g. <code class="computeroutput"><span class="keyword">operator</span><span class="special">*()</span></code>
+          and <code class="computeroutput"><span class="keyword">operator</span><span class="special">-&gt;()</span></code>).<br><span class="bold"><strong>更大的迭代器</strong></span>：有些迭代器的大小将有所增加，因为迭代器需要保存一个指向有状态
+          value traits 的指针以实现节点到值的转换(如 <code class="computeroutput"><span class="keyword">operator</span><span class="special">*()</span></code> 和 <code class="computeroutput"><span class="keyword">operator</span><span class="special">-&gt;()</span></code>)。
+        </li>
+</ul></div>
+
+
+<p>
+        An easy and useful example of stateful value traits is when an array of values
+        can be indirectly introduced in a list guaranteeing no additional allocation
+        apart from the initial resource reservation:<br>有状态 value traits 的一个简易且有用的例子是，将一个值数组间接地传入到链表中，且保证除了初始的资源保留以外，没有其它的内存分配：</p>
+<pre class="programlisting"><span class="preprocessor">#include</span> <span class="special">&lt;</span><span class="identifier">boost</span><span class="special">/</span><span class="identifier">intrusive</span><span class="special">/</span><span class="identifier">list</span><span class="special">.</span><span class="identifier">hpp</span><span class="special">&gt;</span>
+
+<span class="keyword">using</span> <span class="keyword">namespace</span> <span class="identifier">boost</span><span class="special">::</span><span class="identifier">intrusive</span><span class="special">;</span>
+
+<span class="comment">//This type is not modifiable so we can't store hooks or custom nodes<br>//这个类型是不可修改的，因此我们不能保存钩子或定制化的节点<br></span><span class="keyword">typedef</span> <span class="keyword">int</span> <span class="identifier">identifier_t</span><span class="special">;</span>
+
+<span class="comment">//This value traits will associate elements from an array of identifiers with<br></span><span class="comment">//elements of an array of nodes. The element i of the value array will use the<br></span><span class="comment">//node i of the node array:<br>//这个 value traits 将</span><span class="comment">一个 identifiers</span><span class="comment"> 数组与一个节点数组关联起来。<br>//值数组的第i个元素将使用节点数组的第i个节点：<br></span><span class="keyword">struct</span> <span class="identifier">stateful_value_traits</span>
+<span class="special">{</span>
+   <span class="keyword">typedef</span> <span class="identifier">list_node_traits</span><span class="special">&lt;</span><span class="keyword">void</span><span class="special">*&gt;</span>           <span class="identifier">node_traits</span><span class="special">;</span>
+   <span class="keyword">typedef</span> <span class="identifier">node_traits</span><span class="special">::</span><span class="identifier">node</span>                 <span class="identifier">node</span><span class="special">;</span>
+   <span class="keyword">typedef</span> <span class="identifier">node</span> <span class="special">*</span>                            <span class="identifier">node_ptr</span><span class="special">;</span>
+   <span class="keyword">typedef</span> <span class="keyword">const</span> <span class="identifier">node</span> <span class="special">*</span>                      <span class="identifier">const_node_ptr</span><span class="special">;</span>
+   <span class="keyword">typedef</span> <span class="identifier">identifier_t</span>                      <span class="identifier">value_type</span><span class="special">;</span>
+   <span class="keyword">typedef</span> <span class="identifier">identifier_t</span> <span class="special">*</span>                    <span class="identifier">pointer</span><span class="special">;</span> <br>   <span class="keyword">typedef</span> <span class="keyword">const</span> <span class="identifier">identifier_t</span> <span class="special">*</span>              <span class="identifier">const_pointer</span><span class="special">;</span> <br>   <span class="keyword">static</span> <span class="keyword">const</span> <span class="identifier">link_mode_type</span> <span class="identifier">link_mode</span> <span class="special">=</span>   <span class="identifier">normal_link</span><span class="special">;</span>
+
+   <span class="identifier">stateful_value_traits</span><span class="special">(</span><span class="identifier">pointer</span> <span class="identifier">ids</span><span class="special">,</span> <span class="identifier">node_ptr</span> <span class="identifier">node_array</span><span class="special">)</span>
+      <span class="special">:</span>  <span class="identifier">ids_</span><span class="special">(</span><span class="identifier">ids</span><span class="special">),</span>  <span class="identifier">nodes_</span><span class="special">(</span><span class="identifier">node_array</span><span class="special">)</span>
+   <span class="special">{}</span>
+
+   <span class="comment">///Note: non static functions!<br>   ///注意：非静态函数！<br></span>   <span class="identifier">node_ptr</span> <span class="identifier">to_node_ptr</span> <span class="special">(</span><span class="identifier">value_type</span> <span class="special">&amp;</span><span class="identifier">value</span><span class="special">)</span>
+      <span class="special">{</span>  <span class="keyword">return</span> <span class="keyword">this</span><span class="special">-&gt;</span><span class="identifier">nodes_</span> <span class="special">+</span> <span class="special">(&amp;</span><span class="identifier">value</span> <span class="special">-</span> <span class="keyword">this</span><span class="special">-&gt;</span><span class="identifier">ids_</span><span class="special">);</span> <span class="special">}</span>
+   <span class="identifier">const_node_ptr</span> <span class="identifier">to_node_ptr</span> <span class="special">(</span><span class="keyword">const</span> <span class="identifier">value_type</span> <span class="special">&amp;</span><span class="identifier">value</span><span class="special">)</span> <span class="keyword">const</span>
+      <span class="special">{</span>  <span class="keyword">return</span> <span class="keyword">this</span><span class="special">-&gt;</span><span class="identifier">nodes_</span> <span class="special">+</span> <span class="special">(&amp;</span><span class="identifier">value</span> <span class="special">-</span> <span class="keyword">this</span><span class="special">-&gt;</span><span class="identifier">ids_</span><span class="special">);</span> <span class="special">}</span>
+   <span class="identifier">pointer</span> <span class="identifier">to_value_ptr</span><span class="special">(</span><span class="identifier">node_ptr</span> <span class="identifier">n</span><span class="special">)</span>
+      <span class="special">{</span>  <span class="keyword">return</span> <span class="keyword">this</span><span class="special">-&gt;</span><span class="identifier">ids_</span> <span class="special">+</span> <span class="special">(</span><span class="identifier">n</span> <span class="special">-</span> <span class="keyword">this</span><span class="special">-&gt;</span><span class="identifier">nodes_</span><span class="special">);</span> <span class="special">}</span>
+   <span class="identifier">const_pointer</span> <span class="identifier">to_value_ptr</span><span class="special">(</span><span class="identifier">const_node_ptr</span> <span class="identifier">n</span><span class="special">)</span> <span class="keyword">const</span>
+      <span class="special">{</span>  <span class="keyword">return</span> <span class="keyword">this</span><span class="special">-&gt;</span><span class="identifier">ids_</span> <span class="special">+</span> <span class="special">(</span><span class="identifier">n</span> <span class="special">-</span> <span class="keyword">this</span><span class="special">-&gt;</span><span class="identifier">nodes_</span><span class="special">);</span> <span class="special">}</span>
+
+   <span class="keyword">private</span><span class="special">:</span>
+   <span class="identifier">pointer</span>  <span class="identifier">ids_</span><span class="special">;</span>
+   <span class="identifier">node_ptr</span> <span class="identifier">nodes_</span><span class="special">;</span>
+<span class="special">};</span>
+
+<span class="keyword">int</span> <span class="identifier">main</span><span class="special">()</span>
+<span class="special">{</span>
+   <span class="keyword">const</span> <span class="keyword">int</span> <span class="identifier">NumElements</span> <span class="special">=</span> <span class="number">100</span><span class="special">;</span>
+
+   <span class="comment">//This is an array of ids that we want to "store"<br>   //这是一个我们准备"存入"的 ids 数组<br></span>   <span class="identifier">identifier_t</span>                  <span class="identifier">ids</span>   <span class="special">[</span><span class="identifier">NumElements</span><span class="special">];</span>
+
+   <span class="comment">//This is an array of nodes that is necessary to form the linked list<br>   //这是一个形成链表所需的节点数组<br></span>   <span class="identifier">list_node_traits</span><span class="special">&lt;</span><span class="keyword">void</span><span class="special">*&gt;::</span><span class="identifier">node</span> <span class="identifier">nodes</span> <span class="special">[</span><span class="identifier">NumElements</span><span class="special">];</span>
+
+   <span class="comment">//Initialize id objects, each one with a different number<br>   //用不同的数字初始化各个 id 对象<br></span>   <span class="keyword">for</span><span class="special">(</span><span class="keyword">int</span> <span class="identifier">i</span> <span class="special">=</span> <span class="number">0</span><span class="special">;</span> <span class="identifier">i</span> <span class="special">!=</span> <span class="identifier">NumElements</span><span class="special">;</span> <span class="special">++</span><span class="identifier">i</span><span class="special">)</span>   <span class="identifier">ids</span><span class="special">[</span><span class="identifier">i</span><span class="special">]</span> <span class="special">=</span> <span class="identifier">i</span><span class="special">;</span>
+
+   <span class="comment">//Define a list that will "link" identifiers using external nodes<br>   //定义一个链表，使用外部节点来"链接" identifiers<br></span>   <span class="keyword">typedef</span> <span class="identifier">list</span><span class="special">&lt;</span><span class="identifier">identifier_t</span><span class="special">,</span> <span class="identifier">value_traits</span><span class="special">&lt;</span><span class="identifier">stateful_value_traits</span><span class="special">&gt;</span> <span class="special">&gt;</span> <span class="identifier">List</span><span class="special">;</span>
+
+   <span class="comment">//This list will store ids without modifying identifier_t instances<br></span>   <span class="comment">//Stateful value traits must be explicitly passed in the constructor.<br>   //这个链表将保存 ids 而无需修改 identifier_t 实例。有状态的 value traits 必须明确传入给构造函数。<br></span>   <span class="identifier">List</span>  <span class="identifier">my_list</span> <span class="special">(</span><span class="identifier">stateful_value_traits</span> <span class="special">(</span><span class="identifier">ids</span><span class="special">,</span> <span class="identifier">nodes</span><span class="special">));</span>
+
+   <span class="comment">//Insert ids in reverse order in the list<br>   //将 ids 以反序插入到链表中<br></span>   <span class="keyword">for</span><span class="special">(</span><span class="identifier">identifier_t</span> <span class="special">*</span> <span class="identifier">it</span><span class="special">(&amp;</span><span class="identifier">ids</span><span class="special">[</span><span class="number">0</span><span class="special">]),</span> <span class="special">*</span><span class="identifier">itend</span><span class="special">(&amp;</span><span class="identifier">ids</span><span class="special">[</span><span class="identifier">NumElements</span><span class="special">]);</span> <span class="identifier">it</span> <span class="special">!=</span> <span class="identifier">itend</span><span class="special">;</span> <span class="special">++</span><span class="identifier">it</span><span class="special">)</span>
+      <span class="identifier">my_list</span><span class="special">.</span><span class="identifier">push_front</span><span class="special">(*</span><span class="identifier">it</span><span class="special">);</span>
+
+   <span class="comment">//Now test lists 现在测试链表<br></span>   <span class="identifier">List</span><span class="special">::</span><span class="identifier">const_iterator</span>   <span class="identifier">list_it</span> <span class="special">(</span><span class="identifier">my_list</span><span class="special">.</span><span class="identifier">cbegin</span><span class="special">());</span>
+   <span class="identifier">identifier_t</span> <span class="special">*</span><span class="identifier">it_val</span><span class="special">(&amp;</span><span class="identifier">ids</span><span class="special">[</span><span class="identifier">NumElements</span><span class="special">-</span><span class="number">1</span><span class="special">]),</span> <span class="special">*</span><span class="identifier">it_rbeg_val</span><span class="special">(&amp;</span><span class="identifier">ids</span><span class="special">[</span><span class="number">0</span><span class="special">]-</span><span class="number">1</span><span class="special">);</span>
+
+   <span class="comment">//Test the objects inserted in the base hook list 测试插入到基类钩子链表中的对象<br></span>   <span class="keyword">for</span><span class="special">(;</span> <span class="identifier">it_val</span> <span class="special">!=</span> <span class="identifier">it_rbeg_val</span><span class="special">;</span> <span class="special">--</span><span class="identifier">it_val</span><span class="special">,</span> <span class="special">++</span><span class="identifier">list_it</span><span class="special">)</span>
+      <span class="keyword">if</span><span class="special">(&amp;*</span><span class="identifier">list_it</span>  <span class="special">!=</span> <span class="special">&amp;*</span><span class="identifier">it_val</span><span class="special">)</span>   <span class="keyword">return</span> <span class="number">1</span><span class="special">;</span>
+
+   <span class="keyword">return</span> <span class="number">0</span><span class="special">;</span>
+<span class="special">}</span>
+</pre>
+<p>
+        </p>
+<p>
+      </p>
+</div>
+</div>
+<table xmlns:rev="http://www.cs.rpi.edu/~gregod/boost/tools/doc/revision" width="100%"><tbody><tr>
+<td align="left"></td>
+<td align="right"><div class="copyright-footer">Copyright © 2005 Olaf Krzikalla, 2006-2007 Ion Gaztañaga<p>
+        Distributed under the Boost Software License, Version 1.0. (See accompanying
+        file LICENSE_1_0.txt or copy at <a href="http://www.boost.org/LICENSE_1_0.txt" target="_top">http://www.boost.org/LICENSE_1_0.txt</a>)
+      </p>
+</div></td>
+</tr></tbody></table>
+<hr>
+<div class="spirit-nav">
+<a accesskey="p" href="node_algorithms.html"><img src="../../../doc/html/images/prev.png" alt="Prev"></a><a accesskey="u" href="../intrusive.html"><img src="../../../doc/html/images/up.png" alt="Up"></a><a accesskey="h" href="../index.html"><img src="../../../doc/html/images/home.png" alt="Home"></a><a accesskey="n" href="thread_safety.html"><img src="../../../doc/html/images/next.png" alt="Next"></a>
+</div>
+</body></html>

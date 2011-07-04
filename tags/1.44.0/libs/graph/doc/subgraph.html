@@ -1,0 +1,327 @@
+<!DOCTYPE HTML PUBLIC "-//W3C//DTD HTML 4.01 Transitional//EN">
+<html><head>
+<meta content="text/html; charset=UTF-8" http-equiv="content-type">
+<!-- -- Copyright (c) Jeremy Siek 2000 -- -- Distributed under the Boost Software License, Version 1.0. -- (See accompanying file LICENSE_1_0.txt or copy at -- http://www.boost.org/LICENSE_1_0.txt) --><title>Boost Graph Library: Subgraph</title>
+
+</head>
+<body style="color: rgb(0, 0, 0); background-color: rgb(255, 255, 255);" alink="#ff0000" link="#0000ee" vlink="#551a8b">
+<img src="../../../boost.png" alt="C++ Boost" height="86" width="277"> <br clear="">
+<h1><a name="sec:subgraph-class"></a>
+<pre>subgraph&lt;Graph&gt;<br></pre>
+</h1>
+<!--The space consumption of the <tt>subgraph</tt> is quite high. We should change subgraph from representing induced subgraphs to just normal subgraphs (from talk with Steven North). -->
+<p>subgraph 类提供了一种跟踪一个图及其子图的机制。图 <i>G'</i> 被称为图
+<i>G</i> 的 <i>子图subgraph</i>，如果 <i>G'</i>
+的顶点集是 <i>G</i> 的顶点集的一个子集且 <i>G'</i> 的边集是 <i>G</i>
+的边集的一个子集。即，给定 <i>G'=(V',E')</i> 和 <i>G=(V,E)</i>，
+如果 <i>V'</i> 是
+<i>V</i> 的一个子集且 <i>E'</i> 是 <i>E</i>
+的一个子集，则 <i>G'</i> 是 <i>G</i> 的子图。<i>导出子图
+induced
+subgraph</i> 是这样形成的一个子图，指定一个顶点集
+<i>V'</i>，然后从原图中选择连接 <i>V'</i>
+中任两个顶点的所有边。所以在此情况下，<i>E' = {(u,v)
+in E: u,v in V'}</i>。图 1 示范了一个图 <i>G<sub>0</sub></i>
+和两个子图 <i>G<sub>1</sub></i> 和 <i>G<sub>2</sub></i>。<i>G<sub>1</sub></i>
+的边集是 <i>E<sub>1</sub> = { (E,F), (C,F)
+}</i>，而 <i>G<sub>2</sub></i> 的边集是 <i>E<sub>2</sub>
+=
+{ (A,B) }</i>。象 <i>(E,B)</i> 和 <i>(F,D)</i>
+这些连接两个子图的边不属于任一子图的边集。
+</p>
+<p></p>
+<div align="center"><a name="fig:subgraph-tree"></a>
+<table>
+<caption align="bottom"><strong>图 1:</strong>
+带有嵌套子图的图，用一个树结构来维护。</caption>
+<tbody>
+<tr>
+<td><img src="./figs/subgraph.gif"></td>
+<td><img src="./figs/subgraph-tree.gif"></td>
+</tr>
+</tbody>
+</table>
+</div>
+<p><tt>subgraph</tt>
+类实现了导出子图。主图及其子图在一个树形数据结构中维护。主图为树根，子图是根或其它子图的子节点。树中的所有节点，包括根图，都是 <tt>subgraph</tt>
+类的实例。<tt>subgraph</tt> 实现确保了树中的每个节点都是其父节点的一个导出子图。<tt>subgraph</tt>
+类实现了BGL的图接口，因此每个子图对象都可以被视作为一个图。</p>
+<h3>Example 示例</h3>
+这个例子的完整源码在
+<tt>example/subgraph.cpp</tt>。要创建一个图和子图，首先要创建根图对象。这里我们用 <tt>adjacency_list</tt>
+作为底层的图实现。底层的图类型要求具有 <tt>vertex_index</tt> 和 <tt>edge_index</tt>
+内部属性，因此我们为邻接表增加一个边索引属性。我们不用增加顶点索引属性，因为在 <tt>adjacency_list</tt>
+已经内建了。我们将构建图1中的图和子图，所以我们总共需要6个顶点。
+<pre>typedef adjacency_list_traits<vecs ,="" vecs="" directeds=""> Traits;<br>typedef subgraph&lt; adjacency_list<vecs ,="" vecs="" directeds="" no_property="" property=""><edge_index_t ,="" int=""> &gt; &gt; Graph;<br><br>const int N = 6;<br>Graph G0(N);<br><br>enum { A, B, C, D, E, F}; // 为了方便引用 G0 中的顶点<br></edge_index_t></vecs></vecs></pre>
+Next we create two empty subgraph objects, specifying <tt>G0</tt>
+as
+their parent.
+<pre>Graph&amp; G1 = G0.create_subgraph(), G2 = G0.create_subgraph();<br>enum { A1, B1, C2 }; // 为了方便引用 G1 中的顶点<br>enum { A2, B2 }; // 为了方便引用 G2 中的顶点<br></pre>
+我们可以用
+<tt>add_vertex</tt> 函数从根图增加顶点到子图中。因为这里的图实现是带有 <tt>VertexList=vecS</tt>
+的
+<tt>adjacency_list</tt>，所以我们可以用区间 <i>[0,6)</i>
+中的整数(或是枚举值)作为顶点描述符。
+<pre>add_vertex(C, G1); // 全局顶点 C 成为 G1 的局部顶点 A1<br>add_vertex(E, G1); // 全局顶点 E 成为 G1 的局部顶点 B1<br>add_vertex(F, G1); // 全局顶点 F 成为 G1 的局部顶点 C1<br><br>add_vertex(A, G2); // 全局顶点 A 成为 G2 的局部顶点 A2<br>add_vertex(B, G2); // 全局顶点 B 成为 G2 的局部顶点 B2<br></pre>
+接下来，我们可以用
+<tt>add_edge</tt> 函数往主图中增加边。
+<pre>add_edge(A, B, G0);<br>add_edge(B, C, G0);<br>add_edge(B, D, G0);<br>add_edge(E, B, G0);<br>add_edge(E, F, G0);<br>add_edge(F, D, G0);<br></pre>
+我们也可以用
+<tt>add_edge</tt> 函数往 G1 这样的子图中增加边。每个子图有它自己的顶点描述符和边描述符，我们称之为<i>局
+部</i>描述符。我们称根图的顶点描述符和边描述符为<i>全局</i>描述符。在前面，我们使用了全局顶点描述
+符来往图中增加顶点。不过，多数子图函数是使用局部描述符的。因此，在以下的 <tt>add_edge</tt>
+调用中，我们增加了边 <tt>(A1,C1)</tt> (或用数字<tt>(0,2)</tt>)，
+它是全局边
+<tt>(C,F)</tt> (<span style="font-family: monospace;">或
+用数字</span><tt>(2,5)</tt>)的局部版本(用于子图<tt>G1</tt>)。
+往一个子图增加边会导致该边同时被增加至该子图在子图树中的所有祖先中，以确保子图属性被保持。
+<pre>add_edge(A1, C1, G1); // (A1,C1) 是子图 G1 的局部索引<br> // 对应于全局边 (C,F).<br></pre>
+<!----------------------------->
+<h3>Where Defined 定义于</h3>
+<tt>boost/graph/subgraph.hpp</tt>
+<!----------------------------->
+<h3>Template Parameters 模板参数</h3>
+<p>
+<table border="1">
+<tbody>
+<tr>
+<th>Parameter</th>
+<th>Description</th>
+</tr>
+<tr>
+<td><tt>Graph</tt> </td>
+<td>一个符合 <a href="VertexMutableGraph.html">顶点可
+变图VertexMutableGraph</a> 和 <a href="EdgeMutableGraph.html">边
+可变图EdgeMutableGraph</a> 的图类型。该图还必须具有内部的 <tt>vertex_index</tt>
+和 <tt>edge_index</tt> 属性。顶点索引必须由图自动维护，而边索引则被 <tt>subgraph</tt>
+类实现赋值。 </td>
+</tr>
+</tbody>
+</table>
+<!----------------------------->
+</p>
+<h3>Model Of 以...为模型</h3>
+<tt>subgraph</tt> 是符合 <a href="VertexMutableGraph.html">顶
+点可变图VertexMutableGraph</a>。另外，如果 <tt>Graph</tt> 类型符合
+<a href="VertexListGraph.html">点列表图VertexListGraph</a>,
+<a href="EdgeListGraph.html">边列表图EdgeListGraph</a>
+和/或 <a href="BidirectionalGraph.html">双向图
+BidirectionalGraph</a>，则
+<tt>subgraph&lt;Graph&gt;</tt> 也符合这些概念。<!----------------------------->
+<h3>Associates Types 关联类型</h3>
+如果一个图是子图树的根，那么它的顶点描述符和边描述符既是根图的局部描述符，也是全局描述符。如果某个图不是根，则它的描述符只是这个子图的局部描述
+符。子图的迭代器与底层的图类型的迭代器具有相同的迭代器类型。
+<hr>
+<pre>graph_traits&lt;subgraph&gt;::vertex_descriptor<br></pre>
+顶点描述符类型。(<a href="Graph.html">图Graph</a> 的要求)
+<hr>
+<pre>graph_traits&lt;subgraph&gt;::edge_descriptor<br></pre>
+边描述符类型。(<a href="Graph.html">图Graph</a> 的要求)
+<hr>
+<pre>graph_traits&lt;subgraph&gt;::vertex_iterator<br></pre>
+<tt>vertices</tt> 所返回的迭代器类型。 (<a href="VertexListGraph.html">点列表图VertexListGraph</a>
+的要求)
+<hr>
+<pre>graph_traits&lt;subgraph&gt;::edge_iterator<br></pre>
+<tt>edges</tt> 所返回的迭代器类型。(<a href="EdgeListGraph.html">边
+列表图EdgeListGraph</a> 的要求)
+<hr>
+<pre>graph_traits&lt;subgraph&gt;::out_edge_iterator<br></pre>
+<tt>out_edges</tt> 所返回的迭代器类型。(<a href="IncidenceGraph.html">关联图IncidenceGraph</a> 的要求)
+<hr>
+<pre>graph_traits&lt;subgraph&gt;::in_edge_iterator<br></pre>
+<tt>in_edge_iterator</tt> 是 <tt>in_edges</tt>
+函数所返回的迭代器类型。(<a href="BidirectionalGraph.html">双向图
+BidirectionalGraph</a> 的要求)
+<hr>
+<pre>graph_traits&lt;subgraph&gt;::adjacency_iterator<br></pre>
+<tt>adjacent_vertices</tt> 所返回的迭代器类型。(<a href="AdjacencyGraph.html">邻接图AdjacencyGraph</a> 的要求)
+<hr>
+<pre>graph_traits&lt;subgraph&gt;::directed_category<br></pre>
+提供关于图是有向的(<tt>directed_tag</tt>)或是无向的(<tt>undirected_tag</tt>)
+的信息。(<a href="Graph.html">图Graph</a> 的要求)
+<hr>
+<pre>graph_traits&lt;subgraph&gt;::edge_parallel_category<br></pre>
+说明该图类是否允许插入平行边(具有相同源和目标的边)，这取决于底层的 <tt>Graph</tt>
+类。可能的两个标签是 <tt>allow_parallel_edge_tag</tt> 和 <tt>disallow_parallel_edge_tag</tt>.
+(<a href="Graph.html">图Graph</a> 的要求)
+<hr>
+<pre>graph_traits&lt;subgraph&gt;::vertices_size_type<br></pre>
+用于处理图中顶点数量的类型。(<a href="VertexListGraph.html">点列表图
+VertexListGraph</a> 的要求)
+<hr>
+<pre>graph_traits&lt;subgraph&gt;::edges_size_type<br></pre>
+用于处理图中边数量的类型。(<a href="EdgeListGraph.html">边列表图
+EdgeListGraph</a> 的要求)
+<hr>
+<pre>graph_traits&lt;subgraph&gt;::degree_size_type<br></pre>
+用于处理单个顶点的出边数量的类型。(<a href="IncidenceGraph.html">关联图
+IncidenceGraph</a> 的要求)
+<hr>
+<pre>property_map&lt;subgraph, PropertyTag&gt;::type<br>property_map&lt;subgraph, PropertyTag&gt;::const_type<br></pre>
+图中顶点属性或边属性所用的映射类型。特定属性由 <tt>PropertyTag</tt>
+模板参数指定，且必须与该图的 <tt>VertexProperty</tt> 或 <tt>EdgeProperty</tt>
+中所指定的某个属性相匹配。(<a href="PropertyGraph.html">属性图PropertyGraph</a>
+的要求)
+<hr>
+<pre>subgraph::children_iterator<br></pre>
+这个迭代器类型用于访问该图的各个子图。
+<!----------------------------->
+<h3>Member Functions 成员函数</h3>
+<hr>
+<pre>subgraph(vertices_size_type n, const GraphProperty&amp; p = GraphProperty())<br></pre>
+创建根图对象，带有 <tt>n</tt> 个顶点和零条边。
+<hr>
+<pre>subgraph&lt;Graph&gt;&amp; create_subgraph();<br></pre>
+创建一个空的子图对象，其父母为 <i>this</i> 图。
+<hr>
+<pre>template &lt;typename VertexIterator&gt;<br>subgraph&lt;Graph&gt;&amp;<br>create_subgraph(VertexIterator first, VertexIterator last)<br></pre>
+以特定的顶点集创建一个子图对象。该子图的边由这个顶点集导出。即，父图(即 <i>this</i>
+图)中连接子图中的任两个顶点的每一条边都被增加至子图中。
+<hr>
+<pre>vertex_descriptor local_to_global(vertex_descriptor u_local) const<br></pre>
+将一个局部的顶点描述符转换为相应的全局顶点描述符。
+<hr>
+<pre>vertex_descriptor global_to_local(vertex_descriptor u_global) const<br></pre>
+将一个全局的顶点描述符转换为相应的局部顶点描述符。
+<hr>
+<pre>edge_descriptor local_to_global(edge_descriptor e_local) const<br></pre>
+将一个局部的边描述符转换为相应的全局边描述符。
+<hr>
+<pre>edge_descriptor global_to_local(edge_descriptor u_global) const<br></pre>
+将一个全局的边描述符转换为相应的局部边描述符。
+<hr>
+<pre>std::pair&lt;vertex_descriptor, bool&gt; find_vertex(vertex_descriptor u_global) const<br></pre>
+如果顶点 <i>u</i> 在此子图中，则该函数将与全局顶点描述符 <tt>u_global</tt>
+相对应的局部顶点描述符作为返回值对的第一部分，将 <tt>true</tt> 作为值对的第二部分。如果顶点 <i>u</i>
+不在子图中，则该函数在返回值对的第二部分中返回 false。
+<hr>
+<pre>subgraph&amp; root()<br></pre>
+返回该子图树的根图。
+<hr>
+<pre>bool is_root() const<br></pre>
+如果该图是子图树的根，返回 <tt>true</tt>，否则返回 <tt>false</tt>。
+<hr>
+<pre>subgraph&amp; parent()<br></pre>
+返回父图。
+<hr>
+<pre>std::pair&lt;children_iterator, children_iterator&gt; children() const<br></pre>
+返回一个迭代器对，用于访问子图。<!----------------------------->
+<h3>Nonmember Functions 非成员函数</h3>
+子图的功能取决于它的
+<tt>Graph</tt> 类型。例如，如果 <tt>Graph</tt> 是一个
+<a href="BidirectionalGraph.html">双向图BidirectionalGraph</a>
+且支持 <tt>in_edges</tt>，则子图也同样。下面我们列出当给定的&nbsp; <tt>Graph</tt>
+类型是 <a href="VertexListGraph.html">点列表图VertexListGraph</a>,
+<a href="EdgeListGraph.html">边列表图EdgeListGraph</a> 和
+<a href="BidirectionalGraph.html">双向图BidirectionalGraph</a>
+时，子图可能支持的所有函数。如果你所使用的 <tt>Graph</tt>
+类型不满足这些概念且支持较少的函数，则子图同样只支持较少的函数，以下所列函数中的一部分将不被实现。
+<hr>
+<pre>std::pair&lt;vertex_iterator, vertex_iterator&gt;<br>vertices(const subgraph&amp; g)<br></pre>
+返回一个迭代器区间，提供对图 <i>g</i> 的顶点集的访问。(<a href="VertexListGraph.html">点列表图VertexListGraph</a>
+的要求)
+<hr>
+<pre>std::pair&lt;edge_iterator, edge_iterator&gt;<br>edges(const subgraph&amp; g)<br></pre>
+返回一个迭代器区间，提供对图 <i>g</i> 的边集的访问。(<a href="EdgeListGraph.html">边列表图EdgeListGraph</a> 的要求)
+<hr>
+<pre>std::pair&lt;adjacency_iterator, adjacency_iterator&gt;<br>adjacent_vertices(vertex_descriptor u_local, const subgraph&amp; g)<br></pre>
+返回一个迭代器区间，提供对图 <i>g</i> 中顶点 <i>u</i>
+的邻接顶点的访问。(<a href="AdjacencyGraph.html">邻接图AdjacencyGraph</a>
+的要求)
+<hr>
+<pre>std::pair&lt;out_edge_iterator, out_edge_iterator&gt;<br>out_edges(vertex_descriptor u_local, const subgraph&amp; g)<br></pre>
+返回一个迭代器区间，提供对图&nbsp;<i>g</i> 的顶点&nbsp;<i>u</i>
+的出边的访问。如果是无向图，则该迭代器区间提供对顶点&nbsp;<i>u</i> 的所有邻接边的访问。(<a href="IncidenceGraph.html">关联图IncidenceGraph</a> 的要求)
+<hr>
+<pre>std::pair&lt;in_edge_iterator, in_edge_iterator&gt;<br>in_edges(vertex_descriptor v_local, const subgraph&amp; g)<br></pre>
+返回一个迭代器区间，提供对图&nbsp;<i>g</i> 的顶点&nbsp;<i>v</i>
+的入边的访问。(<a href="BidirectionalGraph.html">双向图
+BidirectionalGraph</a> 的要求)
+<hr>
+<pre>vertex_descriptor<br>source(edge_descriptor e_local, const subgraph&amp; g)<br></pre>
+返回图&nbsp;<i>g</i> 中边 <i>e</i> 的源顶点。(<a href="IncidenceGraph.html">关联图IncidenceGraph</a> 的要求)
+<hr>
+<pre>vertex_descriptor<br>target(edge_descriptor e_local, const subgraph&amp; g)<br></pre>
+返回图&nbsp;<i>g</i> 中边 <i>e</i> 的目标顶点。(<a href="IncidenceGraph.html">关联图IncidenceGraph</a> 的要求)
+<hr>
+<pre>degree_size_type<br>out_degree(vertex_descriptor u_local, const subgraph&amp; g)<br></pre>
+返回图&nbsp;<i>g</i> 中顶点 <i>u</i> 的出边数量。(<a href="IncidenceGraph.html">关联图IncidenceGraph</a> 的要求)
+<hr>
+<pre>degree_size_type in_degree(vertex_descriptor u_local, const subgraph&amp; g)<br></pre>
+返回图&nbsp;<i>g</i> 中顶点 <i>u</i> 的入边数量。(<a href="BidirectionalGraph.html">双向图BidirectionalGraph</a>
+的要求)
+<hr>
+<pre>vertices_size_type num_vertices(const subgraph&amp; g)<br></pre>
+返回图 <i>g</i> 的顶点数。(<a href="VertexListGraph.html">点
+列表图VertexListGraph</a> 的要求)
+<hr>
+<pre>edges_size_type num_edges(const subgraph&amp; g)<br></pre>
+返回图 <i>g</i> 的边数。(<a href="EdgeListGraph.html">边
+列表图EdgeListGraph</a> 的要求)
+<hr>
+<pre>vertex_descriptor vertex(vertices_size_type n, const subgraph&amp; g)<br></pre>
+返回子图的顶点列表中第 <i>n</i> 个顶点。
+<hr>
+<pre>std::pair&lt;edge_descriptor, bool&gt;<br>edge(vertex_descriptor u_local, vertex_descriptor v_local, const subgraph&amp; g)<br></pre>
+返回子图 <i>g</i> 中连接顶点 <i>u</i> 和 <i>v</i>
+的边。(<a href="AdjacencyGraph.html">邻接图AdjacencyGraph</a>
+的要求)
+<hr>
+<pre>std::pair&lt;edge_descriptor, bool&gt;<br>add_edge(vertex_descriptor u_local, vertex_descriptor v_local, subgraph&amp; g)<br></pre>
+将边 <i>(u,v)</i> 增加至子图 <i>g</i>
+以及它在子图树中的所有前辈节点中。该函数返回新边的边描述符。如果该边已存在于图中，则不会重复加入，且布尔标志被设为 false。(<a href="EdgeMutableGraph.html">边可变图EdgeMutableGraph</a>
+的要求)
+<hr>
+<pre>std::pair&lt;edge_descriptor, bool&gt;<br>add_edge(vertex_descriptor u_local, vertex_descriptor v_local,<br> const EdgeProperty&amp; p, subgraph&amp; g)<br></pre>
+将边 <i>(u,v)</i> 增加至图中，并将 <tt>p</tt>
+作为该边的内部属性值。更多细节请见上一个 <tt>add_edge</tt>&nbsp;函数。
+<hr>
+<pre>void remove_edge(vertex_descriptor u_local, vertex_descriptor v_local,<br> subgraph&amp; g)<br></pre>
+从子图 <tt>g</tt> 及其在子图树中的所有前辈中移除边 <i>(u,v)</i>。(<a href="EdgeMutableGraph.html">边可变图EdgeMutableGraph</a>
+的要求)
+<hr>
+<pre>void remove_edge(edge_descriptor e_local, subgraph&amp; g)<br></pre>
+从子图 <tt>g</tt> 及其在子图树中的所有前辈中移除边&nbsp;<tt>e</tt>。(<a href="EdgeMutableGraph.html">边可变图EdgeMutableGraph</a>
+的要求)
+<hr>
+<pre>vertex_descriptor<br>add_vertex(subgraph&amp; g)<br></pre>
+增加一个顶点到子图中，并返回新顶点的顶点描述符。该顶点同时被增加至 <tt>g</tt>
+在子图树中的所有前辈中，以保持子图特性。(<a href="VertexMutableGraph.html">点可变图
+VertexMutableGraph</a> 的要求)
+<hr>
+<pre>vertex_descriptor<br>add_vertex(vertex_descriptor u_global, subgraph&amp; g)<br></pre>
+将根图中的顶点 <i>u</i> 增加至子图 <tt>g</tt>。(<a href="VertexMutableGraph.html">点可变图VertexMutableGraph</a>
+的要求)
+<hr>
+<pre>template &lt;class PropertyTag&gt;<br>property_map&lt;subgraph, PropertyTag&gt;::type<br>get(PropertyTag, subgraph&amp; g)<br><br>template &lt;class PropertyTag&gt;<br>property_map&lt;subgraph, PropertyTag&gt;::const_type<br>get(PropertyTag, const subgraph&amp; g)<br></pre>
+返回由
+<tt>PropertyTag</tt> 指定的顶点属性或边属性的属性映射对象。<tt>PropertyTag</tt>
+必须与在该图的&nbsp;<tt>PropertyTag</tt>
+模板参数中所指定的某一个属性相匹配。所有子图共享顶点属性和边属性，所以通过一个子图的局部顶点描述符修改某个属性，同样会改变全局顶点描述符的属性，
+进而改变其它所有子图的属性。不过，子图的属性映射的键类型是子图的局部顶点描述符或局部边描述符。(<a href="PropertyGraph.html">属性图PropertyGraph</a> 的要求)
+<hr>
+<pre>template &lt;class PropertyTag, class Key&gt;<br>typename property_traits&lt;<br> typename property_map&lt;subgraph, PropertyTag&gt;::const_type<br>&gt;::value_type<br>get(PropertyTag, const subgraph&amp; g, Key k_local)<br></pre>
+返回键 <tt>k_local</tt>
+的属性值，该键是一个局部顶点描述符或局部边描述符。有关属性映射的更多信息，参见前面的 <tt>get</tt>
+函数。(<a href="PropertyGraph.html">属性图PropertyGraph</a>
+的要求)
+<hr>
+<pre>template &lt;class PropertyTag, class Key, class Value&gt;<br>void<br>put(PropertyTag, const subgraph&amp; g, Key k_local, const Value&amp; value)<br></pre>
+将键 <tt>k_local</tt> 的属性值设为 <tt>value</tt>。<tt>k_local</tt>
+是一个局部顶点描述符或局部边描述符。<tt>Value</tt> 必须可以转换为 <tt>typename
+property_traits&lt;property_map&lt;adjacency_matrix,
+PropertyTag&gt;::type&gt;::value_type</tt>。(<a href="PropertyGraph.html">属性图PropertyGraph</a> 的要求)
+<hr>
+<pre>template &lt;class GraphProperties, class GraphPropertyTag&gt;<br>typename property_value&lt;GraphProperties, GraphPropertyTag&gt;::type&amp;<br>get_property(subgraph&amp; g, GraphPropertyTag);<br></pre>
+返回由 <tt>GraphPropertyTag</tt> 所指定的关联至图对象 <tt>g</tt>
+的属性。该 <tt>property_value</tt> traits 类定义于 <tt>boost/pending/property.hpp</tt>。
+<hr>
+<pre>template &lt;class GraphProperties, class GraphPropertyTag&gt;<br>const typename property_value&lt;GraphProperties, GraphPropertyTag&gt;::type&amp;<br>get_property(const subgraph&amp; g, GraphPropertyTag);<br></pre>
+返回由 <tt>GraphPropertyTag</tt> 所指定的关联至图对象 <tt>g</tt>
+的属性。该&nbsp;<tt>property_value</tt>
+traits 类定义于 <tt>boost/pending/property.hpp</tt>。
+<hr>
+<h2>Notes 备注</h2>这个 subgraph 模板要求底层的图类型提供顶点索引属性和边索引属性。但是，任何邻接列表都没有缺省构造函数可以同时满足这两个要求。对于使用 <a href="bundles.html">绑定属性</a> 或是其顶点集的邻接列表选择了 <tt>vecS</tt> 以外容器的图，尤其如此。不过，这个问题可以通过将你自己绑定的(或相反)属性嵌入到一个含有合适索引的属性中来解决。例如：
+<pre>struct my_vertex { ... };<br>typedef property&lt;vertex_index_t, std::size_t, vertex_prop&gt; vertex_prop;<br><br>struct my_edge { ... };<br>typedef property&lt;edge_index_t, std::size_t, vertex_prop&gt; edge_prop;<br><br>typedef adjacency_list&lt;vecS, listS, undirectedS, vertex_prop, edge_prop&gt; Graph;<br>typdef subgraph&lt;Graph&gt; Subgraph;<br></pre>
+</body></html>

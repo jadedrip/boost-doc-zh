@@ -1,0 +1,158 @@
+<!DOCTYPE html PUBLIC "-//W3C//DTD XHTML 1.0 Transitional//EN" "http://www.w3.org/TR/xhtml1/DTD/xhtml1-transitional.dtd">
+<html xmlns="http://www.w3.org/1999/xhtml"><head><!-- Copyright (c) Jeremy Siek and Andrew Lumsdaine 2000 --><!-- Distributed under the Boost --><!-- Software License, Version 1.0. (See accompanying --><!-- file LICENSE_1_0.txt or copy at http://www.boost.org/LICENSE_1_0.txt) -->
+
+  
+  <meta name="generator" content="HTML Tidy for Linux/x86 (vers 1 September 2005), see www.w3.org" />
+
+  
+  <meta http-equiv="Content-Type" content="text/html; charset=UTF-8" />
+
+
+  
+  
+  
+  <title>Using Concept Checks</title><link rel="stylesheet" href="../../rst.css" type="text/css" /></head>
+
+<body alink="#ff0000" bgcolor="#ffffff" link="#0000ee" text="#000000" vlink="#551a8b">
+
+  <img src="../../boost.png" alt="C++ Boost" height="86" width="277" /><br clear="none" />
+
+
+  
+<h2><a name="using-concept-checks" id="using-concept-checks">Using Concept
+  Checks 使用概念检查</a></h2>
+
+
+  
+<p>对于每个概念，都有一个概念检查类用于确认一个给定类型(或一组类型)是否符合该概念。Boost概念检查库(BCCL)包括了对应于所有C++标准库中所使用的概念的概念检查类，另外还新增一些。<a href="./reference.htm">Reference参考</a> 
+一节列出了这些概念检查类。另外，其它boost库也可能带有该库所用概念的概念检查类。例如有 <a href="../graph/doc/graph_concepts.html">graph concepts图概念</a> 和 <a href="../property_map/doc/property_map.html">property map concepts属性映射概念</a>. 
+还有，任何时候<span style="font-weight: bold;">任何人</span>编写了一个函数模板，其中的类用到了目前还不存在的概念时，都应该创建一个新的概念检查类。如何创建，请见 <a href="./creating_concepts.htm">Creating Concept Checking Classes创建概念检查类</a>. 
+</p>
+<p>下面以 BCCL 的 <tt>EqualityComparableConcept</tt> 类为例说明概念检查类。该类对应于C++标准 20.1.1 
+节中所描述的 EqualityComparable 要求，以及SGI STL文档中的 <a href="http://www.sgi.com/tech/stl/EqualityComparable.html">EqualityComparable</a> 
+概念。<br />
+</p>
+<pre>template &lt;class T&gt;<br />struct EqualityComparable;<br /></pre>
+
+
+  
+<p>模板参数 <tt>T</tt> 为要检查的类型。即，<tt>EqualityComparable&lt;<em>X</em>&gt;</tt> 的作用是确认
+  <tt><em>X</em></tt>&nbsp;符合 EqualityComparable 概念。</p>
+
+
+  
+<h4><tt>BOOST_CONCEPT_ASSERT()</tt></h4>
+
+
+  
+<p>检查概念要求的最通用方法是使用
+  <code>BOOST_CONCEPT_ASSERT()</code> 宏。你可以在任何域中使用这个宏，传入一个用括号括起来的概念检查模板的特化。<span style="font-weight: bold;">注意：</span>这意味着对 <code>BOOST_CONCEPT_ASSERT</code> 的调用要使用<span style="font-weight: bold;">双重括号</span>。</p>
+
+  
+<pre><font color="green">// 在我的库中：</font>
+template &lt;class T&gt;
+void generic_library_function(T x)
+{
+  BOOST_CONCEPT_ASSERT<strong>((</strong>EqualityComparable&lt;T&gt;<strong>))</strong>;<br />  <font color="green">// ...</font>
+};
+
+template &lt;class It&gt;
+class generic_library_class
+{
+  BOOST_CONCEPT_ASSERT<strong>((</strong>RandomAccessIterator&lt;It&gt;<strong>))</strong>;<br />  <font color="green">// ...</font>
+};
+
+<font color="green">// 在用户代码中：</font><br />class foo {<br />  <font color="green">//... </font>
+};
+
+int main() {
+  foo x;
+  generic_library_function(x);
+  generic_library_class&lt;std::vector&lt;char&gt;::iterator&gt; y;
+  <font color="green">//...</font> <br />}<br /></pre>
+
+
+  
+<h4><tt>BOOST_CONCEPT_REQUIRES</tt></h4>
+
+
+  
+<p>在建议的C++0x中关于 <a href="http://www.generic-programming.org/languages/conceptcpp/tutorial">声明函数模板的概念约束的语法</a> 中，有一个不错的东西，就是该约束是函数<span style="font-style: italic;">声明</span>的一个组成部分，所以客户可以看见它们。<code>BOOST_CONCEPT_ASSERT</code> 只能在函数模板定义中给出约束，这样约束就被隐藏在函数体里面。除了没有自声明的接口外，如果函数是在被调用的编译单元以外的编译单元被显式实例化的，或者编译器实现了链接期实例化，那么这种只在函数体中使用断言的方法可能会引起不想要的检查延迟。</p>
+
+
+  
+<p><tt>BOOST_CONCEPT_REQUIRES</tt> 宏可以用在函数模板声明中，检查某个类型是否符合某个概念。它接受两个参数，一个<strong>约束列表</strong>，和一个函数模板的返回类型。约束列表的形式是，一系列相连的概念检查模板特化，<strong>以双重括号包围</strong>，而函数的返回类型也必须用括号括起来。例如，标准的 <code>stable_sort</code>
+  算法可以声明如下：</p>
+
+  
+<pre>template&lt;typename RanIter&gt;<br />BOOST_CONCEPT_REQUIRES(<br />    ((Mutable_RandomAccessIterator&lt;RanIter&gt;))<br />    ((LessThanComparable&lt;typename Mutable_RandomAccessIterator&lt;RanIter&gt;::value_type&gt;)),<br />    (void)) <font color="green">// 返回类型</font>
+    stable_sort(RanIter,RanIter);
+</pre>
+
+
+  
+<p>注意，该算法要求迭代器的值类型是 LessThanComparable 的，并且它通过
+  <code>Mutable_RandomAccessIterator</code> 概念检查模板来访问该值类型。通常，Boost 概念检查类以嵌套的成员 typedefs 来表示相关类型，以便你可以使用这一语法，它模仿了下一个版本的C++中建议的概念支持的方法。</p>
+
+
+  
+<h4>Multi-Type Concepts 多类型概念</h4>
+
+
+  
+<p>有些概念关联了多个类型。这种情况下，相应的概念检查类具有多个模板参数。以下例子示范了如何将 <tt>BOOST_CONCEPT_REQUIRES</tt>
+  用于 <a href="../property_map/doc/ReadWritePropertyMap.html">ReadWritePropertyMap</a>
+  概念，它接受两个类型参数：一个属性映射和该映射的键类型。</p>
+
+  
+<pre>template &lt;class G, class Buffer, class BFSVisitor, <br />          class ColorMap&gt;<br />BOOST_CONCEPT_REQUIRES(<br />  ((ReadWritePropertyMap&lt;ColorMap, typename IncidenceGraph&lt;G&gt;::vertex_descriptor&gt;)),<br />  (void)) <font color="green">// 返回类型</font>
+breadth_first_search(G&amp; g, 
+  typename graph_traits&lt;IncidenceGraph&gt;::vertex_descriptor s, 
+  Buffer&amp; Q, BFSVisitor vis, ColorMap color)
+{
+  typedef typename IncidenceGraph&lt;G&gt;::vertex_descriptor Vertex;
+  ...
+}
+</pre>
+
+
+  
+<p>虽然概念检查是为了实现泛型库而设计的，但它们也可以用于最终用户。有时，你不能确认某个类型是否符合某个特定概念。至少，语法上的要求可以很容易地通过创建一个小程序来并使用带类型和概念的 <tt>BOOST_CONCEPT_ASSERT</tt> 来进行检查。例如：</p>
+
+  
+<pre><font color="green">// 确认 list&lt;int&gt; 具有双向迭代器</font>
+BOOST_CONCEPT_ASSERT((BidirectionalIterator&lt;std::list&lt;int&gt;::iterator&gt;));
+</pre>
+
+
+  
+<p><a href="./concept_check.htm">Prev: Concept Checking
+  Introduction 概念检查简介</a><br />
+
+  <a href="./creating_concepts.htm">Next: Creating Concept Checking
+  Classes 创建概念检查类</a><br />
+</p>
+
+  
+<hr />
+
+  
+<table>
+
+    <tbody>
+    <tr valign="top">
+
+      <td nowrap="nowrap">Copyright © 2000</td>
+
+
+      <td><a href="http://www.boost.org/people/jeremy_siek.htm">Jeremy Siek</a>(<a href="mailto:jsiek@osl.iu.edu">jsiek@osl.iu.edu</a>) Andrew
+      Lumsdaine(<a href="mailto:lums@osl.iu.edu">lums@osl.iu.edu</a>), 2007
+      <a href="mailto:dave@boost-consulting.com">David Abrahams</a>.</td>
+
+    </tr>
+
+  
+  </tbody>
+</table>
+
+</body></html>

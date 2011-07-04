@@ -1,0 +1,182 @@
+<!DOCTYPE HTML PUBLIC "-//W3C//DTD HTML 4.01 Transitional//EN">
+<html><head>
+
+<title>Semantic Actions</title><meta http-equiv="Content-Type" content="text/html; charset=UTF-8">
+<link rel="stylesheet" href="theme/style.css" type="text/css"></head>
+<body>
+<table background="theme/bkd2.gif" border="0" cellspacing="2" width="100%">
+  <tbody><tr>
+    <td width="10">
+    </td>
+    <td width="85%">
+      <font face="Verdana, Arial, Helvetica, sans-serif" size="6"><b>Semantic Actions 语义动作</b></font>
+    </td>
+    <td width="112"><a href="http://spirit.sf.net"><img src="theme/spirit.gif" align="right" border="0" height="48" width="112"></a></td>
+  </tr>
+</tbody></table>
+<br>
+<table border="0">
+  <tbody><tr>
+    <td width="10"></td>
+    <td width="30"><a href="../index.html"><img src="theme/u_arr.gif" border="0"></a></td>
+    <td width="30"><a href="subrules.html"><img src="theme/l_arr.gif" border="0"></a></td>
+    <td width="30"><a href="indepth_the_parser.html"><img src="theme/r_arr.gif" border="0"></a></td>
+   </tr>
+</tbody></table>
+<p>Semantic actions have the form: <b>expression[action]</b><br>语义动作有如下格式：<strong>表达式[动作]</strong></p>
+<p>Ultimately, after having defined our grammar and having generated a corresponding 
+  parser, we will need to produce some output and do some work besides syntax 
+  analysis; unless, of course, what we want is merely to check for the conformance 
+  of an input with our grammar, which is very seldom the case. Semantic actions 
+  may be attached to any expression at any level within the parser hierarchy. 
+  An action is a C/C++ function or function object that will be called if a match 
+  is found in the particular context where it is attached. The action function 
+  serves as a hook into the parser and may be used to, for example:<br>总的来说，在定义了我们的语法并生成相应的分析器之后，我们就需要在语法分析之外产生某些输出或者其他的工作；当然，除非我们仅仅想验证输入与语法
+的一致性，但是这种情况不大可能。语义动作可以挂接到分析器内任意层次的任意表达式上。一个动作就是一个在其挂接的特定语境下产生匹配时被调用的C/C++函数或者函数对象。一个动作函数就像一个钩入分析器内并且可能被使用的钩子。比如：</p>
+<blockquote>
+  <p><img src="theme/bullet.gif" height="13" width="13"> Generate output from 
+    the parser (ASTs, for example)<br>从分析器产生输出（AST树，比如）<br>
+    <img src="theme/bullet.gif" height="13" width="13"> Report warnings or errors<br>报告警告或者错误<br>
+    <img src="theme/bullet.gif" height="13" width="13"> Manage symbol tables<br>管理符号表</p>
+</blockquote>
+<h2>Generic Semantic Actions (Transduction Interface) 一般的语义动作(Transduction接口)</h2>
+<p>A generic semantic action can be any free function or function object that
+  is compatible with the interface:<br>一个一般的语义动作可以是与接口兼容的任意的自由函数或者函数对象：</p>
+<pre><code><font color="#000000"><span class="identifier"></span><span class="keyword">    void </span><span class="identifier">f</span><span class="special">(</span><span class="identifier">IteratorT </span><span class="identifier">first</span><span class="special">, </span><span class="identifier">IteratorT </span><span class="identifier">last</span><span class="special">);</span></font></code></pre>
+<p>where <tt>IteratorT</tt> is the type of iterator used, <tt>first</tt> points 
+  to the current input and <tt>last</tt> points to one after the end of the input 
+  (identical to STL iterator ranges). A function object (functor) should have 
+  a member <tt>operator()</tt> with the same signature as above:<br>其中 <tt>IteratorT</tt><font face="Courier New"> 是所使用的迭代器类型，</font><tt>first</tt><font face="Courier New"> 指向当前输入而 </font><tt>last</tt><font face="Courier New"> 指向输入终点的后一个位置（与STL迭代器的区间一致）。函数对象（仿函数）则应有与上面签名一致的 </font><tt>operator()</tt><font face="Courier New"> </font><font face="Courier New">成员函数</font><font face="Courier New">：</font></p>
+<pre><code><font color="#000000"><span class="special">    </span><span class="keyword">struct </span><span class="identifier">my_functor<br>    </span><span class="special">{<br>        </span><span class="keyword">void </span><span class="keyword">operator</span><span class="special">()(</span><span class="identifier">IteratorT </span><span class="identifier">first</span><span class="special">, </span><span class="identifier">IteratorT </span><span class="identifier">last</span><span class="special">) </span><span class="keyword">const</span><span class="special">;<br>    </span><span class="special">};</span></font></code></pre>
+<p>Iterators pointing to the matching portion of the input are passed into the 
+  function/functor.<br>指向输入的迭代器将被传入函数/仿函数</p>
+<p>In general, semantic actions accept the first-last iterator pair. This is the 
+  transduction interface. The action functions or functors receive the unprocessed 
+  data representing the matching production directly from the input. In many cases, 
+  this is sufficient. Examples are source to source translation, pre-processing, 
+  etc.<br>总而言之，语义动作接受 first-last 迭代器对。这是一个 transduction 接口。动作函数或者仿函数直接从输入中接收代表匹配生成式的未处理的数据。在很多情况下，这已经足够了。比如从代码到代码的翻译、预处理等等。</p>
+<h3>Example: 例子：</h3>
+<pre><code><font color="#000000"><span class="special">    </span><span class="keyword">void<br>    </span><span class="identifier">my_action</span><span class="special">(</span><span class="keyword">char const</span><span class="special">* </span><span class="identifier">first</span><span class="special">, </span><span class="keyword">char const</span><span class="special">* </span><span class="identifier">last</span><span class="special">)<br>    {<br>        </span><span class="identifier">std</span><span class="special">::</span><span class="identifier">string</span><span class="special"> </span><span class="identifier">str</span><span class="special">(</span><span class="identifier">first</span><span class="special">, </span><span class="identifier">last</span><span class="special">);<br>        </span><span class="identifier">std</span><span class="special">::</span><span class="identifier">cout </span><span class="special">&lt;&lt; </span><span class="identifier">str </span><span class="special">&lt;&lt; </span><span class="identifier">std</span><span class="special">::</span><span class="identifier">endl</span><span class="special">;<br>    }<br><br>    </span><span class="identifier">rule</span><span class="special">&lt;&gt; </span><span class="identifier">myrule </span><span class="special">= (</span><span class="identifier">a </span><span class="special">| </span><span class="identifier">b </span><span class="special">| *(</span><span class="identifier">c </span><span class="special">&gt;&gt; </span><span class="identifier">d</span><span class="special">))[&amp;</span><span class="identifier">my_action</span><span class="special">];</span></font></code></pre>
+<p>The function <tt>my_action</tt> will be called whenever the expression <tt>(a 
+  | b | *(c &gt;&gt; d)</tt> matches a portion of the input stream while parsing. 
+  Two iterators, <tt>first</tt> and <tt>last</tt>, are passed into the function. 
+  These iterators point to the start and end, respectively, of the portion of 
+  input stream where the match is found.<br>函数 <tt>my_action</tt>&nbsp;在表达式 <tt>(a 
+  | b | *(c &gt;&gt; d)</tt>&nbsp;匹配输入流中的某一段时将被调用。两个迭代器 <tt>first</tt> 和 <tt>last</tt> 被分别传入函数，它们指向输入流中匹配的片段的起点和终点。</p>
+<h3>Const-ness: 不变性：</h3>
+<p>With functors, take note that the <tt>operator()</tt> should be <tt>const</tt>.
+  This implies that functors are immutable. One may wish to have some member variables
+  that are modified when the action gets called. This is not a good idea. First
+  of all, functors are preferably lightweight. Functors are passed around a lot
+  and it would incur a lot of overhead if the functors are heavily laden. Second,
+  functors are passed by value. Thus, the actual functor object that finally attaches
+  to the parser, will surely not be the original instance supplied by the client.
+  What this means is that changes to a functor's state will not affect the original
+  functor that the client passed in since they are distinct copies. If a functor
+  needs to update some state variables, which is often the case, it is better
+  to use references to external data. The following example shows how this can
+  be done:<br>使用仿函数时，注意 <tt>operator()</tt>&nbsp;需要声明为 <tt>const</tt>。暗示了仿函数是不可变的。有人也许希望当动作被调用时可以改变某些成员变量。这不是
+个好主意。首先，仿函数应该是轻量级的。仿函数被反复传递，如果它有沉重的负载，那将产生大量的额外消耗。其次，仿函数是传值的。因此，真正挂接到分析器
+上的函数对象，肯定不是由客户程序提供的最初的实例。这意味着仿函数状态的改变无法影响到由客户程序传入的原始的仿函数，因为它们是不同的拷贝。如果一个
+仿函数需要更新某些状态变量，这是很常见的，最好还是引用外部数据。下面的例子说明了如何做到这点：</p>
+<pre><code><font color="#000000"><span class="special">    </span><span class="keyword">struct </span><span class="identifier">my_functor<br>    </span><span class="special">{<br>        </span><span class="identifier">my_functor</span><span class="special">(</span><span class="identifier">std</span><span class="special">::</span><span class="identifier">string</span><span class="special">&amp; </span><span class="identifier">str_</span><span class="special">)<br>        </span><span class="special">: </span><span class="identifier">str</span><span class="special">(</span><span class="identifier">str_</span><span class="special">) </span><span class="special">{}<br><br>        </span><span class="keyword">void<br>        </span><span class="keyword">operator</span><span class="special">()(</span><span class="identifier">IteratorT </span><span class="identifier">first</span><span class="special">, </span><span class="identifier">IteratorT </span><span class="identifier">last</span><span class="special">) </span><span class="keyword">const<br>        </span><span class="special">{<br>            </span><span class="identifier">str</span><span class="special">.</span><span class="identifier">assign</span><span class="special">(</span><span class="identifier">first</span><span class="special">, </span><span class="identifier">last</span><span class="special">);<br>        </span><span class="special">}<br><br>        </span><span class="identifier">std</span><span class="special">::</span><span class="identifier">string</span><span class="special">&amp; </span><span class="identifier">str</span><span class="special">;<br>    </span><span class="special">};</span></font></code></pre>
+<h3>Full Example: 完整的例子：</h3>
+<p>Here now is our calculator enhanced with semantic actions:<br>以下用语义动作来增强我们的计算器：</p>
+<pre><code><font color="#000000"><span class="special">    </span><span class="keyword">namespace<br>    </span><span class="special">{<br>        </span><span class="keyword">void    </span><span class="identifier">do_int</span><span class="special">(</span><span class="keyword">char </span><span class="keyword">const</span><span class="special">* </span><span class="identifier">str</span><span class="special">, </span><span class="keyword">char </span><span class="keyword">const</span><span class="special">* </span><span class="identifier">end</span><span class="special">)<br>        </span><span class="special">{<br>            </span><span class="identifier">string  </span><span class="identifier">s</span><span class="special">(</span><span class="identifier">str</span><span class="special">, </span><span class="identifier">end</span><span class="special">);<br>            </span><span class="identifier">cout </span><span class="special">&lt;&lt; </span><span class="string">"PUSH(" </span><span class="special">&lt;&lt; </span><span class="identifier">s </span><span class="special">&lt;&lt; </span><span class="literal">')' </span><span class="special">&lt;&lt; </span><span class="identifier">endl</span><span class="special">;<br>        </span><span class="special">}<br><br>        </span><span class="keyword">void    </span><span class="identifier">do_add</span><span class="special">(</span><span class="keyword">char </span><span class="keyword">const</span><span class="special">*, </span><span class="keyword">char </span><span class="keyword">const</span><span class="special">*)    </span><span class="special">{ </span><span class="identifier">cout </span><span class="special">&lt;&lt; </span><span class="string">"ADD\n"</span><span class="special">; </span><span class="special">}<br>        </span><span class="keyword">void    </span><span class="identifier">do_subt</span><span class="special">(</span><span class="keyword">char </span><span class="keyword">const</span><span class="special">*, </span><span class="keyword">char </span><span class="keyword">const</span><span class="special">*)   </span><span class="special">{ </span><span class="identifier">cout </span><span class="special">&lt;&lt; </span><span class="string">"SUBTRACT\n"</span><span class="special">; </span><span class="special">}<br>        </span><span class="keyword">void    </span><span class="identifier">do_mult</span><span class="special">(</span><span class="keyword">char </span><span class="keyword">const</span><span class="special">*, </span><span class="keyword">char </span><span class="keyword">const</span><span class="special">*)   </span><span class="special">{ </span><span class="identifier">cout </span><span class="special">&lt;&lt; </span><span class="string">"MULTIPLY\n"</span><span class="special">; </span><span class="special">}<br>        </span><span class="keyword">void    </span><span class="identifier">do_div</span><span class="special">(</span><span class="keyword">char </span><span class="keyword">const</span><span class="special">*, </span><span class="keyword">char </span><span class="keyword">const</span><span class="special">*)    </span><span class="special">{ </span><span class="identifier">cout </span><span class="special">&lt;&lt; </span><span class="string">"DIVIDE\n"</span><span class="special">; </span><span class="special">}<br>        </span><span class="keyword">void    </span><span class="identifier">do_neg</span><span class="special">(</span><span class="keyword">char </span><span class="keyword">const</span><span class="special">*, </span><span class="keyword">char </span><span class="keyword">const</span><span class="special">*)    </span><span class="special">{ </span><span class="identifier">cout </span><span class="special">&lt;&lt; </span><span class="string">"NEGATE\n"</span><span class="special">; </span><span class="special">}<br>    </span><span class="special">}</span></font></code></pre>
+<p>We augment our grammar with semantic actions:<br>我们给我们的语法增加语义动作：</p>
+<pre><code><font color="#000000"><span class="special">    </span><span class="keyword">struct </span><span class="identifier">calculator </span><span class="special">: </span><span class="keyword">public </span><span class="identifier">grammar</span><span class="special">&lt;</span><span class="identifier">calculator</span><span class="special">&gt;<br>    </span><span class="special">{<br>        </span><span class="keyword">template </span><span class="special">&lt;</span><span class="keyword">typename </span><span class="identifier">ScannerT</span><span class="special">&gt;<br>        </span><span class="keyword">struct </span><span class="identifier">definition<br>        </span><span class="special">{<br>            </span><span class="identifier">definition</span><span class="special">(</span><span class="identifier">calculator </span><span class="keyword">const</span><span class="special">&amp; </span><span class="identifier">self</span><span class="special">)<br>            </span><span class="special">{<br>                </span><span class="identifier">expression<br>                    </span><span class="special">=   </span><span class="identifier">term<br>                        </span><span class="special">&gt;&gt; </span><span class="special">*(   </span><span class="special">(</span><span class="literal">'+' </span><span class="special">&gt;&gt; </span><span class="identifier">term</span><span class="special">)[&amp;</span><span class="identifier">do_add</span><span class="special">]<br>                            </span><span class="special">|   </span><span class="special">(</span><span class="literal">'-' </span><span class="special">&gt;&gt; </span><span class="identifier">term</span><span class="special">)[&amp;</span><span class="identifier">do_subt</span><span class="special">]<br>                            </span><span class="special">)<br>                    </span><span class="special">;<br><br>                </span><span class="identifier">term </span><span class="special">=<br>                    </span><span class="identifier">factor<br>                        </span><span class="special">&gt;&gt; </span><span class="special">*(   </span><span class="special">(</span><span class="literal">'*' </span><span class="special">&gt;&gt; </span><span class="identifier">factor</span><span class="special">)[&amp;</span><span class="identifier">do_mult</span><span class="special">]<br>                            </span><span class="special">|   </span><span class="special">(</span><span class="literal">'/' </span><span class="special">&gt;&gt; </span><span class="identifier">factor</span><span class="special">)[&amp;</span><span class="identifier">do_div</span><span class="special">]<br>                            </span><span class="special">)<br>                        </span><span class="special">;<br><br>                </span><span class="identifier">factor<br>                    </span><span class="special">=   </span><span class="identifier">lexeme_d</span><span class="special">[(+</span><span class="identifier">digit_p</span><span class="special">)[&amp;</span><span class="identifier">do_int</span><span class="special">]]<br>                    </span><span class="special">|   </span><span class="literal">'(' </span><span class="special">&gt;&gt; </span><span class="identifier">expression </span><span class="special">&gt;&gt; </span><span class="literal">')'<br>                    </span><span class="special">|   </span><span class="special">(</span><span class="literal">'-' </span><span class="special">&gt;&gt; </span><span class="identifier">factor</span><span class="special">)[&amp;</span><span class="identifier">do_neg</span><span class="special">]<br>                    </span><span class="special">|   </span><span class="special">(</span><span class="literal">'+' </span><span class="special">&gt;&gt; </span><span class="identifier">factor</span><span class="special">)<br>                    </span><span class="special">;<br>            </span><span class="special">}<br><br>            </span><span class="identifier">rule</span><span class="special">&lt;</span><span class="identifier">ScannerT</span><span class="special">&gt; </span><span class="identifier">expression</span><span class="special">, </span><span class="identifier">term</span><span class="special">, </span><span class="identifier">factor</span><span class="special">;<br><br>            </span><span class="identifier">rule</span><span class="special">&lt;</span><span class="identifier">ScannerT</span><span class="special">&gt; </span><span class="keyword">const</span><span class="special">&amp;<br>            </span><span class="identifier">start</span><span class="special">() </span><span class="keyword">const </span><span class="special">{ </span><span class="keyword">return </span><span class="identifier">expression</span><span class="special">; </span><span class="special">}<br>        </span><span class="special">};<br>    </span><span class="special">};</span></font></code></pre>
+<p>Feeding in the expression <tt>(-1 + 2) * (3 + -4)</tt>, for example, to the
+  rule <tt>expression</tt> will produce the expected output:<br>比如把表达式 <tt>(-1 + 2) * (3 + -4)</tt> <font face="Courier New">喂给规则</font> <tt>expression</tt><font face="Courier New">，将产生所预期的输出：</font></p>
+<pre><code><span class="special">-</span><span class="number">1<br></span><span class="number">2<br></span><span class="identifier">ADD<br></span><span class="number">3<br></span><span class="special">-</span><span class="number">4<br></span><span class="identifier">ADD<br></span><span class="identifier">MULT</span></code></pre>
+<p>which, by the way, is the Reverse Polish Notation (RPN) of the given expression, 
+  reminiscent of some primitive calculators and the language Forth.<br>此即上面表达式的逆波兰式（RPN），类似于某些低等计算器或Forth语言。</p>
+<p><img src="theme/lens.gif" height="16" width="15"> <a href="../example/fundamental/calc_plain.cpp">View 
+  the complete source code here</a>. This is part of the Spirit distribution.<br><img src="theme/lens.gif" height="16" width="15"><a href="../example/fundamental/calc_plain.cpp">在这里查看完整代码。</a>这是Spirit发布包的一部分。&nbsp;</p>
+<h2><a name="specialized_actions"></a>Specialized Actions 特殊动作</h2>
+<p>In general, semantic actions accept the first-last iterator pair. There are 
+  situations though where we might want to pass data in its processed form. A 
+  concrete example is the numeric parser. It is unwise to pass unprocessed data 
+  to a semantic action attached to a numeric parser and just throw away what has 
+  been parsed by the parser. We want to pass the actual parsed number.<br>一般来说，语义动作接受 first-last 迭代器对。但在某些情况下我们希望以已被处理的格式传入数据。一个典型的例子就是数值分析器。直接把未处理的数据传给挂接在数值分析器上的语义动作并扔掉刚刚被分析的数据是不明智的。我们希望传递解析出的实际数值。</p>
+<p>The function and functor signature of a semantic action varies depending on 
+  the parser where it is attached to. The following table lists the parsers that 
+  accept unique signatures.<br>语义动作的函数和仿函数的签名的变化取决于它被挂接到哪个分析器上。下面的表格列举了接受一元函数签名的分析器。</p>
+<table align="center" border="0" width="80%">
+  <tbody><tr> 
+    <td class="note_box"><img src="theme/note.gif" height="16" width="16"> Unless 
+      explicitly stated in the documentation of a specific parser type, parsers 
+      not included in the list by default expect the generic signature as explained 
+      above.<p>除非文档中明确指出的分析器类型，否则文档所不包含的分析器都接受上面所说的一般形式的签名。</p></td>
+  </tr>
+</tbody></table>
+<h3>Numeric Actions 数值动作</h3>
+<p><b>Applies to: 对应于：</b></p>
+<blockquote>
+  <p><img src="theme/bullet.gif" height="13" width="13"> uint_p<br>
+    <img src="theme/bullet.gif" height="13" width="13"> int_p<br>
+    <img src="theme/bullet.gif" height="13" width="13"> ureal_p<br>
+    <img src="theme/bullet.gif" height="13" width="13"> real_p</p>
+</blockquote>
+<p><b>Signature for functions: 函数的签名：</b></p>
+<pre><code><font color="#000000"><span class="identifier">    </span><span class="keyword">void </span><span class="identifier">func</span><span class="special">(</span><span class="identifier">NumT </span><span class="identifier">val</span><span class="special">);</span></font></code></pre>
+<p><b>Signature for functors: 仿函数的签名：</b> </p>
+<pre><code><font color="#000000"><span class="special">    </span><span class="keyword">struct </span><span class="identifier">ftor<br>    </span><span class="special">{<br>        </span><span class="keyword">void </span><span class="keyword">operator</span><span class="special">()(</span><span class="identifier">NumT </span><span class="identifier">val</span><span class="special">) </span><span class="keyword">const</span><span class="special">;<br>    </span><span class="special">};</span></font></code></pre>
+<p>Where <tt>NumT</tt> is any primitive numeric type such as <tt>int</tt>, <tt>long</tt>,
+  <tt>float</tt>, <tt>double</tt>, etc., or a user defined numeric type such as
+  big_int. <tt>NumT</tt> is the same type used as template parameter to <tt>uint_p</tt>,
+  <tt>int_p</tt>, <tt>ureal_p</tt> or <tt>real_p</tt>. The parsed number is passed
+  into the function/functor.<br>其中&nbsp;<tt>NumT</tt>&nbsp;是任意基本的数值类型，如 <tt>int</tt>, <tt>long</tt>,
+  <tt>float</tt>, <tt>double</tt> 等等，或者用户定义的数据类型，如
+  big_int。<tt>NumT</tt> 与 <tt>uint_p</tt>,
+  <tt>int_p</tt>, <tt>ureal_p</tt> 或 <tt>real_p</tt> 所使用的模板参数的类型相同。被解析出的数字将被传入函数/仿函数。</p>
+<h3>Character Actions 字符动作</h3>
+<p><b>Applies to: 对应于：</b></p>
+<blockquote>
+  <p><img src="theme/bullet.gif" height="13" width="13"> chlit, ch_p<br>
+    <img src="theme/bullet.gif" height="13" width="13"> range, range_p<br>
+    <img src="theme/bullet.gif" height="13" width="13"> anychar<br>
+    <img src="theme/bullet.gif" height="13" width="13"> alnum, alpha<br>
+    <img src="theme/bullet.gif" height="13" width="13"> cntrl, digit<br>
+    <img src="theme/bullet.gif" height="13" width="13"> graph, lower<br>
+    <img src="theme/bullet.gif" height="13" width="13"> print, punct<br>
+    <img src="theme/bullet.gif" height="13" width="13"> space, upper<br>
+    <img src="theme/bullet.gif" height="13" width="13"> xdigit</p>
+</blockquote>
+<p><b>Signature for functions: 函数的签名：</b></p>
+<pre><code><font color="#000000"><span class="identifier">    </span><span class="keyword">void </span><span class="identifier">func</span><span class="special">(</span><span class="identifier">CharT </span><span class="identifier">ch</span><span class="special">);</span></font></code></pre>
+<p><b>Signature for functors: 仿函数的签名：</b></p>
+<pre><code><font color="#000000"><span class="special">    </span><span class="keyword">struct </span><span class="identifier">ftor<br>    </span><span class="special">{<br>        </span><span class="keyword">void </span><span class="keyword">operator</span><span class="special">()(</span><span class="identifier">CharT </span><span class="identifier">ch</span><span class="special">) </span><span class="keyword">const</span><span class="special">;<br>    </span><span class="special">};</span></font></code></pre>
+<p>Where <tt>CharT</tt> is the value_type of the iterator used in parsing. A <tt>char
+  const*</tt> iterator for example has a <tt>value_type</tt> of <tt>char</tt>.
+  The matching character is passed into the function/functor.<br>其中 <tt>CharT</tt> 为分析中所使用的迭代器的 value_type。比如一个 <tt>char
+  const*</tt>&nbsp;迭代器有&nbsp;<tt>char</tt> 的 <tt>value_type</tt>。匹配的字符将被传入函数/仿函数。</p>
+<h2>Cascading Actions 级联动作</h2>
+<p>Actions can be cascaded. Cascaded actions also inherit the function/functor
+  interface of the original. For example:<br>动作可以级联。级联的动作也继承了原有函数/仿函数的接口。比如：</p>
+<pre><code><font color="#000000"><span class="special">    </span><span class="identifier">uint_p</span><span class="special">[</span><span class="identifier">fa</span><span class="special">][</span><span class="identifier">fb</span><span class="special">][</span><span class="identifier">fc</span><span class="special">]</span></font></code></pre>
+<p>Here, the functors <tt>fa</tt>, <tt>fb</tt> and <tt>fc</tt> all expect the
+  signature <tt>void operator()(unsigned n) const</tt>.<br>这里，函数 <tt>fa</tt>, <tt>fb</tt> 和 <tt>fc</tt>&nbsp;都需要 <tt>void operator()(unsigned n) const</tt> <font face="Courier New">的成员函数签名。</font></p>
+<h2>Directives and Actions 指示符和动作</h2>
+<p>Directives inherit the the function/functor interface of the subject it is
+  enclosing. Example:<br>指示符继承其所封装的对象的函数接口。比如：</p>
+<pre><code><font color="#000000"><span class="special">    </span><span class="identifier">as_lower_d</span><span class="special">[</span><span class="identifier">ch_p</span><span class="special">(</span><span class="literal">'x'</span><span class="special">)][</span><span class="identifier">f</span><span class="special">]</span></font></code></pre>
+<p>Here, the functor <tt>f</tt> expects the signature <tt>void operator()(char 
+  ch) const</tt>, assuming that the iterator used is a <tt>char const*</tt>.<br>这里，仿函数 <tt>f</tt> 需要 <tt>void operator()(char ch) const</tt> 这样的签名，假定所使用的迭代器是 <tt>char const*</tt>。</p>
+<table border="0">
+  <tbody><tr>
+    <td width="10"></td>
+    <td width="30"><a href="../index.html"><img src="theme/u_arr.gif" border="0"></a></td>
+    <td width="30"><a href="subrules.html"><img src="theme/l_arr.gif" border="0"></a></td>
+    <td width="30"><a href="indepth_the_parser.html"><img src="theme/r_arr.gif" border="0"></a></td>
+  </tr>
+</tbody></table>
+<br>
+<hr size="1">
+<p class="copyright">Copyright © 1998-2003 Joel de Guzman<br>
+  <br>
+  <font size="2">Use, modification and distribution is subject to the Boost Software
+    License, Version 1.0. (See accompanying file LICENSE_1_0.txt or copy at
+    http://www.boost.org/LICENSE_1_0.txt)</font></p>
+<p>&nbsp;</p>
+<p>&nbsp;</p>
+</body></html>

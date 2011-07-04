@@ -1,0 +1,1213 @@
+<!DOCTYPE HTML PUBLIC "-//W3C//DTD HTML 4.01 Transitional//EN">
+<html>
+<head>
+
+  
+  <meta content="text/html; charset=UTF-8" http-equiv="content-type">
+
+
+
+
+
+
+  
+  
+  
+  
+  
+  <title>The Boost Tuple Library</title>
+</head>
+
+
+<body bgcolor="#ffffff" text="#000000">
+
+
+
+
+
+
+
+<img src="../../../boost.png" alt="C++ Boost" height="86" width="277">
+
+<h1>Boost Tuple 库</h1>
+
+
+
+
+
+
+
+<p>
+所谓tuple (又称为 <span style="font-style: italic;">N</span><i></i>元组) 是一个由固定数目个元素组成的集合。 
+例如pairs, triples, quadruples 等都是tuple。在编程语言中 ，tuple是指一个包含若干对象的数据对象，包含的对象称为元素。其中每个元素可以是不同类型的对象。
+</p>
+
+
+
+
+
+
+
+<p>Tuple在很多场合下都能方便使用。 
+例如，借助tuple能轻易地定义一个返回多个值的函数。
+</p>
+
+
+
+
+
+
+
+<p>
+在某些编程语言中，例如ML，Python，Haskell，含有作为内建类型的tuple类型。
+不幸的是，在C++中没有这样的内建类型。为了拟补C++这个&ldquo;缺点&rdquo;，Boost Tuple库运用模板技术实现出一个tuple类型。
+</p>
+
+
+
+
+
+
+
+<h2>目录</h2>
+
+
+
+
+
+
+
+<ol>
+
+
+
+
+
+
+  <li><a href="#using_library">使用这个库</a></li>
+
+
+
+
+
+
+  <li><a href="#tuple_types">Tuple型别</a></li>
+
+
+
+
+
+
+  <li><a href="#constructing_tuples">构件tuple</a></li>
+
+
+
+
+
+
+  <li><a href="#accessing_elements">访问tuple元素</a></li>
+
+
+
+
+
+
+  <li><a href="#construction_and_assignment">拷贝构造与赋值</a></li>
+
+
+
+
+
+
+  <li><a href="#relational_operators">关系操作符</a></li>
+
+
+
+
+
+
+  <li><a href="#tiers">Tiers 连结</a></li>
+
+
+
+
+
+
+  <li><a href="#streaming">串行化</a></li>
+
+
+
+
+
+
+  <li><a href="#performance">性能</a></li>
+
+
+
+
+
+
+  <li><a href="#portability">可移植性</a></li>
+
+
+
+
+
+
+  <li><a href="#thanks">感谢</a></li>
+
+
+
+
+
+
+  <li><a href="#references">参考引用</a></li>
+
+
+
+
+
+
+</ol>
+
+
+
+
+
+
+
+<h4>更多细节</h4>
+
+
+
+
+
+
+
+<p>
+<a href="tuple_advanced_interface.html">高级特性</a> (描述一些元函数和相关内容).</p>
+
+
+
+
+
+
+<p>
+<a href="design_decisions_rationale.html">设计逻辑与实现</a></p>
+
+
+
+
+
+
+
+
+<h2><a name="using_library">使用这个库</a></h2>
+
+
+
+
+
+
+
+<p>若要使用这个库，只需要包含：
+
+</p>
+
+
+
+
+
+<pre><code>#include "boost/tuple/tuple.hpp"</code></pre>
+
+
+
+
+
+
+
+<p>要使用比较操作符，请包含：
+</p>
+
+
+
+
+
+<pre><code>#include "boost/tuple/tuple_comparison.hpp"</code></pre>
+
+
+
+
+
+
+
+<p>要使用tuple的输入输出操作符，请，
+
+</p>
+
+
+
+
+
+<pre><code>#include "boost/tuple/tuple_io.hpp"</code></pre>
+
+
+
+
+
+
+
+其中，<code>tuple_io.hpp</code> 和 <code>tuple_comparison.hpp</code> 都已经包含有tuple.hpp。
+
+<p>大部分定义都在命名空间 <code>::boost::tuples</code>，除了最常用的一些功能放在 <code>::boost</code> 。 最常用的是： <code>tuple</code>， <code>make_tuple</code>， <code>tie</code> 和 <code>get</code>。 还有，辅助用的<code> ref</code> 和 <code>cref</code> 在 <code>::boost</code> 中定义.。
+
+</p>
+
+
+
+
+
+<h2><a name="tuple_types">Tuple 型别</a></h2>
+
+
+
+
+
+
+
+<p>所谓tuple型别是tuple模板的一个实例<code></code>。模板参数是元素的类型。目前版本支持包含0到10个元素的tuple。如果你需要更多个元素，最多上限可支持几十个元素。
+可支持任意的C++类型。注意 <code>void</code> 类型和普通函数类型是合法的C++类型， 但是这些类型不能生成对象。 
+因此，包含这个类型的tuple型别可存在，但不能产生tuple对象。显然可见，那些不能被拷贝的，没有默认构造函数的类型，当用作tuple元素型别的时候，也会受到相应的限制 (详见下节 '构件tuple'&nbsp;)。 
+
+</p>
+
+
+
+
+
+<p>
+例如，下面是合法的tuple实例定义 （<code></code>其中<code>A</code>，<code>B</code> ，<code>C</code> 是用户定义类型)：
+
+</p>
+
+
+
+
+
+<pre><code>tuple&lt;int&gt;<br>tuple&lt;double&amp;, const double&amp;, const double, double*, const double*&gt;<br>tuple&lt;A, int(*)(char, int), B(A::*)(C&amp;), C&gt;<br>tuple&lt;std::string, std::pair&lt;A, B&gt; &gt;<br>tuple&lt;A*, tuple&lt;const A*, const B&amp;, C&gt;, bool, void*&gt;<br></code></pre>
+
+
+
+
+
+
+
+<h2><a name="constructing_tuples">构件tuple</a></h2>
+
+
+
+
+
+
+
+<p>
+Tuple的构造函数以其元素作为参数。 对于一个<i>n</i>个元素的tuple，构造函数能接受<i>k</i>&nbsp;个参数，其中 0 &lt;= <i>k</i> &lt;= <i>n</i> 例如：
+</p>
+
+
+
+
+
+<pre><code>tuple&lt;int, double&gt;() <br>tuple&lt;int, double&gt;(1) <br>tuple&lt;int, double&gt;(1, 3.14)<br></code></pre>
+
+
+
+
+
+
+
+<p>
+对于没有初始值的元素，就自动被默认构造(因此该元素类型必须有默认构造函数)。例如：
+
+</p>
+
+
+
+
+
+<pre><code>class X {<br>  X(); <br>public:<br>  X(std::string);<br>};<br><br>tuple&lt;X,X,X&gt;()                                              // 错误: X类型没有实现默认构造函数<br>tuple&lt;X,X,X&gt;(string("Jaba"), string("Daba"), string("Duu")) // 正确<br></code></pre>
+
+
+
+
+
+
+
+特别地，引用类型不能默认构造，必须提供初始值： 
+
+<pre><code>tuple&lt;double&amp;&gt;()                // 错误: 引用必须 <br>                                // 显式初始化<br><br>double d = 5; <br>tuple&lt;double&amp;&gt;(d)               // 正确<br><br>tuple&lt;double&amp;&gt;(d+3.14)          // 错误: 不能用临时对象<br>                                // 初始化非const的引用<br><br>tuple&lt;const double&amp;&gt;(d+3.14)    // 可以，不过很危险： <br>                                // 该元素成为悬空引用 <br></code></pre>
+
+
+
+
+
+
+
+<p>对不能拷贝构造的元素提供初始值，会引起编译错误
+
+</p>
+
+
+
+
+
+<pre><code>class Y { <br>  Y(const Y&amp;); <br>public:<br>  Y();<br>};<br><br>char a[10];<br><br>tuple&lt;char[10], Y&gt;(a, Y()); // 错误， 数组类型和Y类型不能拷贝构造<br>tuple&lt;char[10], Y&gt;();       // 正确<br></code></pre>
+
+
+
+
+
+
+
+特别注意，下面的语句是完全正确的：
+<code></code>
+<pre>Y y;<br>tuple&lt;char(&amp;)[10], Y&amp;&gt;(a, y); <br></pre>
+
+
+
+
+
+
+
+可能会出现一种无法构造的tuple型别。
+这种情况出现在一个不能初始化的元素先于一个必须初始化的元素出现在tuple元素列表。例： <code>tuple&lt;char[10], int&amp;&gt;</code>.
+
+<p>总体上，一个tuple的构造过程语义上相当于一组独立的元素构造过程。
+</p>
+
+
+
+
+
+
+
+<h4><a name="make_tuple">关于 <code>make_tuple</code> 函数</a></h4>
+
+
+
+
+<p>Tuple也可以通过函数make_tuple构造(类似于构造pair的函数<code>std::make_pair</code>)。这样将更方便地构造tuple，省却了显式指定元素的类型： 
+</p>
+
+
+
+
+
+<pre><code>tuple&lt;int, int, double&gt; add_multiply_divide(int a, int b) {<br>  return make_tuple(a+b, a*b, double(a)/double(b));<br>}<br></code></pre>
+
+
+
+
+
+
+
+<p>
+缺省情况下，元素类型被自动推导为普通的非引用类型，例： 
+</p>
+
+
+
+
+
+<pre><code>void foo(const A&amp; a, B&amp; b) { <br>  ...<br>  make_tuple(a, b);<br></code></pre>
+
+
+
+
+
+
+这里调用 <code>make_tuple</code> 得到的结果类型是<code>tuple&lt;A, B&gt;</code>
+
+<p>
+有时这种缺省的普通非引用类型不是我们需要的，例如当元素类型不可拷贝构造时。 
+因此，程序员可以去控制类型推导，把元素类型声明为一个常量或非常量引用。
+这需要在两个模板函数的帮助下实现 <code>ref</code> 和 <code>cref</code><span style="font-family: monospace;"> 。</span> 
+任意参数都可以被这两个函数包装为需要的类型。 
+其实现技术上也能保证对象的常量性不被破坏，当常量对象经过ref包装后将成为常量引用，而不是非常量引用(下面代码第五行)。例如：
+
+</p>
+
+
+
+
+
+<pre><code>A a; B b; const A ca = a;<br>make_tuple(cref(a), b);      // 产生类型 tuple&lt;const A&amp;, B&gt;<br>make_tuple(ref(a), b);       // </code><code>产生类型</code><code> tuple&lt;A&amp;, B&gt;<br>make_tuple(ref(a), cref(b)); // </code><code>产生类型</code><code> tuple&lt;A&amp;, const B&amp;&gt;<br>make_tuple(cref(ca));        // </code><code>产生类型</code><code> tuple&lt;const A&amp;&gt;<br>make_tuple(ref(ca));         // </code><code>产生类型</code><code> tuple&lt;const A&amp;&gt;<br></code></pre>
+
+
+
+
+
+
+
+
+<p>
+在make_tuple中，数组参数被默认推导为常量引用，不需要cref进行包装，例如：
+</p>
+
+
+
+
+
+<pre><code>make_tuple("Donald", "Daisy");<br></code></pre>
+
+
+
+
+
+
+
+这样产生的tuple对象的类型是 <code>tuple&lt;const char (&amp;)[7], const char (&amp;)[6]&gt;</code> 
+(注意，字符串字面常量的类型是常量字符的数组，而不是 <code>const char*</code>)。但是，如果要用函数 <code>make_tuple</code> 产生非常量数组类型，就要用ref包装了。
+
+<p>
+函数指针被推导为普通的非引用类型，也就是普通的函数指针。 Tuple元素也可以是一个函数的引用类型，但是这种tuple不能通过make_tuple构造。(一个普通的函数类型会是推导的结果，是非法的)：
+</p>
+
+
+
+
+
+<pre><code>void f(int i);<br>  ...<br>make_tuple(&amp;f); // tuple&lt;void (*)(int)&gt;<br>  ...<br>tuple&lt;tuple&lt;void (&amp;)(int)&gt; &gt; a(f) // 可以<br>make_tuple(f);                    // 错误<br></code></pre>
+
+
+
+
+
+
+
+<h2><a name="accessing_elements">访问 tuple 元素</a></h2>
+
+
+
+
+
+
+
+<p>
+通过下面的表达式访问tuple元素：
+
+</p>
+
+
+
+
+
+<pre><code>t.get&lt;N&gt;()<br></code></pre>
+
+
+
+
+
+
+或者
+<pre><code>get&lt;N&gt;(t)<br></code></pre>
+
+
+
+
+
+
+其中 <code>t</code> 是一个tuple对象， <code>N</code> 是一个指定被访问元素下标的常数表达式。 根据 <code>t</code> 是否常量， <code>get</code> 函数返回的第 <code>N</code> 个元素的类型自动成为常量引用或非常量引用。 首元素的下标为 0 ，因此<code>
+N</code> 必须在 0 到 <code>k-1</code> 之间，其中 <code>k</code> 是tuple中元素的个数。 违反这个约定将会导致编译错误。 例如：
+
+<pre><code>double d = 2.7; A a;<br>tuple&lt;int, double&amp;, const A&amp;&gt; t(1, d, a);<br>const tuple&lt;int, double&amp;, const A&amp;&gt; ct = t;<br>  ...<br>int i = get&lt;0&gt;(t); i = t.get&lt;0&gt;();        // 正确<br>int j = get&lt;0&gt;(ct);                       // 正确<br>get&lt;0&gt;(t) = 5;                            // 正确 <br>get&lt;0&gt;(ct) = 5;                           // 错误， 不能对常量赋值 <br>  ...<br>double e = get&lt;1&gt;(t); // 正确   <br>get&lt;1&gt;(t) = 3.14;     // 正确 <br>get&lt;2&gt;(t) = A();      // 错误，不能对常量赋值 <br>A aa = get&lt;3&gt;(t);     // 错误：下标超出范围 <br>  ...<br>++get&lt;0&gt;(t);  // 正确，可以像普通变量一样使用<br></code></pre>
+
+
+
+
+
+
+
+注意! 这个 get 成员函数在微软的Visual C++编译器下不支持。
+还有，若不显式地使用命名空间前缀，编译器将找不到非成员get函数。 因此，当用 MSVC++ 6.0 编译时，所有的get调用都应写成<code></code> <code>tuples::get&lt;N&gt;(a_tuple)</code>&nbsp;。
+
+<h2><a name="construction_and_assignment">拷贝构造与赋值</a></h2>
+
+
+
+
+
+
+
+<p>
+一个 tuple对象可以通过另一个tuple对象拷贝构造， 假若每一个元素都是逐一可拷贝构造的。
+类似地，一个tuple对象可以对另一个tuple对象赋值，假若每一个元素都是逐一可赋值的。例如：
+
+</p>
+
+
+
+
+
+<pre><code>class A {};<br>class B : public A {};<br>struct C { C(); C(const B&amp;); };<br>struct D { operator C() const; };<br>tuple&lt;char, B*, B, D&gt; t;<br>  ...<br>tuple&lt;int, A*, C, C&gt; a(t); // 正确 <br>a = t;                     // 正确 <br></code></pre>
+
+
+
+
+
+
+
+这两种情况进行如下类型转换，<code>char -&gt; int</code>, <code>B* -&gt; A*</code> (派生类指针转为基类指针),  <code>B -&gt; C</code> (用户定义转换) and <code>D -&gt; C</code> (用户定义转换)。
+
+<p>注意，库也定义了从一个<code>std::pair</code>到相应的tuple类型的赋值：
+
+</p>
+
+
+
+
+
+<pre><code>tuple&lt;float, int&gt; a = std::make_pair(1, 'a');<br></code></pre>
+
+
+
+
+
+
+
+<h2><a name="relational_operators">关系操作符</a></h2>
+
+
+
+
+
+
+<p>
+作用在tuple上的关系操作符 <code>==, !=, &lt;, &gt;, &lt;=</code>&nbsp;<code>,</code> <code>&gt;=</code>
+会转发到tuple内的元素的相应操作符上。 意思是，对于某一个关系操作符，如果在所有的元素上都有定义，则该操作符将同样地在整个tuple上有定义。 Tuple的相等操作符的定义是<code></code><code></code>：
+</p>
+
+
+
+
+
+<ul>
+
+
+
+
+
+
+  <li><code>a == b</code> iff for each <code>i</code>: <code>a<sub>i</sub> == b<sub>i</sub></code></li>
+
+
+
+
+
+
+  <li><code>a != b</code> iff exists <code>i</code>: <code>a<sub>i</sub> != b<sub>i</sub></code></li>
+
+
+
+
+
+
+</ul>
+
+
+
+
+
+
+
+操作符 <code>&lt;, &gt;, &lt;=</code>&nbsp;<code>,</code> <code>&gt;=</code> 通过字典顺序实现。
+
+<p>要注意，若对元素个数不同的两个tuple进行比较会产生编译错误。</p>
+
+
+还有，比较操作符是&ldquo;短路&rdquo;的：比较从第一个元素开始，一旦能得出结果就马上停止，忽略后面元素的比较运算。
+
+<p>Examples:
+
+</p>
+
+
+
+
+
+<pre><code>tuple&lt;std::string, int, A&gt; t1(std::string("same?"), 2, A());<br>tuple&lt;std::string, long, A&gt; t2(std::string("same?"), 2, A());<br>tuple&lt;std::string, long, A&gt; t3(std::string("different"), 3, A());<br><br>bool operator==(A, A) { std::cout &lt;&lt; "All the same to me..."; return true; }<br><br>t1 == t2; 		// true<br>t1 == t3;               // false, 没有打印出 "All the..."<br></code></pre>
+
+
+
+
+
+
+
+
+<h2><a name="tiers">Tiers连结</a></h2>
+
+
+
+
+
+
+
+<p>
+<i>Tiers</i> 是一种 tuple， 其所有的元素都是非常量引用类型。
+它通过调用<code>tie</code>函数构造<code></code> (类比 <code>make_tuple</code>):
+
+</p>
+
+
+
+
+
+<pre><code>int i; char c; double d; <br>  ...<br>tie(i, c, a);<br></code></pre>
+
+
+
+
+
+
+
+<p>上面 <code>tie</code> 函数生成了一个类型为 <code>tuple&lt;int&amp;, char&amp;, double&amp;&gt;</code>的tuple 。 也可调用 <code>make_tuple(ref(i), ref(c), ref(a))</code>得到同样结果。
+</p>
+
+
+
+
+
+
+
+<p>一个包含非常量引用元素的tuple可以使另一个tuple&ldquo;解包&rdquo;为普通变量。例如：
+
+</p>
+
+
+
+
+
+<pre><code>int i; char c; double d; <br>tie(i, c, d) = make_tuple(1,'a', 5.5);<br>std::cout &lt;&lt; i &lt;&lt; " " &lt;&lt;  c &lt;&lt; " " &lt;&lt; d;<br></code></pre>
+
+
+
+
+
+
+这段代码把1 a 5.5打印到标准输出流。<code></code>
+
+在ML和Python语言中，这样一个tuple解包操作被作为一个例子。
+调用返回tuple的函数是很方便的。
+
+<p>这种tiers连结技术也可以用在 <code>std::pair</code> 上：
+
+</p>
+
+
+
+
+
+<pre><code>int i; char c;<br>tie(i, c) = std::make_pair(1, 'a');<br></code></pre>
+
+
+
+
+
+
+<h4>ignore对象</h4>
+
+
+有一个特殊的对象叫&ldquo;ignore对象&rdquo;<code>，</code>它允许你在赋值时忽略某些元素。&nbsp;如果函数返回的tuple中，你只对其中一部分元素感兴趣，则可运用到&ldquo;ignore对象&rdquo;。例如（注意，ignore对象在子命名空间tuples）：
+
+<pre><code>char c;<br>tie(tuples::ignore, c) = std::make_pair(1, 'a');<br></code></pre>
+
+
+
+
+
+
+
+<h2><a name="streaming">串行化</a></h2>
+
+
+
+
+
+
+
+<p>
+Tuple 向 <code>std::ostream</code> 的输出的全局操作符 <code>operator&lt;&lt;</code>&nbsp;被重载，定义为对tuple的元素逐一调用&nbsp;<code>operator&lt;&lt;</code> &nbsp;。 
+</p>
+
+
+
+
+
+
+
+<p>
+类似地，为了从输入流 <code>std::istream</code>  得一个tuple，全局操作符 <code>operator&gt;&gt;</code> 也被重载，定义为对元素逐一调用 <code>operator&gt;&gt;</code> &nbsp;。 
+</p>
+
+
+
+
+
+
+
+<p>
+元素之间默认的分隔符是空格，而且整个tuple用圆括号包围。例如：
+
+</p>
+
+
+
+
+
+<pre><code>tuple&lt;float, int, std::string&gt; a(1.0f,  2, std::string("Howdy folks!");<br><br>cout &lt;&lt; a; <br></code></pre>
+
+
+输出tuple是： <code>(1.0 2 Howdy folks!)</code>
+
+<p>这个库定义了三个函数，用于改变默认的行为：
+</p>
+
+
+
+
+
+<ul>
+
+
+
+
+
+
+  <li><code>set_open(char)</code> 设置第一个元素之前输出的字符。</li>
+
+
+
+
+
+
+  <li><code>set_close(char)</code> 设置最后一个元素之后输出的字符。</li>
+
+
+
+
+
+
+  <li><code>set_delimiter(char)</code> 设置元素之间分隔符。</li>
+
+
+
+
+
+
+</ul>
+
+
+注意，这些函数在子命名空间tuples中定义。例如：
+<code></code>
+<pre>cout &lt;&lt; tuples::set_open('[') &lt;&lt; tuples::set_close(']') &lt;&lt; tuples::set_delimiter(',') &lt;&lt; a; <br></pre>
+
+
+
+
+
+
+输出刚才同样的tuple a如此： <code>[1.0,2,Howdy folks!]</code>
+
+<p>这三个函数也适用于输入操作符 <code>operator&gt;&gt;</code> 和 <code>istream</code> 。 假设标准输入流 <code>cin</code> 流有如下数据：
+
+</p>
+
+
+
+
+
+<pre><code>(1 2 3) [4:5]</code></pre>
+
+
+程序代码：
+
+<code></code>
+<pre>tuple&lt;int, int, int&gt; i;<br>tuple&lt;int, int&gt; j;<br><br>cin &gt;&gt; i;<br>cin &gt;&gt; tuples::set_open('[') &gt;&gt; tuples::set_close(']') &gt;&gt; tules::set_delimiter(':');<br>cin &gt;&gt; j;<br></pre>
+
+
+
+
+
+
+
+把数据读入tuple i 和 j &nbsp;。
+
+<p>
+注意，从<code>std::string</code> 或者 C风格的字符串中提取出tuple不一定行得通，因为解析可串行化的tuple时可能带有歧义。
+</p>
+
+
+
+
+
+
+
+<h2><a name="performance">性能</a></h2>
+
+
+
+
+
+
+
+所有的tuple访问和构造函数都是很小的只有一行的内联函数。 
+因此，一个好的编译器可以消除任何额外的开销，产生相当于手写tuple（例如用类的方法）一样高质量的代码。 
+特别地，若用好的编译器，下面的代码没有性能差别：
+
+<pre><code>class hand_made_tuple { <br>  A a; B b; C c;<br>public:<br>  hand_made_tuple(const A&amp; aa, const B&amp; bb, const C&amp; cc) <br>    : a(aa), b(bb), c(cc) {};<br>  A&amp; getA() { return a; };<br>  B&amp; getB() { return b; };<br>  C&amp; getC() { return c; };<br>};<br><br>hand_made_tuple hmt(A(), B(), C()); <br>hmt.getA(); hmt.getB(); hmt.getC();<br></code></pre>
+
+
+
+
+
+
+
+和同样功能的代码：
+
+<pre><code>tuple&lt;A, B, C&gt; t(A(), B(), C());<br>t.get&lt;0&gt;(); t.get&lt;1&gt;(); t.get&lt;2&gt;(); <br></code></pre>
+
+
+
+
+
+
+
+<p>注意，有一些广泛使用的编译器（例如bcc 5.5.1）不能够优化这种tuple用法。
+</p>
+
+
+
+
+
+  
+<p>根据编译器的优化能力，在函数返回多个值的情况下，对比直接用非常量引用参数的方法，使用tier连结技术会有很小的性能下降。 例如，假设如下函数 <code>f1</code> 和 <code>f2</code> 有同样的功能：
+
+</p>
+
+
+
+
+
+<pre><code>void f1(int&amp;, double&amp;);<br>tuple&lt;int, double&gt; f2();<br></code></pre>
+
+
+
+
+
+
+
+那么按照如下代码，调用<code>f1</code>稍微比<code>f2</code>快一点：
+
+<pre><code>int i; double d;<br>  ...<br>f1(i,d);         // #1<br>tie(i,d) = f2(); // #2<br></code></pre>
+
+
+
+
+
+
+参阅 [<a href="#publ_1">1</a>,
+<a href="#publ_2">2</a>] 有更多深入的关于效率的讨论。
+
+<h4>对编译时间的影响</h4>
+
+
+
+
+
+
+
+<p>因为过多的模板实例化，编译tuple会比较慢。
+根据编译器和tuple长度的不同，编译一个tuple比编译一个等效的类（例如上述的&ldquo;手写tuple&rdquo;类）可能需要多花10倍的时间。
+但是，一个实际的程序除了tuple的定义之外，还包含很多实现其他程序功能的代码，使用tuple而多花费的时间可能是察觉不出的。有人曾测量过，
+在频繁使用tuple的程序中，编译时间增加5到10个百分点。
+在该的测试程序中，编译需要的内存增加22%到27%。 参阅 [<a href="#publ_1">1</a>,
+<a href="#publ_2">2</a>] 有更详细内容。
+</p>
+
+
+
+
+
+
+
+<h2><a name="portability">可移植性</a></h2>
+
+
+
+
+
+
+
+<p>这个库的代码是用标准C++编写，所以可用于和C++标准相容的编译器。 
+下面是此库在一些流行编译器上的已知问题：
+</p>
+
+
+
+
+
+
+<table>
+
+
+
+
+
+
+  <tbody>
+
+
+
+
+
+    <tr>
+
+
+
+
+
+      <td><u>Compiler</u></td>
+
+
+
+
+
+      <td><u>Problems</u></td>
+
+
+
+
+
+    </tr>
+
+
+
+
+
+
+    <tr>
+
+
+
+
+
+      <td>gcc 2.95</td>
+
+
+
+
+
+      <td>-</td>
+
+
+
+
+
+    </tr>
+
+
+
+
+
+
+    <tr>
+
+
+
+
+
+      <td>edg 2.44</td>
+
+
+
+
+
+      <td>-</td>
+
+
+
+
+
+    </tr>
+
+
+
+
+
+
+    <tr>
+
+
+
+
+
+      <td>Borland 5.5</td>
+
+
+
+
+
+      <td>不能用函数指针或者成员指针作为元素类型</td>
+
+
+
+
+
+    </tr>
+
+
+
+
+
+
+    <tr>
+
+
+
+
+
+      <td>Metrowerks 6.2</td>
+
+
+
+
+
+      <td>不能用 <code>ref</code> 和 <code>cref</code> 包装</td>
+
+
+
+
+
+    </tr>
+
+
+
+
+
+
+    <tr>
+
+
+
+
+
+      <td>MS Visual C++</td>
+
+
+
+
+
+      <td>没有引用 (<code>tie</code> 仍然可用)。 不能用 <code>ref</code> 和 <code>cref</code> 包装</td>
+
+
+
+
+
+    </tr>
+
+
+
+
+
+
+  
+  
+  
+  
+  
+  </tbody>
+</table>
+
+
+
+
+
+
+
+<h2><a name="thanks">感谢</a></h2>
+
+
+Gary Powell 是一个不可缺少的帮手。 特别地，tuple的流操作是他设计出来的。 Doug Gregor 提出一个可在
+MSVC编译的工作版本， David Abrahams 找到一个避开编译器不支持偏特化大部分约束的方法。 感谢 Jeremy Siek,
+William Kempf 和 Jens Maurer
+，他们提供的帮助和提出的建议。&nbsp;Vesa Karvonen, John Max
+Skaller, Ed Brey, Beman Dawes, David Abrahams 和 Hartmut Kaiser
+对库提出有建设性的意见。
+tie连结的思路来自于一个很久以前在usenet上的文章，作者是Ian
+McCulloch，他提出了一些类似std::pairs的设计。
+
+<h2><a name="references">参考引用</a></h2>
+
+
+
+
+
+
+
+<p>
+<a name="publ_1"></a>[1]
+J&auml;rvi J.: <i>Tuples and multiple return values in C++</i>, TUCS Technical Report No 249, 1999<!-- (<a href="http://www.tucs.fi/Publications">http://www.tucs.fi/Publications</a>)-->.
+</p>
+
+
+
+
+
+
+
+<p>
+<a name="publ_2"></a>[2]
+J&auml;rvi J.: <i>ML-Style Tuple Assignment in Standard C++ - Extending the Multiple Return Value Formalism</i>, TUCS Technical Report No 267, 1999<!-- (<a href="http://www.tucs.fi/Publications">http://www.tucs.fi/Publications</a>)-->.
+</p>
+
+
+
+
+
+
+
+<p>
+[3] J&auml;rvi J.:<i>Tuple Types and Multiple Return Values</i>, C/C++ Users Journal, August 2001.
+</p>
+
+
+
+
+
+
+
+<hr>
+
+<p>Last modified 2003-09-07</p>
+
+
+
+
+
+
+
+<p>&copy; Copyright <a href="../../../people/jaakko_jarvi.htm"> Jaakko J&auml;rvi</a>
+2001. Permission to copy, use, modify, sell and distribute this
+software and its documentation is granted provided this copyright
+notice appears in all copies. This software and its documentation is
+provided "as is" without express or implied warranty, and with no claim
+as to its suitability for any purpose.
+</p>
+
+
+
+
+
+
+</body>
+</html>

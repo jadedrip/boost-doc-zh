@@ -1,0 +1,149 @@
+[/
+ / Copyright (c) 2008 Marcin Kalicinski (kalita <at> poczta dot onet dot pl)
+ / Copyright (c) 2009 Sebastian Redl (sebastian dot redl <at> getdesigned dot at)
+ /
+ / Distributed under the Boost Software License, Version 1.0. (See accompanying
+ / file LICENSE_1_0.txt or copy at http://www.boost.org/LICENSE_1_0.txt)
+ /]
+[section:tutorial Five Minute Tutorial 五分钟教程]
+This tutorial uses XML. Note that the library is not specifically bound to XML,
+and any other supported format (such as INI or JSON) could be used instead.
+XML was chosen because the author thinks that  wide range of people is familiar
+with it.
+
+本教程使用XML。注意，本库并不是特别与XML绑定的，你可以使用其它可支持的格式
+(如INI或JSON)来代替。选择XML只是因为作者认为大多数人比较熟悉它。
+
+Suppose we are writing a logging system for some application, and need to read
+log configuration from a file when the program starts. The file with the log
+configuration looks like this:
+
+假设我们正在为某个应用程序编写一个日志系统，需要在程序启动时从某个文件读入日志的配置。
+日志配置文件看起来可能会象这样：
+
+[pre
+<debug>
+    <filename>debug.log</filename>
+    <modules>
+        <module>Finance</module>
+        <module>Admin</module>
+        <module>HR</module>
+    </modules>
+    <level>2</level>
+</debug>
+]
+
+It contains the log filename, a list of modules where logging is enabled, and
+the debug level value. To store the logging configuration in the program we
+created a debug_settings structure:
+
+它包含日志文件名，一串由要打开日志功能的模块所组成的列表，以及调试级别值。
+为了在程序中保存这些日志配置信息，我们创建一个 debug_settings 结构：
+
+   struct debug_settings
+   {
+       std::string m_file;          // log filename 日志文件名
+       int m_level;                 // debug level 调试级别
+       std::set<string> m_modules;  // modules where logging is enabled 要打开日志功能的模块
+       void load(const std::string &filename);
+       void save(const std::string &filename);
+   };
+
+All that needs to be done now is to write implementations of load() and save()
+member functions. Let's first deal with load(). It contains just 7 lines of
+code, although it does all the necessary things, including error reporting:
+
+现在要做的就是，编写 load() 和 save() 成员函数的实现。我们首先来看 load()。
+它只包含7行代码，就可以完成所有必要的工作，包括错误报告：
+
+    #include <boost/property_tree/ptree.hpp>
+    #include <boost/property_tree/xml_parser.hpp>
+
+    // Loads debug_settings structure from the specified XML file
+	// 从指定的XML文件中导入 debug_settings 结构
+    void debug_settings::load(const std::string &filename)
+    {
+        // Create an empty property tree object 创建一个空的属性树对象
+        using boost::property_tree::__ptree__;
+        __ptree__ pt;
+
+        // Load the XML file into the property tree. If reading fails
+        // (cannot open file, parse error), an exception is thrown.
+		// 将XML文件导入属性树。如果读入失败(不能打开文件，或分析错误)，则抛出异常
+        __read_xml__(filename, pt);
+
+        // Get the filename and store it in the m_file variable.
+        // Note that we construct the path to the value by separating
+        // the individual keys with dots. If dots appear in the keys,
+        // a path type with a different separator can be used.
+        // If the debug.filename key is not found, an exception is thrown.
+		// 获得文件名并将它保存到 m_file 变量。注意，我们用以点号分隔的键值
+		// 来构建访问该值的路径。如果在键值中有点号，则需使用其它分隔符。
+		// 如果 debug.filename 键值没有被找到，则抛出异常。
+        m_file = pt.__ptree_get__<std::string>("debug.filename");
+
+        // Get the debug level and store it in the m_level variable.
+        // This is another version of the get method: if the value is
+        // not found, the default value (specified by the second
+        // parameter) is returned instead. The type of the value
+        // extracted is determined by the type of the second parameter,
+        // so we can simply write get(...) instead of get<int>(...).
+		// 获得调试级别并将它保存到 m_level 变量。这是 get 方法的另一个版本：
+		// 如果要获取的值没有找到，则返回缺省值(由第二个参数指定)代替。
+		// 获取的值的类型由第二个参数的类型决定，所以我们只要写 get(...)，
+		// 而不用写 get<int>(...).
+        m_level = pt.__ptree_get__("debug.level", 0);
+
+        // Iterate over the debug.modules section and store all found
+        // modules in the m_modules set. The get_child() function
+        // returns a reference to the child at the specified path; if
+        // there is no such child, it throws. Property tree iterators
+        // are models of BidirectionalIterator.
+		// 遍历 debug.modules 节并将所有找到的模块保存至 m_modules 集合中。
+		// 函数 get_child() 返回指定路径上的子节点的引用；如果该子节点不存在，
+		// 则抛出异常。属性树迭代器为双向迭代器。
+        BOOST_FOREACH(__ptree__::__ptree_value_type__ &v,
+                pt.__ptree_get_child__("debug.modules"))
+            m_modules.__ptree_insert__(v.second.data());
+    }
+
+Now the save() function. It is also 7 lines of code:
+
+接下来是 save() 函数。它也是7行代码：
+
+   // Saves the debug_settings structure to the specified XML file
+   // 将 debug_setting 结构保存至指定的XML文件
+   void debug_settings::save(const std::string &filename)
+   {
+      // Create an empty property tree object 创建一个空的属性树对象
+      using boost::property_tree::__ptree__;
+      __ptree__ pt;
+   
+      // Put log filename in property tree 将日志文件名存入属性树
+      pt.__ptree_put__("debug.filename", m_file);
+   
+      // Put debug level in property tree 将调试级别存入属性树
+      pt.__ptree_put__("debug.level", m_level);
+   
+      // Iterate over the modules in the set and put them in the
+      // property tree. Note that the put function places the new
+      // key at the end of the list of keys. This is fine most of
+      // the time. If you want to place an item at some other place
+      // (i.e. at the front or somewhere in the middle), this can
+      // be achieved using a combination of the insert and put_own
+      // functions.
+	  // 遍历集合中的模块并将它们存入属性树中。注意，函数 put 将新插入的
+	  // 键值置于列表的尾端。多数时候这样很好。如果你想将某一项置于其它位
+	  // 置(例如在前端或中间)，可以用 insert 和 put_own 函数的组合来解决。
+      BOOST_FOREACH(const std::string &name, m_modules)
+         pt.__ptree_put__("debug.modules.module", name, true);
+
+      // Write the property tree to the XML file. 将属性树写出至XML文件。
+      __write_xml__(filename, pt);
+   }
+
+The full program [@boost:/libs/property_tree/examples/debug_settings.cpp debug_settings.cpp] is
+included in the examples directory.
+
+完整的程序 [@boost:/libs/property_tree/examples/debug_settings.cpp debug_settings.cpp] 在 examples 目录下。
+[endsect] [/tutorial]

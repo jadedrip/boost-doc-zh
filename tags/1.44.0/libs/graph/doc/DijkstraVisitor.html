@@ -1,0 +1,179 @@
+<!DOCTYPE HTML PUBLIC "-//W3C//DTD HTML 4.01 Transitional//EN">
+<html><head><meta content="text/html; charset=UTF-8" http-equiv="content-type"><!--
+  -- Copyright (c) Jeremy Siek, Lie-Quan Lee, and Andrew Lumsdaine 2000
+  --
+  -- Distributed under the Boost Software License, Version 1.0.
+  -- (See accompanying file LICENSE_1_0.txt or copy at
+  -- http://www.boost.org/LICENSE_1_0.txt)
+  -->
+<title>Boost Graph Library: Dijkstra Visitor</title></head>
+<body alink="#ff0000" bgcolor="#ffffff" link="#0000ee" text="#000000" vlink="#551a8b"> 
+<img src="../../../boost.png" alt="C++ Boost" height="86" width="277"> 
+
+<br clear="">
+
+<h1><img src="figs/python.gif" alt="(Python)">Dijkstra 遍历器概念</h1>这个概念定义了 <a href="./dijkstra_shortest_paths.html"><tt>dijkstra_shortest_paths()</tt></a>
+及相关算法所用的遍历器接口。用户可以创建一个符合该接口的类，然后传递一个该类的对象给
+<tt>dijkstra_shortest_paths()</tt> 以增加在搜索期间的动作。
+
+<h3>Refinement of 精化自</h3>
+
+<a href="../../utility/CopyConstructible.html">可复制构造 Copy Constructible</a>
+(遍历器的复制应该是一个轻量级的操作)。
+
+
+<h3>Notation 记号</h3>
+
+<table>
+<tbody><tr>
+<td><tt>V</tt></td>
+<td>一个以 Dijkstra 遍历器为模的类型。</td>
+</tr>
+
+<tr>
+<td><tt>vis</tt></td>
+<td>一个类型为 <tt>V</tt> 的对象。</td>
+</tr>
+
+<tr>
+<td><tt>G</tt></td>
+<td>一个以 Graph 为模的类型。</td>
+</tr>
+
+<tr>
+<td><tt>g</tt></td>
+<td>一个类型为 <tt>G</tt> 的对象。</td>
+</tr>
+
+<tr>
+<td><tt>e</tt></td>
+<td>一个类型为 <tt>boost::graph_traits&lt;G&gt;::edge_descriptor</tt> 的对象。</td>
+</tr>
+
+<tr>
+<td><tt>s,u,v</tt></td>
+<td>一个类型为 <tt>boost::graph_traits&lt;G&gt;::vertex_descriptor</tt> 的对象。</td>
+</tr>
+
+<tr>
+<td><tt>DistanceMap</tt></td>
+<td>一个以 <a href="../../property_map/doc/ReadWritePropertyMap.html">Read/Write Property Map</a> 为模的类型。</td>
+</tr>
+
+<tr>
+<td><tt>d</tt></td>
+<td>一个类型为 <tt>DistanceMap</tt> 的对象。</td>
+</tr>
+
+<tr>
+<td><tt>WeightMap</tt></td>
+<td>一个以 <a href="../../property_map/doc/ReadWritePropertyMap.html">Readable Property Map</a> 为模的类型。</td>
+</tr>
+
+<tr>
+<td><tt>w</tt></td>
+<td>一个类型为&nbsp;<tt>WeightMap</tt><tt></tt> 的对象。</td>
+</tr>
+
+</tbody></table>
+
+<h3>Associated Types 关联类型</h3>无
+<h3>Valid Expressions 有效表达式</h3>
+
+<table border="1">
+<tbody><tr>
+<th>Name</th><th>Expression</th><th>Return Type</th><th>Description</th>
+</tr>
+
+<tr>
+<td>顶点初始化</td>
+<td><tt>vis.initialize_vertex(u, g)</tt></td>
+<td><tt>void</tt></td>
+<td>在图初始化时对图中每个顶点调用。
+</td>
+</tr>
+
+<tr>
+<td>顶点检查</td>
+<td><tt>vis.examine_vertex(u, g)</tt></td>
+<td><tt>void</tt></td>
+<td>当某个顶点从队列中弹出时调用。在对顶点 <tt>u</tt> 的每条出边调用 <tt>examine_edge()</tt> 之前发生。
+</td>
+</tr>
+
+<tr>
+<td>边检查</td>
+<td><tt>vis.examine_edge(e, g)</tt></td>
+<td><tt>void</tt></td>
+<td>在每个顶点被发现后，对其每条出边调用。&nbsp;
+</td>
+</tr>
+
+<tr>
+<td>顶点发现</td>
+<td><tt>vis.discover_vertex(u, g)</tt></td>
+<td><tt>void</tt></td>
+<td>当首次遇到某个顶点时调用。&nbsp;
+</td>
+</tr>
+
+<tr>
+<td>边松驰</td>
+<td><tt>vis.edge_relaxed(e, g)</tt></td>
+<td><tt>void</tt></td>
+<td>在检查时，如果满足以下条件，则该边被松驰(其距离被减少)，并调用该方法。<br>
+<tt>
+tie(u,v) = incident(e, g);<br>
+D d_u = get(d, u), d_v = get(d, v);<br>
+W w_e = get(w, e);<br>
+assert(compare(combine(d_u, w_e), d_v));<br>
+</tt>
+</td>
+</tr>
+
+<tr>
+<td>边未松驰</td>
+<td><tt>vis.edge_not_relaxed(e, g)</tt></td>
+<td><tt>void</tt></td>
+<td>在检查时，如果该边未被松驰(见上)，则调用该方法。
+</td>
+</tr>
+
+<tr>
+<td>顶点结束</td>
+<td><tt>vis.finish_vertex(u, g)</tt></td>
+<td><tt>void</tt></td>
+<td>
+This invoked on a vertex after all of its out edges have been added to the
+search tree and all of the adjacent vertices have been discovered
+(but before their out-edges have been examined).
+</td>
+</tr>
+
+</tbody></table>
+
+<h3>Models 模型</h3>
+
+<ul>
+ <li><a href="./dijkstra_visitor.html"><tt>dijkstra_visitor</tt></a>
+</li></ul>
+
+<a name="python"></a>
+<h3>Python</h3>要在Python中实现一个<tt>DijkstraVisitor</tt>概念的模型，应创建一个从图的&nbsp;<tt>DijkstraVisitor</tt> 类型(名为 <tt><i>GraphType</i>.</tt><tt>DijkstraVisitor</tt>)派生的新类。事件和语法与C++中的遍历器相同。以下是一个
+Python <tt>bgl.Graph</tt> 图类型的例子：
+
+<pre>class count_tree_edges_dijkstra_visitor(bgl.Graph.DijkstraVisitor):<br>  def __init__(self, name_map):<br>    bgl.Graph.DijkstraVisitor.__init__(self)<br>    self.name_map = name_map<br><br>  def edge_relaxed(self, e, g):<br>    (u, v) = (g.source(e), g.target(e))<br>    print "Relaxed edge ",<br>    print self.name_map[u],<br>    print " -&gt; ",<br>    print self.name_map[v]<br></pre>
+
+<br>
+<hr>
+<table>
+<tbody><tr valign="top">
+<td nowrap="nowrap">Copyright © 2000-2001</td><td>
+<a href="http://www.boost.org/people/jeremy_siek.htm">Jeremy Siek</a>,
+Indiana University (<a href="mailto:jsiek@osl.iu.edu">jsiek@osl.iu.edu</a>)<br>
+<a href="http://www.boost.org/people/liequan_lee.htm">Lie-Quan Lee</a>, Indiana University (<a href="mailto:llee@cs.indiana.edu">llee@cs.indiana.edu</a>)<br>
+<a href="http://www.osl.iu.edu/%7Elums">Andrew Lumsdaine</a>,
+Indiana University (<a href="mailto:lums@osl.iu.edu">lums@osl.iu.edu</a>)
+</td></tr></tbody></table>
+
+</body></html>

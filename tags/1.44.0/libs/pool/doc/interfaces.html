@@ -1,0 +1,99 @@
+<!DOCTYPE HTML PUBLIC "-//W3C//DTD HTML 4.01 Transitional//EN" "http://www.w3.org/TR/html4/loose.dtd">
+<html><head>
+  <meta http-equiv="Content-Language" content="en-us">
+  <meta http-equiv="Content-Type" content="text/html; charset=UTF-8">
+  <link href="pool.css" rel="stylesheet" type="text/css">
+
+  <title>Boost Pool Interfaces</title></head>
+<body>
+  <img src="../../../boost.png" alt="C++ Boost" height="86" width="276">
+
+  <h1 align="center">Boost Pool Interfaces</h1>
+
+  <h2>Introduction 简介</h2>
+
+  <p>There are several interfaces provided which allow users great flexibility 
+  in how they want to use Pools. Review the <a href="concepts.html">concepts document</a> to get the basic understanding of how 
+  Pools work.<br>我们提供了几个接口，让用户可以非常灵活地使用 Pools. 请回顾一下 <a href="concepts.html">概念文档</a> 以获得 Pools 如何工作的基本知识。</p>
+
+  <h2>Terminology and Tradeoffs 术语和权衡</h2>
+
+  <h3>Object Usage vs. Singleton Usage 对象用法 与 单件用法</h3>
+
+  <p><em>Object Usage</em> is the method where each Pool is an object that may 
+  be created and destroyed. Destroying a Pool implicitly frees all chunks that 
+  have been allocated from it.<br><em>对象用法</em> 即每个 Pool 是一个对象，可能需要创建和销毁。销毁一个 Pool&nbsp;会隐式释放分配给它的所有内存区块。</p>
+
+  <p><em>Singleton Usage</em> is the method where each Pool is an object with 
+  static duration; that is, it will not be destroyed until program exit. Pool 
+  objects with Singleton Usage may be shared; thus, Singleton Usage implies 
+  thread-safety as well. System memory allocated by Pool objects with 
+  Singleton Usage may be freed through <span class="code">release_memory</span> or <span class="code">purge_memory</span>.<br><em>单件用法</em> 即每个 Pool 是一个静态持续的对象；即它在程序退出前不会被销毁。单件用法的 Pool 
+  对象是可共享的；因此，单件用法也是线程安全的。单件用法的 Pool 对象所分配的系统内存可通过 <span class="code">release_memory</span> 或 <span class="code">purge_memory</span> 来释放。</p>
+
+  <h3>Out-of-Memory Conditions: Exceptions vs. Null Return 内存用尽的情况：异常 与 返回空值</h3>
+
+  <p>Some Pool interfaces throw exceptions when out-of-memory; others will 
+  return 0. In general, unless mandated by the Standard, Pool interfaces will 
+  always prefer to return 0 instead of throw an exception.<br>有些 Pool 接口在内存用尽时抛出异常；有些则返回 0. 通常，除非标准有规定，Pool 接口总是优先返回 0 而不是抛出异常。</p>
+
+  <h2>The Interfaces 接口</h2>
+
+  <h3>pool</h3>
+
+  <p>The <a href="interfaces/pool.html">pool interface</a> is a simple Object 
+  Usage interface with Null Return.<br><a href="interfaces/pool.html">pool 接口</a> 是一个简单的对象用法接口，它采用空值返回。</p>
+
+  <p>Example:<br>例子：</p>
+  <pre class="code">void func()<br>{<br>  boost::pool&lt;&gt; p(sizeof(int));<br>  for (int i = 0; i &lt; 10000; ++i)<br>  {<br>    int * const t = p.malloc();<br>    ... // Do something with t; don't take the time to free() it<br>        // 使用 t，不用关心何时 free() 它<br>  }<br>} // on function exit, p is destroyed, and all malloc()'ed ints are implicitly freed<br>  // 函数退出时，p 被销毁，所有被 malloc() 的整数都被暗中释放<br></pre>
+
+  <h3>object_pool</h3>
+
+  <p>The <a href="interfaces/object_pool.html">object_pool interface</a> is an 
+  Object Usage interface with Null Return, but is aware of the type of the 
+  object for which it is allocating chunks. On destruction, any chunks that 
+  have been allocated from that object_pool will have their destructors 
+  called.<br><a href="interfaces/object_pool.html">object_pool interface</a> 是一个采用空值返回的对象用法接口，不过它需要知道分配区块的对象类型。在析构时，所有从该 object_pool 分配的区块都会调用它们的析构函数。</p>
+
+  <p>Example:<br>例子：</p>
+  <pre class="code">struct X { ... }; // has destructor with side-effects 带有副作用的析构函数<br><br>void func()<br>{<br>  boost::object_pool&lt;X&gt; p;<br>  for (int i = 0; i &lt; 10000; ++i)<br>  {<br>    X * const t = p.malloc();<br>    ... // Do something with t; don't take the time to free() it<br>        // 使用 t，不用关心何时 free() 它  }<br>} // on function exit, p is destroyed, and all destructors for the X objects are called<br>  // 函数退出时，p 被销毁，所有 X 对象的析构函数被调用</pre>
+
+  <h3>singleton_pool</h3>
+
+  <p>The <a href="interfaces/singleton_pool.html">singleton_pool interface</a> 
+  is a Singleton Usage interface with Null Return. It's just the same as the 
+  pool interface but with Singleton Usage instead.<br><a href="interfaces/singleton_pool.html">singleton_pool interface</a> 
+  是一个采用空值返回的单件用法接口。它与 pool 接口相同，除了是单件用法。</p>
+
+  <p>Example:<br>例子：</p>
+  <pre class="code">struct MyPoolTag { };<br><br>typedef boost::singleton_pool&lt;MyPoolTag, sizeof(int)&gt; my_pool;<br>void func()<br>{<br>  for (int i = 0; i &lt; 10000; ++i)<br>  {<br>    int * const t = my_pool::malloc();<br>    ... // Do something with t; don't take the time to free() it<br>        // 使用 t，不用关心何时 free() 它  }  }<br>  // Explicitly free all malloc()'ed int's 显式释放所有被 malloc() 的整数<br>  my_pool::purge_memory();<br>}<br></pre>
+
+  <h3>pool_alloc</h3>
+
+  <p>The <a href="interfaces/pool_alloc.html">pool_alloc interface</a> is a 
+  Singleton Usage interface with Exceptions. It is built on the singleton_pool 
+  interface, and provides a Standard Allocator-compliant class (for use in 
+  containers, etc.).<br><a href="interfaces/pool_alloc.html">pool_alloc interface</a> 是一个采用异常方式的单件用法接口。它是在 singleton_pool 
+  接口的基础上构建的，并提供了一个符合标准分配器规范的类(可用于标准容器)。</p>
+
+  <p>Example:<br>例子：</p>
+  <pre class="code">void func()<br>{<br>  std::vector&lt;int, boost::pool_allocator&lt;int&gt; &gt; v;<br>  for (int i = 0; i &lt; 10000; ++i)<br>    v.push_back(13);<br>} // Exiting the function does NOT free the system memory allocated by the pool allocator<br>  // You must call<br>  //  boost::singleton_pool&lt;boost::pool_allocator_tag, sizeof(int)&gt;::release_memory()<br>  // in order to force that<br>  // 退出该函数不会释放内存池分配器所分配的系统内存。你必须调用<br>  //  boost::singleton_pool&lt;boost::pool_allocator_tag, sizeof(int)&gt;::release_memory() 来强制释放<br></pre>
+
+  <h2>Future Directions 未来的方向</h2>
+
+  <p>Another pool interface will be written: a base class for per-class pool 
+  allocation. This "pool_base" interface will be Singleton Usage with 
+  Exceptions, and built on the singleton_pool interface.<br>将编写另一个内存池接口：一个基类用于单个类的内存池分配。这个 "pool_base" 接口将会是采用异常方式的单件用法，并基于 singleton_pool 接口构建。</p>
+  <hr>
+
+  <p><a href="http://validator.w3.org/check?uri=referer"><img src="http://www.w3.org/Icons/valid-html401" alt="Valid HTML 4.01 Transitional" border="0" height="31" width="88"></a></p>
+
+  <p>Revised 
+  <!--webbot bot="Timestamp" s-type="EDITED" s-format="%d %B, %Y" startspan -->05 December, 2006<!--webbot bot="Timestamp" endspan i-checksum="38516" --></p>
+
+  <p><i>Copyright © 2000, 2001 Stephen Cleary (scleary AT jerviswebb DOT com)</i></p>
+
+  <p><i>Distributed under the Boost Software License, Version 1.0. (See 
+  accompanying file <a href="../../../LICENSE_1_0.txt">LICENSE_1_0.txt</a> or 
+  copy at <a href="http://www.boost.org/LICENSE_1_0.txt">http://www.boost.org/LICENSE_1_0.txt</a>)</i></p>
+</body></html>

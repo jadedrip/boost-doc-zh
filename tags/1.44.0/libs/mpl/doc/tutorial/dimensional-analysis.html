@@ -1,0 +1,157 @@
+<!DOCTYPE html PUBLIC "-//W3C//DTD XHTML 1.0 Transitional//EN" "http://www.w3.org/TR/xhtml1/DTD/xhtml1-transitional.dtd">
+<html xmlns="http://www.w3.org/1999/xhtml" xml:lang="en" lang="en">
+<head>
+<!-- Copyright Aleksey Gurtovoy 2006. Distributed under the Boost --><!-- Software License, Version 1.0. (See accompanying --><!-- file LICENSE_1_0.txt or copy at http://www.boost.org/LICENSE_1_0.txt) -->
+
+  
+  <meta http-equiv="Content-Type" content="text/html; charset=utf-8" />
+
+
+  
+  <meta name="generator" content="Docutils 0.3.6: http://docutils.sourceforge.net/" />
+
+
+
+  
+  
+  <title>THE BOOST MPL LIBRARY: Dimensional Analysis</title>
+  <link rel="stylesheet" href="../style.css" type="text/css" />
+</head>
+
+
+<body class="docframe">
+
+
+<table class="header">
+
+  <tbody>
+
+    <tr class="header">
+
+      <td class="header-group navigation-bar"><span class="navigation-group"><a href="./tutorial-metafunctions.html" class="navigation-link">Prev</a>&nbsp;<a href="./representing-dimensions.html" class="navigation-link">Next</a></span><span class="navigation-group-separator">&nbsp;|&nbsp;</span><span class="navigation-group">Back&nbsp;<a href="./higher-order.html" class="navigation-link">Along</a></span><span class="navigation-group-separator">&nbsp;|&nbsp;</span><span class="navigation-group"><a href="./tutorial-metafunctions.html" class="navigation-link">Up</a>&nbsp;<a href="../index.html" class="navigation-link">Home</a></span><span class="navigation-group-separator">&nbsp;|&nbsp;</span><span class="navigation-group"><a href="./tutorial_toc.html" class="navigation-link">Full TOC</a></span></td>
+
+
+      <td class="header-group page-location"><a href="../index.html" class="navigation-link">标题页</a> / <a href="./tutorial-metafunctions.html" class="navigation-link">教程：元函数和高阶元编程</a> / <a href="./dimensional-analysis.html" class="navigation-link">量纲分析</a></td>
+
+
+    </tr>
+
+  
+  </tbody>
+</table>
+
+<div class="header-separator"></div>
+
+
+<div class="section" id="dimensional-analysis">
+<h1><a class="toc-backref" href="./tutorial-metafunctions.html#id41" name="dimensional-analysis">量纲分析</a></h1>
+
+
+<p>在纸面上进行物理计算的首要规则是，用于计算的数字并不是孤立的：多数数字都带有<span style="font-style: italic;">量纲</span>，忽略这一点是很危险的。由于计算变得更复杂了，对量纲进行跟踪可以防止我们不小心将质量赋给了长度，或者将加速度加到速度上 &mdash; 这需要为数字建立一个类型系统。</p>
+
+
+<p>手工检查类型是很枯燥的，而且也容易出错。当人们变得烦燥时，他们的注意力就会分散并容易出错。类型检查看起来不象排序那样是一项适合计算机做的工作，是吗？如果我们可以为量纲和数字建立一个C++类型框架，也许我们就能够在发生严重问题之前捕获这些错误。</p>
+
+
+<p>防止不同量纲的数字相互操作并不困难；我们只要将量纲表示为类，并且只允许同一类型的量纲互操作。这个问题有趣的地方在于，不同的量纲<span style="font-style: italic;">可以</span>通过乘法或除法进行组合，产生任意复杂的新量纲。例如，按照牛顿定律，力和质量与加速度的关系如下：</p>
+
+
+<blockquote>
+  <em>F</em> = <em>ma</em></blockquote>
+
+
+<p>由于质量和加速度具有不同的量纲，所以力的量纲肯定是它们的组合。事实上，加速度的量纲已经是一个组合，它是速度除以时间：</p>
+
+
+<blockquote>
+  <em>dv</em>/<em>dt</em></blockquote>
+
+
+<p>由于速度是距离(<em>l</em>)除以时间(<em>t</em>)，所以加速度的基本量纲是：</p>
+
+
+<blockquote>
+(<em>l</em>/<em>t</em>)/<em>t</em>  =  <em>l</em>/<em>t</em><sup>2</sup></blockquote>
+
+
+<p>实际上，加速度通常以"米每秒平方"来测量。这样可以得到，力的量纲是：</p>
+
+
+<blockquote>
+  <em>ml</em>/<em>t</em><sup>2</sup></blockquote>
+
+
+<!-- @litre_translator.line_offset -= 7 -->
+<p>力通常以 kg(m/s<sup>2</sup>) 或称为"千克米每秒平方"来衡量 。在将质量和加速度进行相乘时，我们也对它们的量纲进行相乘以得到结果，这样有助于我们确保结果是有意义的。这种方法的正式名字是 <strong>量纲分析</strong>，我们下一个任务就是在C++类型系统中实现这一规则。John Barton 和 Lee Nackman 在他们所写的 <em>Scientific and Engineering
+C++</em> <a class="citation-reference" href="#bn94" id="id5" name="id5">[BN94]</a> 一书中首次展示了如何做到这一点。我们将以元编程的方式对他们的方法进行改写。</p>
+
+
+<table class="citation" id="bn94" frame="void" rules="none">
+
+
+  <colgroup><col class="label" /><col /></colgroup>
+  <tbody valign="top">
+
+
+    <tr>
+
+      <td class="label"><a class="fn-backref" href="#id5" name="bn94">[BN94]</a></td>
+
+      <td>John J. Barton 和 Lee R. Nackman. <em>Scientific and
+Engineering C++: an Introduction with Advanced Techniques and
+Examples.</em> Reading, MA: Addison Wesley. ISBN
+0-201-53393-6. 1994.</td>
+
+    </tr>
+
+
+  
+  </tbody>
+</table>
+
+
+<ul class="toc simple" id="outline">
+
+
+  <li><a class="reference" href="./representing-dimensions.html" id="id42" name="id42">量纲的表示</a></li>
+
+
+  <li><a class="reference" href="./representing-quantities.html" id="id43" name="id43">数量的表示</a></li>
+
+
+  <li><a class="reference" href="./implementing-addition-and.html" id="id44" name="id44">加法和减法的实现</a></li>
+
+
+  <li><a class="reference" href="./implementing.html" id="id45" name="id45">乘法的实现</a></li>
+
+
+  <li><a class="reference" href="./implementing-division.html" id="id46" name="id46">除法的实现</a></li>
+
+
+</ul>
+
+
+</div>
+
+
+
+<div class="footer-separator"></div>
+
+
+<table class="footer">
+
+  <tbody>
+
+    <tr class="footer">
+
+      <td class="header-group navigation-bar"><span class="navigation-group"><a href="./tutorial-metafunctions.html" class="navigation-link">Prev</a>&nbsp;<a href="./representing-dimensions.html" class="navigation-link">Next</a></span><span class="navigation-group-separator">&nbsp;|&nbsp;</span><span class="navigation-group">Back&nbsp;<a href="./higher-order.html" class="navigation-link">Along</a></span><span class="navigation-group-separator">&nbsp;|&nbsp;</span><span class="navigation-group"><a href="./tutorial-metafunctions.html" class="navigation-link">Up</a>&nbsp;<a href="../index.html" class="navigation-link">Home</a></span><span class="navigation-group-separator">&nbsp;|&nbsp;</span><span class="navigation-group"><a href="./tutorial_toc.html" class="navigation-link">Full TOC</a></span></td>
+
+
+    </tr>
+
+  
+  </tbody>
+</table>
+
+</body>
+</html>

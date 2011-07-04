@@ -1,0 +1,377 @@
+<!DOCTYPE HTML PUBLIC "-//W3C//DTD HTML 4.01 Transitional//EN">
+<html><head><meta content="text/html; charset=UTF-8" http-equiv="content-type"><!--
+  -- Copyright (c) Michael Drexl 2006
+  --
+  -- Permission to use, copy, modify, and distribute this software
+  -- and its documentation for any purpose is hereby granted without fee,
+  -- provided that the above copyright notice appears in all copies and
+  -- that both that copyright notice and this permission notice appear
+  -- in supporting documentation.  Michael Drexl makes no
+  -- representations about the suitability of this software for any
+  -- purpose.  It is provided "as is" without express or implied warranty.
+  -->
+<title>Boost Graph Library: Resource-Constrained Shortest Paths</title></head>
+<body alink="#ff0000" bgcolor="#ffffff" link="#0000ee" text="#000000" vlink="#551a8b"> 
+<img src="../../../boost.png" alt="C++ Boost" height="86" width="277"> 
+
+<br clear="">
+
+<h1><a name="sec:espprc"></a>
+<tt>r_c_shortest_paths</tt>
+</h1>
+
+<p>
+</p><pre>template&lt;class Graph,<br>         class VertexIndexMap,<br>         class EdgeIndexMap,<br>         class Resource_Container,<br>         class Resource_Extension_Function,<br>         class Dominance_Function,<br>         class Label_Allocator,<br>         class Visitor&gt;<br>void r_c_shortest_paths( const Graph&amp; g,<br>                         const VertexIndexMap&amp; vertex_index_map,<br>                         const EdgeIndexMap&amp; edge_index_map,<br>                         typename graph_traits&lt;Graph&gt;::vertex_descriptor s,<br>                         typename graph_traits&lt;Graph&gt;::vertex_descriptor t,<br>                         std::vector&lt;std::vector&lt;typename graph_traits&lt;Graph&gt;::edge_descriptor&gt; &gt;&amp; pareto_optimal_solutions,<br>                         std::vector&lt;Resource_Container&gt;&amp; pareto_optimal_resource_containers,<br>                         const Resource_Container&amp; rc,<br>                         const Resource_Extension_Function&amp; ref,<br>                         const Dominance_Function&amp; dominance,<br>                         Label_Allocator la,<br>                         Visitor vis )<br><br>template&lt;class Graph,<br>         class VertexIndexMap,<br>         class EdgeIndexMap,<br>         class Resource_Container,<br>         class Resource_Extension_Function,<br>         class Dominance_Function,<br>         class Label_Allocator,<br>         class Visitor&gt;<br>void r_c_shortest_paths( const Graph&amp; g,<br>                         const VertexIndexMap&amp; vertex_index_map,<br>                         const EdgeIndexMap&amp; edge_index_map,<br>                         typename graph_traits&lt;Graph&gt;::vertex_descriptor s,<br>                         typename graph_traits&lt;Graph&gt;::vertex_descriptor t,<br>                         std::vector&lt;typename graph_traits&lt;Graph&gt;::edge_descriptor&gt;&amp; pareto_optimal_solution,<br>                         Resource_Container&gt;&amp; pareto_optimal_resource_container,<br>                         const Resource_Container&amp; rc,<br>                         const Resource_Extension_Function&amp; ref,<br>                         const Dominance_Function&amp; dominance,<br>                         Label_Allocator la,<br>                         Visitor vis )<br><br>template&lt;class Graph,<br>         class VertexIndexMap,<br>         class EdgeIndexMap,<br>         class Resource_Container,<br>         class Resource_Extension_Function,<br>         class Dominance_Function&gt;<br>void r_c_shortest_paths( const Graph&amp; g,<br>                         const VertexIndexMap&amp; vertex_index_map,<br>                         const EdgeIndexMap&amp; edge_index_map,<br>                         typename graph_traits&lt;Graph&gt;::vertex_descriptor s,<br>                         typename graph_traits&lt;Graph&gt;::vertex_descriptor t,<br>                         std::vector&lt;std::vector&lt;typename graph_traits&lt;Graph&gt;::edge_descriptor&gt; &gt;&amp; pareto_optimal_solutions,<br>                         std::vector&lt;Resource_Container&gt;&amp; pareto_optimal_resource_containers,<br>                         const Resource_Container&amp; rc,<br>                         const Resource_Extension_Function&amp; ref,<br>                         const Dominance_Function&amp; dominance )<br><br>template&lt;class Graph,<br>         class VertexIndexMap,<br>         class EdgeIndexMap,<br>         class Resource_Container,<br>         class Resource_Extension_Function,<br>         class Dominance_Function&gt;<br>void r_c_shortest_paths( const Graph&amp; g,<br>                         const VertexIndexMap&amp; vertex_index_map,<br>                         const EdgeIndexMap&amp; edge_index_map,<br>                         typename graph_traits&lt;Graph&gt;::vertex_descriptor s,<br>                         typename graph_traits&lt;Graph&gt;::vertex_descriptor t,<br>                         std::vector&lt;typename graph_traits&lt;Graph&gt;::edge_descriptor&gt;&amp; pareto_optimal_solution,<br>                         Resource_Container&gt;&amp; pareto_optimal_resource_container,<br>                         const Resource_Container&amp; rc,<br>                         const Resource_Extension_Function&amp; ref,<br>                         const Dominance_Function&amp; dominance )<br><br></pre>
+
+<h3>Introduction and Problem Description 简介与问题描述</h3>带资源限制的最短路径问题(SPPRC)是指，在一个带有边长度(旅行时间、花费)的有向图中，在一个或多个资源限制下，找出从源顶点到目标顶点间的最短(最便宜、最快)路径。例如，你可能想在以下限制下，找出从 <i>s</i> 到 <i>t</i> 的一条最短长度的路径。
+<ul>
+<li>总的旅行时间不得超过某个上界，且/或
+</li><li>沿着路径在各个顶点必须携带的货品总数小于或等于某个容量限制，且/或
+</li><li>如果在路径上有 <i>i</i> 和 <i>j</i> 两个顶点，则 <i>i</i> 必须在 <i>j</i> 之前
+</li><li>等等
+</li></ul>
+
+<p>严格说来，这个问题是NP难度的。如果不要求路径是基本的，即如果允许有顶点被多次访问，则该问题可以在伪多项式时间内解决。核心内容是，一个SPPRC中的两条(部分)路径是不可比较的，这与不带资源限制的SPP不同。这使得SPPRC类似于多准则决策问题。<br>对该问题的最近一项研究是：<br>
+Irnich, S.; Desaulniers, G. (2005):<br>
+Shortest Path Problems with Resource Constraints<br>
+in:<br>
+Desaulniers, G.; Desrosiers, J.; Solomon, M. (eds.) (2005):<br>
+Column Generation<br>
+Springer, New York, pp. 33–65<br>
+(<a href="http://www.dpor.rwth-aachen.de/de/publikationen/pdf/or_2004-01.pdf">在此</a>可在线访问)
+</p><p>本文档并不能给出对SPPRC的完整介绍。读者如何想要完整地了解该问题，请参考以上论文。不过，要理解本算法及其实现，需要解释一些基本的思想，并指出与无资源限制最短路径问题(SPP)的标签算法间的差别。
+</p>
+
+<p>SPPRC的标准解法是基于动态规划的标签算法。该方法使用了 <i>资源resources</i> 和 <i>资源扩展函数resource extension functions</i> 的概念。资源是可以在图的某个有向路径中各顶点上被确定或测量的某种一维扩展的信息片。例如费用、时间、负载，或是类似"在当前路径上是否已访问了顶点<i>i</i>"的信息。如果图中有至少一个顶点，其资源不能取为所有可能的值，则称该资源是<i>受约束的</i>。资源在某个顶点处的 <i>资源窗口resource window</i> 是指，该资源在该顶点处可允许的值集。
+</p>
+
+<p>对于每个要考虑的资源，图中的每条边都定义有一个资源扩展函数。某个资源的资源扩展函数将一条边的源顶点处的资源值的所有可能的向量(数学意义上的，不要与 <tt>std::vector</tt> 混淆)集合映射至该边的目标顶点处的资源可能值的集合。这意味着某个顶点处的资源值可能依赖于其前趋顶点处的一个或多个其它资源的值。
+</p>
+
+<p>
+<i>标签Labels</i>
+用于为部分路径保存资源的信息。一个SPPRC标签算法中的标签不象SPP标签算法中的标签那样，仅仅是常驻顶点、当前费用以及前趋顶点这三
+个的组合。SPPRC标签算法中的标签保存了它的常驻顶点、它被扩展的前趋边、它的前趋标签，以及它当前的资源值向量。被最小化的标准(费
+用、旅行时间、旅行距离或其它)也被视为一个(可能是不受限的)资源。之所以要保存前趋边而不是前趋顶点，是因为，由于资源受到约束，你不能假定底层的图
+是简单的。标签被记录在顶点上，当它们沿着某条边扩展时，会通过资源扩展函数被传播。标签沿着某条边 (<i>i</i>, <i>j</i>) 的 <i>扩展extension</i> 是 <i>可行的feasible</i>，如果在&nbsp;<i>j</i> 所得的标签 <i>l</i> 是可行的，即 <i>l</i> 的所有资源值都位于其资源窗口中。
+</p>
+
+<p>为了令标签的数量尽可能少，很重要的一点是执行一个 <i>优化步骤</i> 以消除不需要的标签。标签 <i>l</i><sub>1</sub> <i>优于</i> 另一个标签 <i>l</i><sub>2</sub>，如果它们都位于同一个顶点且，对于 <i>l</i><sub>2</sub> 的每一个可行的扩展，也有 <i>l</i><sub>1</sub> 的一个可行扩展，其每个主要标度资源的值都小于或等于 <i>l</i><sub>2</sub> 扩展中的资源值，且每个名义标度资源的值都等于 <i>l</i><sub>2</sub> 扩展中的资源值。被优化掉的标签无需扩展。未被其它标签优化掉的标签称为 未被优化掉 或 较优的。优化原理的应用是可选的—至少理论上如此。
+</p>
+
+<p>本实现是一个 标签-设定 算法。这意味着必须有一个或多个资源，其累计量在扩展后总是要至少与之前一样高。这类似于无资源限制的SPP所用的
+Dijkstra 算法，其距离量必须是非负的。如果有一个资源对于所有边都具有非负的资源量(例如，非负的边长度或非负的边旅行时间)，即可满足。
+</p>
+
+<h3>Concepts 概念</h3>
+
+<h4>ResourceContainer 资源容器</h4>
+
+<p>一个符合 ResourceContainer 概念的类型用于保存某个标签的当前资源消耗量。
+</p>
+
+<p>
+<b>Refinement of 精化自</b><br>
+<a href="http://www.sgi.com/tech/stl/DefaultConstructible.html">可缺省构造DefaultConstructible</a>, <a href="../../utility/CopyConstructible.html">可复制构造CopyConstructible</a>, <a href="http://www.sgi.com/tech/stl/Assignable.html">可赋值Assignable</a>, <a href="http://www.sgi.com/tech/stl/LessThanComparable.html">可小于比较LessThanComparable</a>, <a href="http://www.sgi.com/tech/stl/EqualityComparable.html">可等价比较EqualityComparable</a>
+</p>
+
+<p>
+<b>Valid Expressions 有效表达式</b><br>
+参见 <a href="#ResourceExtensionFunction">ResourceExtensionFunction</a> 概念。
+</p>
+
+<a name="Label"><h4>Label 标签</h4></a>
+
+<p>这个概念为 <tt>r_c_shortest_paths</tt> 函数中的标签定义了接口。这里有一个设计决策，不按标签的类型对这些函数参数化。类型 <tt>template&lt;class Graph, class Resource_Container&gt; struct r_c_shortest_paths_label</tt> 即符合该概念。
+</p>
+
+<p>
+<b>Valid Expressions 有效表达式</b><br>如果 <tt>label</tt> 是类型为 <tt>r_c_shortest_paths_label</tt> 的一个对象，则以下表达式有效：<br>
+<table border="1">
+<tbody><tr>
+<td>
+<tt>label.num</tt>
+</td>
+<td>返回一个无符号整数值，指定标签的数量。标签按它们的创建顺序连续编号。
+</td>
+</tr>
+<tr>
+<td>
+<tt>label.cumulated_resource_consumption</tt>
+</td>
+<td>返回与 <tt>label</tt> 相关联的，以 ResourceContainer 概念为模型的对象。
+</td>
+</tr>
+<tr>
+<td>
+<tt>label.p_pred_label</tt>
+</td>
+<td>返回指向前趋标签的常量指针，即指向沿着 <tt>label.pred_edge</tt> 扩展得到 <tt>label 对象的那个标签。</tt>
+</td>
+</tr>
+<tr>
+<td>
+<tt>label.pred_edge</tt>
+</td>
+<td>返回一个边描述符，令 <tt>label.p_pred_label</tt> 沿着该边扩展得到 <tt>label</tt> 对象。
+</td>
+</tr>
+<tr>
+<td>
+<tt>label.resident_vertex</tt>
+</td>
+<td>返回 <tt>label</tt> 对象所处的顶点的顶点描述符。
+</td>
+</tr>
+<tr>
+<td>
+<tt>label.b_is_dominated</tt>
+</td>
+<td>返回一个布尔值，表明该 <tt>label</tt> 对象是否被处于 <tt>label.resident_vertex</tt> 顶点的其它标签优化掉。仅当执行了优化检查后有用，即仅在遍历器函数 <tt>on_label_dominated</tt> 和 <tt>on_label_not_dominated</tt> (见 <a href="#ResourceConstrainedShortestPathsVisitor">下文</a>)中有用。
+</td>
+</tr>
+</tbody></table>
+
+</p><p>
+<b>Invariants 不变式</b><br>每一个 <tt>r_c_shortest_paths_label</tt> 对象，除了第一个标签，都有一个有效(非空)的 <tt>p_pred_label</tt> 指针和一个有效的 <tt>pred_edge</tt> 成员。<tt>num</tt> 成员等于零的标签的 <tt>p_pred_label</tt> 指针为空指针，而该标签的 <tt>pred_edge</tt> 成员是缺省构造的边描述符。
+</p>
+
+<a name="ResourceExtensionFunction"><h4>ResourceExtensionFunction 资源扩展函数</h4></a>
+
+<p>
+ResourceExtensionFunction 概念的模型用于指定一个标签如何沿着一条边扩展。
+</p>
+
+<p>
+<b>Valid Expressions 有效表达式</b><br>如果 <tt>ref</tt> 符合 ResourceExtensionFunction 概念，且类型 <tt>Resource_Container</tt> 符合 ResourceContainer 概念，则以下表达式有效：<br>
+<table border="1">
+<tbody><tr>
+<td>
+<pre>bool b = ref( const Graph&amp; g,<br>              Resource_Container&amp; new_cont,<br>              const Resource_Container&amp; old_cont,<br>              graph_traits&lt;Graph&gt;::edge_descriptor ed )<br></pre>
+</td>
+<td>
+<tt>ref</tt> 必须当且仅当该扩展可行，即如果 <tt>new_cont</tt> 满足在 <tt>ed</tt> 的目标顶点处的所有资源约束时返回 <tt>true</tt>。
+</td>
+</tr>
+</tbody></table>此外，以 ResourceExtensionFunction 概念为模的类型的引用可以作为 <tt>r_c_shortest_paths</tt> 的参数被传递，见上。<tt></tt><br>
+</p>
+
+<p>因此，以 ResourceExtensionFunction 概念为模的类型通常是一个函数或 <a href="http://www.sgi.com/tech/stl/functors.html">函数对象</a>。
+</p>
+
+<p>
+<b>Invariants 不变式</b><br>
+如果 <tt>ref</tt> 符合 ResourceExtensionFunction 概念，且类型 <tt>Resource_Container</tt> 符合 ResourceContainer 概念，则在调用
+</p><pre>ref( const Graph&amp; g,<br>     Resource_Container&amp; new_cont,<br>     const Resource_Container&amp; old_cont,<br>     graph_traits&lt;Graph&gt;::edge_descriptor )<br></pre>之后，表达式 <tt>old_cont &lt;= new_cont</tt> 为 <tt>true</tt>.<br>如上所述，这是因为本实现是一个标签-设定算法。因此，ResourceContainer 的小于操作符必须比较一个或多个资源，这些资源沿任意边的消耗量都是非递减的，这样算法才可以正确工作。
+<p></p>
+
+<h4>DominanceFunction</h4>
+
+<p>DominanceFunction 的模型用于指定两个标签间的优势关系。
+</p>
+
+<p>
+<b>Refinement of 精化自</b><br>
+<a href="http://www.sgi.com/tech/stl/BinaryPredicate.html">二元谓词BinaryPredicate</a>
+</p>
+
+<p>
+<b>Valid Expressions 有效表达式</b><br>如果 <tt>dominance</tt> 符合 DominanceFunction 概念，且类型 <tt>Resource_Container</tt> 符合 ResourceContainer 概念，则以下表达式有效：
+<table border="1">
+<tbody><tr>
+<td>
+<pre>bool b = dominance(const Resource_Container&amp; rc1, const Resource_Container&amp; rc2)<br></pre>
+</td>
+<td>
+<tt>dominance</tt> 必须当且仅当<tt></tt> <tt>rc1</tt> 优于 <tt>rc2</tt> 时返回 <tt>true</tt>
+</td>
+</tr>
+</tbody></table>
+此外，以&nbsp;DominanceFunction 概念为模的类型的引用可以作为 <tt>r_c_shortest_paths</tt> 的参数被传递，见上。
+</p>
+
+<p>
+<b>Invariants 不变式</b><br>一个符合 DominanceFunction 概念的类型必须当且仅当<tt></tt> <tt>rc1&lt;=rc2</tt> 返回 <tt>true</tt>。当 <tt>rc1==rc2</tt> 时它必须不返回 <tt>false</tt>。然后，它保证没有两个带有同一个资源消耗量的标签相互比对方优势，也都不会被 <tt>r_c_shortest_paths</tt> 函数视为被优化掉的。
+</p>
+
+<a name="ResourceConstrainedShortestPathsVisitor"><h4>ResourceConstrainedShortestPathsVisitor 资源受限的最短路径遍历器</h4></a>
+
+<p>这个概念定义了用于 <tt>r_c_shortest_paths</tt> 的遍历器接口。用户可以定义一个具有此接口的类型，并将该类型的一个对象传递给 <tt>r_c_shortest_paths</tt>，以实现在算法内的某些事件点执行用户自定义的动作。注意，该对象是以值方式传递的。
+</p>
+
+<p>
+<b>Refinement of 精化自</b><br>
+<a href="http://www.sgi.com/tech/stl/DefaultConstructible.html">可缺省构造DefaultConstructible</a>, <a href="../../utility/CopyConstructible.html">可复制构造CopyConstructible</a>
+</p>
+
+<p>
+<b>Valid Expressions 有效表达式</b><br>如果 <tt>vis</tt> 是符合 ResourceConstrainedShortestPathsVisitor 概念的类型的对象，且 <tt>g</tt> 是符合 关联图IncidenceGraph 和 属性图PropertyGraph 概念的类型 <tt>Graph</tt> 的一个对象，且该图为有向图，且 <tt>l</tt> 是符合&nbsp;Label 概念的类型 <tt>Label</tt> 的一个对象，则以下表达式有效：<br>
+<table border="1">
+<tbody><tr>
+<td>
+<tt>vis.on_label_popped( const Label&amp; l, const Graph&amp; g )</tt>
+</td>
+</tr>
+<tr>
+<td>
+<tt>vis.on_label_feasible( const Label&amp; l, const Graph&amp; g )</tt>
+</td>
+</tr>
+<tr>
+<td>
+<tt>vis.on_label_not_feasible( const Label&amp; l, const Graph&amp; g )</tt>
+</td>
+</tr>
+<tr>
+<td>
+<tt>vis.on_label_dominated( const Label&amp; l, const Graph&amp; g )</tt>
+</td>
+</tr>
+<tr>
+<td>
+<tt>vis.on_label_not_dominated( const Label&amp; l, const Graph&amp; g )</tt>
+</td>
+</tr>
+</tbody></table>有关 Label 的接口请见 <a href="#Label">Label 概念说明</a>。有关这些函数被调用时的信息，请见 <a href="#FunctionsDescription">算法说明</a>。
+</p><p>
+
+<a name="FunctionsDescription"><h3>Functions Description 函数说明</h3></a>
+
+</p><p>这些函数是基于优先队列的标签-设定算法的一个实现。在每一次迭代中，该算法从优先队列(未处理标签的集合)中取出一个标签
+<i>l</i>，检查它与 <i>l</i> 所驻的顶点 <i>i</i> 的当前标签集的比较优势。如果 <i>l</i> 被其它常驻在 <i>i</i> 的标签所优化，则 <i>l</i> 被从常驻于 <i>i</i> 中的标签集中删除。如果 <i>l</i> 未被优化掉，则它将被沿着 <i>i</i> 的所有出边扩展。由此所得到的每个新标签，都要检查其可行性，如果是可行的，则被加入至未处理标签集合中，同时也加入至顶点 <i>i</i> 的对应各后续标点的常驻标签集中。<i></i>如果某个新标签不是可行的，则被忽略。当没有未处理标签时，该算法结束。然后，它检查目标顶点是否已可到达(由于资源受限，所以即使是强连接图，也可能不能到达目标顶点)，构造一个或所有较优的(即未被优化掉的) <i>s</i>-<i>t</i>-路径并返回。该算法的伪代码如下。
+</p>
+
+<pre>r_c_shortest_paths( g,<br>                    vertex_index_map,<br>                    edge_index_map,<br>                    s,<br>                    t,<br>                    pareto_optimal_solutions,<br>                    pareto_optimal_resource_containers,<br>                    rc,<br>                    ref,<br>                    dominance,<br>                    la,<br>                    vis )<br>{<br>  Label first_label, cur_label, new_label<br>  Set of Labels unprocessed_labels, labels_cur_vertex<br>  initialize first_label with rc<br>  INSERT(unprocessed_labels, first_label)<br>  <b>while</b>(unprocessed_labels != Ø)<br>    cur_label := EXTRACTMIN(unprocessed_labels)                      ◁ vis.on_label_popped(cur_label)<br>    <b>if</b>(cur_label is not dominated)<br>      vertex i = ResidentVertex(cur_label)<br>      perform pairwise dominance check over labels resident at i<br>      mark all dominated labels as dominated<br>      DELETE all labels which are dominated AND processed<br>    <b>if</b>(cur_label is not dominated)                                   ◁ vis.on_label_not_dominated(cur_label)<br>      mark cur_label as processed<br>      <b>for each</b> arc (i, j) in the forward star of i<br>        new_label := ref(cur_label)<br>        <b>if</b>(new_label is not feasible)                                ◁ vis.on_label_not_feasible(new_label)<br>          DELETE(new_label)<br>        <b>else</b>                                                         ◁ vis.on_label_feasible(new_label)<br>          INSERT(unprocessed_labels, new_label)<br>          INSERT(set of labels resident at j,new_label)<br>    <b>else</b>                                                             ◁ vis.on_label_dominated(cur_label)<br>      DELETE(cur_label)<br>  <b>if</b>(t could be reached from s)<br>    <b>for each</b> label resident at t<br>      INSERT(pareto_optimal_resource_containers, label.resource_container)<br>      recursively construct pareto_optimal_path<br>      INSERT(pareto_optimal_solutions, pareto_optimal_path)<br>      <b>if</b>(only one Pareto-optimal solution is sought)<br>        BREAK<br>}<br></pre>
+
+<h3>Where Defined 定义于</h3>
+
+<a href="../../../boost/graph/r_c_shortest_paths.hpp"><tt>boost/graph/r_c_shortest_paths.hpp</tt></a>
+
+<h3>Parameters 参数</h3>
+
+IN: <tt>const Graph&amp; g</tt>
+<blockquote>应用该算法的图对象。类型 <tt>Graph</tt> 必须是有向的，且必须符合 <a href="./IncidenceGraph.html">关联图Incidence Graph</a> 和 <a href="./PropertyGraph.html">属性图PropertyGraph</a>。
+</blockquote>
+IN: <tt>const VertexIndexMap&amp; vertex_index_map</tt>
+<blockquote>一个 <a href="../../property_map/doc/ReadablePropertyMap.html">可读属性映射</a>，将顶点描述符映射至 [0, <tt>num_vertices(g)</tt>) 间的整数。
+</blockquote>
+IN: <tt>const EdgeIndexMap&amp; edge_index_map</tt>
+<blockquote>一个 <a href="../../property_map/doc/ReadablePropertyMap.html">可读属性映射</a>，将边描述符映射至 [0, <tt>num_edges(g)</tt>) 间的整数。
+</blockquote>
+IN: <tt>typename graph_traits&lt;Graph&gt;::vertex_descriptor s</tt>
+<blockquote>表示该路径开始顶点的顶点描述符。
+</blockquote>
+IN: <tt>typename graph_traits&lt;Graph&gt;::vertex_descriptor t</tt>
+<blockquote>表示该路径结束顶点的顶点描述符。
+</blockquote>
+OUT: <tt>std::vector&lt;std::vector&lt;typename graph_traits&lt;Graph&gt;::edge_descriptor&gt; &gt;&amp;
+pareto_optimal_solutions</tt>
+<blockquote>在要返回所有近似最优解的重载函数中，用于保存近似最优的(未被优化掉的)解(<i>s</i>-<i>t</i>-路径)的容器。该路径以相反顺序(从 <tt>t</tt> 到 <tt>s</tt>)的边描述符序列返回。
+</blockquote>
+OUT: <tt>std::vector&lt;Resource_Container&gt;&amp; pareto_optimal_resource_containers</tt>
+<blockquote>在要返回所有近似最优解的重载函数中，用于保存近似最优的资源的容器。
+</blockquote>
+OUT: <tt>std::vector&lt;typename graph_traits&lt;Graph&gt;::edge_descriptor&gt;&amp; 
+pareto_optimal_solution</tt>
+<blockquote>在只返回一个近似最优解的重载函数中，用于保存第一个近似最优的(未被优化掉的)解(<i>s</i>-<i>t</i>-路径)的容器。该路径以相反顺序(从 <tt>t</tt> 到 <tt>s</tt>)的边描述符序列返回。
+</blockquote>
+OUT: <tt>Resource_Container&amp; pareto_optimal_resource_container</tt>
+<blockquote>在只返回一个近似最优解的重载函数中，用于保存对应于第一个近似最优解的资源的容器。
+</blockquote>
+IN: <tt>const Resource_Container&amp; rc</tt>
+<blockquote>给定在顶点 <tt>s</tt> 处的初始资源消耗量的对象。类型 <tt>Resource_Container</tt> 必须符合 ResourceContainer 概念。
+</blockquote>
+IN: <tt>Resource_Extension_Function&amp; ref</tt>
+<blockquote>一个 <a href="http://www.sgi.com/tech/stl/functors.html">函数对象</a> 或函数指针或函数，指定某个标签如何沿着边被扩展。类型 <tt>Resource_Extension_Function</tt> 必须符合 ResourceExtensionFunction 概念。
+</blockquote>
+IN: <tt>Dominance_Function&amp; dominance</tt>
+<blockquote>一个 <a href="http://www.sgi.com/tech/stl/functors.html">函数对象</a> 或函数指针或函数，指定两个标签间的优势关系。类型 <tt>Dominance_Function</tt> 必须符合 DominanceFunction 概念。
+</blockquote>
+IN: <tt>Label_Allocator la</tt>
+<blockquote>一个类型为 <tt>Label_Allocator</tt> 的对象，指定标签的内存管理策略。它必须提供和 <tt>std::allocator<lt ;r_c_shortest_paths_label&lt;graph="" resource_container&gt="" &gt=""></lt></tt> 一样的接口。这个参数有一个缺省类型 <tt>default_r_c_shortest_paths_allocator</tt>，它使用STL标准分配器。如果使用的是这个函数的第三个或第四个重载，则该类型的一个对象被用作 <tt>Label_Allocator</tt> 参数。如果使用的是这个函数的第一个或第二个重载，则你必须给定一个 <tt>Label_Allocator</tt> 和一个 <tt>Visitor</tt> 参数。如果你仅想为 <tt>Visitor</tt> 开发一个用户自定义类型，那么你可以使用 <tt>default_r_c_shortest_paths_allocator</tt> 作为 <tt>Label_Allocator</tt>
+参数。如果你想使用特殊的分配器，可以指定任意一个类型作为该分配器的值类型模板参数；分配器的值类型会被绑定为正确的类型。
+</blockquote>
+IN: <tt>Visitor vis</tt>
+<blockquote>一个遍历器对象，指定在算法内部的某些事件点执行哪些操作。类型 <tt>Visitor</tt> 必须符合 ResourceConstrainedShortestPathsVisitor 概念。该参数有一个缺省类型 <tt>default_r_c_shortest_paths_visitor</tt>，它带有空的函数体。如果使用的是这个函数的第三个或第四个重载，则该类型的一个对象被用作&nbsp;<tt>Visitor</tt> 参数。如果使用的是这个函数的第一个或第二个重载，则你必须给定一个 <tt>Label_Allocator</tt> 和一个 <tt>Visitor</tt> 参数。如果你只想使用一个特化的分配器，那么你可以使用 <tt>default_r_c_shortest_paths_</tt><tt>visitor</tt> 作为&nbsp;<tt>Visitor</tt>
+参数。
+</blockquote>
+
+<h4>Preconditions 先验条件</h4>
+
+<ul>
+<li>
+<tt>s</tt> 和 <tt>t</tt> 是 <tt>g</tt> 的有效顶点描述符。
+</li><li>
+<tt>rc</tt> 位于 <tt>s</tt> 处的资源窗口范围内，即它在 <tt>s</tt> 处组成一个可行的 <tt>Resource_Container</tt> 对象<tt></tt>(见 <a href="#Discussion">讨论</a>)。
+</li></ul>
+
+<h4>Throws 抛出</h4>
+
+<p>该函数本身不会抛出任何异常。不过，取决于模板参数，可能有异常从函数内部抛出。
+</p>
+
+<h4>Complexity 复杂度</h4>
+
+<p>时间复杂度与问题有关。对于一个非简单的问题或一个无负权回路的图之上的问题，复杂度为顶点数和边数的多项式，并依赖于所用的资源和资源扩展函数。对于带有负权回路的图之上的简单问题，复杂度为顶点数和边数的指数式，并依赖于所用的资源和资源扩展函数。
+</p>
+
+<a name="Discussion"><h3>Discussion 讨论</h3></a>
+
+<p>这个函数留下了一大堆工作给用户。它几乎就象是SPPRC的一个小型框架。但是这是这个问题固有的特性。它完全取决于用户，用户要确保在其资源容器
+对象中保存了'正确'的资源，资源扩展函数以正确的方式对标签进行扩展，且优势函数可以将'正确'标签分为被优化掉的和非被优化掉的。特别是，提供给该函
+数的初始
+ResourceContainer 对象必须是可行的，这一先验条件与它是 unpleasant
+的同样重要。本实现不会检查这些，因此，这里为了泛型性而牺牲了舒适性。这是一个设计决策，即不根据类型 ResourceContainer
+和图类型的顶点属性之间的关系作任何假设。
+</p>
+
+<p>在底层图不含有负权回路(即对于那些要最小化的非受限资源，如费用或距离，而言，具有负权资源消耗量的回路)的情况下，所得的路径总是简单的，即不
+含重复顶点。当存在负权回路时，如果至少存在一个严格递增的资源，即存在某个资源，其在所有边上都有严格为正的消耗，则本算法是有限的(这是一个充分条
+件)。否则，你必须为 ResourceContainer 概念提供一个定制的类型，以保证有限性。相关例子，请见<br>
+Feillet, D.; Dejax, P.; Gendreau, M.; Gueguen, C. (2004):<br>
+An Exact Algorithm for the Elementary Shortest Path Problem with
+Resource Constraints: Application to Some Vehicle Routing Problems<br>
+Networks, vol. 44, pp. 216–229.
+</p>
+
+<p>经验表明，对于'小的'资源容器，尝试某个特化的小对象分配器，如来自 Boost Pool 库，可能是有益的。对于较大的资源容器(即用于大量资源的)，缺省的分配器是正确的选择。
+</p>
+
+<p>有一个名为 <tt>check_path</tt> 的工具函数可以用于调试，如果 <tt>r_c_shortest_paths</tt> 返回一个可行且近似最优的路径，而用户怀疑它不是可行的或不是最优的：
+</p><pre>template&lt;class Graph,<br>         class Resource_Container,<br>         class Resource_Extension_Function&gt;<br>void check_r_c_path( const Graph&amp; g,<br>                     const std::vector&lt;typename graph_traits&lt;Graph&gt;::edge_descriptor&gt;&amp; ed_vec_path,<br>                     const Resource_Container&amp; initial_resource_levels,<br>                     bool b_result_must_be_equal_to_desired_final_resource_levels,<br>                     const Resource_Container&amp; desired_final_resource_levels,<br>                     Resource_Container&amp; actual_final_resource_levels,<br>                     const Resource_Extension_Function&amp; ref,<br>                     bool&amp; b_is_a_path_at_all,<br>                     bool&amp; b_feasible,<br>                     bool&amp; b_correctly_extended,<br>                     typename graph_traits&lt;Graph&gt;::edge_descriptor&amp;<br>                     ed_last_extended_arc )<br></pre>
+<p></p>其中的布尔参数具有以下意义：
+<ul>
+<li>
+如果 <tt>b_result_must_be_equal_to_desired_final_resource_levels==true</tt>，则被计算的累积最终资源级别必须等于 <tt>desired_final_resource_levels</tt>.
+</li><li>如果 <tt>b_result_must_be_equal_to_desired_final_resource_levels==false</tt>，则被计算的累积最终资源级别必须小于等于 <tt>desired_final_resource_levels</tt>.
+</li><li>
+<tt>b_is_a_path_at_all==true</tt> 当且仅当 <tt>ed_vec_path</tt>
+指定了在图论意义上的一次步行，即一系列的边，其中每条边的目标为下一条边的源，或是一次反向步行，其中每条边的源为下一条边的目标。注意，在资源受限最
+短路径的世界中，路径不必是简单的：顶点或边的重复是允许的。当图中没有任一回路具有负的成本(旅行成本、旅行时间等)，则 <tt>r_c_shortest_paths</tt> 所返回的路径将是简单的。否则，你必须使用适当的资源容器、资源扩展函数和优势函数(参见前文所述)。
+</li><li>
+<tt>b_feasible==true</tt> 当且仅当 <tt>b_is_a_path_at_all==true</tt> 且沿着该路径的所有顶点的所有资源窗口得以维持。
+</li><li>当 <tt>b_result_must_be_equal_to_desired_final_resource_levels==true</tt> (或<tt>false</tt>)时，<tt>b_correctly_extended==true</tt> 当且仅当 <tt>b_feasible==true</tt>
+且位于路径末端的被计算资源级别等于(或小于等于)由 <tt>desired_final_resource_levels</tt> 所给定的最终资源级别期望值。
+</li></ul>
+
+<p>
+<tt>ed_last_extended_arc</tt> 保存了最后一条被扩展边的边描述符。如果 <tt>ed_vec_path</tt> 是长度为正值的路径，且 <tt>b_feasible==false</tt>，则 <tt>ed_last_extended_arc</tt> 是一个边描述符，该边的目标顶点是第一个违反资源窗口的顶点。
+</p>
+
+<h3>Examples 示例</h3>
+
+<p>文件 <a href="../example/r_c_shortest_paths_example.cpp">
+<rr>example/r_c_shortest_paths_example.cpp</rr></a> 提供了多个例子，示范如何用 <tt>r_c_shortest_paths</tt>
+函数解答SPPRC。其中还有一个示例是关于不带资源受限的SPP的，有一个示例则是关于带时间窗口的最短路径问题。<br>很显然，你不会用这个算法来解不带资源受限的SPP，因为有更快的算法，但是，你可能希望带资源受限的SPP的代码可以处理这种情况。
+</p>
+
+<br>
+<hr>
+<table>
+<tbody><tr valign="top">
+<td nowrap="nowrap">Copyright © 2006</td>
+<td>
+Michael Drexl (michaeldrexl at web dot de)
+</td></tr></tbody></table>
+
+</body></html>

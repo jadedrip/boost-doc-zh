@@ -1,0 +1,376 @@
+<!DOCTYPE HTML PUBLIC "-//W3C//DTD HTML 4.01 Transitional//EN">
+<html><head>
+<meta http-equiv="Content-Type" content="text/html; charset=UTF-8">
+
+<title>Intrusive treap based associative containers: treap_set, treap_multiset and treap</title><link rel="stylesheet" href="../boostbook.css" type="text/css">
+<meta name="generator" content="DocBook XSL Stylesheets V1.73.2">
+<link rel="start" href="../index.html" title="The Boost C++ Libraries BoostBook Documentation Subset">
+<link rel="up" href="../intrusive.html" title="Chapter&nbsp;10.&nbsp;Boost.Intrusive">
+<link rel="prev" href="sg_set_multiset.html" title="Intrusive scapegoat tree based associative containers: sg_set, sg_multiset and sgtree">
+<link rel="next" href="advanced_lookups_insertions.html" title="Advanced lookup and insertion functions for associative containers"></head>
+<body alink="#0000ff" bgcolor="white" link="#0000ff" text="black" vlink="#840084">
+<table cellpadding="2" width="100%"><tbody><tr>
+<td valign="top"><img alt="Boost C++ Libraries" src="../../../boost.png" height="86" width="277"></td>
+<td align="center"><a href="../../../index.html">Home</a></td>
+<td align="center"><a href="../../../libs/libraries.htm">Libraries</a></td>
+<td align="center"><a href="http://www.boost.org/users/people.html">People</a></td>
+<td align="center"><a href="http://www.boost.org/users/faq.html">FAQ</a></td>
+<td align="center"><a href="../../../more/index.htm">More</a></td>
+</tr></tbody></table>
+<hr>
+<div class="spirit-nav">
+<a accesskey="p" href="sg_set_multiset.html"><img src="../../../doc/html/images/prev.png" alt="Prev"></a><a accesskey="u" href="../intrusive.html"><img src="../../../doc/html/images/up.png" alt="Up"></a><a accesskey="h" href="../index.html"><img src="../../../doc/html/images/home.png" alt="Home"></a><a accesskey="n" href="advanced_lookups_insertions.html"><img src="../../../doc/html/images/next.png" alt="Next"></a>
+</div>
+<div class="section" lang="en">
+<div class="titlepage"><div><div><h2 class="title" style="clear: both;">
+<a name="intrusive.treap_set_multiset"></a><a class="link" href="treap_set_multiset.html" title="Intrusive treap based associative containers: treap_set, treap_multiset and treap"> Intrusive treap based associative
+    containers: treap_set, treap_multiset and treap 基于treap的介入式关联容器：treap_set, treap_multiset 和 treap</a>
+</h2></div></div></div>
+<div class="toc"><dl>
+<dt><span class="section"><a href="treap_set_multiset.html#intrusive.treap_set_multiset.treap_set_multiset_hooks">
+      Using binary search tree hooks: bs_set_base_hook and bs_set_member_hook 使用二分查找树钩子：bs_set_base_hook 和 bs_set_member_hook</a></span></dt>
+<dt><span class="section"><a href="treap_set_multiset.html#intrusive.treap_set_multiset.treap_set_multiset_containers">
+      treap_set, treap_multiset and treap containers &nbsp; treap_set, treap_multiset 和 treap 容器</a></span></dt>
+<dt><span class="section"><a href="treap_set_multiset.html#intrusive.treap_set_multiset.treap_set_exceptions"> Exception
+      safety of treap-based intrusive containers 基于treap的介入式容器的异常安全性</a></span></dt>
+<dt><span class="section"><a href="treap_set_multiset.html#intrusive.treap_set_multiset.treap_set_multiset_example">
+      Example 例子</a></span></dt>
+</dl></div>
+<p>
+      The name <span class="emphasis"><em>treap</em></span> is a mixture of <span class="emphasis"><em>tree</em></span>
+      and <span class="emphasis"><em>heap</em></span> indicating that Treaps exhibit the properties
+      of both binary search trees and heaps. A treap is a binary search tree that
+      orders the nodes by a key but also by a priority attribute. The nodes are ordered
+      so that the keys form a binary search tree and the priorities obey the max
+      heap order property.<br>名称&nbsp;<span class="emphasis"><em>treap</em></span> 是&nbsp;<span class="emphasis"><em>tree</em></span>
+ 和&nbsp;<span class="emphasis"><em>heap</em></span> 的混合，可见treap同时具有二叉树和堆的特点。treap是这样的一棵二叉树，其节点既要按键值排序，也要按优先级排序。因为节点是有序的，所以其键值形成一个二叉树，而优先级则满足最大堆的顺序属性。
+    </p>
+<div class="itemizedlist"><ul type="disc">
+<li>
+        If v is a left descendant of u, then key[v] &lt; key[u];<br>如果 v 是 u 的左子树，则 key[v] &lt; key[u];
+      </li>
+<li>
+        If v is a right descendant of u, then key[v] &gt; key[u];<br>如果 v 是 u 的右子树，则 key[v] &gt; key[u];
+      </li>
+<li>
+        If v is a child of u, then priority[v] &lt;= priority[u];<br>如果 v 是 u 的子树，则&nbsp;priority[v] &lt;= priority[u];
+      </li>
+</ul></div>
+<p>
+      If priorities are non-random, the tree will usually be unbalanced; this worse
+      theoretical average-case behavior may be outweighed by better expected-case
+      behavior, as the most important items will be near the root. This means most
+      important objects will be retrieved faster than less important items and for
+      items keys with equal keys most important objects will be found first. These
+      properties are important for some applications.<br>如果优先级是非随机的，则该树通常会是不平衡的；最坏的理论平均情况可能会被较好的期望情况超出，因为最重要的项比较接近根。这意味着最重要的对象要比较不重要的更快取出，对于具有相同键值的项来说，较重要的会先被找到。对于某些应用来说，这一点是很重要的。
+    </p>
+<p>
+      The priority comparison will be provided just like the key comparison, via
+      a function object that will be stored in the intrusive container. This means
+      that the priority can be stored in the value to be introduced in the treap
+      or computed on flight (via hashing or similar).<br>优先级的比较和键值的比较一样，通过一个保存在介入式容器中的函数对象来提供。这意味着优先级可以被保存在引入到treap中的值当中，或者在需要的时候即时计算得到(通过散列或类似的方法)。
+    </p>
+<p>
+      <span class="bold"><strong>Boost.Intrusive</strong></span> offers 3 containers based
+      on treaps: <code class="computeroutput"><a class="link" href="../boost/intrusive/treap_set.html" title="Class template treap_set">treap_set</a></code>,
+      <code class="computeroutput"><a class="link" href="../boost/intrusive/treap_multiset.html" title="Class template treap_multiset">treap_multiset</a></code>
+      and <code class="computeroutput"><a class="link" href="../boost/intrusive/treap.html" title="Class template treap">treap</a></code>. The first two
+      are similar to <code class="computeroutput"><a class="link" href="../boost/intrusive/set.html" title="Class template set">set</a></code> or <code class="computeroutput"><a class="link" href="../boost/intrusive/multiset.html" title="Class template multiset">multiset</a></code> and the latter is a generalization
+      that offers functions both to insert unique and multiple keys.<br><span class="bold"><strong>Boost.Intrusive</strong></span> 提供了3种基于treap的容器：<code class="computeroutput"><a class="link" href="../boost/intrusive/treap_set.html" title="Class template treap_set">treap_set</a></code>,
+      <code class="computeroutput"><a class="link" href="../boost/intrusive/treap_multiset.html" title="Class template treap_multiset">treap_multiset</a></code> 和 <code class="computeroutput"><a class="link" href="../boost/intrusive/treap.html" title="Class template treap">treap</a></code>。前两个类似于 <code class="computeroutput"><a class="link" href="../boost/intrusive/set.html" title="Class template set">set</a></code> 和 <code class="computeroutput"><a class="link" href="../boost/intrusive/multiset.html" title="Class template multiset">multiset</a></code>，后一个则是一个泛化容器，提供了插入唯一或非唯一键值的函数。
+    </p>
+<p>
+      The memory overhead of these containers with Boost.Intrusive hooks is 3 pointers.<br>这些带有 Boost.Intrusive 钩子的容器的空间开销通常为3个指针。&nbsp;
+    </p>
+
+<p>
+      An empty, <code class="computeroutput"><a class="link" href="../boost/intrusive/treap_set.html" title="Class template treap_set">treap_set</a></code>,
+      <code class="computeroutput"><a class="link" href="../boost/intrusive/treap_multiset.html" title="Class template treap_multiset">treap_multiset</a></code>
+      or <code class="computeroutput"><a class="link" href="../boost/intrusive/treap.html" title="Class template treap">treap</a></code> has also the
+      size of 3 pointers and an integer (supposing empty function objects for key
+      and priority comparison and constant-time size).<br>一个空的 <code class="computeroutput"><a class="link" href="../boost/intrusive/treap_set.html" title="Class template treap_set">treap_set</a></code>,
+      <code class="computeroutput"><a class="link" href="../boost/intrusive/treap_multiset.html" title="Class template treap_multiset">treap_multiset</a></code> 或 <code class="computeroutput"><a class="link" href="../boost/intrusive/treap.html" title="Class template treap">treap</a></code> 也具有3个指针和1个整数的大小(假设键值比较和优先级比较的函数对象为空，且容器带有常量时间的size函数)。</p>
+<div class="section" lang="en">
+<div class="titlepage"><div><div><h3 class="title">
+<a name="intrusive.treap_set_multiset.treap_set_multiset_hooks"></a><a class="link" href="treap_set_multiset.html#intrusive.treap_set_multiset.treap_set_multiset_hooks" title="Using binary search tree hooks: bs_set_base_hook and bs_set_member_hook">
+      Using binary search tree hooks: bs_set_base_hook and bs_set_member_hook&nbsp;</a></h3><h3 class="title"><a class="link" href="treap_set_multiset.html#intrusive.treap_set_multiset.treap_set_multiset_hooks" title="Using binary search tree hooks: bs_set_base_hook and bs_set_member_hook">使用二分查找树钩子：bs_set_base_hook 和 bs_set_member_hook</a></h3></div></div></div>
+
+<p>
+        <code class="computeroutput"><a class="link" href="../boost/intrusive/treap_set.html" title="Class template treap_set">treap_set</a></code>, <code class="computeroutput"><a class="link" href="../boost/intrusive/treap_multiset.html" title="Class template treap_multiset">treap_multiset</a></code> and <code class="computeroutput"><a class="link" href="../boost/intrusive/treap.html" title="Class template treap">treap</a></code> don't use their own hooks
+        but plain binary search tree hooks. This has many advantages since binary
+        search tree hooks can also be used to insert values in splay containers and
+        scapegoat trees.<br><code class="computeroutput"><a class="link" href="../boost/intrusive/treap_set.html" title="Class template treap_set">treap_set</a></code>, <code class="computeroutput"><a class="link" href="../boost/intrusive/treap_multiset.html" title="Class template treap_multiset">treap_multiset</a></code> 和 <code class="computeroutput"><a class="link" href="../boost/intrusive/treap.html" title="Class template treap">treap</a></code> 不使用它们自己的钩子，而是使用普通的二分查找树钩子。这有许多优点，因为二分查找树钩子还可以用于将值插入到 splay 容器和替罪羊树中。</p>
+<pre class="programlisting"><span class="keyword">template</span> <span class="special">&lt;</span><span class="keyword">class</span> <span class="special">...</span><span class="identifier">Options</span><span class="special">&gt;</span>
+<span class="keyword">class</span> <span class="identifier">bs_set_base_hook</span><span class="special">;</span>
+</pre>
+<div class="itemizedlist"><ul type="disc"><li>
+<code class="computeroutput"><a class="link" href="../boost/intrusive/bs_set_base_hook.html" title="Class template bs_set_base_hook">bs_set_base_hook</a></code>:
+          the user class derives publicly from this class to make it compatible with
+          scapegoat tree based containers.<br><code class="computeroutput"><a class="link" href="../boost/intrusive/bs_set_base_hook.html" title="Class template bs_set_base_hook">bs_set_base_hook</a></code><code class="computeroutput"></code><code class="computeroutput"></code>:&nbsp;用户类公有派生自本类以兼容于基于替罪羊树的容器。 
+
+        </li></ul></div>
+<p>
+      </p>
+<pre class="programlisting"><span class="keyword">template</span> <span class="special">&lt;</span><span class="keyword">class</span> <span class="special">...</span><span class="identifier">Options</span><span class="special">&gt;</span>
+<span class="keyword">class</span> <span class="identifier">bs_set_member_hook</span><span class="special">;</span>
+</pre>
+<div class="itemizedlist"><ul type="disc"><li>
+<code class="computeroutput"><a class="link" href="../boost/intrusive/set_member_hook.html" title="Class template set_member_hook">set_member_hook</a></code>:
+          the user class contains a public member of this class to make it compatible
+          with scapegoat tree based containers.<br><code class="computeroutput"></code><code class="computeroutput"><a class="link" title="Class template set_base_hook" href="../boost/intrusive/set_member_hook.html">set_member_hook</a></code>:&nbsp;用户类包含一个公有的本类以兼容于基于替罪羊树的容器。 
+
+        </li></ul></div>
+<p>
+        <code class="computeroutput"><a class="link" href="../boost/intrusive/bs_set_base_hook.html" title="Class template bs_set_base_hook">bs_set_base_hook</a></code>
+        and <code class="computeroutput"><a class="link" href="../boost/intrusive/bs_set_member_hook.html" title="Class template bs_set_member_hook">bs_set_member_hook</a></code>
+        receive the same options explained in the section <a class="link" href="usage.html" title="How to use Boost.Intrusive">How
+        to use Boost.Intrusive</a>:<br><code class="computeroutput"></code><code class="computeroutput"><a class="link" title="Class template bs_set_base_hook" href="../boost/intrusive/bs_set_base_hook.html">bs_set_base_hook</a></code> 和 
+<code class="computeroutput"><a class="link" title="Class template bs_set_member_hook" href="../boost/intrusive/bs_set_member_hook.html">bs_set_member_hook</a></code>&nbsp;接受在 
+<a class="link" title="How to use Boost.Intrusive" href="usage.html">如何使用 
+Boost.Intrusive</a> 一节中说明的各种选项：&nbsp; 
+      </p>
+<div class="itemizedlist"><ul type="disc">
+<li>
+<span class="bold"><strong><code class="computeroutput"><span class="identifier">tag</span><span class="special">&lt;</span><span class="keyword">class</span> <span class="identifier">Tag</span><span class="special">&gt;</span></code></strong></span>
+          (for base hooks only): This argument serves as a tag, so you can derive
+          from more than one base hook. Default: <code class="computeroutput"><span class="identifier">tag</span><span class="special">&lt;</span><span class="identifier">default_tag</span><span class="special">&gt;</span></code>.<br><span class="bold"><strong><code class="computeroutput"><span class="identifier">tag</span><span class="special">&lt;</span><span class="keyword">class</span> <span class="identifier">Tag</span><span class="special">&gt;</span></code></strong></span> (只用于基类钩子)：该参数作为一个标记，你可以派生自多个 
+slist 钩子。缺省值：<code class="computeroutput"><span class="identifier">tag</span><span class="special">&lt;</span><span class="identifier">default_tag</span><span class="special">&gt;</span></code>. 
+        </li>
+<li>
+<span class="bold"><strong><code class="computeroutput"><span class="identifier">link_mode</span><span class="special">&lt;</span><span class="identifier">link_mode_type</span>
+          <span class="identifier">LinkMode</span><span class="special">&gt;</span></code></strong></span>:
+          The linking policy. Default: <code class="computeroutput"><span class="identifier">link_mode</span><span class="special">&lt;</span><span class="identifier">safe_link</span><span class="special">&gt;</span></code>.<br><span class="bold"><strong><code class="computeroutput"><span class="identifier">link_mode</span><span class="special">&lt;</span><span class="identifier">link_mode_type</span> <span class="identifier">LinkMode</span><span class="special">&gt;</span></code></strong></span>: 链接策略。缺省值：<code class="computeroutput"><span class="identifier">link_mode</span><span class="special">&lt;</span><span class="identifier">safe_link</span><span class="special">&gt;</span></code>. 
+        </li>
+<li>
+<span class="bold"><strong><code class="computeroutput"><span class="identifier">void_pointer</span><span class="special">&lt;</span><span class="keyword">class</span> <span class="identifier">VoidPointer</span><span class="special">&gt;</span></code></strong></span>:
+          The pointer type to be used internally in the hook and propagated to the
+          container. Default: <code class="computeroutput"><span class="identifier">void_pointer</span><span class="special">&lt;</span><span class="keyword">void</span><span class="special">*&gt;</span></code>.<br><span class="bold"><strong><code class="computeroutput"><span class="identifier">void_pointer</span><span class="special">&lt;</span><span class="keyword">class</span> <span class="identifier">VoidPointer</span><span class="special">&gt;</span></code></strong></span>: 在钩子内部使用并被传递给容器的指针类型。缺省值：<code class="computeroutput"><span class="identifier">void_pointer</span><span class="special">&lt;</span><span class="keyword">void</span><span class="special">*&gt;</span></code>. 
+        </li>
+</ul></div>
+</div>
+<div class="section" lang="en">
+<div class="titlepage"><div><div><h3 class="title">
+<a name="intrusive.treap_set_multiset.treap_set_multiset_containers"></a><a class="link" href="treap_set_multiset.html#intrusive.treap_set_multiset.treap_set_multiset_containers" title="treap_set, treap_multiset and treap containers">
+      treap_set, treap_multiset and treap containers&nbsp;</a></h3><h3 class="title"><a class="link" href="treap_set_multiset.html#intrusive.treap_set_multiset.treap_set_multiset_containers" title="treap_set, treap_multiset and treap containers">treap_set, treap_multiset 和 treap 容器</a></h3></div></div></div>
+<p>
+      </p>
+<pre class="programlisting"><span class="keyword">template</span> <span class="special">&lt;</span><span class="keyword">class</span> <span class="identifier">T</span><span class="special">,</span> <span class="keyword">class</span> <span class="special">...</span><span class="identifier">Options</span><span class="special">&gt;</span>
+<span class="keyword">class</span> <span class="identifier">treap_set</span><span class="special">;</span>
+
+<span class="keyword">template</span> <span class="special">&lt;</span><span class="keyword">class</span> <span class="identifier">T</span><span class="special">,</span> <span class="keyword">class</span> <span class="special">...</span><span class="identifier">Options</span><span class="special">&gt;</span>
+<span class="keyword">class</span> <span class="identifier">treap_multiset</span><span class="special">;</span>
+
+<span class="keyword">template</span> <span class="special">&lt;</span><span class="keyword">class</span> <span class="identifier">T</span><span class="special">,</span> <span class="keyword">class</span> <span class="special">...</span><span class="identifier">Options</span><span class="special">&gt;</span>
+<span class="keyword">class</span> <span class="identifier">treap</span><span class="special">;</span>
+</pre>
+<p>
+        These containers receive the same options explained in the section <a class="link" href="usage.html" title="How to use Boost.Intrusive">How to use Boost.Intrusive</a>:<br><code class="computeroutput"></code>这些容器接受在 <a class="link" title="How to use Boost.Intrusive" href="usage.html">如何使用 Boost.Intrusive</a> 
+一节中说明的选项： 
+      </p>
+<div class="itemizedlist"><ul type="disc">
+<li>
+<span class="bold"><strong><code class="computeroutput"><span class="identifier">base_hook</span><span class="special">&lt;</span><span class="keyword">class</span> <span class="identifier">Hook</span><span class="special">&gt;</span></code></strong></span>
+          / <span class="bold"><strong><code class="computeroutput"><span class="identifier">member_hook</span><span class="special">&lt;</span><span class="keyword">class</span> <span class="identifier">T</span><span class="special">,</span> <span class="keyword">class</span>
+          <span class="identifier">Hook</span><span class="special">,</span>
+          <span class="identifier">Hook</span> <span class="identifier">T</span><span class="special">::*</span> <span class="identifier">PtrToMember</span><span class="special">&gt;</span></code></strong></span> / <span class="bold"><strong><code class="computeroutput"><span class="identifier">value_traits</span><span class="special">&lt;</span><span class="keyword">class</span> <span class="identifier">ValueTraits</span><span class="special">&gt;</span></code></strong></span>: To specify the hook type
+          or value traits used to configure the container. (To learn about value
+          traits go to the section <a class="link" href="value_traits.html" title="Containers with custom ValueTraits">Containers
+          with custom ValueTraits</a>.)<br><span class="bold"><strong><code class="computeroutput"><span class="identifier">base_hook</span><span class="special">&lt;</span><span class="keyword">class</span> <span class="identifier">Hook</span><span class="special">&gt;</span></code></strong></span> / <span class="bold"><strong><code class="computeroutput"><span class="identifier">member_hook</span><span class="special">&lt;</span><span class="keyword">class</span> <span class="identifier">T</span><span class="special">,</span> <span class="keyword">class</span> <span class="identifier">Hook</span><span class="special">,</span> <span class="identifier">Hook</span> <span class="identifier">T</span><span class="special">::*</span> <span class="identifier">PtrToMember</span><span class="special">&gt;</span></code></strong></span> / <span class="bold"><strong><code class="computeroutput"><span class="identifier">value_traits</span><span class="special">&lt;</span><span class="keyword">class</span> <span class="identifier">ValueTraits</span><span class="special">&gt;</span></code></strong></span>: 指定用于配置容器的钩子类型或 value 
+traits。(要学习有关 value traits 的知识，请见 <a class="link" title="Containers with custom ValueTraits" href="value_traits.html">带定制化 
+ValueTraits 的容器</a>) 
+        </li>
+<li>
+<span class="bold"><strong><code class="computeroutput"><span class="identifier">constant_time_size</span><span class="special">&lt;</span><span class="keyword">bool</span> <span class="identifier">Enabled</span><span class="special">&gt;</span></code></strong></span>:
+          To activate the constant-time <code class="computeroutput"><span class="identifier">size</span><span class="special">()</span></code> operation. Default: <code class="computeroutput"><span class="identifier">constant_time_size</span><span class="special">&lt;</span><span class="keyword">true</span><span class="special">&gt;</span></code>
+</li>
+<li>
+<span class="bold"><strong><code class="computeroutput"><span class="identifier">size_type</span><span class="special">&lt;</span><span class="keyword">bool</span> <span class="identifier">Enabled</span><span class="special">&gt;</span></code></strong></span>:
+          To specify the type that will be used to store the size of the container.
+          Default: <code class="computeroutput"><span class="identifier">size_type</span><span class="special">&lt;</span><span class="identifier">std</span><span class="special">::</span><span class="identifier">size_t</span><span class="special">&gt;</span></code><br><span class="bold"><strong><code class="computeroutput"><span class="identifier">size_type</span><span class="special">&lt;</span><span class="keyword">bool</span> <span class="identifier">Enabled</span><span class="special">&gt;</span></code></strong></span>: 指定用于保存容器大小的类型。缺省值：<code class="computeroutput"><span class="identifier">size_type</span><span class="special">&lt;</span><span class="identifier">std</span><span class="special">::</span><span class="identifier">size_t</span><span class="special">&gt;</span></code>. 
+</li>
+</ul></div>
+<p>
+        And they also can receive additional options:<br><code class="computeroutput"></code>它们还可以接受其它的选项： 
+      </p>
+<div class="itemizedlist"><ul type="disc">
+<li>
+<span class="bold"><strong><code class="computeroutput"><span class="identifier">compare</span><span class="special">&lt;</span><span class="keyword">class</span> <span class="identifier">Compare</span><span class="special">&gt;</span></code></strong></span>:
+          Comparison function for the objects to be inserted in containers. The comparison
+          functor must induce a strict weak ordering. Default: <code class="computeroutput"><span class="identifier">compare</span><span class="special">&lt;</span> <span class="identifier">std</span><span class="special">::</span><span class="identifier">less</span><span class="special">&lt;</span><span class="identifier">T</span><span class="special">&gt;</span> <span class="special">&gt;</span></code><br><code class="computeroutput"></code><span class="bold"><strong><code class="computeroutput"><span class="identifier">compare</span><span class="special">&lt;</span><span class="keyword">class</span> <span class="identifier">Compare</span><span class="special">&gt;</span></code></strong></span>: 
+被插入到容器中的对象所用的比较函数。这个比较函数必须实现一个严格弱序。缺省值：<code class="computeroutput"><span class="identifier">compare</span><span class="special">&lt;</span> <span class="identifier">std</span><span class="special">::</span><span class="identifier">less</span><span class="special">&lt;</span><span class="identifier">T</span><span class="special">&gt;</span> <span class="special">&gt;</span></code>
+</li>
+<li>
+<span class="bold"><strong><code class="computeroutput"><span class="identifier">priority</span><span class="special">&lt;</span><span class="keyword">class</span> <span class="identifier">PriorityCompare</span><span class="special">&gt;</span></code></strong></span>:
+          Priority Comparison function for the objects to be inserted in containers.
+          The comparison functor must induce a strict weak ordering. Default: <code class="computeroutput"><span class="identifier">priority</span><span class="special">&lt;</span>
+          <span class="identifier">priority_compare</span><span class="special">&lt;</span><span class="identifier">T</span><span class="special">&gt;</span> <span class="special">&gt;</span></code><br><span class="bold"><strong><code class="computeroutput"><span class="identifier">priority</span><span class="special">&lt;</span><span class="keyword">class</span> <span class="identifier">PriorityCompare</span><span class="special">&gt;</span></code></strong></span>:
+          被插入到容器中的对象所用的优先级比较函数。这个比较函数必须实现一个严格弱序。缺省值：<code class="computeroutput"><span class="identifier">priority</span><span class="special">&lt;</span>
+          <span class="identifier">priority_compare</span><span class="special">&lt;</span><span class="identifier">T</span><span class="special">&gt;</span> <span class="special">&gt;</span></code>
+</li>
+</ul></div>
+
+<p>
+        The default <code class="computeroutput"><span class="identifier">priority_compare</span><span class="special">&lt;</span><span class="identifier">T</span><span class="special">&gt;</span></code>
+        object function will call an unqualified function <code class="computeroutput"><span class="identifier">priority_order</span></code>
+        passing two constant <code class="computeroutput"><span class="identifier">T</span></code> references
+        as arguments and should return true if the first argument has higher priority
+        (it will be searched faster), inducing strict weak ordering. The function
+        will be found using ADL lookup so that the user just needs to define a <code class="computeroutput"><span class="identifier">priority_order</span></code> function in the same namespace
+        as his class:<br>缺省的 <code class="computeroutput"><span class="identifier">priority_compare</span><span class="special">&lt;</span><span class="identifier">T</span><span class="special">&gt;</span></code>
+        对象函数会调用一个非受限的函数 <code class="computeroutput"><span class="identifier">priority_order</span></code>，传入两个常量的 <code class="computeroutput"><span class="identifier">T</span></code> 引用作为参数，如果第一个参数具有较高优先级(该对象将被较快地查找到)，则返回 true，这个函数实现一个严格弱序。该函数由ADL规则来查找，因此用户只需要在他的类所在的名字空间中定义一个 <code class="computeroutput"><span class="identifier">priority_order</span></code> 函数即可：</p>
+<pre class="programlisting"><span class="keyword">struct</span> <span class="identifier">MyType</span>
+<span class="special">{</span>
+   <span class="keyword">friend</span> <span class="keyword">bool</span> <span class="identifier">priority_order</span><span class="special">(</span><span class="keyword">const</span> <span class="identifier">MyType</span> <span class="special">&amp;</span><span class="identifier">a</span><span class="special">,</span> <span class="keyword">const</span> <span class="identifier">MyType</span> <span class="special">&amp;</span><span class="identifier">b</span><span class="special">)</span>
+   <span class="special">{...}</span>
+<span class="special">};</span>
+</pre>
+<p>
+        or<br>或
+      </p>
+<pre class="programlisting"><span class="keyword">namespace</span> <span class="identifier">mytype</span> <span class="special">{</span>
+
+<span class="keyword">struct</span> <span class="identifier">MyType</span><span class="special">{</span> <span class="special">...</span> <span class="special">};</span>
+
+<span class="keyword">bool</span> <span class="identifier">priority_order</span><span class="special">(</span><span class="keyword">const</span> <span class="identifier">MyType</span> <span class="special">&amp;</span><span class="identifier">a</span><span class="special">,</span> <span class="keyword">const</span> <span class="identifier">MyType</span> <span class="special">&amp;</span><span class="identifier">b</span><span class="special">)</span>
+<span class="special">{...}</span>
+
+<span class="special">}</span>  <span class="comment">//namespace mytype {<br></span></pre>
+</div>
+<div class="section" lang="en">
+<div class="titlepage"><div><div><h3 class="title">
+<a name="intrusive.treap_set_multiset.treap_set_exceptions"></a><a class="link" href="treap_set_multiset.html#intrusive.treap_set_multiset.treap_set_exceptions" title="Exception safety of treap-based intrusive containers"> Exception
+      safety of treap-based intrusive containers&nbsp;</a></h3><h3 class="title"><a class="link" href="treap_set_multiset.html#intrusive.treap_set_multiset.treap_set_exceptions" title="Exception safety of treap-based intrusive containers">基于treap的介入式容器的异常安全性</a>
+</h3></div></div></div>
+<p>
+        In general, intrusive containers offer strong safety guarantees, but treap
+        containers must deal with two possibly throwing functors (one for value ordering,
+        another for priority ordering). Moreover, treap erasure operations require
+        rotations based on the priority order function and this issue degrades usual
+        <code class="computeroutput"><span class="identifier">erase</span><span class="special">(</span><span class="identifier">const_iterator</span><span class="special">)</span></code>
+        no-throw guarantee. However, intrusive offers the strongest possible behaviour
+        in these situations. In summary:<br>通常，介入式容器提供强异常安全保证，但是 treap
+        容器必须处理两个可能发生异常的函数对象(一个用于值排序，另一个用于优先级排序)。此外，treap 的删除操作要求基于优先级排序函数的旋转，这会降低普通的
+        <code class="computeroutput"><span class="identifier">erase</span><span class="special">(</span><span class="identifier">const_iterator</span><span class="special">)</span></code>
+        的无抛出保证。不过，本库提供了在此条件下可能的最强保证。总的来说：
+      </p>
+<div class="itemizedlist"><ul type="disc">
+<li>
+          If the priority order functor does not throw, treap-based containers, offer
+          exactly the same guarantees as other tree-based containers.<br>如果优先级排序函数无抛出，则基于 treap 的容器提供与其它基于树的容器完全相同的保证。
+        </li>
+<li>
+          If the priority order functor throws, treap-based containers offer strong
+          guarantee.<br>如果优先级排序函数有抛出，则基于 treap 的容器提供强异常安全性保证。
+        </li>
+</ul></div>
+</div>
+<div class="section" lang="en">
+<div class="titlepage"><div><div><h3 class="title">
+<a name="intrusive.treap_set_multiset.treap_set_multiset_example"></a><a class="link" href="treap_set_multiset.html#intrusive.treap_set_multiset.treap_set_multiset_example" title="Example">
+      Example 示例</a>
+</h3></div></div></div>
+
+
+<p>
+        Now let's see a small example using both hooks and <code class="computeroutput"><a class="link" href="../boost/intrusive/treap_set.html" title="Class template treap_set">treap_set</a></code>/
+        <code class="computeroutput"><a class="link" href="../boost/intrusive/treap_multiset.html" title="Class template treap_multiset">treap_multiset</a></code>
+        containers:<br>现在我们来看一个使用这些钩子和 <code class="computeroutput"><a class="link" href="../boost/intrusive/treap_set.html" title="Class template treap_set">treap_set</a></code>/
+        <code class="computeroutput"><a class="link" href="../boost/intrusive/treap_multiset.html" title="Class template treap_multiset">treap_multiset</a></code>&nbsp;容器的小例子：</p>
+<pre class="programlisting"><span class="preprocessor">#include</span> <span class="special">&lt;</span><span class="identifier">boost</span><span class="special">/</span><span class="identifier">intrusive</span><span class="special">/</span><span class="identifier">treap_set</span><span class="special">.</span><span class="identifier">hpp</span><span class="special">&gt;</span>
+<span class="preprocessor">#include</span> <span class="special">&lt;</span><span class="identifier">vector</span><span class="special">&gt;</span>
+<span class="preprocessor">#include</span> <span class="special">&lt;</span><span class="identifier">algorithm</span><span class="special">&gt;</span>
+<span class="preprocessor">#include</span> <span class="special">&lt;</span><span class="identifier">cassert</span><span class="special">&gt;</span>
+
+<span class="keyword">using</span> <span class="keyword">namespace</span> <span class="identifier">boost</span><span class="special">::</span><span class="identifier">intrusive</span><span class="special">;</span>
+
+<span class="keyword">class</span> <span class="identifier">MyClass</span> <span class="special">:</span> <span class="keyword">public</span> <span class="identifier">bs_set_base_hook</span><span class="special">&lt;&gt;</span> <span class="comment">//This is a base hook 一个基类钩子<br></span><span class="special">{</span>
+   <span class="keyword">int</span> <span class="identifier">int_</span><span class="special">;</span>
+   <span class="keyword">unsigned</span> <span class="keyword">int</span> <span class="identifier">prio_</span><span class="special">;</span>
+
+   <span class="keyword">public</span><span class="special">:</span>
+   <span class="comment">//This is a member hook 一个成员钩子<br></span>   <span class="identifier">bs_set_member_hook</span><span class="special">&lt;&gt;</span> <span class="identifier">member_hook_</span><span class="special">;</span>
+
+   <span class="identifier">MyClass</span><span class="special">(</span><span class="keyword">int</span> <span class="identifier">i</span><span class="special">,</span> <span class="keyword">unsigned</span> <span class="keyword">int</span> <span class="identifier">prio</span><span class="special">)</span>  <span class="special">:</span>  <span class="identifier">int_</span><span class="special">(</span><span class="identifier">i</span><span class="special">),</span> <span class="identifier">prio_</span><span class="special">(</span><span class="identifier">prio</span><span class="special">)</span>
+      <span class="special">{}</span>
+
+   <span class="keyword">unsigned</span> <span class="keyword">int</span> <span class="identifier">get_priority</span><span class="special">()</span> <span class="keyword">const</span>
+   <span class="special">{</span>  <span class="keyword">return</span> <span class="keyword">this</span><span class="special">-&gt;</span><span class="identifier">prio_</span><span class="special">;</span>   <span class="special">}</span>
+
+   <span class="comment">//Less and greater operators 小于和大于操作符<br></span>   <span class="keyword">friend</span> <span class="keyword">bool</span> <span class="keyword">operator</span><span class="special">&lt;</span> <span class="special">(</span><span class="keyword">const</span> <span class="identifier">MyClass</span> <span class="special">&amp;</span><span class="identifier">a</span><span class="special">,</span> <span class="keyword">const</span> <span class="identifier">MyClass</span> <span class="special">&amp;</span><span class="identifier">b</span><span class="special">)</span>
+      <span class="special">{</span>  <span class="keyword">return</span> <span class="identifier">a</span><span class="special">.</span><span class="identifier">int_</span> <span class="special">&lt;</span> <span class="identifier">b</span><span class="special">.</span><span class="identifier">int_</span><span class="special">;</span>  <span class="special">}</span>
+   <span class="keyword">friend</span> <span class="keyword">bool</span> <span class="keyword">operator</span><span class="special">&gt;</span> <span class="special">(</span><span class="keyword">const</span> <span class="identifier">MyClass</span> <span class="special">&amp;</span><span class="identifier">a</span><span class="special">,</span> <span class="keyword">const</span> <span class="identifier">MyClass</span> <span class="special">&amp;</span><span class="identifier">b</span><span class="special">)</span>
+      <span class="special">{</span>  <span class="keyword">return</span> <span class="identifier">a</span><span class="special">.</span><span class="identifier">int_</span> <span class="special">&gt;</span> <span class="identifier">b</span><span class="special">.</span><span class="identifier">int_</span><span class="special">;</span>  <span class="special">}</span>
+   <span class="comment">//Default priority compare 缺省的优先级比较<br></span>   <span class="keyword">friend</span> <span class="keyword">bool</span> <span class="identifier">priority_order</span> <span class="special">(</span><span class="keyword">const</span> <span class="identifier">MyClass</span> <span class="special">&amp;</span><span class="identifier">a</span><span class="special">,</span> <span class="keyword">const</span> <span class="identifier">MyClass</span> <span class="special">&amp;</span><span class="identifier">b</span><span class="special">)</span>
+      <span class="special">{</span>  <span class="keyword">return</span> <span class="identifier">a</span><span class="special">.</span><span class="identifier">prio_</span> <span class="special">&lt;</span> <span class="identifier">b</span><span class="special">.</span><span class="identifier">prio_</span><span class="special">;</span>  <span class="special">}</span>  <span class="comment">//Lower value means higher priority 较小值表示较高优先级<br></span>   <span class="comment">//Inverse priority compare 反序优先级比较<br></span>   <span class="keyword">friend</span> <span class="keyword">bool</span> <span class="identifier">priority_inverse_order</span> <span class="special">(</span><span class="keyword">const</span> <span class="identifier">MyClass</span> <span class="special">&amp;</span><span class="identifier">a</span><span class="special">,</span> <span class="keyword">const</span> <span class="identifier">MyClass</span> <span class="special">&amp;</span><span class="identifier">b</span><span class="special">)</span>
+      <span class="special">{</span>  <span class="keyword">return</span> <span class="identifier">a</span><span class="special">.</span><span class="identifier">prio_</span> <span class="special">&gt;</span> <span class="identifier">b</span><span class="special">.</span><span class="identifier">prio_</span><span class="special">;</span>  <span class="special">}</span>  <span class="comment">//Higher value means higher priority 较大值表示较高优先级<br></span><span class="special">};</span>
+
+<span class="keyword">struct</span> <span class="identifier">inverse_priority</span>
+<span class="special">{</span>
+   <span class="keyword">bool</span> <span class="keyword">operator</span><span class="special">()(</span><span class="keyword">const</span> <span class="identifier">MyClass</span> <span class="special">&amp;</span><span class="identifier">a</span><span class="special">,</span> <span class="keyword">const</span> <span class="identifier">MyClass</span> <span class="special">&amp;</span><span class="identifier">b</span><span class="special">)</span> <span class="keyword">const</span>
+   <span class="special">{</span>  <span class="keyword">return</span> <span class="identifier">priority_inverse_order</span><span class="special">(</span><span class="identifier">a</span><span class="special">,</span> <span class="identifier">b</span><span class="special">);</span> <span class="special">}</span>
+<span class="special">};</span>
+
+
+<span class="comment">//Define an treap_set using the base hook that will store values in reverse order<br>//使用基类钩子定义一个 treap_set，以反序保存值<br></span><span class="keyword">typedef</span> <span class="identifier">treap_set</span><span class="special">&lt;</span> <span class="identifier">MyClass</span><span class="special">,</span> <span class="identifier">compare</span><span class="special">&lt;</span><span class="identifier">std</span><span class="special">::</span><span class="identifier">greater</span><span class="special">&lt;</span><span class="identifier">MyClass</span><span class="special">&gt;</span> <span class="special">&gt;</span> <span class="special">&gt;</span>     <span class="identifier">BaseSet</span><span class="special">;</span>
+
+<span class="comment">//Define an multiset using the member hook that will store<br>//使用成员钩子定义一个 multiset<br></span><span class="keyword">typedef</span> <span class="identifier">member_hook</span><span class="special">&lt;</span><span class="identifier">MyClass</span><span class="special">,</span> <span class="identifier">bs_set_member_hook</span><span class="special">&lt;&gt;,</span> <span class="special">&amp;</span><span class="identifier">MyClass</span><span class="special">::</span><span class="identifier">member_hook_</span><span class="special">&gt;</span> <span class="identifier">MemberOption</span><span class="special">;</span>
+<span class="keyword">typedef</span> <span class="identifier">treap_multiset</span>
+   <span class="special">&lt;</span> <span class="identifier">MyClass</span><span class="special">,</span> <span class="identifier">MemberOption</span><span class="special">,</span> <span class="identifier">priority</span><span class="special">&lt;</span><span class="identifier">inverse_priority</span><span class="special">&gt;</span> <span class="special">&gt;</span> <span class="identifier">MemberMultiset</span><span class="special">;</span>
+
+<span class="keyword">int</span> <span class="identifier">main</span><span class="special">()</span>
+<span class="special">{</span>
+   <span class="keyword">typedef</span> <span class="identifier">std</span><span class="special">::</span><span class="identifier">vector</span><span class="special">&lt;</span><span class="identifier">MyClass</span><span class="special">&gt;::</span><span class="identifier">iterator</span> <span class="identifier">VectIt</span><span class="special">;</span>
+
+   <span class="comment">//Create several MyClass objects, each one with a different value<br>   //创建几个 MyClass 对象，每个的值各不相同<br></span>   <span class="identifier">std</span><span class="special">::</span><span class="identifier">vector</span><span class="special">&lt;</span><span class="identifier">MyClass</span><span class="special">&gt;</span> <span class="identifier">values</span><span class="special">;</span>
+   <span class="keyword">for</span><span class="special">(</span><span class="keyword">int</span> <span class="identifier">i</span> <span class="special">=</span> <span class="number">0</span><span class="special">;</span> <span class="identifier">i</span> <span class="special">&lt;</span> <span class="number">100</span><span class="special">;</span> <span class="special">++</span><span class="identifier">i</span><span class="special">)</span>  <span class="identifier">values</span><span class="special">.</span><span class="identifier">push_back</span><span class="special">(</span><span class="identifier">MyClass</span><span class="special">(</span><span class="identifier">i</span><span class="special">,</span> <span class="special">(</span><span class="identifier">i</span> <span class="special">%</span> <span class="number">10</span><span class="special">)));</span>
+
+   <span class="identifier">BaseSet</span> <span class="identifier">baseset</span><span class="special">;</span>
+   <span class="identifier">MemberMultiset</span> <span class="identifier">membermultiset</span><span class="special">;</span>
+   
+   <span class="comment">//Now insert them in the sets 将它们插入到集合中<br></span>   <span class="keyword">for</span><span class="special">(</span><span class="identifier">VectIt</span> <span class="identifier">it</span><span class="special">(</span><span class="identifier">values</span><span class="special">.</span><span class="identifier">begin</span><span class="special">()),</span> <span class="identifier">itend</span><span class="special">(</span><span class="identifier">values</span><span class="special">.</span><span class="identifier">end</span><span class="special">());</span> <span class="identifier">it</span> <span class="special">!=</span> <span class="identifier">itend</span><span class="special">;</span> <span class="special">++</span><span class="identifier">it</span><span class="special">){</span>
+      <span class="identifier">baseset</span><span class="special">.</span><span class="identifier">insert</span><span class="special">(*</span><span class="identifier">it</span><span class="special">);</span>
+      <span class="identifier">membermultiset</span><span class="special">.</span><span class="identifier">insert</span><span class="special">(*</span><span class="identifier">it</span><span class="special">);</span>
+   <span class="special">}</span>
+
+   <span class="comment">//Now test treap_sets 测试 treap_sets<br></span>   <span class="special">{</span>
+      <span class="identifier">BaseSet</span><span class="special">::</span><span class="identifier">reverse_iterator</span> <span class="identifier">rbit</span><span class="special">(</span><span class="identifier">baseset</span><span class="special">.</span><span class="identifier">rbegin</span><span class="special">()),</span> <span class="identifier">rbitend</span><span class="special">(</span><span class="identifier">baseset</span><span class="special">.</span><span class="identifier">rend</span><span class="special">());</span>
+      <span class="identifier">MemberMultiset</span><span class="special">::</span><span class="identifier">iterator</span> <span class="identifier">mit</span><span class="special">(</span><span class="identifier">membermultiset</span><span class="special">.</span><span class="identifier">begin</span><span class="special">()),</span> <span class="identifier">mitend</span><span class="special">(</span><span class="identifier">membermultiset</span><span class="special">.</span><span class="identifier">end</span><span class="special">());</span>
+      <span class="identifier">VectIt</span> <span class="identifier">it</span><span class="special">(</span><span class="identifier">values</span><span class="special">.</span><span class="identifier">begin</span><span class="special">()),</span> <span class="identifier">itend</span><span class="special">(</span><span class="identifier">values</span><span class="special">.</span><span class="identifier">end</span><span class="special">());</span>
+
+      <span class="comment">//Test the objects inserted in the base hook treap_set 测试插入到基类钩子treap_set中的对象<br></span>      <span class="keyword">for</span><span class="special">(;</span> <span class="identifier">it</span> <span class="special">!=</span> <span class="identifier">itend</span><span class="special">;</span> <span class="special">++</span><span class="identifier">it</span><span class="special">,</span> <span class="special">++</span><span class="identifier">rbit</span><span class="special">)</span>
+         <span class="keyword">if</span><span class="special">(&amp;*</span><span class="identifier">rbit</span> <span class="special">!=</span> <span class="special">&amp;*</span><span class="identifier">it</span><span class="special">)</span>   <span class="keyword">return</span> <span class="number">1</span><span class="special">;</span>
+
+      <span class="comment">//Test the objects inserted in the member hook treap_set 测试插入到成员钩子treap_set中的对象<br></span>      <span class="keyword">for</span><span class="special">(</span><span class="identifier">it</span> <span class="special">=</span> <span class="identifier">values</span><span class="special">.</span><span class="identifier">begin</span><span class="special">();</span> <span class="identifier">it</span> <span class="special">!=</span> <span class="identifier">itend</span><span class="special">;</span> <span class="special">++</span><span class="identifier">it</span><span class="special">,</span> <span class="special">++</span><span class="identifier">mit</span><span class="special">)</span>
+         <span class="keyword">if</span><span class="special">(&amp;*</span><span class="identifier">mit</span> <span class="special">!=</span> <span class="special">&amp;*</span><span class="identifier">it</span><span class="special">)</span> <span class="keyword">return</span> <span class="number">1</span><span class="special">;</span>
+
+      <span class="comment">//Test priority order 测试优先级顺序<br></span>      <span class="keyword">for</span><span class="special">(</span><span class="keyword">int</span> <span class="identifier">i</span> <span class="special">=</span> <span class="number">0</span><span class="special">;</span> <span class="identifier">i</span> <span class="special">&lt;</span> <span class="number">100</span><span class="special">;</span> <span class="special">++</span><span class="identifier">i</span><span class="special">){</span>
+         <span class="keyword">if</span><span class="special">(</span><span class="identifier">baseset</span><span class="special">.</span><span class="identifier">top</span><span class="special">()-&gt;</span><span class="identifier">get_priority</span><span class="special">()</span> <span class="special">!=</span> <span class="keyword">static_cast</span><span class="special">&lt;</span><span class="keyword">unsigned</span> <span class="keyword">int</span><span class="special">&gt;(</span><span class="identifier">i</span><span class="special">/</span><span class="number">10</span><span class="special">))</span>
+            <span class="keyword">return</span> <span class="number">1</span><span class="special">;</span>
+         <span class="keyword">if</span><span class="special">(</span><span class="identifier">membermultiset</span><span class="special">.</span><span class="identifier">top</span><span class="special">()-&gt;</span><span class="identifier">get_priority</span><span class="special">()</span> <span class="special">!=</span> <span class="number">9u</span> <span class="special">-</span> <span class="keyword">static_cast</span><span class="special">&lt;</span><span class="keyword">unsigned</span> <span class="keyword">int</span><span class="special">&gt;(</span><span class="identifier">i</span><span class="special">/</span><span class="number">10</span><span class="special">))</span>
+            <span class="keyword">return</span> <span class="number">1</span><span class="special">;</span>
+         <span class="identifier">baseset</span><span class="special">.</span><span class="identifier">erase</span><span class="special">(</span><span class="identifier">baseset</span><span class="special">.</span><span class="identifier">top</span><span class="special">());</span>
+         <span class="identifier">membermultiset</span><span class="special">.</span><span class="identifier">erase</span><span class="special">(</span><span class="identifier">membermultiset</span><span class="special">.</span><span class="identifier">top</span><span class="special">());</span>
+      <span class="special">}</span>
+   <span class="special">}</span>
+   <span class="keyword">return</span> <span class="number">0</span><span class="special">;</span>
+<span class="special">}</span>
+</pre>
+<p>
+        </p>
+<p>
+      </p>
+</div>
+</div>
+<table xmlns:rev="http://www.cs.rpi.edu/~gregod/boost/tools/doc/revision" width="100%"><tbody><tr>
+<td align="left"></td>
+<td align="right"><div class="copyright-footer">Copyright © 2005 Olaf Krzikalla, 2006-2008 Ion Gaztañaga<p>
+        Distributed under the Boost Software License, Version 1.0. (See accompanying
+        file LICENSE_1_0.txt or copy at <a href="http://www.boost.org/LICENSE_1_0.txt" target="_top">http://www.boost.org/LICENSE_1_0.txt</a>)
+      </p>
+</div></td>
+</tr></tbody></table>
+<hr>
+<div class="spirit-nav">
+<a accesskey="p" href="sg_set_multiset.html"><img src="../../../doc/html/images/prev.png" alt="Prev"></a><a accesskey="u" href="../intrusive.html"><img src="../../../doc/html/images/up.png" alt="Up"></a><a accesskey="h" href="../index.html"><img src="../../../doc/html/images/home.png" alt="Home"></a><a accesskey="n" href="advanced_lookups_insertions.html"><img src="../../../doc/html/images/next.png" alt="Next"></a>
+</div>
+</body></html>

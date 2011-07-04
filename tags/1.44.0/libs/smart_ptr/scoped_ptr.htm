@@ -1,0 +1,124 @@
+﻿<!DOCTYPE HTML PUBLIC "-//W3C//DTD HTML 4.01 Transitional//EN">
+<html>
+	<head>
+		<title>scoped_ptr</title>
+		<meta http-equiv="Content-Type" content="text/html; charset=UTF-8">
+	</head>
+	<body bgcolor="#ffffff" text="#000000">
+		<h1><A href="../../index.htm"><img src="../../boost.png" alt="boost.png (6897 bytes)" align="middle" width="277" height="86"
+					border="0"></A>scoped_ptr 类模板</h1>
+		<p><b>scoped_ptr</b> class template类模板存储一个指向动态分配对象的指针（动态分配对象是用 C++ <b>new</b> 表达式分配的）。在 <b>scoped_ptr</b> 的析构过程中，或者经由一个显式的 <b>reset</b>，要保证它所指向的对象被删除。参见<a href="#example">示例</a>。</p>
+		<p><b>scoped_ptr</b> 模板是解决简单需要的简单方案。它提供了一个基本的“资源获取就是初始化”的机制，不包括共享所有权或所有权转让语义。无论它的名字还是语义上的强制要求（作为一个 <a href="../utility/utility.htm#Class_noncopyable">noncopyable</a>），它的唯一目的就是在当前作用域内独自保留所有权。因为它是 <a href="../utility/utility.htm#Class_noncopyable">noncopyable（不可拷贝的）</a>，对于不可拷贝的指针来说，它比 <b>shared_ptr</b> 或 <b>std::auto_ptr</b> 更加安全。</p>
+		<p>因为 <b>scoped_ptr</b> 很简单，在它的通常实现中，每一个操作都和内建指针有同样的速度，而且的它所占用的空间没有超过内建指针。</p>
+		<p><STRONG>scoped_ptr</STRONG> 不能用于 C++ 标准库中的容器中，如果你需要一个能这样做的智能指针，请使用 <a href="shared_ptr.htm"><b>shared_ptr</b></a>。</p>
+		<p><STRONG>scoped_ptr</STRONG> 不能正确持有指向一个动态分配数组的指针。关于那种用法请参见 <a href="scoped_array.htm"><b>scoped_array</b></a>。</p>
+		<p>这个类模板被 <b>T</b> 参数化，这个 <b>T</b> 是被指向的对象的类型。<b>T</b> 必须适合于智能指针的<a href="smart_ptr.htm#common_requirements">共通需求</a>。</p>
+		<h2>Synopsis 概要</h2>
+		<pre>namespace boost {
+
+  template&lt;class T&gt; class scoped_ptr : <a href="../utility/utility.htm#Class_noncopyable">noncopyable</a> {
+
+   public:
+     typedef T <a href="#element_type">element_type</a>;
+
+     explicit <a href="#constructors">scoped_ptr</a>(T * p = 0); // never throws
+     <a href="#destructor">~scoped_ptr</a>(); // never throws
+
+     void <a href="#reset">reset</a>(T * p = 0); // never throws
+
+     T &amp; <a href="#indirection">operator*</a>() const; // never throws
+     T * <a href="#indirection">operator-&gt;</a>() const; // never throws
+     T * <a href="#get">get</a>() const; // never throws
+     
+     operator <A href="#conversions" ><i>unspecified-bool-type</i></A>() const; // never throws
+
+     void <a href="#swap">swap</a>(scoped_ptr &amp; b); // never throws
+  };
+
+  template&lt;class T&gt; void <a href="#free-swap">swap</a>(scoped_ptr&lt;T&gt; &amp; a, scoped_ptr&lt;T&gt; &amp; b); // never throws
+
+}</pre>
+		<h2>Members 成员</h2>
+		<h3><a name="element_type">element_type 元素类型</a></h3>
+		<pre>typedef T element_type;</pre>
+		<p>提供所存储的指针的类型。</p>
+		<h3><a name="constructors">constructors 构造函数</a></h3>
+		<pre>explicit scoped_ptr(T * p = 0); // never throws</pre>
+		<p>构造一个 <b>scoped_ptr</b>，存储一个 <b>p</b> 的拷贝，<b>p</b> 必须是经由 C++ 的 <b>new</b> 表达式动态分配的或者是 0。这里并不需要 <b>T</b> 是一个完整类型。参见智能指针的<a href="smart_ptr.htm#common_requirements">共通需求</a>。</p>
+		<h3><a name="destructor">destructor 析构函数</a></h3>
+		<pre>~scoped_ptr(); // never throws</pre>
+		<p>销毁所存储的指针（如果有的话）所指向的对象，就像使用 <tt>delete this-&gt;get()</tt>。</p>
+		<P>
+			为了保证这里不会抛出异常，要求被删除对象的析构函数不能抛出异常。参见智能指针的<a href="smart_ptr.htm#common_requirements">共通需求</a>。</P>
+		<h3><a name="reset">reset 重置</a></h3>
+		<pre>void reset(T * p = 0); // never throws</pre>
+		<p>删除所存储的指针所指向的对象，然后存储一个 p 的拷贝，p 必须是经由一个 C++ 的 <b>new</b> 表达式动态分配的或者是 0。为了保证这里不会抛出异常，要求被删除对象的析构函数不能抛出异常。参见智能指针的<a href="smart_ptr.htm#common_requirements">共通需求</a>。</p>
+		<h3><a name="indirection">indirection 间接引用</a></h3>
+		<pre>T &amp; operator*() const; // never throws</pre>
+		<p>返回一个引向所存储的指针所指向的对象的引用。如果所存储的指针为 0，则其行为是未定义的。</p>
+		<pre>T * operator-&gt;() const; // never throws</pre>
+		<p>返回所存储的指针。如果所存储的指针为 0，则其行为是未定义的。</p>
+		<h3><a name="get">get 取得</a></h3>
+		<pre>T * get() const; // never throws</pre>
+		<p>返回所存储的指针。这里并不需要 <b>T</b> 是一个完整类型。参见智能指针的<a href="smart_ptr.htm#common_requirements">共通需求</a>。</p>
+		<h3><a name="conversions">conversions 转换</a></h3>
+		<pre>operator <i>unspecified-bool-type</i> () const; // never throws</pre>
+		<p>返回一个未确定的值，在需要布尔值的上下文中，它等价于 <code>get() != 0</code>。</p>
+		<h3><a name="swap">swap 交换</a></h3>
+		<pre>void swap(scoped_ptr &amp; b); // never throws</pre>
+		<p>交换两个智能指针中的内容。这里并不需要 <b>T</b> 是一个完整类型。参见智能指针的<a href="smart_ptr.htm#common_requirements">共通需求</a>。</p>
+		<h2><a name="functions">Free Functions 自由函数</a></h2>
+		<h3><a name="free-swap">swap 交换</a></h3>
+		<pre>template&lt;class T&gt; void swap(scoped_ptr&lt;T&gt; &amp; a, scoped_ptr&lt;T&gt; &amp; b); // never throws</pre>
+		<p>等价于 <b>a.swap(b)</b>。与 <b>std::swap</b> 的接口匹配。为泛型编程提供帮助。</p>
+		<h2><a name="example">Example 示例</a></h2>
+		<p>这是一个使用 <b>scoped_ptr</b> 的例子。</p>
+		<blockquote>
+			<pre>#include &lt;boost/scoped_ptr.hpp&gt;
+#include &lt;iostream&gt;
+
+struct Shoe { ~Shoe() { std::cout &lt;&lt; "Buckle my shoe\n"; } };
+
+class MyClass {
+    boost::scoped_ptr&lt;int&gt; ptr;
+  public:
+    MyClass() : ptr(new int) { *ptr = 0; }
+    int add_one() { return ++*ptr; }
+};
+
+int main()
+{
+    boost::scoped_ptr&lt;Shoe&gt; x(new Shoe);
+    MyClass my_instance;
+    std::cout &lt;&lt; my_instance.add_one() &lt;&lt; '\n';
+    std::cout &lt;&lt; my_instance.add_one() &lt;&lt; '\n';
+}</pre>
+		</blockquote>
+		<p>这个示例程序生成一首童谣的开始部分：</p>
+		<blockquote>
+			<pre>1
+2
+Buckle my shoe</pre>
+		</blockquote>
+		<h2>Rationale 基本原理</h2>
+		<p>使用 <b>scoped_ptr</b> 而不是 <b>auto_ptr</b> 的主要原因是让阅读你的代码的人知道你的意图是仅仅要在当前作用域中应用“资源获取就是初始化”，而且没有转让所有权的打算。</p>
+		<p>使用 <b>scoped_ptr</b> 的第二个原因是防止一个后期维护程序员通过增加一个函数返回 <b>auto_ptr</b> 来转让所有权，因为维护程序员看到 <b>auto_ptr</b>，并认为所有权可以安全地转让。</p>
+		<p>考虑 <b>bool</b> 对应于 <b>int</b>。我们都知道在表象之下 <b>bool</b> 通常就是一个 <b>int</b>，甚至，一些观点因此而反对在 C++ 标准中包含 <b>bool</b>。但是在编码中使用 <b>bool</b> 而不是 <b>int</b>，你可以告诉你的读者你的意图是什么。<b>scoped_ptr</b> 也是一样，使用它表明你的意图。</p>
+		<p>有些观点认为 <b>scoped_ptr&lt;T&gt;</b> 等价于 <b>std::auto_ptr&lt;T&gt; 
+				const</b>。但是，Ed Brey 指出，<b>reset</b> 在 <b>std::auto_ptr&lt;T&gt; const</b> 上无法工作。</p>
+		<h2><a name="Handle/Body">Handle/Body</a> Idiom Handle/Body 惯用法</h2>
+		<p><b>scoped_ptr</b> 的一个通常用法是实现 handle/body（也叫做 pimpl）惯用法，以避免将身体（实现）暴露在头文件中。</p>
+		<p><a href="example/scoped_ptr_example_test.cpp">scoped_ptr_example_test.cpp</a> 示例程序包含一个头文件 <a href="example/scoped_ptr_example.hpp">scoped_ptr_example.hpp</a>，使用一个指向一个不完整的类型的 <b>scoped_ptr&lt;&gt;</b> 以隐藏实现。需要一个完整类型的成员函数实例化出现在 <a href="example/scoped_ptr_example.cpp">scoped_ptr_example.cpp</a> 实现文件中。</p>
+		<h2>Frequently Asked Questions 常见问题</h2>
+		<p><b>问：scoped_ptr</b> 中为什么没有一个 release() 成员<br>
+			<b>答：</b>在阅读源代码的时候，能够根据它所使用的类型为程序的行为划定一个限度是很有价值的。如果 <STRONG>scoped_ptr</STRONG> 有一个 release() 成员，转让它所持有的指针的所有权，弱化它的作为一种在给定的上下文中限定资源的生存期的方法的角色就成为可能。在需要转让所有权的时候，请使用 <STRONG>std::auto_ptr</STRONG>。（由 Dave Abrahams 提供）</p>
+		<hr>
+		<p>Revised <!--webbot bot="Timestamp" s-type="EDITED" s-format="%d %B %Y" startspan --> 
+			09 January 2003<!--webbot bot="Timestamp" endspan i-checksum="32310" --></p>
+		<p>Copyright 1999 Greg Colvin and Beman Dawes. Copyright 2002 Darin Adler. 
+			Copyright 2002-2005 Peter Dimov. Permission to copy, use, modify, sell and 
+			distribute this document is granted provided this copyright notice appears in 
+			all copies. This document is provided "as is" without express or implied 
+			warranty, and with no claim as to its suitability for any purpose.</p>
+	</body>
+</html>

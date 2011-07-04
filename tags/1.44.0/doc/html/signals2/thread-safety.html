@@ -1,0 +1,495 @@
+<html>
+<head>
+<meta http-equiv="Content-Type" content="text/html; charset=UTF-8">
+<title>Thread-Safety</title>
+<link rel="stylesheet" href="../boostbook.css" type="text/css">
+<meta name="generator" content="DocBook XSL Stylesheets V1.74.3">
+<link rel="home" href="../index.html" title="The Boost C++ Libraries BoostBook Documentation Subset">
+<link rel="up" href="../signals2.html" title="Chapter 17. Boost.Signals2">
+<link rel="prev" href="../boost/signals2/trackable.html" title="Class trackable">
+<link rel="next" href="faq.html" title="Frequently Asked Questions">
+</head>
+<body bgcolor="white" text="black" link="#0000FF" vlink="#840084" alink="#0000FF">
+<table cellpadding="2" width="100%"><tr>
+<td valign="top"><img alt="Boost C++ Libraries" width="277" height="86" src="../../../boost.png"></td>
+<td align="center"><a href="../../../index.html">Home</a></td>
+<td align="center"><a href="../../../libs/libraries.htm">Libraries</a></td>
+<td align="center"><a href="http://www.boost.org/users/people.html">People</a></td>
+<td align="center"><a href="http://www.boost.org/users/faq.html">FAQ</a></td>
+<td align="center"><a href="../../../more/index.htm">More</a></td>
+</tr></table>
+<hr>
+<div class="spirit-nav">
+<a accesskey="p" href="../boost/signals2/trackable.html"><img src="../../../doc/html/images/prev.png" alt="Prev"></a><a accesskey="u" href="../signals2.html"><img src="../../../doc/html/images/up.png" alt="Up"></a><a accesskey="h" href="../index.html"><img src="../../../doc/html/images/home.png" alt="Home"></a><a accesskey="n" href="faq.html"><img src="../../../doc/html/images/next.png" alt="Next"></a>
+</div>
+<div class="section" lang="en">
+<div class="titlepage"><div><div><h2 class="title" style="clear: both">
+<a name="signals2.thread-safety"></a>Thread-Safety</h2></div></div></div>
+
+<div class="titlepage"><div><div><h2 class="title" style="clear: both">
+<a name="signals2.thread-safety"></a>线程安全性</h2></div></div></div>
+
+<div class="toc"><dl>
+<dt><span class="section"><a href="thread-safety.html#id3385400">Introduction</a></span></dt>
+<dt><span class="section"><a href="thread-safety.html#id3385455">Signals and combiners</a></span></dt>
+<dt><span class="section"><a href="thread-safety.html#id3385620">Connections and other classes</a></span></dt>
+</dl></div>
+
+<div class="toc"><dl>
+<dt><span class="section"><a href="thread-safety.html#id3385400">介绍</a></span></dt>
+<dt><span class="section"><a href="thread-safety.html#id3385455">信号与合并器</a></span></dt>
+<dt><span class="section"><a href="thread-safety.html#id3385620">连接与其他类</a></span></dt>
+</dl></div>
+
+<div class="section" lang="en">
+<div class="titlepage"><div><div><h3 class="title">
+<a name="id3385400"></a>Introduction</h3></div></div></div>
+
+<div class="titlepage"><div><div><h3 class="title">
+<a name="id3385400"></a>介绍</h3></div></div></div>
+
+<p>
+      The primary motivation for Boost.Signals2 is to provide a version of
+      the original Boost.Signals library which can be used safely in a
+      multi-threaded environment.
+      This is achieved primarily through two changes from the original Boost.Signals
+      API.  One is the introduction of a new automatic connection management scheme
+      relying on <code class="computeroutput">shared_ptr</code> and <code class="computeroutput">weak_ptr</code>,
+      as described in the <a class="link" href="tutorial.html#signals2.tutorial.connection-management" title="Automatic Connection Management (Intermediate)">tutorial</a>.
+      The second change was the introduction of a <code class="computeroutput">Mutex</code> template type
+      parameter to the <code class="computeroutput"><a class="link" href="../boost/signal.html" title="Class template signal">signal</a></code> class.  This section details how
+      the library employs these changes to provide thread-safety, and
+      the limits of the provided thread-safety.
+    </p>
+
+<p>
+      Boost.Signals2 的原始动机是提供原
+      Boost.Signals 库的另一版本，使之可以安全地用于多线程环境。
+
+      做到这一点主要是通过对原 Boost.Signals API 的两个更改。
+
+      一是采用了新的，依赖于
+      <code class="computeroutput">shared_ptr</code>
+      和 <code class="computeroutput">weak_ptr</code>
+      的自动连接管理方式，
+      详见 <a class="link" href="tutorial.html#signals2.tutorial.connection-management" title="Automatic Connection Management (Intermediate)">教程</a>
+      的描述。
+
+      二是 <code class="computeroutput"><a class="link" href="../boost/signal.html" title="Class template signal">signal</a></code>
+      类引入了模板类型参数
+      <code class="computeroutput">Mutex</code>。
+
+      本节详述了库如何采用这些更改来提供线程安全性，
+      以及它所提供的线程安全性的局限性。
+    </p>
+
+</div>
+<div class="section" lang="en">
+<div class="titlepage"><div><div><h3 class="title">
+<a name="id3385455"></a>Signals and combiners</h3></div></div></div>
+
+<div class="titlepage"><div><div><h3 class="title">
+<a name="id3385455"></a>信号与合并器</h3></div></div></div>
+
+<p>
+      Each signal object default-constructs a <code class="computeroutput">Mutex</code> object to protect
+      its internal state.  Furthermore, a <code class="computeroutput">Mutex</code> is created
+      each time a new slot is connected to the signal, to protect the
+      associated signal-slot connection.
+    </p>
+
+<p>
+      每个信号对象会缺省构造一个 <code class="computeroutput">Mutex</code>
+      对象，以保护其内部状态。
+      此外，每当一个新的插槽连接到信号，
+      都会创建一个 <code class="computeroutput">Mutex</code>，
+      以保护相关的信号插槽连接。
+    </p>
+
+<p>
+      A signal's mutex is automatically locked whenever any of the
+      signal's methods are called.  The mutex is usually held until the
+      method completes, however there is one major exception to this rule.  When
+      a signal is invoked by calling
+      <code class="computeroutput">signal::operator()</code>,
+      the invocation first acquires a lock on the signal's mutex.  Then
+      it obtains a handle to the signal's slot list and combiner.  Next
+      it releases the signal's mutex, before invoking the combiner to
+      iterate through the slot list.  Thus no mutexes are held by the
+      signal while a slot is executing.  This design choice
+      makes it impossible for user code running in a slot
+      to deadlock against any of the
+      mutexes used internally by the Boost.Signals2 library.
+      It also prevents slots from accidentally causing
+      recursive locking attempts on any of the library's internal mutexes.
+      Therefore, if you invoke a signal concurrently from multiple threads,
+      it is possible for the signal's combiner to be invoked concurrently
+      and thus the slots to execute concurrently.
+    </p>
+
+<p>
+      调用信号的任何方法时，信号的互斥体都会自动加锁。
+      通常互斥体会保持锁定，直到方法结束，但是有一个重要的例外。
+
+      当信号通过 <code class="computeroutput">signal::operator()</code>
+      调用时，该调用首先会获取信号互斥体上的锁。
+
+      然后，它会获得一个句柄，指向信号的插槽链表与合并器。
+
+      接着，它会在调用合并器遍历插槽链表之前，释放信号的互斥体。
+
+      因此，当插槽执行时，信号并没有持有互斥体。
+
+      选择这种设计杜绝了以下可能：
+      插槽中运行的用户代码死锁于
+      Boost.Signals2 库内部使用的互斥体。
+
+      它还可防止插槽意外造成对库的内部互斥体递归加锁。
+
+      因此，如果您从多个线程并发调用信号，
+      有可能会造成信号的合并器被并发调用，
+      从而造成插槽并发执行。
+    </p>
+
+<p>
+      During a combiner invocation, the following steps are performed in order to
+      find the next callable slot while iterating through the signal's
+      slot list.
+    </p>
+
+<p>
+      在合并器的调用中，遍历信号的插槽链表时会执行以下步骤，以找到下一个可调用插槽。
+    </p>
+
+<div class="itemizedlist"><ul type="disc">
+<li><p>The <code class="computeroutput">Mutex</code> associated with the connection to the
+          slot is locked.</p>
+    <p>插槽的连接所关联的 <code class="computeroutput">Mutex</code>
+          被锁定。</p>
+</li>
+<li><p>All the tracked <code class="computeroutput">weak_ptr</code> associated with the
+          slot are copied into temporary <code class="computeroutput">shared_ptr</code> which
+          will be kept alive until the invocation is done with the slot.  If this fails due
+          to any of the
+          <code class="computeroutput">weak_ptr</code> being expired, the connection is
+          automatically disconnected.  Therefore a slot will never be run
+          if any of its tracked <code class="computeroutput">weak_ptr</code> have expired,
+          and none of its tracked <code class="computeroutput">weak_ptr</code> will
+          expire while the slot is running.
+        </p>
+    <p>与插槽相关的所有被跟踪的 <code class="computeroutput">weak_ptr</code>
+          被复制到临时的 <code class="computeroutput">shared_ptr</code>，
+          并一直生存直到插槽完成调用。
+
+          如果 <code class="computeroutput">weak_ptr</code>
+          过期无法复制，连接将自动断开。
+
+          因此，如果插槽跟踪的任何
+          <code class="computeroutput">weak_ptr</code>
+          过期，插槽就不会运行，
+          而当插槽运行时，其跟踪的
+          <code class="computeroutput">weak_ptr</code>
+          不会过期。
+        </p>
+</li>
+<li><p>
+          The slot's connection is checked to see if it is blocked
+          or disconnected, and then the connection's mutex is unlocked.  If the connection
+          was either blocked or disconnected, we
+          start again from the beginning with the next slot in the slot list.
+          Otherwise, we commit to executing the slot when the combiner next
+          dereferences the slot call iterator (unless the combiner should increment
+          the iterator without ever dereferencing it).
+        </p>
+    <p>
+          插槽的连接被检查，看它是否被阻塞或断开，
+          然后，连接的互斥体被解锁。
+
+          如果连接被阻塞或断开，则取插槽链表中的下一个插槽重新开始。
+
+          否则，当合并器下一步解引用插槽调用迭代器时，就执行插槽，
+          （除非合并器递增迭代器而未对其解引用）。        
+        </p>
+</li>
+</ul></div>
+
+<p>
+      Note that since we unlock the connection's mutex before executing
+      its associated slot, it is possible a slot will still be executing
+      after it has been disconnected by a
+      <code class="computeroutput"><a class="link" href="../boost/signals2/connection.html#id1278410-bb">connection::disconnect</a>()</code>, if
+      the disconnect was called concurrently with signal invocation.
+    </p>
+
+<p>
+      注意，因为我们在执行插槽前就解锁了其对应连接的互斥体，
+      所以有可能插槽在用
+      <code class="computeroutput"><a class="link" href="../boost/signals2/connection.html#id1278410-bb">connection::disconnect</a>()</code>
+      断开后仍将继续执行，如在信号调用时并发调用断开。
+    </p>
+
+<p>
+      You may have noticed above that during signal invocation, the invocation only
+      obtains handles to the signal's slot list and combiner while holding the
+      signal's mutex.  Thus concurrent signal invocations may still wind up
+      accessing the
+      same slot list and combiner concurrently.  So what happens if the slot list is modified,
+      for example by connecting a new slot, while a signal
+      invocation is in progress concurrently?  If the slot list is already in use,
+      the signal performs a deep copy of the slot list before modifying it.
+      Thus the a concurrent signal invocation will continue to use the old unmodified slot list,
+      undisturbed by modifications made to the newly created deep copy of the slot list.
+      Future signal invocations will receive a handle to the newly created deep
+      copy of the slot list, and the old slot list will be destroyed once it
+      is no longer in use.  Similarly, if you change a signal's combiner with
+      <code class="computeroutput"><a class="link" href="../boost/signals2/signalN.html#id2375152-bb">signal::set_combiner</a></code>
+      while a signal invocation is running concurrently, the concurrent
+      signal invocation will continue to use the old combiner undisturbed,
+      while future signal invocations will receive a handle to the new combiner.
+    </p>
+
+<p>
+      您可能已经注意到，在上述信号调用中，
+      在持有信号的互斥体时，仅仅获取了信号的插槽链表与合并器的句柄。
+
+      因此并发调用信号仍可导致并发操作同一插槽链表与合并器。
+
+      那么，如果插槽链表被更改，
+      例如，当信号调用正在进行中时，并发地连接新的插槽，
+      会发生什么事？
+
+      如果插槽链表已在使用中，信号会在更改它之前进行深拷贝。
+
+      因此，并发的信号调用将继续使用旧的未修改的插槽链表，
+      对于新建的插槽链表深拷贝的更改，将不会干扰到该信号调用。
+      
+      以后的信号调用收到的句柄将指向新建的插槽链表深拷贝，
+      旧的插槽链表一旦不再使用，将会被销毁。
+      
+      同样，如果信号调用正在运行时，用
+      <code class="computeroutput"><a class="link" href="../boost/signals2/signalN.html#id2375152-bb">signal::set_combiner</a></code>
+      并发地更改信号的合并器，
+      并发的信号调用将继续使用旧的合并器而不受干扰，
+      而以后的信号调用将会收到新的合并器的句柄。
+    </p>
+
+<p>
+      The fact that concurrent signal invocations use the same combiner object
+      means you need to insure any custom combiner you write is thread-safe.
+      So if your combiner maintains state which is modified when the combiner
+      is invoked, you
+      may need to protect that state with a mutex.  Be aware, if you hold
+      a mutex in your combiner while dereferencing slot call iterators,
+      you run the risk of deadlocks and recursive locking if any of
+      the slots cause additional mutex locking to occur.  One way to avoid
+      these perils is for your combiner to release any locks before
+      dereferencing a slot call iterator.  The combiner classes provided by
+      the Boost.Signals2 library are all thread-safe, since they do not maintain
+      any state across invocations.
+    </p>
+
+<p>
+      并发的信号调用使用的是同一个合并器对象，这一事实意味着，
+      你需要确保你写的任何自定义合并器是线程安全的。
+
+      所以，如果你的合并器需要维护状态，该状态会在合并器被调用时更改，
+      你就可能需要用互斥体保护该状态。
+
+      注意，如果您在您的合并器中持有互斥体，
+      当插槽调用迭代器解引用时，
+      如果有个插槽导致了额外的互斥锁的发生，
+      你就会有死锁和递归锁的危险。
+
+      避免这些危险的一个方法是，
+      让你的合并器在信号调用迭代器解引用之前释放锁。
+
+      Boost.Signals2 库提供的合并器类都是线程安全的，
+      因为它们在调用之间并没有维护任何状态。
+    </p>
+
+<p>
+      Suppose a user writes a slot which connects another slot to the invoking signal.
+      Will the newly connected slot be run during the same signal invocation in
+      which the new connection was made?  The answer is no.  Connecting a new slot
+      modifies the signal's slot list, and as explained above, a signal invocation
+      already in progress will not see any modifications made to the slot list.
+    </p>
+
+<p>
+      假设用户写了个插槽，该插槽把另一个插槽连接到调用的信号。
+
+      在同一信号调用中，这个新连接的插槽会不会运行？
+
+      答案是否定的。
+
+      连接新的插槽更改了信号的插槽链表，正如上文所述，
+      正在进行的信号调用将不会看到对插槽链表的任何更改。
+    </p>
+
+<p>
+      Suppose a user writes a slot which disconnects another slot from the invoking signal.
+      Will the disconnected slot be prevented from running during the same signal invocation,
+      if it appears later in the slot list than the slot which disconnected it?
+      This time the answer is yes.  Even if the disconnected slot is still
+      present in the signal's slot list, each slot is checked to see if it is
+      disconnected or blocked immediately before it is executed (or not executed as
+      the case may be), as was described in more detail above.
+    </p>
+
+<p>
+      假设用户写了个插槽，该插槽把另一个插槽从调用的信号断开。
+
+      在同一信号调用中，这个被断开的插槽是否无法运行？
+      如果它在插槽链表中出现的位置在那个断开它的插槽之后呢？
+
+      这一次，答案是肯定的。
+
+      即使被断开的插槽仍然存在于信号的插槽链表中，
+      每个插槽在执行（或视情况并不执行）前，
+      会检查它是否已被断开或阻塞，
+      这在上文中已有详述。
+    </p>
+
+</div>
+<div class="section" lang="en">
+<div class="titlepage"><div><div><h3 class="title">
+<a name="id3385620"></a>Connections and other classes</h3></div></div></div>
+
+<div class="titlepage"><div><div><h3 class="title">
+<a name="id3385620"></a>连接与其他类</h3></div></div></div>
+
+<p>
+      The methods of the <code class="computeroutput"><a class="link" href="../boost/signals2/connection.html" title="Class connection">signals2::connection</a></code> class are thread-safe,
+      with the exception of assignment and swap.  This is achived via locking the mutex
+      associated with the object's underlying signal-slot connection.  Assignment and
+      swap are not thread-safe because the mutex protects the underlying connection
+      which a <code class="computeroutput"><a class="link" href="../boost/signals2/connection.html" title="Class connection">signals2::connection</a></code> object references, not
+      the <code class="computeroutput"><a class="link" href="../boost/signals2/connection.html" title="Class connection">signals2::connection</a></code> object itself.  That is,
+      there may be many copies of a <code class="computeroutput"><a class="link" href="../boost/signals2/connection.html" title="Class connection">signals2::connection</a></code> object,
+      all of which reference the same underlying connection.  There is not a mutex
+      for each <code class="computeroutput"><a class="link" href="../boost/signals2/connection.html" title="Class connection">signals2::connection</a></code> object, there is only
+      a single mutex protecting the underlying connection they reference.
+    </p>
+
+<p>
+      <code class="computeroutput"><a class="link" href="../boost/signals2/connection.html" title="Class connection">signals2::connection</a></code>
+      类的方法是线程安全的，除了赋值和交换（swap）。
+
+      这是通过对象底层的信号-插槽连接所对应的互斥体加锁实现的。
+
+      赋值和交换不是线程安全的，因为互斥体保护的是底层的连接，
+      它是由
+      <code class="computeroutput"><a class="link" href="../boost/signals2/connection.html" title="Class connection">signals2::connection</a></code>
+      对象所引用的，
+      而不是
+      <code class="computeroutput"><a class="link" href="../boost/signals2/connection.html" title="Class connection">signals2::connection</a></code>
+      对象本身。
+
+      也就是说，可能有许多份
+      <code class="computeroutput"><a class="link" href="../boost/signals2/connection.html" title="Class connection">signals2::connection</a></code>
+      对象的拷贝，
+      所有拷贝都引用了同一个底层连接。
+      
+      没有针对每个
+      <code class="computeroutput"><a class="link" href="../boost/signals2/connection.html" title="Class connection">signals2::connection</a></code>
+      对象的互斥体，
+      只有一个互斥体保护它们所引用的底层连接。
+    </p>
+
+<p>The <code class="computeroutput"><a class="link" href="../boost/signals2/shared_connection_block.html" title="Class shared_connection_block">shared_connection_block</a></code> class obtains some thread-safety
+      from the <code class="computeroutput">Mutex</code> protecting the underlying connection which is blocked
+      and unblocked.  The internal reference counting which is used to keep track of
+      how many <code class="computeroutput"><a class="link" href="../boost/signals2/shared_connection_block.html" title="Class shared_connection_block">shared_connection_block</a></code> objects are asserting
+      blocks on their underlying connection is also thread-safe (the implementation
+      relies on <code class="computeroutput">shared_ptr</code> for the reference counting).
+      However, individual <code class="computeroutput"><a class="link" href="../boost/signals2/shared_connection_block.html" title="Class shared_connection_block">shared_connection_block</a></code> objects
+      should not be accessed concurrently by multiple threads.  As long as two
+      threads each have their own <code class="computeroutput"><a class="link" href="../boost/signals2/shared_connection_block.html" title="Class shared_connection_block">shared_connection_block</a></code> object,
+      then they may use them in safety, even if both <code class="computeroutput"><a class="link" href="../boost/signals2/shared_connection_block.html" title="Class shared_connection_block">shared_connection_block</a></code>
+      objects are copies and refer to the same underlying connection.
+    </p>
+
+<p><code class="computeroutput"><a class="link" href="../boost/signals2/shared_connection_block.html" title="Class shared_connection_block">shared_connection_block</a></code>
+      类因为有保护其底层连接的
+      <code class="computeroutput">Mutex</code>，
+      从而获得了一些线程安全性，
+      该底层连接即被阻塞和解除阻塞的连接。
+
+      其内部引用计数也是线程安全的（实现依赖于
+      <code class="computeroutput">shared_ptr</code>
+      的引用计数），
+      该引用计数用来跟踪有多少
+      <code class="computeroutput"><a class="link" href="../boost/signals2/shared_connection_block.html" title="Class shared_connection_block">shared_connection_block</a></code>
+      对象宣称阻塞它们的底层连接。
+
+      然而，单个的
+      <code class="computeroutput"><a class="link" href="../boost/signals2/shared_connection_block.html" title="Class shared_connection_block">shared_connection_block</a></code>
+      对象不应该从多个线程并发访问。
+
+      只要两个线程都有自己的
+      <code class="computeroutput"><a class="link" href="../boost/signals2/shared_connection_block.html" title="Class shared_connection_block">shared_connection_block</a></code>
+      对象，那么它们可以安全地使用它们，
+      即使这两个
+      <code class="computeroutput"><a class="link" href="../boost/signals2/shared_connection_block.html" title="Class shared_connection_block">shared_connection_block</a></code>
+      对象是复制关系，并指向同一个底层连接。
+    </p>
+
+<p>
+      The <code class="computeroutput"><a class="link" href="../boost/signals2/slotN.html" title="Class template slotN">slot</a></code> class has no internal mutex locking
+      built into it.  It is expected that slot objects will be created then
+      connected to a signal in a single thread.  Once they have been copied into
+      a signal's slot list, they are protected by the mutex associated with
+      each signal-slot connection.
+    </p>
+
+<p>
+      <code class="computeroutput"><a class="link" href="../boost/signals2/slotN.html" title="Class template slotN">slot</a></code>
+      类没有内置的内部互斥锁。
+
+      插槽对象应该在一个线程内创建，然后连接到信号。
+
+      它们一旦被复制到信号的插槽链表，
+      它们就会被每个信号-插槽连接所关联的互斥体所保护。
+    </p>
+
+<p>The <code class="computeroutput"><a class="link" href="../boost/signals2/trackable.html" title="Class trackable">signals2::trackable</a></code> class does NOT provide
+      thread-safe automatic connection management.  In particular, it leaves open the
+      possibility of a signal invocation calling into a partially destructed object
+      if the trackable-derived object is destroyed in a different thread from the
+      one invoking the signal.
+      <code class="computeroutput"><a class="link" href="../boost/signals2/trackable.html" title="Class trackable">signals2::trackable</a></code> is only provided as a convenience
+      for porting single-threaded code from Boost.Signals to Boost.Signals2.
+    </p>
+
+<p><code class="computeroutput"><a class="link" href="../boost/signals2/trackable.html" title="Class trackable">signals2::trackable</a></code>
+      类不提供线程安全的自动连接管理。
+
+      特别是，它留下了一种可能性，
+      如果 trackable 子类对象在不同于引发信号的线程中被销毁，
+      信号调用可能会进入部分析构对象。
+
+      提供
+      <code class="computeroutput"><a class="link" href="../boost/signals2/trackable.html" title="Class trackable">signals2::trackable</a></code>
+      仅仅是为了方便单线程代码从 Boost.Signals 移植到 Boost.Signals2。
+    </p>
+
+</div>
+</div>
+<table xmlns:rev="http://www.cs.rpi.edu/~gregod/boost/tools/doc/revision" width="100%"><tr>
+<td align="left"><p><small>Last revised: June 12, 2007 at 14:01:23 -0400</small></p></td>
+<td align="right"><div class="copyright-footer">Copyright © 2001-2004 Douglas Gregor<br>Copyright © 2007-2009 Frank Mori Hess
+
+    <p>翻译：<a href="http://blog.csdn.net/jq0123">金庆</a></p>
+    <p>译文更新：2009.6.18</p>
+
+    <p>Distributed under the Boost
+    Software License, Version 1.0. (See accompanying file
+    <code class="filename">LICENSE_1_0.txt</code> or copy at <a href="http://www.boost.org/LICENSE_1_0.txt" target="_top">http://www.boost.org/LICENSE_1_0.txt</a>)</p>
+</div></td>
+</tr></table>
+<hr>
+<div class="spirit-nav">
+<a accesskey="p" href="../boost/signals2/trackable.html"><img src="../../../doc/html/images/prev.png" alt="Prev"></a><a accesskey="u" href="../signals2.html"><img src="../../../doc/html/images/up.png" alt="Up"></a><a accesskey="h" href="../index.html"><img src="../../../doc/html/images/home.png" alt="Home"></a><a accesskey="n" href="faq.html"><img src="../../../doc/html/images/next.png" alt="Next"></a>
+</div>
+</body>
+</html>

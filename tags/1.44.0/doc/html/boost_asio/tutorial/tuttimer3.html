@@ -1,0 +1,141 @@
+<html>
+<head>
+<meta http-equiv="Content-Type" content="text/html; charset=UTF-8">
+<title>Timer.3 - Binding arguments to a handler</title>
+<link rel="stylesheet" href="../../boostbook.css" type="text/css">
+<meta name="generator" content="DocBook XSL Stylesheets V1.74.3">
+<link rel="home" href="../../boost_asio.html" title="Boost.Asio">
+<link rel="up" href="../tutorial.html" title="Tutorial">
+<link rel="prev" href="tuttimer2/src.html" title="Source listing for Timer.2">
+<link rel="next" href="tuttimer3/src.html" title="Source listing for Timer.3">
+</head>
+<body bgcolor="white" text="black" link="#0000FF" vlink="#840084" alink="#0000FF">
+<table cellpadding="2" width="100%"><tr>
+<td valign="top"><img alt="Boost C++ Libraries" width="277" height="86" src="../../../../boost.png"></td>
+<td align="center"><a href="../../../../index.html">Home</a></td>
+<td align="center"><a href="../../../../libs/libraries.htm">Libraries</a></td>
+<td align="center"><a href="http://www.boost.org/users/people.html">People</a></td>
+<td align="center"><a href="http://www.boost.org/users/faq.html">FAQ</a></td>
+<td align="center"><a href="../../../../more/index.htm">More</a></td>
+</tr></table>
+<hr>
+<div class="spirit-nav">
+<a accesskey="p" href="tuttimer2/src.html"><img src="../../../../doc/html/images/prev.png" alt="Prev"></a><a accesskey="u" href="../tutorial.html"><img src="../../../../doc/html/images/up.png" alt="Up"></a><a accesskey="h" href="../../boost_asio.html"><img src="../../../../doc/html/images/home.png" alt="Home"></a><a accesskey="n" href="tuttimer3/src.html"><img src="../../../../doc/html/images/next.png" alt="Next"></a>
+</div>
+<div class="section" lang="en">
+<div class="titlepage"><div><div><h3 class="title">
+<a name="boost_asio.tutorial.tuttimer3"></a><a class="link" href="tuttimer3.html" title="Timer.3 - Binding arguments to a handler"> Timer.3 - 回调函数绑定参数</a>
+</h3></div></div></div>
+<p>
+      在本示例程序中我们将修改Timer.2中的例子，使定时器每秒被激活一次。例子将示范如何给你的函数指针传递附加参数。
+      </p>
+<pre class="programlisting"><span class="preprocessor">#include</span> <span class="special">&lt;</span><span class="identifier">iostream</span><span class="special">&gt;</span>
+<span class="preprocessor">#include</span> <span class="special">&lt;</span><span class="identifier">boost</span><span class="special">/</span><span class="identifier">asio</span><span class="special">.</span><span class="identifier">hpp</span><span class="special">&gt;</span>
+<span class="preprocessor">#include</span> <span class="special">&lt;</span><span class="identifier">boost</span><span class="special">/</span><span class="identifier">bind</span><span class="special">.</span><span class="identifier">hpp</span><span class="special">&gt;</span>
+<span class="preprocessor">#include</span> <span class="special">&lt;</span><span class="identifier">boost</span><span class="special">/</span><span class="identifier">date_time</span><span class="special">/</span><span class="identifier">posix_time</span><span class="special">/</span><span class="identifier">posix_time</span><span class="special">.</span><span class="identifier">hpp</span><span class="special">&gt;</span>
+</pre>
+<p>
+        使用Asio实现一个重复定时器，你必须在你的回调函数中去改变定时器的终止时间，然后开始一个新的异步等待。显然这意味着回调函数必须拥有改变定时器对象的权限。为此我们为
+        <code class="computeroutput"><span class="identifier">print</span></code>函数增加两个新参数:
+      </p>
+<div class="itemizedlist"><ul type="disc">
+<li>
+          一个指向定时器对象的指针。
+        </li>
+<li>
+          一个用于当定时器第6次被激活时我们可以中止程序的计数器。
+        </li>
+</ul></div>
+<pre class="programlisting"><span class="keyword">void</span> <span class="identifier">print</span><span class="special">(</span><span class="keyword">const</span> <span class="identifier">boost</span><span class="special">::</span><span class="identifier">system</span><span class="special">::</span><span class="identifier">error_code</span><span class="special">&amp;</span> <span class="comment">/*e*/</span><span class="special">,</span>
+    <span class="identifier">boost</span><span class="special">::</span><span class="identifier">asio</span><span class="special">::</span><span class="identifier">deadline_timer</span><span class="special">*</span> <span class="identifier">t</span><span class="special">,</span> <span class="keyword">int</span><span class="special">*</span> <span class="identifier">count</span><span class="special">)</span>
+<span class="special">{</span>
+</pre>
+<p>
+        如上所示，示例程序使用了一个计数器,当定时器被第6次激活时，用来中止程序。然而，你将看到这里并没有显式地要求io_service对象中止。回忆示例2中，当没有更多“工作”去做时，<a class="link" href="../reference/io_service/run.html" title="io_service::run">io_service::run()</a>
+        函数完成。在计数器<code class="computeroutput"><span class="identifier">达到</span></code>
+        5时，定时器并没有启动一个新的异步等待。该io_service执行完工作后停止运行。
+      </p>
+<pre class="programlisting">  <span class="keyword">if</span> <span class="special">(*</span><span class="identifier">count</span> <span class="special">&lt;</span> <span class="number">5</span><span class="special">)</span>
+  <span class="special">{</span>
+    <span class="identifier">std</span><span class="special">::</span><span class="identifier">cout</span> <span class="special">&lt;&lt;</span> <span class="special">*</span><span class="identifier">count</span> <span class="special">&lt;&lt;</span> <span class="string">"\n"</span><span class="special">;</span>
+    <span class="special">++(*</span><span class="identifier">count</span><span class="special">);</span>
+</pre>
+<p>
+        接着，我们推迟定时器的终止时间。通过在原先的终止时间上增加延时，我们可以确保定时器不会在处理回调函数所需时间内到期。
+      </p>
+<pre class="programlisting">    <span class="identifier">t</span><span class="special">-&gt;</span><span class="identifier">expires_at</span><span class="special">(</span><span class="identifier">t</span><span class="special">-&gt;</span><span class="identifier">expires_at</span><span class="special">()</span> <span class="special">+</span> <span class="identifier">boost</span><span class="special">::</span><span class="identifier">posix_time</span><span class="special">::</span><span class="identifier">seconds</span><span class="special">(</span><span class="number">1</span><span class="special">));</span>
+</pre>
+<p>
+        接着我们在定时器中启动一个新的异步等待。我们必须使用boost::bind() 函数给你的回调函数绑定额外的参数，因为<a class="link" href="../reference/basic_deadline_timer/async_wait.html" title="basic_deadline_timer::async_wait">deadline_timer::async_wait()</a>
+        函数只期望得到一个拥用
+        <code class="computeroutput"><span class="keyword">void</span><span class="special">(</span><span class="keyword">const</span> <span class="identifier">boost</span><span class="special">::</span><span class="identifier">system</span><span class="special">::</span><span class="identifier">error_code</span><span class="special">&amp;)</span></code>
+        签名的函数指针（或函数对象）。为你的<code class="computeroutput"><span class="identifier">print</span></code>函数绑定附加的参数后，它就成为与签名精确匹配的函数对象。    
+      </p>
+<p>
+        查看<a href="http://www.boost.org/libs/bind/bind.html" target="_top">Boost.Bind
+        文档</a>文档以获得更多如何使用boost::bind()的信息。
+      </p>
+<p>
+       	在本例中，boost::bind（）的boost::asio::placeholders::error参数是为了给回调函数传入一个error对象。当开始异步操作时，如果使用boost::bind()，你必须指定和回调函数的参数列表相匹配的一个参数。在示例4中，如果在回调函数中，这个参数不是必需的，这个占位符会被省略。
+      </p>
+<pre class="programlisting">    <span class="identifier">t</span><span class="special">-&gt;</span><span class="identifier">async_wait</span><span class="special">(</span><span class="identifier">boost</span><span class="special">::</span><span class="identifier">bind</span><span class="special">(</span><span class="identifier">print</span><span class="special">,</span>
+          <span class="identifier">boost</span><span class="special">::</span><span class="identifier">asio</span><span class="special">::</span><span class="identifier">placeholders</span><span class="special">::</span><span class="identifier">error</span><span class="special">,</span> <span class="identifier">t</span><span class="special">,</span> <span class="identifier">count</span><span class="special">));</span>
+  <span class="special">}</span>
+<span class="special">}</span>
+
+<span class="keyword">int</span> <span class="identifier">main</span><span class="special">()</span>
+<span class="special">{</span>
+  <span class="identifier">boost</span><span class="special">::</span><span class="identifier">asio</span><span class="special">::</span><span class="identifier">io_service</span> <span class="identifier">io</span><span class="special">;</span>
+</pre>
+<p>
+       为了在定时器第6次被激活时终止程序，我们添加一个新的<code class="computeroutput"><span class="identifier">count</span></code>变量。
+      </p>
+<pre class="programlisting">  <span class="keyword">int</span> <span class="identifier">count</span> <span class="special">=</span> <span class="number">0</span><span class="special">;</span>
+  <span class="identifier">boost</span><span class="special">::</span><span class="identifier">asio</span><span class="special">::</span><span class="identifier">deadline_timer</span> <span class="identifier">t</span><span class="special">(</span><span class="identifier">io</span><span class="special">,</span> <span class="identifier">boost</span><span class="special">::</span><span class="identifier">posix_time</span><span class="special">::</span><span class="identifier">seconds</span><span class="special">(</span><span class="number">1</span><span class="special">));</span>
+</pre>
+<p>
+        在第四步中，当在<code class="computeroutput"><span class="identifier">主函数</span></code>中的调用<a class="link" href="../reference/basic_deadline_timer/async_wait.html" title="basic_deadline_timer::async_wait">deadline_timer::async_wait()</a>
+        函数时，我们绑定<code class="computeroutput"><span class="identifier">print</span></code>函数所需要的附加参数。
+      </p>
+<pre class="programlisting">  <span class="identifier">t</span><span class="special">.</span><span class="identifier">async_wait</span><span class="special">(</span><span class="identifier">boost</span><span class="special">::</span><span class="identifier">bind</span><span class="special">(</span><span class="identifier">print</span><span class="special">,</span>
+        <span class="identifier">boost</span><span class="special">::</span><span class="identifier">asio</span><span class="special">::</span><span class="identifier">placeholders</span><span class="special">::</span><span class="identifier">error</span><span class="special">,</span> <span class="special">&amp;</span><span class="identifier">t</span><span class="special">,</span> <span class="special">&amp;</span><span class="identifier">count</span><span class="special">));</span>
+
+  <span class="identifier">io</span><span class="special">.</span><span class="identifier">run</span><span class="special">();</span>
+</pre>
+<p>
+        最后，为了证明<code class="computeroutput"><span class="identifier">count</span></code>
+        变量在<code class="computeroutput"><span class="identifier">print</span></code>
+        函数句柄中被使用，我们打印出它的值。
+      </p>
+<pre class="programlisting">  <span class="identifier">std</span><span class="special">::</span><span class="identifier">cout</span> <span class="special">&lt;&lt;</span> <span class="string">"Final count is "</span> <span class="special">&lt;&lt;</span> <span class="identifier">count</span> <span class="special">&lt;&lt;</span> <span class="string">"\n"</span><span class="special">;</span>
+
+  <span class="keyword">return</span> <span class="number">0</span><span class="special">;</span>
+<span class="special">}</span>
+</pre>
+<p>
+        查看<a class="link" href="tuttimer3/src.html" title="Source listing for Timer.3">本例全部源代码</a>
+      </p>
+<p>
+        返回<a class="link" href="../tutorial.html" title="Tutorial">指南</a>
+      </p>
+<p>
+        前一例: <a class="link" href="tuttimer2.html" title="Timer.2 - Using a timer asynchronously">Timer.2 - 使用异步定时器</a>
+      </p>
+<p>
+        后一例: <a class="link" href="tuttimer4.html" title="Timer.4 - Using a member function as a handler">Timer.4 - 成员函数作为回调函数</a>
+      </p>
+</div>
+<table xmlns:rev="http://www.cs.rpi.edu/~gregod/boost/tools/doc/revision" width="100%"><tr>
+<td align="left"></td>
+<td align="right"><div class="copyright-footer">Copyright © 2003 - 2008 Christopher M. Kohlhoff<p>
+        Distributed under the Boost Software License, Version 1.0. (See accompanying
+        file LICENSE_1_0.txt or copy at <a href="http://www.boost.org/LICENSE_1_0.txt" target="_top">http://www.boost.org/LICENSE_1_0.txt</a>)
+      </p>
+</div></td>
+</tr></table>
+<hr>
+<div class="spirit-nav">
+<a accesskey="p" href="tuttimer2/src.html"><img src="../../../../doc/html/images/prev.png" alt="Prev"></a><a accesskey="u" href="../tutorial.html"><img src="../../../../doc/html/images/up.png" alt="Up"></a><a accesskey="h" href="../../boost_asio.html"><img src="../../../../doc/html/images/home.png" alt="Home"></a><a accesskey="n" href="tuttimer3/src.html"><img src="../../../../doc/html/images/next.png" alt="Next"></a>
+</div>
+</body>
+</html>

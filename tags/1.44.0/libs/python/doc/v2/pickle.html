@@ -1,0 +1,545 @@
+<!DOCTYPE html PUBLIC "-//W3C//DTD HTML 4.0//EN"
+"http://www.w3.org/TR/REC-html40/strict.dtd">
+
+<html>
+  <head>
+    <meta http-equiv="Content-Type" content="text/html; charset=UTF-8">
+
+<title>Boost.Python Pickle Support</title>
+
+</head>
+<body>
+  
+<div>
+
+<img src="../../../../boost.png"
+     alt="boost.png (6897 bytes)"
+     align="center"
+     width="277" height="86">
+
+<hr>
+<h1>Boost.Python Pickle Support</h1>
+
+<h1>Boost.Python Pickle支持</h1>
+
+Pickle is a Python module for object serialization, also known
+as persistence, marshalling, or flattening.
+
+<p>
+Pickle是Python的对象序列化（serialization）模块，
+也称为persistence、marshalling，或flattening。
+
+<p>
+It is often necessary to save and restore the contents of an object to
+a file. One approach to this problem is to write a pair of functions
+that read and write data from a file in a special format. A powerful
+alternative approach is to use Python's pickle module. Exploiting
+Python's ability for introspection, the pickle module recursively
+converts nearly arbitrary Python objects into a stream of bytes that
+can be written to a file.
+
+<p>
+经常需要保存对象的内容到文件和恢复对象。
+
+解决该问题的方法之一是，写一对读写函数，以特殊格式从文件读取和写入数据。
+
+另一种有效方法是使用Python的pickle模块。
+
+利用Python的反省能力，
+pickle模块递归地转换几乎任意的Python对象，
+将其转换为可以写入文件的字节流。
+
+<p>
+The Boost Python Library supports the pickle module
+through the interface as described in detail in the
+<a href="http://www.python.org/doc/current/lib/module-pickle.html"
+>Python Library Reference for pickle.</a> This interface
+involves the special methods <tt>__getinitargs__</tt>,
+<tt>__getstate__</tt> and <tt>__setstate__</tt> as described
+in the following. Note that Boost.Python is also fully compatible
+with Python's cPickle module.
+
+<p>
+Boost Python库
+通过在<a href="http://www.python.org/doc/current/lib/module-pickle.html"
+>Python Library Reference for pickle</a>
+中详细描述的接口支持pickle模块。
+
+该接口包括特殊方法
+<tt>__getinitargs__</tt>、
+<tt>__getstate__</tt>和<tt>__setstate__</tt>，
+描述如下。
+
+注意Boost.Python还完全兼容Python的cPickle模块。
+
+<hr>
+<h2>The Boost.Python Pickle Interface</h2>
+
+<h2>Boost.Python Pickle接口</h2>
+
+At the user level, the Boost.Python pickle interface involves three special
+methods:
+
+<p>
+在用户层面上，Boost.Python pickle接口包括三个特殊方法：
+
+<dl>
+<dt>
+<strong><tt>__getinitargs__</tt></strong>
+<dd>
+  When an instance of a Boost.Python extension class is pickled, the
+  pickler tests if the instance has a <tt>__getinitargs__</tt> method.
+  This method must return a Python tuple (it is most convenient to use
+  a boost::python::tuple). When the instance is restored by the
+  unpickler, the contents of this tuple are used as the arguments for
+  the class constructor.
+
+  <p>
+  当Boost.Python扩展类的实例被pickle时，
+  pickler测试该实例有没有<tt>__getinitargs__</tt>方法。
+  
+  该方法必须返回一个Python元组（使用boost::python::tuple最方便）。
+  
+  当实例由unpickler恢复时，该元组的内容用作类的构造函数的参数。
+
+  <p>
+  If <tt>__getinitargs__</tt> is not defined, <tt>pickle.load</tt>
+  will call the constructor (<tt>__init__</tt>) without arguments;
+  i.e., the object must be default-constructible.
+
+  <p>
+  如果<tt>__getinitargs__</tt>未定义，
+  <tt>pickle.load</tt>将调用无参数的构造函数（<tt>__init__</tt>）；
+  即该对象必须可缺省构造。
+  
+<p>
+<dt>
+<strong><tt>__getstate__</tt></strong>
+
+<dd>
+  When an instance of a Boost.Python extension class is pickled, the
+  pickler tests if the instance has a <tt>__getstate__</tt> method.
+  This method should return a Python object representing the state of
+  the instance.
+  
+  <p>
+  当Boost.Python扩展类的实例被pickle时，
+  pickler测试该实例有没有<tt>__getstate__</tt>方法。
+  该方法应返回表示实例状态的Python对象。
+  
+<p>
+<dt>
+<strong><tt>__setstate__</tt></strong>
+
+<dd>
+  When an instance of a Boost.Python extension class is restored by the
+  unpickler (<tt>pickle.load</tt>), it is first constructed using the
+  result of <tt>__getinitargs__</tt> as arguments (see above). Subsequently
+  the unpickler tests if the new instance has a <tt>__setstate__</tt>
+  method. If so, this method is called with the result of
+  <tt>__getstate__</tt> (a Python object) as the argument.
+
+  <p>
+  当Boost.Python扩展类的实例由unpickler恢复时（<tt>pickle.load</tt>），
+  它首先以<tt>__getinitargs__</tt>的结果为参数进行构造（见上）。
+  
+  随后unpickler测试新的实例有没有<tt>__setstate__</tt>方法。
+  如有，就以<tt>__getstate__</tt>的结果（Python对象）为参数，调用该方法。
+  
+</dl>
+
+The three special methods described above may be <tt>.def()</tt>'ed
+individually by the user. However, Boost.Python provides an easy to use
+high-level interface via the
+<strong><tt>boost::python::pickle_suite</tt></strong> class that also
+enforces consistency: <tt>__getstate__</tt> and <tt>__setstate__</tt>
+must be defined as pairs. Use of this interface is demonstrated by the
+following examples.
+
+<p>
+上述三个特殊方法可由用户单独<tt>.def()</tt>。
+
+不过，Boost.Python
+通过<strong><tt>boost::python::pickle_suite</tt></strong>类
+提供了一个易于使用的高级接口，
+同时也加强了一致性：
+<tt>__getstate__</tt>和<tt>__setstate__</tt>
+必须成对定义。
+
+下例演示了该接口的使用。
+
+<hr>
+<h2>Examples</h2>
+
+<h2>例子</h2>
+
+There are three files in 
+<tt>boost/libs/python/test</tt> that show how to
+provide pickle support.
+
+<p>
+<tt>boost/libs/python/test</tt>中有三个文件，显示了如何提供pickle支持。
+
+<hr>
+<h3><a href="../../test/pickle1.cpp"><tt>pickle1.cpp</tt></a></h3>
+
+    The C++ class in this example can be fully restored by passing the
+    appropriate argument to the constructor. Therefore it is sufficient
+    to define the pickle interface method <tt>__getinitargs__</tt>.
+    This is done in the following way:
+
+    <p>
+    该例中的C++类可以通过向构造函数传递适当的参数完全恢复。
+    因此，它定义pickle接口方法<tt>__getinitargs__</tt>就足够了。
+    这是按以下方式做到的：
+     
+<ul>
+<li>1. Definition of the C++ pickle function:
+
+<p>定义C++ pickle函数：
+
+<pre>
+  struct world_pickle_suite : boost::python::pickle_suite
+  {
+    static
+    boost::python::tuple
+    getinitargs(world const&amp; w)
+    {
+        return boost::python::make_tuple(w.get_country());
+    }
+  };
+</pre>
+<li>2. Establishing the Python binding:
+
+<p>建立Python绑定：
+
+<pre>
+  class_&lt;world&gt;("world", args&lt;const std::string&amp;&gt;())
+      // ...
+      .def_pickle(world_pickle_suite())
+      // ...
+</pre>
+</ul>
+
+<hr>
+<h3><a href="../../test/pickle2.cpp"><tt>pickle2.cpp</tt></a></h3>
+
+    The C++ class in this example contains member data that cannot be
+    restored by any of the constructors. Therefore it is necessary to
+    provide the <tt>__getstate__</tt>/<tt>__setstate__</tt> pair of
+    pickle interface methods:
+    
+    <p>
+    本例中的C++类含有任何构造函都无法恢复的成员数据。
+    因此，有必要提供<tt>__getstate__</tt>/<tt>__setstate__</tt>
+    pickle接口方法对：
+
+<ul>
+<li>1. Definition of the C++ pickle functions:
+
+<p>定义C++ pickle函数：
+
+<pre>
+  struct world_pickle_suite : boost::python::pickle_suite
+  {
+    static
+    boost::python::tuple
+    getinitargs(const world&amp; w)
+    {
+      // ...
+    }
+
+    static
+    boost::python::tuple
+    getstate(const world&amp; w)
+    {
+      // ...
+    }
+
+    static
+    void
+    setstate(world&amp; w, boost::python::tuple state)
+    {
+      // ...
+    }
+  };
+</pre>
+<li>2. Establishing the Python bindings for the entire suite:
+
+<p>为整个suite建立Python绑定：
+
+<pre>
+  class_&lt;world&gt;("world", args&lt;const std::string&amp;&gt;())
+      // ...
+      .def_pickle(world_pickle_suite())
+      // ...
+</pre>
+</ul>
+
+    <p>
+    For simplicity, the <tt>__dict__</tt> is not included in the result
+    of <tt>__getstate__</tt>. This is not generally recommended, but a
+    valid approach if it is anticipated that the object's
+    <tt>__dict__</tt> will always be empty. Note that the safety guard
+    described below will catch the cases where this assumption is violated.
+    
+    <p>
+    为简单起见，<tt>__getstate__</tt>的结果中没有包括<tt>__dict__</tt>。
+    
+    一般不推荐这样做，
+    但如果预期对象的<tt>__dict__</tt>将总是为空，
+    这仍是一个有效的办法，
+
+    注意如果违反假设，下述的安全防范措施将捕捉到该情况。
+
+<hr>
+<h3><a href="../../test/pickle3.cpp"><tt>pickle3.cpp</tt></a></h3>
+
+    This example is similar to <a
+    href="../../test/pickle2.cpp"><tt>pickle2.cpp</tt></a>. However, the
+    object's <tt>__dict__</tt> is included in the result of
+    <tt>__getstate__</tt>.  This requires a little more code but is
+    unavoidable if the object's <tt>__dict__</tt> is not always empty.
+
+    <p>
+    本例类似于<a
+    href="../../test/pickle2.cpp"><tt>pickle2.cpp</tt></a>。
+    
+    不过，该对象的<tt>__dict__</tt>被包括在<tt>__getstate__</tt>的结果中。
+    
+    这需要多一点代码，但如果该对象的<tt>__dict__</tt>并非总是空的，
+    这是不可避免的。
+    
+<hr>
+<h2>Pitfall and Safety Guard</h2>
+
+<h2>陷阱及安全防范</h2>
+
+The pickle protocol described above has an important pitfall that the
+end user of a Boost.Python extension module might not be aware of:
+
+<p>
+上述的pickle协议有个重要的陷阱，
+Boost.Python扩展模块的最终用户可能不知道：
+
+<p>
+<strong>
+<tt>__getstate__</tt> is defined and the instance's <tt>__dict__</tt>
+is not empty.
+</strong>
+<p>
+
+<p>
+<strong>
+定义了<tt>__getstate__</tt>，并且实例的<tt>__dict__</tt>不为空。
+</strong>
+<p>
+
+  The author of a Boost.Python extension class might provide a
+  <tt>__getstate__</tt> method without considering the possibilities
+  that:
+
+  <p>
+  Boost.Python扩展类的作者可能会提供<tt>__getstate__</tt>方法，
+  但没有考虑以下可能性：
+  
+  <p>
+  <ul>
+  <li>
+    his class is used in Python as a base class. Most likely the
+    <tt>__dict__</tt> of instances of the derived class needs to be
+    pickled in order to restore the instances correctly.
+
+    <p>
+    他的类在Python中用作基类。
+    为了正确恢复派生类的实例，
+    很有可能需要pickle该实例的<tt>__dict__</tt>。
+    
+  <p>
+  <li>
+    the user adds items to the instance's <tt>__dict__</tt> directly.
+    Again, the <tt>__dict__</tt> of the instance then needs to be
+    pickled.
+
+    <p>
+    用户直接向实例的<tt>__dict__</tt>增添项目。
+    同样需要pickle实例的<tt>__dict__</tt>。
+    
+  </ul>
+  <p>
+
+  To alert the user to this highly unobvious problem, a safety guard is
+  provided. If <tt>__getstate__</tt> is defined and the instance's
+  <tt>__dict__</tt> is not empty, Boost.Python tests if the class has
+  an attribute <tt>__getstate_manages_dict__</tt>. An exception is
+  raised if this attribute is not defined:
+
+  <p>
+  为提醒用户这种极不明显的问题，Boost.Python提供了安全防范措施。
+  如果定义了<tt>__getstate__</tt>，并且实例的<tt>__dict__</tt>非空，
+  Boost.Python将测试该类有没有<tt>__getstate_manages_dict__</tt>属性。
+  如果该属性未定义，则引发异常：
+  
+<pre>
+    RuntimeError: Incomplete pickle support (__getstate_manages_dict__ not set)
+</pre>
+
+  To resolve this problem, it should first be established that the
+  <tt>__getstate__</tt> and <tt>__setstate__</tt> methods manage the
+  instances's <tt>__dict__</tt> correctly. Note that this can be done
+  either at the C++ or the Python level. Finally, the safety guard
+  should intentionally be overridden. E.g. in C++ (from
+  <a href="../../test/pickle3.cpp"><tt>pickle3.cpp</tt></a>):
+
+  <p>
+  为解决该问题，应该首先确定
+  <tt>__getstate__</tt>和<tt>__setstate__</tt>方法
+  正确管理实例的<tt>__dict__</tt>。
+  
+  注意，这既可以在C++也可以在Python层次做到。
+  
+  最后，安全防范措施应该有意地进行覆盖。
+  例如，在C++中（来自
+  <a href="../../test/pickle3.cpp"><tt>pickle3.cpp</tt></a>）：
+  
+<pre>
+  struct world_pickle_suite : boost::python::pickle_suite
+  {
+    // ...
+
+    static bool getstate_manages_dict() { return true; }
+  };
+</pre>
+
+  Alternatively in Python:
+  
+  <p>
+  或在Python中：
+
+<pre>
+    import your_bpl_module
+    class your_class(your_bpl_module.your_class):
+      __getstate_manages_dict__ = 1
+      def __getstate__(self):
+        # your code here
+      def __setstate__(self, state):
+        # your code here
+</pre>
+
+<hr>
+<h2>Practical Advice</h2>
+
+<h2>实用建议</h2>
+
+<ul>
+<li>
+  In Boost.Python extension modules with many extension classes,
+  providing complete pickle support for all classes would be a
+  significant overhead. In general complete pickle support should
+  only be implemented for extension classes that will eventually
+  be pickled.
+
+  <p>
+  在具有许多扩展类的Boost.Python扩展模块中，
+  为所有类提供完整的pickle支持将是重大的开销。
+  
+  通常，完整的pickle支持应该仅为最终会被pickle的扩展类实现。
+  
+<p>
+<li>
+  Avoid using <tt>__getstate__</tt> if the instance can also be
+  reconstructed by way of <tt>__getinitargs__</tt>. This automatically
+  avoids the pitfall described above.
+
+  <p>
+  如果实例也可以通过<tt>__getinitargs__</tt>的方式重新构造，
+  避免使用<tt>__getstate__</tt>。
+  
+  这将自动避开上述的陷阱。
+  
+<p>
+<li>
+  If <tt>__getstate__</tt> is required, include the instance's
+  <tt>__dict__</tt> in the Python object that is returned.
+
+  <p>
+  如果要求<tt>__getstate__</tt>，
+  在返回的Python对象中包括实例的<tt>__dict__</tt>。
+  
+</ul>
+
+<hr>
+<h2>Light-weight alternative: pickle support implemented in Python</h2>
+
+<h2>轻量级替代方法：在Python中实现pickle支持</h2>
+
+<h3><a href="../../test/pickle4.cpp"><tt>pickle4.cpp</tt></a></h3>
+
+The <tt>pickle4.cpp</tt> example demonstrates an alternative technique
+for implementing pickle support. First we direct Boost.Python via
+the <tt>class_::enable_pickling()</tt> member function to define only
+the basic attributes required for pickling:
+
+<p>
+<tt>pickle4.cpp</tt>例子演示了一种实现pickle的替代技术。
+首先，我们通过<tt>class_::enable_pickling()</tt>
+指示Boost.Python只定义pickle要求的基本属性：
+
+<pre>
+  class_&lt;world&gt;("world", args&lt;const std::string&amp;&gt;())
+      // ...
+      .enable_pickling()
+      // ...
+</pre>
+
+This enables the standard Python pickle interface as described
+in the Python documentation. By &quot;injecting&quot; a
+<tt>__getinitargs__</tt> method into the definition of the wrapped
+class we make all instances pickleable:
+
+<p>
+这开启了Python文档中描述的标准Pythonpickle接口。
+
+通过向被封装类的定义中“注入”<tt>__getinitargs__</tt>方法，
+我们使所有实例都可pickle：
+
+<pre>
+  # import the wrapped world class
+  from pickle4_ext import world
+
+  # definition of __getinitargs__
+  def world_getinitargs(self):
+    return (self.get_country(),)
+
+  # now inject __getinitargs__ (Python is a dynamic language!)
+  world.__getinitargs__ = world_getinitargs
+</pre>
+
+See also the
+<a href="../tutorial/doc/html/python/techniques.html#python.extending_wrapped_objects_in_python"
+>tutorial section</a> on injecting additional methods from Python.
+
+<p>
+关于从Python注入附加方法，也可见
+<a href="../tutorial/doc/html/python/techniques.html#python.extending_wrapped_objects_in_python"
+>tutorial section</a>。
+
+
+<hr>
+
+&copy; Copyright Ralf W. Grosse-Kunstleve 2001-2004. Distributed under
+  the Boost Software License, Version 1.0. (See accompanying file
+  LICENSE_1_0.txt or copy at http://www.boost.org/LICENSE_1_0.txt)
+
+<p>
+Updated: Feb 2004.
+
+<p>
+翻译：<a href="http://blog.csdn.net/jq0123">金庆</a>
+
+<p>
+译文更新：2008.5.29
+
+</div>
+
+</body></html>

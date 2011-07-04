@@ -1,0 +1,452 @@
+<!DOCTYPE HTML PUBLIC "-//W3C//DTD HTML 4.01 Transitional//EN">
+<html>
+<head>
+
+		
+		
+  <title>intrusive_ptr</title>
+  <meta http-equiv="Content-Type" content="text/html; charset=UTF-8">
+</head>
+
+
+	<body bgcolor="#ffffff" text="#000000">
+
+		
+<h1><a href="../../index.htm"><img alt="boost.png (6897 bytes)" src="../../boost.png" align="middle" border="0" height="86" width="277"></a>intrusive_ptr 类模板</h1>
+
+		
+<p>
+			<a href="#Introduction">Introduction 简介</a><br>
+
+			<a href="#Synopsis">Synopsis 概要</a><br>
+
+			<a href="#Members">Members 成员</a><br>
+
+			<a href="#functions">Free Functions 自由函数</a><br>
+
+		</p>
+
+		
+<h2><a name="Introduction">Introduction 简介</a></h2>
+
+		
+<p><b>intrusive_ptr</b> 类模板存储一个指向带有侵入式引用计数的对象的指针。每一个新的 <b>intrusive_ptr</b> 实例都通过对函数 <strong>intrusive_ptr_add_ref</strong> 的无条件调用（将指针作为参数）增加引用计数。同样，当一个 <strong>intrusive_ptr</strong> 被销毁，它会调用 <strong>intrusive_ptr_release</strong>，这个函数负责当引用计数降为 0 时销毁这个对象。这两个函数的适当定义由用户提供。在支持 argument-dependent lookup （参数依赖查找）的编译器上，<strong>intrusive_ptr_add_ref</strong> 和 <strong>intrusive_ptr_release</strong> 应该和它们的参数定义在同一个名字空间中，否则，就定义名字空间 <strong>boost</strong> 中。</p>
+
+		
+<p>这个类模板以 <b>T</b> 为参数，<b>T</b> 是被指向的对象的类型。只要 <strong>T*</strong> 能被隐式地转换到 <strong>U*</strong>，则 <strong>intrusive_ptr&lt;T&gt;</strong> 就能被隐式地转换到 <strong>intrusive_ptr&lt;U&gt;</strong>。</p>
+
+		
+<p>使用 <strong>intrusive_ptr</strong> 的主要原因是：</p>
+
+		
+<ul>
+
+			<li>
+				一些已有的 frameworks 和操作系统提供带有侵入式引用计数的对象；
+			</li>
+  <li>
+				<strong>intrusive_ptr</strong> 的内存占用量和相应的裸指针一样。
+			</li>
+  <li>
+				<strong>intrusive_ptr&lt;T&gt;</strong> 能够从任意一个类型为 <strong>T *</strong> 的裸指针构造出来。</li>
+</ul>
+
+		
+<p>作为一个通用规则，如果 <strong>intrusive_ptr</strong> 不是很明显地比 <strong>shared_ptr</strong> 更加适合你的需要，请首先考虑基于 <strong>shared_ptr</strong> 的设计。</p>
+
+		
+<h2><a name="Synopsis">Synopsis 概要</a></h2>
+
+		
+<pre>namespace boost {<br><br>  template&lt;class T&gt; class intrusive_ptr {<br><br>    public:<br><br>      typedef T <a href="#element_type">element_type</a>;<br><br>      <a href="#constructors">intrusive_ptr</a>(); // never throws<br>      <a href="#constructors">intrusive_ptr</a>(T * p, bool add_ref = true);<br><br>      <a href="#constructors">intrusive_ptr</a>(intrusive_ptr const &amp; r);<br>      template&lt;class Y&gt; <a href="#constructors">intrusive_ptr</a>(intrusive_ptr&lt;Y&gt; const &amp; r);<br><br>      <a href="#destructor">~intrusive_ptr</a>();<br><br>      intrusive_ptr &amp; <a href="#assignment">operator=</a>(intrusive_ptr const &amp; r);<br>      template&lt;class Y&gt; intrusive_ptr &amp; <a href="#assignment">operator=</a>(intrusive_ptr&lt;Y&gt; const &amp; r);<br>      template&lt;class Y&gt; intrusive_ptr &amp; <a href="#assignment">operator=</a>(T * r);<br>     &nbsp;void <a href="#reset">reset</a>(T * r);<br><br>      T &amp; <a href="#indirection">operator*</a>() const; // never throws<br>      T * <a href="#indirection">operator-&gt;</a>() const; // never throws<br>      T * <a href="#get">get</a>() const; // never throws<br><br>      operator <a href="#conversions"><i>unspecified-bool-type</i></a>() const; // never throws<br><br>      void <a href="#swap">swap</a>(intrusive_ptr &amp; b); // never throws<br>  };<br><br>  template&lt;class T, class U&gt;<br>    bool <a href="#comparison">operator==</a>(intrusive_ptr&lt;T&gt; const &amp; a, intrusive_ptr&lt;U&gt; const &amp; b); // never throws<br><br>  template&lt;class T, class U&gt;<br>    bool <a href="#comparison">operator!=</a>(intrusive_ptr&lt;T&gt; const &amp; a, intrusive_ptr&lt;U&gt; const &amp; b); // never throws<br><br>  template&lt;class T&gt;<br>    bool <a href="#comparison">operator==</a>(intrusive_ptr&lt;T&gt; const &amp; a, T * b); // never throws<br><br>  template&lt;class T&gt;<br>    bool <a href="#comparison">operator!=</a>(intrusive_ptr&lt;T&gt; const &amp; a, T * b); // never throws<br><br>  template&lt;class T&gt;<br>    bool <a href="#comparison">operator==</a>(T * a, intrusive_ptr&lt;T&gt; const &amp; b); // never throws<br><br>  template&lt;class T&gt;<br>    bool <a href="#comparison">operator!=</a>(T * a, intrusive_ptr&lt;T&gt; const &amp; b); // never throws<br><br>  template&lt;class T, class U&gt;<br>    bool <a href="#comparison">operator&lt;</a>(intrusive_ptr&lt;T&gt; const &amp; a, intrusive_ptr&lt;U&gt; const &amp; b); // never throws<br><br>  template&lt;class T&gt; void <a href="#free-swap">swap</a>(intrusive_ptr&lt;T&gt; &amp; a, intrusive_ptr&lt;T&gt; &amp; b); // never throws<br><br>  template&lt;class T&gt; T * <a href="#get_pointer">get_pointer</a>(intrusive_ptr&lt;T&gt; const &amp; p); // never throws<br><br>  template&lt;class T, class U&gt;<br>    intrusive_ptr&lt;T&gt; <a href="#static_pointer_cast">static_pointer_cast</a>(intrusive_ptr&lt;U&gt; const &amp; r); // never throws<br><br>  template&lt;class T, class U&gt;<br>    intrusive_ptr&lt;T&gt; <a href="#const_pointer_cast">const_pointer_cast</a>(intrusive_ptr&lt;U&gt; const &amp; r); // never throws<br><br>  template&lt;class T, class U&gt;<br>    intrusive_ptr&lt;T&gt; <a href="#dynamic_pointer_cast">dynamic_pointer_cast</a>(intrusive_ptr&lt;U&gt; const &amp; r); // never throws<br><br>  template&lt;class E, class T, class Y&gt;<br>    std::basic_ostream&lt;E, T&gt; &amp; <a href="#insertion-operator">operator&lt;&lt;</a> (std::basic_ostream&lt;E, T&gt; &amp; os, intrusive_ptr&lt;Y&gt; const &amp; p);<br><br>}</pre>
+
+		
+<h2><a name="Members">Members 成员</a></h2>
+
+		
+<h3><a name="element_type">element_type 元素类型</a></h3>
+
+		
+<pre>typedef T element_type;</pre>
+
+		
+<blockquote>
+			
+  <p>提供模板参数 T 的类型。</p>
+
+		</blockquote>
+
+		
+<h3><a name="constructors">constructors 构造函数</a></h3>
+
+		
+<pre>intrusive_ptr(); // never throws</pre>
+
+		
+<blockquote>
+			
+  <p><b>后置条件：</b><code>get() == 0</code>。</p>
+
+			
+  <p><b>抛出：</b>无。</p>
+
+		</blockquote>
+
+		
+<pre>intrusive_ptr(T * p, bool add_ref = true);</pre>
+
+		
+<blockquote>
+			
+  <p><b>作用：</b><code>if(p != 0 &amp;&amp; add_ref) intrusive_ptr_add_ref(p);</code>。</p>
+
+			
+  <p><b>后置条件：</b><code>get() == p</code>。</p>
+
+		</blockquote>
+
+		
+<pre>intrusive_ptr(intrusive_ptr const &amp; r);<br>template&lt;class Y&gt; intrusive_ptr(intrusive_ptr&lt;Y&gt; const &amp; r);</pre>
+
+		
+<blockquote>
+			
+  <p><b>作用：</b><code>if(r.get() != 0) intrusive_ptr_add_ref(r.get());</code>。</p>
+
+			
+  <p><b>后置条件：</b><code>get() == r.get()</code>。</p>
+
+		</blockquote>
+
+		
+<h3><a name="destructor">destructor 析构函数</a></h3>
+
+		
+<pre>~intrusive_ptr();</pre>
+
+		
+<blockquote>
+			
+  <p><b>作用：</b><code>if(get() != 0) intrusive_ptr_release(get());</code>。</p>
+
+		</blockquote>
+
+		
+<h3><a name="assignment">assignment 赋值</a></h3>
+
+		
+<pre>intrusive_ptr &amp; operator=(intrusive_ptr const &amp; r);<br>template&lt;class Y&gt; intrusive_ptr &amp; operator=(intrusive_ptr&lt;Y&gt; const &amp; r);<br>intrusive_ptr &amp; operator=(T * r);</pre>
+
+		
+<blockquote>
+			
+  <p><b>作用：</b>等价于 <code>intrusive_ptr(r).swap(*this)</code>。</p>
+
+			
+  <p><b>返回：</b><code>*this</code>。</p>
+
+		</blockquote>
+
+		
+<h3><a name="reset">reset 重置</a></h3>
+<pre>void reset(T * r);</pre>
+
+<blockquote>
+  <p><b>作用：</b>等价于 
+  <code>intrusive_ptr(r).swap(*this)</code>.</p>
+</blockquote>
+<h3><a name="indirection">indirection 间接引用</a></h3>
+
+		
+<pre>T &amp; operator*() const; // never throws</pre>
+
+		
+<blockquote>
+			
+  <p><b>条件：</b><code>get() != 0</code>。</p>
+
+			
+  <p><b>返回：</b><code>*get()</code>。</p>
+
+			
+  <p><b>抛出：</b>无。</p>
+
+		</blockquote>
+
+		
+<pre>T * operator-&gt;() const; // never throws</pre>
+
+		
+<blockquote>
+			
+  <p><b>条件：</b><code>get() != 0</code>。</p>
+
+			
+  <p><b>返回：</b><code>get()</code>。</p>
+
+			
+  <p><b>抛出：</b>无。</p>
+
+		</blockquote>
+
+		
+<h3><a name="get">get 取得</a></h3>
+
+		
+<pre>T * get() const; // never throws</pre>
+
+		
+<blockquote>
+			
+  <p><b>返回：</b>所存储的指针。</p>
+
+			
+  <p><b>抛出：</b>无。</p>
+
+		</blockquote>
+
+		
+<h3><a name="conversions">conversions 转换</a></h3>
+
+		
+<pre>operator <i>unspecified-bool-type</i> () const; // never throws</pre>
+
+		
+<blockquote>
+			
+  <p><b>返回：</b>一个未确定的值，在需要布尔值的上下文中，它等价于 <code>get() != 0</code>。</p>
+
+			
+  <p><b>抛出：</b>无。</p>
+
+			
+  <p><b>注意：</b>这一转换操作符允许将 <b>intrusive_ptr</b> 对象用于需要布尔值的上下文中，就像 <code>if (p &amp;&amp; p-&gt;valid()) {}</code>。实际目标类型通常是一个指向成员函数的指针，消除了很多隐式转换的陷阱。</p>
+
+		</blockquote>
+
+		
+<h3><a name="swap">swap 交换</a></h3>
+
+		
+<pre>void swap(intrusive_ptr &amp; b); // never throws</pre>
+
+		
+<blockquote>
+			
+  <p><b>作用：</b>交换两个智能指针中的内容。</p>
+
+			
+  <p><b>抛出：</b>无。</p>
+
+		</blockquote>
+
+		
+<h2><a name="functions">Free Functions 自由函数</a></h2>
+
+		
+<h3><a name="comparison">comparison 比较</a></h3>
+
+		
+<pre>template&lt;class T, class U&gt;<br>  bool operator==(intrusive_ptr&lt;T&gt; const &amp; a, intrusive_ptr&lt;U&gt; const &amp; b); // never throws</pre>
+
+		
+<blockquote>
+			
+  <p><b>返回：</b><code>a.get() == b.get()</code>。</p>
+
+			
+  <p><b>抛出：</b>无。</p>
+
+		</blockquote>
+
+		
+<pre>template&lt;class T, class U&gt;<br>  bool operator!=(intrusive_ptr&lt;T&gt; const &amp; a, intrusive_ptr&lt;U&gt; const &amp; b); // never throws</pre>
+
+		
+<blockquote>
+			
+  <p><b>返回：</b><code>a.get() != b.get()</code>。</p>
+
+			
+  <p><b>抛出：</b>无。</p>
+
+		</blockquote>
+
+		
+<pre>template&lt;class T, class U&gt;<br>  bool operator==(intrusive_ptr&lt;T&gt; const &amp; a, U * b); // never throws</pre>
+
+		
+<blockquote>
+			
+  <p><b>返回：</b><code>a.get() == b</code>。</p>
+
+			
+  <p><b>抛出：</b>无。</p>
+
+		</blockquote>
+
+		
+<pre>template&lt;class T, class U&gt;<br>  bool operator!=(intrusive_ptr&lt;T&gt; const &amp; a, U * b); // never throws</pre>
+
+		
+<blockquote>
+			
+  <p><b>返回：</b><code>a.get() != b</code>。</p>
+
+			
+  <p><b>抛出：</b>无。</p>
+
+		</blockquote>
+
+		
+<pre>template&lt;class T, class U&gt;<br>  bool operator==(T * a, intrusive_ptr&lt;U&gt; const &amp; b); // never throws</pre>
+
+		
+<blockquote>
+			
+  <p><b>返回：</b><code>a == b.get()</code>。</p>
+
+			
+  <p><b>抛出：</b>无。</p>
+
+		</blockquote>
+
+		
+<pre>template&lt;class T, class U&gt;<br>  bool operator!=(T * a, intrusive_ptr&lt;U&gt; const &amp; b); // never throws</pre>
+
+		
+<blockquote>
+			
+  <p><b>返回：</b><code>a != b.get()</code>。</p>
+
+			
+  <p><b>抛出：</b>无。</p>
+
+		</blockquote>
+
+		
+<pre>template&lt;class T, class U&gt;<br>  bool operator&lt;(intrusive_ptr&lt;T&gt; const &amp; a, intrusive_ptr&lt;U&gt; const &amp; b); // never throws</pre>
+
+		
+<blockquote>
+			
+  <p><b>返回：</b><code>std::less&lt;T *&gt;()(a.get(), b.get())</code>。</p>
+
+			
+  <p><b>抛出：</b>无。</p>
+
+			
+  <p><b>注意：</b>允许 <strong>intrusive_ptr</strong> 对象在关联式容器中作为键值使用。</p>
+
+		</blockquote>
+
+		
+<h3><a name="free-swap">swap 交换</a></h3>
+
+		
+<pre>template&lt;class T&gt;<br>  void swap(intrusive_ptr&lt;T&gt; &amp; a, intrusive_ptr&lt;T&gt; &amp; b); // never throws</pre>
+
+		
+<blockquote>
+			
+  <p><b>作用：</b>等价于 <code>a.swap(b)</code>。</p>
+
+			
+  <p><b>抛出：</b>无。</p>
+
+			
+  <p><b>注意：</b>与 <b>std::swap</b> 的接口匹配。为泛型编程提供帮助。</p>
+
+		</blockquote>
+
+		
+<h3><a name="get_pointer">get_pointer 取得指针</a></h3>
+
+		
+<pre>template&lt;class T&gt;<br>  T * get_pointer(intrusive_ptr&lt;T&gt; const &amp; p); // never throws</pre>
+
+		
+<blockquote>
+			
+  <p><b>返回：</b><code>p.get()</code>。</p>
+
+			
+  <p><b>抛出：</b>无。</p>
+
+			
+  <p><b>注意：</b>为泛型编程提供帮助，用于 <a href="../bind/mem_fn.html">mem_fn</a>。</p>
+
+		</blockquote>
+
+		
+<h3><a name="static_pointer_cast">static_pointer_cast</a></h3>
+
+		
+<pre>template&lt;class T, class U&gt;<br>  intrusive_ptr&lt;T&gt; static_pointer_cast(intrusive_ptr&lt;U&gt; const &amp; r); // never throws</pre>
+
+		
+<blockquote>
+			
+  <p><b>返回：</b><code>intrusive_ptr&lt;T&gt;(static_cast&lt;T*&gt;(r.get()))</code>。</p>
+
+			
+  <p><b>抛出：</b>无。</p>
+
+		</blockquote>
+
+		
+<h3><a name="const_pointer_cast">const_pointer_cast</a></h3>
+
+		
+<pre>template&lt;class T, class U&gt;<br>  intrusive_ptr&lt;T&gt; const_pointer_cast(intrusive_ptr&lt;U&gt; const &amp; r); // never throws</pre>
+
+		
+<blockquote>
+			
+  <p><b>返回：</b><code>intrusive_ptr&lt;T&gt;(const_cast&lt;T*&gt;(r.get()))</code>。</p>
+
+			
+  <p><b>抛出：</b>无。</p>
+
+		</blockquote>
+
+		
+<h3><a name="dynamic_pointer_cast">dynamic_pointer_cast</a></h3>
+
+		
+<pre>template&lt;class T, class U&gt;<br>  intrusive_ptr&lt;T&gt; dynamic_pointer_cast(intrusive_ptr&lt;U&gt; const &amp; r);</pre>
+
+		
+<blockquote>
+			
+  <p><b>返回：</b><code>intrusive_ptr&lt;T&gt;(dynamic_cast&lt;T*&gt;(r.get()))</code>。</p>
+
+			
+  <p><b>抛出：</b>无。</p>
+
+		</blockquote>
+
+		
+<h3><a name="insertion-operator">operator&lt;&lt;</a></h3>
+
+		
+<pre>template&lt;class E, class T, class Y&gt;<br>    std::basic_ostream&lt;E, T&gt; &amp; operator&lt;&lt; (std::basic_ostream&lt;E, T&gt; &amp; os, intrusive_ptr&lt;Y&gt; const &amp; p);</pre>
+
+		
+<blockquote>
+			
+  <p><strong>作用：</strong><code>os &lt;&lt; p.get();</code>。</p>
+
+			
+  <p><b>返回：</b><code>os</code>。</p>
+
+		</blockquote>
+
+		
+<hr>
+<p>$Date: 2007-11-25 13:38:02 -0500 (Sun, 25 Nov 2007) $</p>
+
+<p><small>Copyright &copy; 2003-2005 Peter Dimov. Distributed under the Boost 
+Software License, Version 1.0. See accompanying file <a href="../../LICENSE_1_0.txt">LICENSE_1_0.txt</a> or copy at <a href="http://www.boost.org/LICENSE_1_0.txt">http://www.boost.org/LICENSE_1_0.txt</a>.</small></p>
+</body>
+</html>

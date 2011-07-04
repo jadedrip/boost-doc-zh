@@ -1,0 +1,130 @@
+<!DOCTYPE HTML PUBLIC "-//W3C//DTD HTML 4.01 Transitional//EN">
+<html><head>
+<meta http-equiv="Content-Type" content="text/html; charset=UTF-8">
+
+<title>Usage</title><link rel="stylesheet" href="../boostbook.css" type="text/css">
+<meta name="generator" content="DocBook XSL Stylesheets V1.73.2">
+<link rel="start" href="../index.html" title="The Boost C++ Libraries BoostBook Documentation Subset">
+<link rel="up" href="../string_algo.html" title="Chapter 17. Boost String Algorithms Library">
+<link rel="prev" href="release_notes.html" title="Release Notes">
+<link rel="next" href="quickref.html" title="Quick Reference"></head>
+<body alink="#0000ff" bgcolor="white" link="#0000ff" text="black" vlink="#840084">
+<table cellpadding="2" width="100%"><tbody><tr>
+<td valign="top"><img alt="Boost C++ Libraries" src="../../../boost.png" height="86" width="277"></td>
+<td align="center"><a href="../../../index.html">Home</a></td>
+<td align="center"><a href="../../../libs/libraries.htm">Libraries</a></td>
+<td align="center"><a href="http://www.boost.org/users/people.html">People</a></td>
+<td align="center"><a href="http://www.boost.org/users/faq.html">FAQ</a></td>
+<td align="center"><a href="../../../more/index.htm">More</a></td>
+</tr></tbody></table>
+<hr>
+<div class="spirit-nav">
+<a accesskey="p" href="release_notes.html"><img src="../../../doc/html/images/prev.png" alt="Prev"></a><a accesskey="u" href="../string_algo.html"><img src="../../../doc/html/images/up.png" alt="Up"></a><a accesskey="h" href="../index.html"><img src="../../../doc/html/images/home.png" alt="Home"></a><a accesskey="n" href="quickref.html"><img src="../../../doc/html/images/next.png" alt="Next"></a>
+</div>
+<div class="section" lang="en">
+<div class="titlepage"><div><div><h2 class="title" style="clear: both;">
+<a name="string_algo.usage"></a>Usage（用法）</h2></div></div></div>
+<div class="toc"><dl>
+<dt><span class="section"><a href="usage.html#id3482927">First Example（第一个例子）</a></span></dt>
+<dt><span class="section"><a href="usage.html#id3483156">Case conversion（大小写转换）</a></span></dt>
+<dt><span class="section"><a href="usage.html#id3483221">Predicates and Classification（判断式与分类）</a></span></dt>
+<dt><span class="section"><a href="usage.html#id3483320">Trimming（修剪）</a></span></dt>
+<dt><span class="section"><a href="usage.html#id3483389">Find algorithms（查找算法）</a></span></dt>
+<dt><span class="section"><a href="usage.html#id3483512">Replace Algorithms（替换算法）</a></span></dt>
+<dt><span class="section"><a href="usage.html#id3483641">Find Iterator（查找迭代器）</a></span></dt>
+<dt><span class="section"><a href="usage.html#id3483755">Split（分割）</a></span></dt>
+</dl></div>
+<div class="section" lang="en">
+<div class="titlepage"><div><div><h3 class="title">
+<a name="id3482927"></a>第一个例子</h3></div></div></div>
+<p>使用这些算法简单易懂。我们来看看第一个例子：</p>
+<pre class="programlisting">    #include &lt;boost/algorithm/string.hpp&gt;<br>    using namespace std;<br>    using namespace boost;<br>    <br>    // ...<br><br>    string str1(" hello world! ");<br>    to_upper(str1);  // str1 == " HELLO WORLD! "<br>    trim(str1);      // str1 == "HELLO WORLD!"<br><br>    string str2=<br>       to_lower_copy(<br>          ireplace_first_copy(<br>             str1,"hello","goodbye")); // str2 == "goodbye world!"<br>        </pre>
+<p>这个例子将 str1 转换为大写，并修剪 string 头尾的空格。然后，以 str1 的拷贝的方式创建 str2，并用 "goodbye" 替换 "hello"。这个例子示范了本库使用的几个重要概念：</p>
+<div class="itemizedlist"><ul type="disc">
+<li>
+<p><span class="bold"><strong>Container parameters（容器参数）：</strong></span>与 STL 算法不同，参数并不一定要用迭代器的方式指定。STL 的惯例具有很大的灵活性，但也有几个限制。它不可能将算法 <span class="emphasis"><em>stack</em></span>（套叠）在一起，因为一个容器需要用两个参数传递。因此它就不可能使用另一个算法的返回值。写成 <code class="computeroutput">to_lower(str1)</code>，比 <code class="computeroutput">to_lower(str1.begin(), str1.end())</code> 要简单得多。</p>
+<p><a href="../../../libs/range/index.html" target="_top">Boost.Range</a> 的魔力提供了处理不同 string 类型的统一方法。如果需要传递一对迭代器，就可以用 <a href="../../../libs/range/doc/utility_class.html" target="_top"><code class="computeroutput">boost::iterator_range</code></a> 将迭代器打包到一个具有可兼容接口的结构中。</p>
+</li>
+<li><p><span class="bold"><strong>拷贝 vs. 变化：</strong></span>本库很多算法对输入执行某种转换。这种转换可以在原地进行，改变输入序列，也可以创建一个转换后的输入的拷贝，而保持原始输入不变。这些可能性中并没有一种比另一种更加优越，而且各有利弊。因此，本库同时提供了这两种方式。</p></li>
+<li><p><span class="bold"><strong>Algorithm stacking（算法套叠）：</strong></span>拷贝版本返回一个转换后的输入作为结果，这样就允许将转换简单地串接在一个表达式中（例如，我们可以这样写 <code class="computeroutput">trim_copy(to_upper_copy(s))</code>）。可变版本返回 <code class="computeroutput">void</code>，以避免误用。</p></li>
+<li><p><span class="bold"><strong>Naming（命名）：</strong></span>命名遵循来自于标准 C++ 库的管理。如果同一个算法有拷贝和可变两个版本，则可变版本没有后缀，而拷贝版本有后缀 <span class="emphasis"><em>_copy</em></span>。有些算法有前缀 <span class="emphasis"><em>i</em></span>（比如 <code class="computeroutput"><a class="link" href="../boost/algorithm/ifind_first.html" title="Function template ifind_first">ifind_first()</a></code>）。这个前缀表明这个算法以大小写无关方式工作。</p></li>
+</ul></div>
+<p>为使用本库，需要包含 <code class="computeroutput"><a class="link" href="reference.html#header.boost.algorithm.string.hpp" title="Header &lt;boost/algorithm/string.hpp&gt;">boost/algorithm/string.hpp</a></code> 头文件。如果需要与 regex 相关的函数，则包含 <code class="computeroutput"><a class="link" href="reference.html#header.boost.algorithm.string_regex.hpp" title="Header &lt;boost/algorithm/string_regex.hpp&gt;">boost/algorithm/string_regex.hpp</a></code> 头文件。</p>
+</div>
+<div class="section" lang="en">
+<div class="titlepage"><div><div><h3 class="title">
+<a name="id3483156"></a>大小写转换</h3></div></div></div>
+<p>STL 有一个转换字符大小写的不错的方法。不幸的是，它只对单个的字符有效，而我们要转换一个 string，</p>
+<pre class="programlisting">    string str1("HeLlO WoRld!");<br>    to_upper(str1); // str1=="HELLO WORLD!"<br>        </pre>
+<p><code class="computeroutput"><a class="link" href="../boost/algorithm/to_upper.html" title="Function template to_upper">to_upper()</a></code> 和 <code class="computeroutput"><a class="link" href="../boost/algorithm/to_lower.html" title="Function template to_lower">to_lower()</a></code> 使用一个指定的地区设置转换一个 string 中的 characters 的大小写。</p>
+<p>关于更多的信息请参见 <code class="computeroutput"><a class="link" href="reference.html#header.boost.algorithm.string.case_conv.hpp" title="Header &lt;boost/algorithm/string/case_conv.hpp&gt;">boost/algorithm/string/case_conv.hpp</a></code> 的参考。</p>
+</div>
+<div class="section" lang="en">
+<div class="titlepage"><div><div><h3 class="title">
+<a name="id3483221"></a>判断式与分类</h3></div></div></div>
+<p>本库的一部分用于处理和 string 相关的判断式。考虑这个例子：</p>
+<pre class="programlisting">    bool is_executable( string&amp; filename )<br>    {<br>        return <br>            iends_with(filename, ".exe") ||<br>            iends_with(filename, ".com");<br>    }<br><br>    // ...<br>    string str1("command.com");<br>    cout <br>        &lt;&lt; str1<br>        &lt;&lt; (is_executable("command.com")? "is": "is not") <br>        &lt;&lt; "an executable" <br>        &lt;&lt; endl; // prints "command.com is an executable"<br>    <br>    //..<br>    char text1[]="hello world!";<br>    cout <br>        &lt;&lt; text1 <br>        &lt;&lt; (all( text1, is_lower() )? "is": "is not")<br>        &lt;&lt; " written in the lower case" <br>        &lt;&lt; endl; // prints "hello world! is written in the lower case"<br>        </pre>
+<p>判断式用于判定在各种条件下，一个 substring 是否包含于输入 string。条件为：一个 string 以这个
+substring 开始，以这个 substring 结尾，直接包含这个 substring 以及两个 string
+是否相等。更多的细节请参见 <code class="computeroutput"><a class="link" href="reference.html#header.boost.algorithm.string.predicate.hpp" title="Header &lt;boost/algorithm/string/predicate.hpp&gt;">boost/algorithm/string/predicate.hpp</a></code> 的参考。</p>
+<p>另外，算法 <code class="computeroutput"><a class="link" href="../boost/algorithm/all.html" title="Function template all">all()</a></code> 检查一个容器中的所有元素是否满足由一个判断式指定的条件。这个判断式可以是任何一元判断式，但是本库提供了一系列有用的 string 相关的判断式和连接符备用。它们位于 <code class="computeroutput"><a class="link" href="reference.html#header.boost.algorithm.string.classification.hpp" title="Header &lt;boost/algorithm/string/classification.hpp&gt;">boost/algorithm/string/classification.hpp</a></code> 头文件。分类判断式可以用逻辑连接符连接起来形成一个更复杂的表达式。例如：<code class="computeroutput">is_from_range('a','z') || is_digit()</code>。</p>
+</div>
+<div class="section" lang="en">
+<div class="titlepage"><div><div><h3 class="title">
+<a name="id3483320"></a>修剪</h3></div></div></div>
+<p>在解析来自用户的输入时，strings 中通常会有不需要的开头或拖尾字符。为了去掉它们，我们需要修剪函数：</p>
+<pre class="programlisting">    string str1="     hello world!     ";<br>    string str2=trim_left_copy(str1);   // str2 == "hello world!     "<br>    string str3=trim_right_copy(str2);  // str3 == "     hello world!"<br>    trim(str1);                         // str1 == "hello world!"<br><br>    string phone="00423333444";<br>    // remove leading 0 from the phone number<br>    trim_left_if(phone,is_any_of("0")); // phone == "423333444"<br>        </pre>
+<p>它可以修剪一个 string 右边的，左边的或两边的空格。而且，为了应付移除某些空格以外的东西的需要，有一个 <span class="emphasis"><em>_if</em></span> 变量，用户可以指定一个仿函数用来选择要被移除的 <span class="emphasis"><em>space</em></span>。它可能使用我们前面提到过的类似 <code class="computeroutput"><a class="link" href="../boost/algorithm/is_digit.html" title="Function is_digit">is_digit()</a></code> 这样的分类判断式。请参见 <code class="computeroutput"><a class="link" href="reference.html#header.boost.algorithm.string.trim.hpp" title="Header &lt;boost/algorithm/string/trim.hpp&gt;">boost/algorithm/string/trim.hpp</a></code> 的参考。</p>
+</div>
+<div class="section" lang="en">
+<div class="titlepage"><div><div><h3 class="title">
+<a name="id3483389"></a>查找算法</h3></div></div></div>
+<p>本库包含一套查找算法。如下例：</p>
+<pre class="programlisting">    char text[]="hello dolly!";<br>    iterator_range&lt;char*&gt; result=find_last(text,"ll");<br><br>    transform( result.begin(), result.end(), result.begin(), bind2nd(plus&lt;char&gt;(), 1) );<br>    // text = "hello dommy!"            <br><br>    to_upper(result); // text == "hello doMMy!"<br><br>    // iterator_range is convertible to bool<br>    if(find_first(text, "dolly"))<br>    {<br>        cout &lt;&lt; "Dolly is there" &lt;&lt; endl;<br>    }<br>        </pre>
+<p>我们使用 <code class="computeroutput"><a class="link" href="../boost/algorithm/find_last.html" title="Function template find_last">find_last()</a></code> 在 <code class="computeroutput">text</code> 中查找 "ll"。结果以 <a href="../../../libs/range/doc/utility_class.html" target="_top"><code class="computeroutput">boost::iterator_range</code></a> 的形式给出。这个范围限定了输入中符合查找规则的部分。在我们的例子中就是最后一次出现的 "ll"。就像我们看到的，<code class="computeroutput"><a class="link" href="../boost/algorithm/find_last.html" title="Function template find_last">find_last()</a></code> 算法的输入也可以是 char[]，因为这个类型也被 <a href="../../../libs/range/index.html" target="_top">Boost.Range</a> 所支持。接下来的代码行转换这个结果。注意 <a href="../../../libs/range/doc/utility_class.html" target="_top"><code class="computeroutput">boost::iterator_range</code></a> 具有通常的 <code class="computeroutput">begin()</code> 和 <code class="computeroutput">end()</code> 方法，所以它可以像任何其它 STL 容器一样使用。它也可以转换为 bool，因此它可以很容易地使用查找算法做一个简单的包含检查。</p>
+<p>
+            Find algorithms are located in <code class="computeroutput"><a class="link" href="reference.html#header.boost.algorithm.string.find.hpp" title="Header &lt;boost/algorithm/string/find.hpp&gt;">boost/algorithm/string/find.hpp</a></code>.
+        </p>
+</div>
+<div class="section" lang="en">
+<div class="titlepage"><div><div><h3 class="title">
+<a name="id3483512"></a>替换算法</h3></div></div></div>
+<p>查找算法可以用于搜索 string 的一个指定部分。替换则又向前走了一步。在找到一个匹配部分后，用其它东西来取代它。取代的部分根据原始文本计算，并使用了某些转换。</p>
+<pre class="programlisting">    string str1="Hello  Dolly,   Hello World!"<br>    replace_first(str1, "Dolly", "Jane");      // str1 == "Hello  Jane,   Hello World!"<br>    replace_last(str1, "Hello", "Goodbye");    // str1 == "Hello  Jane,   Goodbye World!"<br>    erase_all(str1, " ");                      // str1 == "HelloJane,GoodbyeWorld!"<br>    erase_head(str1, 6);                       // str1 == "Jane,GoodbyeWorld!"<br>        </pre>
+<p>关于替换和删除函数的完整列表，请参见 <a class="link" href="reference.html" title="Reference">参考</a>。有很多预定义的函数用于通常用法，本库还允许你定义一个定制化的 <code class="computeroutput">replace()</code> 来适应一个指定的要求。有一个通用的持有两个参数的 <code class="computeroutput"><a class="link" href="../boost/algorithm/find_format.html" title="Function template find_format">find_format()</a></code> 函数。第一个参数是一个 <a class="link" href="concept.html#string_algo.finder_concept" title="Finder Concept">Finder</a> 对象，第二个参数是一个 <a class="link" href="concept.html#string_algo.formatter_concept" title="Formatter concept">Formatter</a> 对象。Finder 对象是一个用于执行搜索替换部分的仿函数。Formatter 对象持有 Finder 的结果（通常是一个找到的 substring 的引用）并为它创建一个取代。替换算法将两者结合起来得到想要的取代。</p>
+<p>参见 <code class="computeroutput"><a class="link" href="reference.html#header.boost.algorithm.string.replace.hpp" title="Header &lt;boost/algorithm/string/replace.hpp&gt;">boost/algorithm/string/replace.hpp</a></code>，<code class="computeroutput"><a class="link" href="reference.html#header.boost.algorithm.string.erase.hpp" title="Header &lt;boost/algorithm/string/erase.hpp&gt;">boost/algorithm/string/erase.hpp</a></code> 和 <code class="computeroutput"><a class="link" href="reference.html#header.boost.algorithm.string.find_format.hpp" title="Header &lt;boost/algorithm/string/find_format.hpp&gt;">boost/algorithm/string/find_format.hpp</a></code> 中的参考。</p>
+</div>
+<div class="section" lang="en">
+<div class="titlepage"><div><div><h3 class="title">
+<a name="id3483641"></a>查找迭代器</h3></div></div></div>
+<p>查找迭代器是对查找算法的一种扩展。不仅仅是找到一个 string 的一个部分。查找迭代器允许我们迭代遍历匹配指定规则的全部 substring。这个部件使用 <a class="link" href="concept.html#string_algo.finder_concept" title="Finder Concept">Finder</a> 来增量式地搜索 string。解引用一个查找迭代器产生一个 <a href="../../../libs/range/doc/utility_class.html" target="_top"><code class="computeroutput">boost::iterator_range</code></a> 对象，它限定了当前的匹配范围。</p>
+<p>有两个提供的迭代器是 <code class="computeroutput"><a class="link" href="../boost/algorithm/find_iterator.html" title="Class template find_iterator">find_iterator</a></code> 和 <code class="computeroutput"><a class="link" href="../boost/algorithm/split_iterator.html" title="Class template split_iterator">split_iterator</a></code>。前者迭代遍历用指定 Finder 找到的全部 substrings。后者迭代遍历这些 substraings 之间的间隔。</p>
+<pre class="programlisting">    string str1("abc-*-ABC-*-aBc");<br>    // Find all 'abc' substrings (ignoring the case)<br>    // Create a find_iterator<br>    typedef find_iterator&lt;string::iterator&gt; string_find_iterator;<br>    for(string_find_iterator It=<br>            make_find_iterator(str1, first_finder("abc", is_iequal()));<br>        It!=string_find_iterator();<br>        ++It)<br>    {<br>        cout &lt;&lt; copy_range&lt;std::string&gt;(*It) &lt;&lt; endl;<br>    }<br><br>    // Output will be:<br>    // abc<br>    // ABC<br>    // aBC<br>    <br>    typedef split_iterator&lt;string::iterator&gt; string_split_iterator;<br>    for(string_split_iterator It=<br>        make_split_iterator(str1, first_finder("-*-", is_iequal()));<br>        It!=string_split_iterator();<br>        ++It)<br>    {<br>        cout &lt;&lt; copy_range&lt;std::string&gt;(*It) &lt;&lt; endl;<br>    }<br><br>    // Output will be:<br>    // abc<br>    // ABC<br>    // aBC<br>        </pre>
+<p>注意查找迭代器只有一个模板参数。它是基本的迭代器类型。Finder 在运行时指定。这允许我们为通常的 string 类型 typedef 一个查找迭代器并复用它。另外 make_*_iterator 函数帮助我们为某个特定的范围创建一个查找迭代器。</p>
+<p>请参见 <code class="computeroutput"><a class="link" href="reference.html#header.boost.algorithm.string.find_iterator.hpp" title="Header &lt;boost/algorithm/string/find_iterator.hpp&gt;">boost/algorithm/string/find_iterator.hpp</a></code> 中的参考。</p>
+</div>
+<div class="section" lang="en">
+<div class="titlepage"><div><div><h3 class="title">
+<a name="id3483755"></a>分割</h3></div></div></div>
+<p>分割算法是查找迭代器为一种常用的使用方案所做的扩展。这些算法使用一个查找迭代器并将全部匹配项存储在提供的容器中。这个容器必须能够持有被选取的 substrings 的拷贝（比如 <code class="computeroutput">std::string</code>）或引用（比如 <code class="computeroutput">iterator_range</code>）。</p>
+<p>提供了两个算法。<code class="computeroutput"><a class="link" href="../boost/algorithm/find_all.html" title="Function template find_all">find_all()</a></code> 在输入中查找一个 string 的所有拷贝。<code class="computeroutput"><a class="link" href="../boost/algorithm/split_id2965593.html" title="Function template split">split()</a></code> 将输入分割为若干个部分。</p>
+<pre class="programlisting">    string str1("hello abc-*-ABC-*-aBc goodbye");<br><br>    typedef vector&lt; iterator_range&lt;string::iterator&gt; &gt; find_vector_type;<br>    <br>    find_vector_type FindVec; // #1: Search for separators<br>    ifind_all( FindVec, str1, "abc" ); // FindVec == { [abc],[ABC],[aBc] }<br><br>    typedef vector&lt; string &gt; split_vector_type;<br>    <br>    split_vector_type SplitVec; // #2: Search for tokens<br>    split( SplitVec, str1, is_any_of("-*") ); // SplitVec == { "hello abc","ABC","aBc goodbye" }<br>        </pre>
+<p><code class="computeroutput">[hello]</code> 表示一个限定这个 substring 的 <code class="computeroutput">iterator_range</code>。</p>
+<p>第一个例子展示如何创建一个持有全部被选取的 substrings 的容器。算法 <code class="computeroutput"><a class="link" href="../boost/algorithm/ifind_all.html" title="Function template ifind_all">ifind_all()</a></code> 将全部以大小写无关方式等于 "abc" 的 substring 的引用放入 FindVec 中。</p>
+<p>第二个例子使用 <code class="computeroutput"><a class="link" href="../boost/algorithm/split_id2965593.html" title="Function template split">split()</a></code> 将 string str1 分割成以字符 '-' 或 '*' 分隔的若干个部分。然后将这些部分放入 SplitVec 中。它还可以指定是否将相邻的分隔符连接在一起。</p>
+<p>更多信息可以在参考 <code class="computeroutput"><a class="link" href="reference.html#header.boost.algorithm.string.split.hpp" title="Header &lt;boost/algorithm/string/split.hpp&gt;">boost/algorithm/string/split.hpp</a></code> 中找到。</p>
+</div>
+</div>
+<table xmlns:rev="http://www.cs.rpi.edu/~gregod/boost/tools/doc/revision" width="100%"><tbody><tr>
+<td align="left"><p><small>Last revised: June 14, 2009 at 23:56:08 +0100</small></p></td>
+<td align="right"><div class="copyright-footer">Copyright © 2002-2004 Pavol Droba<p>Use, modification and distribution is subject to the Boost
+                Software License, Version 1.0. (See accompanying file
+                <code class="filename">LICENSE_1_0.txt</code> or copy at <a href="http://www.boost.org/LICENSE_1_0.txt" target="_top">http://www.boost.org/LICENSE_1_0.txt</a>)
+            </p>
+</div></td>
+</tr></tbody></table>
+<hr>
+<div class="spirit-nav">
+<a accesskey="p" href="release_notes.html"><img src="../../../doc/html/images/prev.png" alt="Prev"></a><a accesskey="u" href="../string_algo.html"><img src="../../../doc/html/images/up.png" alt="Up"></a><a accesskey="h" href="../index.html"><img src="../../../doc/html/images/home.png" alt="Home"></a><a accesskey="n" href="quickref.html"><img src="../../../doc/html/images/next.png" alt="Next"></a>
+</div>
+</body></html>

@@ -1,0 +1,62 @@
+<!DOCTYPE html PUBLIC "-//W3C//DTD XHTML 1.0 Strict//EN" "http://www.w3.org/TR/xhtml1/DTD/xhtml1-strict.dtd">
+<html xmlns="http://www.w3.org/1999/xhtml" xml:lang="en" lang="en"><head>
+	<meta http-equiv="Content-Type" content="text/html; charset=utf-8" />
+	
+	<title>transporting of exceptions between threads</title><link href="reno.css" type="text/css" rel="stylesheet" /></head>
+
+<body>
+<div class="body-0">
+<div class="body-1">
+<div class="body-2">
+<div>
+<div id="boost_logo">
+<a href="http://www.boost.org"><img style="border: 0pt none ;" src="http://www.boost.org/boost.png" alt="Boost" height="86" width="277" /></a>
+</div>
+<h1>Boost Exception</h1>
+</div>
+<!-- Copyright (c) 2006-2009 Emil Dotchevski and Reverge Studios, Inc. -->
+<!-- Distributed under the Boost Software License, Version 1.0. (See accompanying -->
+<!-- file LICENSE_1_0.txt or copy at http://www.boost.org/LICENSE_1_0.txt) -->
+<div class="RenoIncludeDIV"><div class="RenoAutoDIV"><h2>在线程之间传递异常对象</h2>
+</div>
+<p>Boost Exception 通过clone支持线程之间的异常传递. 这和 <span class="RenoLink"><a href="http://www.open-std.org/jtc1/sc22/wg21/docs/papers/2007/n2179.html">N2179</a></span>是一致的, 但是由于 Boost Exception 不能依赖于语言本身的支持, 这需要在抛出端使用函数 <span class="RenoLink"><a href="enable_current_exception.html">enable_current_exception</a></span> 来支持异常对象的clone.</p>
+<h4>注意:</h4>
+<p>通过我们都熟悉的函数 boost::<span class="RenoLink"><a href="throw_exception.html">throw_exception</a></span> 抛出的异常对象都是从 boost::<span class="RenoLink"><a href="exception.html">exception</a></span> 继承的,因而额支持clone.</p>
+<div class="RenoIncludeDIV"><div class="RenoAutoDIV"><h3>在异常的抛出点使用函数 enable_current_exception </h3>
+</div>
+<p>下面的实例说明了如何在throw语句中支持对象的clone (15.1):</p>
+<pre>#include &lt;<span class="RenoLink"><a href="boost_exception_info_hpp.html">boost/exception/info.hpp</a></span>&gt;<br />#include &lt;<span class="RenoLink"><a href="boost_exception_errinfo_errno_hpp.html">boost/exception/errinfo_errno.hpp</a></span>&gt;<br />#include &lt;stdio.h&gt;<br />#include &lt;errno.h&gt;<br /><br />struct file_read_error: virtual boost::<span class="RenoLink"><a href="exception.html">exception</a></span> { };<br /><br />void<br />file_read( FILE * f, void * buffer, size_t size )<br />    {<br />    if( size!=fread(buffer,1,size,f) )<br />        throw boost::<span class="RenoLink"><a href="enable_current_exception.html">enable_current_exception</a></span>(file_read_error()) &lt;&lt;<br />            boost::<span class="RenoLink"><a href="errinfo_errno.html">errinfo_errno</a></span>(errno);<br />    }</pre>
+<p>当然, 函数<span class="RenoLink"><a href="enable_current_exception.html">enable_current_exception</a></span> 支持任何的异常类型; 并不强制一定是从 boost::<span class="RenoLink"><a href="exception.html">exception</a></span> 继承的.</p>
+</div><div class="RenoIncludeDIV"><div class="RenoAutoDIV"><h3>复制和重新抛出异常</h3>
+</div>
+<p>当你捕获异常对象的时候, 可以使用函数 <span class="RenoLink"><a href="current_exception.html">current_exception</a></span>得到当前异常对象的指针 <span class="RenoLink"><a href="exception_ptr.html">exception_ptr</a></span>:</p>
+<pre>#include &lt;<span class="RenoLink"><a href="exception_cloning_hpp.html">boost/exception_ptr.hpp</a></span>&gt;<br />#include &lt;boost/thread.hpp&gt;<br />#include &lt;boost/bind.hpp&gt;<br /><br />void do_work(); //throws cloning-enabled boost::<span class="RenoLink"><a href="exception.html">exception</a></span>s<br /><br />void<br />worker_thread( boost::<span class="RenoLink"><a href="exception_ptr.html">exception_ptr</a></span> &amp; error )<br />    {<br />    try<br />        {<br />        do_work();<br />        error = boost::<span class="RenoLink"><a href="exception_ptr.html">exception_ptr</a></span>();<br />        }<br />    catch(<br />    ... )<br />        {<br />        error = boost::<span class="RenoLink"><a href="current_exception.html">current_exception</a></span>();<br />        }<br />    }</pre>
+<p>在上面的例子中, 注意到通过函数 <span class="RenoLink"><a href="current_exception.html">current_exception</a></span> 捕获的异常对象保持原有的异常类型. 通过函数 <span class="RenoLink"><a href="rethrow_exception.html">rethrow_exception</a></span> 可以重新抛出这个异常对象:</p>
+<pre>// ...continued<br /><br />void<br />work()<br />    {<br />    boost::<span class="RenoLink"><a href="exception_ptr.html">exception_ptr</a></span> error;<br />    boost::<span class="RenoLink"><a href="http://www.boost.org/doc/html/boost/thread.html">thread</a></span> t( boost::<span class="RenoLink"><a href="http://www.boost.org/libs/bind/bind.html">bind</a></span>(worker_thread,boost::<span class="RenoLink"><a href="http://www.boost.org/doc/html/ref.html">ref</a></span>(error)) );<br />    t.<span class="RenoLink"><a href="http://www.boost.org/doc/html/boost/thread.html">join</a></span>();<br />    if( error )<br />        boost::<span class="RenoLink"><a href="rethrow_exception.html">rethrow_exception</a></span>(error);<br />    }</pre>
+<p>注意, 函数 <span class="RenoLink"><a href="current_exception.html">current_exception</a></span> 可能由于以下的原因导致原始异常对象的拷贝失败:</p>
+<div><ul><li> 没有足够的内存, 在那种情况下, 指针 <span class="RenoLink"><a href="exception_ptr.html">exception_ptr</a></span> 指向 std::bad_alloc, 或者</li>
+<li> 如果没有在throw语句中使用函数 <span class="RenoLink"><a href="enable_current_exception.html">enable_current_exception</a></span> ,并且当前的编译器不支持异常对象的自动拷贝, 那么返回的异常对象指针 <span class="RenoLink"><a href="exception_ptr.html">exception_ptr</a></span> 指向 <span class="RenoLink"><a href="unknown_exception.html">unknown_exception</a></span>.</li>
+</ul></div>
+<p>否则, 在上面实例中,使用函数 <span class="RenoLink"><a href="current_exception.html">current_exception</a></span> 和 <span class="RenoLink"><a href="rethrow_exception.html">rethrow_exception</a></span> 总是合法的.</p>
+</div></div><div class="RenoAutoDIV"><div class="RenoHR"><hr /></div>
+<h3>参见:</h3>
+<div class="RenoPageList"><a href="boost-exception.html">Boost Exception<br />
+</a></div>
+</div>
+<!-- Copyright (c) 2006-2009 Emil Dotchevski and Reverge Studios, Inc. -->
+<!-- Distributed under the Boost Software License, Version 1.0. (See accompanying -->
+<!-- file LICENSE_1_0.txt or copy at http://www.boost.org/LICENSE_1_0.txt) -->
+<div id="footer">
+<p>&nbsp;</p>
+<hr />
+<p>
+<a class="logo" href="http://jigsaw.w3.org/css-validator/check/referer"><img class="logo_pic" src="valid-css.png" alt="Valid CSS" height="31" width="88" /></a>
+<a class="logo" href="http://validator.w3.org/check?uri=referer"><img class="logo_pic" src="valid-xhtml.png" alt="Valid XHTML 1.0" height="31" width="88" /></a>
+<small>Copyright (c) 2006-2009 by Emil Dotchevski and Reverge Studios, Inc.<br />
+Distributed under the <a href="http://www.boost.org/LICENSE_1_0.txt">Boost Software License, Version 1.0</a>.<p><i>Copyright © 2009 <a href="http://zadecn.spaces.live.com/">zade</a></i></p>.</small>
+</p>
+</div>
+</div>
+</div>
+</div>
+</body></html>

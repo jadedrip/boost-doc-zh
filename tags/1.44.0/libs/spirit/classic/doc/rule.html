@@ -1,0 +1,206 @@
+<!DOCTYPE HTML PUBLIC "-//W3C//DTD HTML 4.01 Transitional//EN">
+<html><head>
+
+<title>The Rule</title><meta http-equiv="Content-Type" content="text/html; charset=UTF-8">
+<link rel="stylesheet" href="theme/style.css" type="text/css"></head>
+<body>
+<table background="theme/bkd2.gif" border="0" cellspacing="2" width="100%">
+  <tbody><tr> 
+    <td width="10"> 
+    </td>
+    <td width="85%"> 
+      <font face="Verdana, Arial, Helvetica, sans-serif" size="6"><b>The Rule 规则</b></font>
+    </td>
+    <td width="112"><a href="http://spirit.sf.net"><img src="theme/spirit.gif" align="right" border="0" height="48" width="112"></a></td>
+  </tr>
+</tbody></table>
+<br>
+<table border="0">
+  <tbody><tr>
+    <td width="10"></td>
+    <td width="30"><a href="../index.html"><img src="theme/u_arr.gif" border="0"></a></td>
+    <td width="30"><a href="numerics.html"><img src="theme/l_arr.gif" border="0"></a></td>
+    <td width="30"><a href="epsilon.html"><img src="theme/r_arr.gif" border="0"></a></td>
+  </tr>
+</tbody></table>
+<p>The <b>rule</b> is a polymorphic parser that acts as a named place-holder capturing 
+  the behavior of an EBNF expression assigned to it. Naming an EBNF expression 
+  allows it to be referenced later. The <tt>rule</tt> is a template class parameterized 
+  by the type of the scanner (<tt>ScannerT</tt>), the rule's <a href="indepth_the_parser_context.html">context</a> 
+  and its <a href="#tag">tag</a>. Default template parameters are provided to 
+  make it easy to use the rule.<br><span style="font-weight: bold;">规则</span>是一个多态的分析器，就是一个有名字的占位符，这个占位符保有赋给它的EBNF表达式的行为。为EBNF表达式命名是为了在以后能引用它。<tt>rule</tt>是一个模板类，其模板参数是扫描器类型(<tt>ScannerT</tt>)、规则的语境(<a href="indepth_the_parser_context.html">context</a>)和标签(<a href="#tag">tag</a>)。所提供的默认模板参数使得规则很易于使用。</p>
+<pre><code><font color="#000000"><span class="identifier">    </span><span class="keyword">template</span><span class="special">&lt;<br>        </span><span class="keyword">typename </span><span class="identifier">ScannerT </span><span class="special">= </span><span class="identifier">scanner</span><span class="special">&lt;&gt;,<br>        </span><span class="keyword">typename </span><span class="identifier">ContextT </span><span class="special">= </span><span class="identifier">parser_context</span><span class="special">&lt;&gt;</span><span class="identifier">,<br>        </span><span class="keyword">typename</span><span class="identifier"> TagT </span><span class="special">=</span><span class="identifier"> parser_address_tag</span><span class="special">&gt;<br>    </span><span class="keyword">class </span><span class="identifier">rule</span><span class="special">;</span></font></code></pre>
+<p>Default template parameters are supplied to handle the most common case. <tt>ScannerT</tt> 
+  defaults to <tt>scanner&lt;&gt;</tt>, a plain vanilla scanner that acts on <tt>char 
+  const<span class="operators">*</span></tt> iterators and does nothing special 
+  at all other than iterate through all the chars in the null terminated input 
+  a character at a time. The rule tag, <tt>TagT</tt>, typically used with <a href="trees.html">ASTs</a>, 
+  is used to identify a rule; it is explained <a href="#tag">here</a>. In trivial 
+  cases, declaring a rule as <tt>rule&lt;&gt;</tt> is enough. You need not be 
+  concerned at all with the <tt>ContextT</tt> template parameter unless you wish 
+  to tweak the low level behavior of the rule. Detailed information on the <tt>ContextT</tt> 
+  template parameter is provided <a href="indepth_the_parser_context.html">elsewhere</a>.<br>所提供的默认模板参数足以应付最常见的情况。<tt>ScannerT</tt> 默认为 <tt>scanner&lt;&gt;</tt>，一个最基本的分析器，使用 <tt>char 
+  const<span class="operators">*</span></tt> 迭代器，且除了以每次读取一个字符的方式对一个null结尾的输入的所有字符进行迭代，什么也不作。规则的标签 <tt>TagT</tt>，主要配合抽象语法树（<a href="trees.html">ASTs</a>）使用，用于识别不同的规则。在<a href="#tag">这里</a>有说明。在简单类里，将规则声明为 <tt>rule&lt;&gt;</tt> 就足够了。你完全不必考虑 <tt>ContextT</tt>&nbsp;参数，除非你想调整规则的底层行为。<tt>ContextT</tt>&nbsp;参数的详细信息将<a href="indepth_the_parser_context.html">另行提供</a>。 
+</p>
+<h3><a name="order_of_parameters"></a>Order of parameters 参数的顺序</h3>
+<p>As of v1.8.0, the <tt>ScannerT</tt>, <tt>ContextT</tt> and <tt>TagT</tt> can 
+  be specified in any order. If a template parameter is missing, it will assume 
+  the defaults. Examples:<br>在1.8.0这个版本中，<tt>ScannerT</tt>, <tt>ContextT</tt> 和 <tt>TagT</tt>&nbsp;可以以任意顺序排列。如果某个模板参数缺失，则适用默认的参数。例：</p>
+<pre><span class="identifier">    rule</span><span class="special">&lt;&gt; </span><span class="identifier">rx1</span><span class="special">;<br>    </span><span class="identifier">rule</span><span class="special">&lt;</span><span class="identifier">scanner</span><span class="special">&lt;&gt; </span><span class="special">&gt; </span><span class="identifier">rx2</span><span class="special">;<br></span>    <span class="identifier">rule</span><span class="special">&lt;</span><span class="identifier">parser_context<code><font color="#000000"><span class="special">&lt;&gt;</span></font></code> </span><span class="special">&gt; </span><span class="identifier">rx3</span><span class="special">;<br>    </span><span class="identifier">rule</span><span class="special">&lt;</span><span class="identifier">parser_context<code><font color="#000000"><span class="special">&lt;&gt;</span></font></code></span><span class="special">, </span><span class="identifier">parser_address_tag</span><span class="special">&gt; </span><span class="identifier">rx4</span><span class="special">;<br></span>    <span class="identifier">rule</span><span class="special">&lt;</span><span class="identifier">parser_address_tag</span><span class="special">&gt; </span><span class="identifier">rx5</span><span class="special">;<br></span>    <span class="identifier">rule</span><span class="special">&lt;</span><span class="identifier">parser_address_tag</span><span class="special">, </span><span class="identifier">scanner</span><span class="special">&lt;&gt;, </span><span class="identifier">parser_context<code><font color="#000000"><span class="special">&lt;&gt;</span></font></code> </span><span class="special">&gt; </span><span class="identifier">rx6</span><span class="special">;<br>    </span><span class="identifier">rule</span><span class="special">&lt;</span><span class="identifier">parser_context<code><font color="#000000"><span class="special">&lt;&gt;</span></font></code></span><span class="special">, </span><span class="identifier">scanner</span><span class="special">&lt;&gt;, </span><span class="identifier">parser_address_tag</span><span class="special">&gt; </span><span class="identifier">rx7</span><span class="special">;</span></pre>
+<h3><a name="multiple_scanner_support" id="multiple_scanner_support"></a>Multiple scanners 多扫描器</h3>
+<p>As of v1.8.0, rules can use one or more scanner types. There are cases, for 
+  instance, where we need a rule that can work on the phrase and character levels. 
+  Rule/scanner mismatch has been a source of confusion and is the no. 1 <a href="faq.html#scanner_business">FAQ</a>. 
+  To address this issue, we now have multiple scanner support. Example:<br>在1.8.0中，规则可以使用一个或者多个扫描器类型。在诸如需要一个能同时工作于短句层次和字符层次的分析器的情况下，规则/扫描器的不匹配是迷惑的来源，也是最常见的 <a href="faq.html#scanner_business">FAQ</a>。为了解决这个问题，就有了对多扫描器的支持。例子：</p>
+<pre><span class="special">    </span><span class="keyword">typedef </span><span class="identifier">scanner_list</span><span class="special">&lt;</span><span class="identifier">scanner</span><span class="special">&lt;&gt;, </span><span class="identifier">phrase_scanner_t</span><span class="special">&gt; </span><span class="identifier">scanners</span><span class="special">;<br><br>    </span><span class="identifier">rule</span><span class="special">&lt;</span><span class="identifier">scanners</span><span class="special">&gt;  </span><span class="identifier">r </span><span class="special">= </span><span class="special">+</span><span class="identifier">anychar_p</span><span class="special">;<br>    </span><span class="identifier">assert</span><span class="special">(</span><span class="identifier">parse</span><span class="special">(</span><span class="string">"abcdefghijk"</span><span class="special">, </span><span class="identifier">r</span><span class="special">).</span><span class="identifier">full</span><span class="special">);<br>    </span><span class="identifier">assert</span><span class="special">(</span><span class="identifier">parse</span><span class="special">(</span><span class="string">"a b c d e f g h i j k"</span><span class="special">, </span><span class="identifier">r</span><span class="special">, </span><span class="identifier">space_p</span><span class="special">).</span><span class="identifier">full</span><span class="special">);</span></pre>
+<p>Notice how rule <tt>r</tt> is used in both the phrase and character levels.<br>留意规则 <tt>r</tt> 是如何同时在句子和字符的层次中使用的<tt></tt>。 
+</p>
+<p>By default support for multiple scanners is disabled.  The macro
+  <tt>BOOST_SPIRIT_RULE_SCANNERTYPE_LIMIT</tt> must be defined to the
+  maximum number of scanners allowed in a scanner_list.  The value must
+  be greater than 1 to enable multiple scanners.  Given the
+  example above, to define a limit of two scanners for the list, the
+  following line must be inserted into the source file before the
+  inclusion of Spirit headers:<br>对多扫描器的支持在默认情况下是关闭的。宏
+  <tt>BOOST_SPIRIT_RULE_SCANNERTYPE_LIMIT</tt>&nbsp;<font face="Courier New">必须定义成 scanner_list 所允许的扫描器的最大数目。</font>&nbsp;比如上面的例子，要把扫描器列表的最大数目限定为2，就必须在源码中Spirit的头文件之前插入以下一行：
+</p>
+<pre><span class="special">    </span><span class="preprocessor">#define </span><span class="identifier">BOOST_SPIRIT_RULE_SCANNERTYPE_LIMIT</span> <span class="literal">2</span></pre>
+<table align="center" border="0" width="80%">
+  <tbody><tr> 
+    <td class="note_box"><img src="theme/bulb.gif" height="18" width="13"> See 
+      the techniques section for an <a href="techniques.html#multiple_scanner_support">example</a> 
+      of a <a href="grammar.html">grammar</a> using a multiple scanner enabled 
+      rule, <a href="scanner.html#lexeme_scanner">lexeme_scanner</a> and <a href="scanner.html#as_lower_scanner">as_lower_scanner.</a><p>查看关于<a href="grammar.html">语法</a>如何使用允许多扫描器的规则、<a href="scanner.html#lexeme_scanner">lexeme_scanner</a> 和 <a href="scanner.html#as_lower_scanner">as_lower_scanner</a> 的<a href="techniques.html#multiple_scanner_support">例子</a>，请见技术一节。<a href="scanner.html#as_lower_scanner"></a><a href="http://www.boost.org/libs/spirit/doc/scanner.html#as_lower_scanner"></a></p></td>
+  </tr>
+</tbody></table>
+<h3>Rule Declarations 规则声明</h3>
+<p>The rule class models EBNF's production rule. Example:<br>rule 类实现了EBNF的产生规则。例：</p>
+<pre><code><font color="#000000">    <span class="identifier">rule</span><span class="special">&lt;&gt; </span><span class="identifier">a_rule </span><span class="special">= </span><span class="special">*(</span><span class="identifier">a </span><span class="special">| </span><span class="identifier">b</span><span class="special">) </span><span class="special">&amp; </span><span class="special">+(</span><span class="identifier">c </span><span class="special">| </span><span class="identifier">d </span><span class="special">| </span><span class="identifier">e</span><span class="special">);</span></font></code></pre>
+<p>The type and behavior of the right-hand (rhs) EBNF expression, which may be 
+  arbitrarily complex, is encoded in the rule named a_rule. a_rule may now be 
+  referenced elsewhere in the grammar:<br>右操作数（rhs）的EBNF表达式的类型（它可以有任意的复杂度），被一个名为a_rule的规则所包含。a_rule可以在语法的任意处被引用。</p>
+<pre><code><font color="#000000">    <span class="identifier">rule</span><span class="special">&lt;&gt; </span><span class="identifier">another_rule </span><span class="special">= </span><span class="identifier">f </span><span class="special">&gt;&gt; </span><span class="identifier">g </span><span class="special">&gt;&gt; </span><span class="identifier">h </span><span class="special">&gt;&gt; </span><span class="identifier">a_rule</span><span class="special">;</span></font></code></pre>
+<table align="center" border="0" width="80%">
+  <tbody><tr> 
+    <td class="note_box"><img src="theme/alert.gif" height="16" width="16"> <b>Referencing 
+      rules &nbsp;引用规则<br>
+      </b><br>
+      When a rule is referenced anywhere in the right hand side of an EBNF expression, 
+      the rule is held by the expression by reference. It is the responsibility 
+      of the client to ensure that the referenced rule stays in scope and does 
+      not get destructed while it is being referenced.<p>当一个规则被在EBNF的表达式右边引用时，表达式适用的是规则的引用。保证被引用的规则的可见性和被引用时的有效性，是客户程序的责任。</p> </td>
+  </tr>
+</tbody></table>
+<pre><span class="special">    </span><span class="identifier">a </span><span class="special">= </span><span class="identifier">int_p</span><span class="special">;<br>    </span><span class="identifier">b </span><span class="special">= </span><span class="identifier">a</span><span class="special">;<br>    </span><span class="identifier">c </span><span class="special">= </span><span class="identifier">int_p </span><span class="special">&gt;&gt; </span><span class="identifier">b</span><span class="special">;</span></pre>
+<h3>Copying Rules 复制规则</h3>
+<p>The rule is a weird C++ citizen, unlike any other C++ object. It does not have 
+  the proper copy and assignment semantics and cannot be stored and passed around 
+  by value. If you need to copy a rule you have to explicitly call its member 
+  function <tt>copy()</tt>:<br>规则是一个别扭的C++公民。与其他C++对象不同，它没有拷贝和赋值语义，且不能被存储和以值方式传递。如果你需要复制一个规则，就必须显式地调用它的成员函数 <tt>copy()</tt>:</p>
+<pre><span class="special">    </span><span class="identifier">r</span><span class="special">.</span><span class="identifier">copy()</span><span class="special">;</span></pre>
+<p>However, be warned that copying a rule will not deep copy other referenced 
+  rules of the source rule being copied. This might lead to dangling references. 
+  Again, it is the responsibility of the client to ensure that all referenced 
+  rules stay in scope and does not get destructed while it is being referenced. 
+  Caveat emptor.<br>然而，对一个规则的拷贝并不会引起对这个规则所引用的其他规则的深度拷贝。因为这可能会导致悬挂引用。当然，客户程序同样有责任保证所有被引用的规则都在范围内，并且在被引用期间不会被析构。你得风险自担。</p>
+<p>If you copy a rule, then you'll want to place it in a storage somewhere. The 
+  problem is how? The storage can't be another rule:<br>如果你复制一个规则，那么你可能会想把它储存在某处。问题是怎么储存？反正不能用另一个规则：</p>
+<pre>    <code><font color="#000000"><span class="identifier">rule</span><span class="special">&lt;&gt;</span></font></code> r2 <span class="special">=</span> <span class="identifier">r</span><span class="special">.</span><span class="identifier">copy()</span><span class="special">; </span><span class="comment">// BAD!</span></pre>
+<p>because rules are weird and does not have the expected C++ copy-constructor 
+  and assignment semantics! As a general rule: <strong>Don't put a copied rule 
+  into another rule! </strong>Instead, use the <a href="stored_rule.html">stored_rule</a> 
+  for that purpose.<br>因为规则是别扭的，而且没有所需要的C++拷贝构造函数和赋值语义！基本原则：<strong>不要把拷贝的规则放到另一个规则中去</strong>。而是使用<a href="stored_rule.html">可存储规则</a>来达到这一目的。</p>
+<h3>Forward declarations 前向声明</h3>
+<p>A <tt>rule</tt> may be declared before being defined to allow cyclic structures 
+  typically found in BNF declarations. Example:<br><tt>rule</tt> 可以在定义前声明以允许EBNF中常见的循环结构。例子：</p>
+<pre><code><font color="#000000"><span class="special">    </span><span class="identifier">rule</span><span class="special">&lt;&gt; </span><span class="identifier">a</span><span class="special">, </span><span class="identifier">b</span><span class="special">, </span><span class="identifier">c</span><span class="special">;<br><br>    </span><span class="identifier">a </span><span class="special">= </span><span class="identifier">b </span><span class="special">| </span><span class="identifier">a</span><span class="special">;<br>    </span><span class="identifier">b </span><span class="special">= </span><span class="identifier">c </span><span class="special">| </span><span class="identifier">a</span><span class="special">;</span></font></code></pre>
+<h3>Recursion 递归</h3>
+<p>The right-hand side of a rule may reference other rules, including itself. 
+  The limitation is that direct or indirect left recursion is not allowed (this 
+  is an unchecked run-time error that results in an infinite loop). This is typical 
+  of top-down parsers. Example:<br>规则的右边可以是其他规则，包括它自己。但是直接或间接的左递归是不允许的（这是一个无法自动检查的错误，在运行时将引起无限循环）。这是自顶向下分析器的典型情况。例子：</p>
+<pre><code><font color="#000000"><span class="special">    </span><span class="identifier">a </span><span class="special">= </span><span class="identifier">a </span><span class="special">| </span><span class="identifier">b</span><span class="special">; </span><span class="comment">// infinite loop! 无限循环！</span></font></code></pre>
+<table align="center" border="0" width="80%">
+  <tbody><tr> 
+    <td class="note_box"><img src="theme/lens.gif" height="16" width="15"> <b>What 
+      is left recursion? 什么是左递归？<br>
+      </b><br>
+      Left recursion happens when you have a rule that calls itself before anything 
+      else. A top-down parser will go into an infinite loop when this happens. 
+      See the <a href="faq.html#left_recursion">FAQ</a> for details on how to 
+      eliminate left recursion.<p>当某个规则的等号右边的第一个元素是它自己的时候，就产生了左递归。一个自顶向下分析器在这种情况下将陷入无限循环中。 <a href="faq.html#left_recursion">FAQ</a>中有如何消除左递归的细节。</p></td>
+  </tr>
+</tbody></table>
+<h3>Undefined rules 未定义规则</h3>
+<p>An undefined rule matches nothing and is semantically equivalent to <tt>nothing_p</tt>.<br>未定义的规则什么都不匹配，语义上等同于 <tt>nothing_p</tt>。</p>
+<h3>Redeclarations 重声明</h3>
+<p>Like any other C++ assignment, a second assignment to a rule is destructive 
+  and will redefine it. The old definition is lost. Rules are dynamic. A rule 
+  can change its definition anytime:<br>与C++的其他赋值相同，对一个规则的二次赋值会引起它的析构和重定义。老的定义就此丢失。规则是动态的。一个规则可以在任意时间改变它的定义：</p>
+<pre><code><font color="#000000"><span class="identifier">    r </span><span class="special">= </span><span class="identifier">a_definition</span><span class="special">;<br></span><span class="identifier">    r </span><span class="special">= </span><span class="identifier">another_definition</span><span class="special">;</span></font></code></pre>
+<p>Rule <tt>r</tt> loses the old definition when the second assignment is made. 
+  As mentioned, an undefined rule matches nothing and is semantically equivalent 
+  to <tt>nothing_p</tt>.<br>规则 <tt>r</tt>&nbsp;在第二次赋值发生时，丢掉了它的旧定义。正如上面所提到的，一个未定义的规则总是不匹配，语义上等同于 <tt>nothing_p</tt>。&nbsp;</p><h3>Dynamic Parsers 动态分析器</h3>
+<p>Hosting declarative EBNF in imperative C++ yields an interesting blend. We 
+  have the best of both worlds. We have the ability to conveniently modify the 
+  grammar at run time using imperative constructs such as <tt>if</tt>, <tt>else</tt> 
+  statements. Example:<br>将函数式的EBNF置于指令式的C++中，产生了一个有趣的混合。我们集二者之长。我们可以轻松地在运行时使用指令式的构造，比如 <tt>if</tt>, <tt>else</tt>&nbsp;语句，来改变一个语法。例如：</p>
+<pre><code><font color="#000000"><span class="special">    </span><span class="keyword">if </span><span class="special">(</span><span class="identifier">feature_is_available</span><span class="special">)<br>        </span><span class="identifier">r </span><span class="special">= </span><span class="identifier">add_this_feature</span><span class="special">;</span></font></code></pre>
+<p>Rules are essentially dynamic parsers. A dynamic parser is characterized by 
+  its ability to modify its behavior at run time. Initially, an undefined rule 
+  matches nothing. At any time, the rule may be defined and redefined, thus, dynamically 
+  altering its behavior.<br>规则本质上就是动态分析器。之所以是动态的，是因为它在运行时可以改变其行为的这一特征。最初，一个未定义的规则总是不匹配。而在任何时候，规则都可以定义和重定义，由此动态地改变它的行为。</p>
+<h3>No start rule 没有起始规则</h3>
+<p>Typically, parsers have what is called a start symbol, chosen to be the root 
+  of the grammar where parsing starts. The Spirit parser framework has no notion 
+  of a start symbol. Any rule can be a start symbol. This feature promotes step-wise 
+  creation of parsers. We can build parsers from the bottom up while fully testing 
+  each level or module up untill we get to the top-most level.<br>一般来说，分析器都有一个起始符号，作为语法的根源，分析的起点。Spirit分析器框架并没有起始符号。任何规则都可以是起始符号。这加强了逐步构造分析器的能力。构建分析器时，可以自底向上，同时完整测试所有层次，或者构建所有层次，直到最顶层。</p>
+<h3><a name="tag"></a>Parser Tags 分析器标签</h3>
+<p>Rules may be tagged for identification purposes. This is necessary, especially 
+  when dealing with <a href="trees.html">parse trees and ASTs</a> to see which 
+  rule created a specific AST/parse tree node. Each rule has an ID of type <tt>parser_id</tt>. 
+  This ID can be obtained through the rule's <tt>id()</tt> member function:<br>为了识别，可以给规则加上标签。这是有需要的，尤其是在<a href="trees.html">分析树和AST树</a>中要判断是哪个规则产生了特定的AST/分析树节点时。每个规则都有一个类型为 <tt>parser_id</tt> 的ID。这个ID可以通过规则的 <tt>id()</tt>&nbsp;成员函数得到：</p>
+<pre><code><font color="#000000"><span class="identifier">    my_rule</span><span class="special">.</span><span class="identifier">id</span><span class="special">(); </span><span class="comment">//  get my_rule's id 取出my_rule的id</span></font></code></pre>
+<p>The <tt>parser_id</tt> class is declared as:<br>类&nbsp;<tt>parser_id</tt> 声明如下：</p>
+<pre>    <span class="keyword">class</span> <span class="identifier">parser_id</span><br>    <span class="special">{</span><br>    <span class="keyword">public</span><span class="special">:</span><br>                    parser_id<span class="special">();</span><br>        <span class="keyword">explicit</span>    parser_id<span class="special">(</span><span class="keyword">void const</span><span class="special">*</span> p<span class="special">);</span><br>                    parser_id<span class="special">(</span><span class="keyword">std::size_t</span> l<span class="special">);</span>
+    
+        <span class="keyword">bool</span>        <span class="keyword">operator</span><span class="special">==(</span><span class="identifier">parser_id</span> <span class="keyword">const</span><span class="special">&amp;</span> x<span class="special">)</span> const<span class="special">;</span><br>        <span class="keyword">bool</span>        <span class="keyword">operator</span><span class="special">!=(</span><span class="identifier">parser_id</span> <span class="keyword">const</span><span class="special">&amp;</span> x<span class="special">)</span> const<span class="special">;</span>
+        <span class="keyword">bool</span> <span class="keyword">       operator</span><span class="special">&lt;(</span><span class="identifier">parser_id</span> <span class="keyword">const</span><span class="special">&amp;</span> x<span class="special">)</span> const<span class="special">;</span>
+        <span class="special"></span><span class="keyword">std::size_t</span><span class="identifier"> to_long</span><span class="special">()</span> <span class="keyword">const</span><span class="special">;<br>    };</span></pre>
+<h3>parser_address_tag</h3>
+<p>The rule's <tt>TagT</tt> template parameter supplies this ID. This defaults 
+  to <tt>parser_address_tag</tt>. The <tt>parser_address_tag</tt> uses the address 
+  of the rule as its ID. This is often not the most convenient, since it is not 
+  always possible to get the address of a rule to compare against.<br>规则的TagT模板参数支持这个ID。默认是 <tt>parser_address_tag</tt>。<tt>parser_address_tag</tt> 适用规则在内存中的地址作为它的ID。这样通常不是很方便，因为并不总是能够得到一个规则的地址拿来比较的。</p>
+<h3>parser_tag</h3>
+<p>It is possible to have specific constant integers to identify a rule. For this 
+  purpose, we can use the <tt>parser_tag&lt;N&gt;</tt>, where N is a constant 
+  integer:<br>使用特定的常整数来识别规则也是可以的。为了达到这一目的，可以使用 <tt>parser_tag&lt;N&gt;</tt>，这里N是一个常整数。</p>
+<pre><code><font color="#000000"><span class="identifier">    rule</span><span class="special">&lt;</span><span class="identifier">parser_tag</span><span class="special">&lt;</span><span class="identifier">123</span><span class="special">&gt; &gt; </span><span class="identifier">my_rule</span><span class="special">; </span><span class="comment">//  set my_rule's id to 123 将my_rule的id设为123</span></font></code></pre>
+<h3>dynamic_parser_tag</h3>
+<p>The <tt>parser_tag&lt;N&gt;</tt> can only specifiy a <strong>static ID</strong>, 
+  which is defined at compile time. If you need the ID to be <strong>dynamic</strong> 
+  (changeable at runtime), you can use the <tt>dynamic_parser_tag</tt> class as 
+  the <tt>TagT</tt> template parameter. This template parameter enables the <tt>set_id()</tt> 
+  function, which may be used to set the required id at runtime:<br><tt>parser_tag&lt;N&gt;</tt>&nbsp;只能表示一个在编译期定义的<strong>静态ID</strong>。如果你想让ID变成动态的（在运行期可更改），可以使用 <tt>dynamic_parser_tag</tt> 类作为 <tt>TagT</tt> 模板参数。这个参数允许 <tt>set_id()</tt>&nbsp;函数，作用是在运行时设定所需的 id 值：</p>
+<pre><code><font color="#000000"><span class="identifier">    rule</span><span class="special">&lt;</span><span class="identifier">dynamic_parser_tag</span><span class="special">&gt; </span><span class="identifier">my_dynrule</span><span class="special">;</span><br>    my_dynrule.set_id(1234);    <span class="comment">// set my_dynrule's id to 1234</span></font></code><code><font color="#000000"><span class="comment"> 将my_rule的id设为1234</span></font></code></pre>
+<p>If the <tt>set_id()</tt> function isn't called, the parser id defaults to the 
+  address of the rule as its ID, just like the <tt>parser_address_tag</tt> template 
+  parameter would do.<br>如果 <tt>set_id()</tt>&nbsp;没有被调用，分析器的id默认为它的地址。就像 <tt>parser_address_tag</tt>&nbsp;模板参数那样。</p>
+<table border="0">
+  <tbody><tr> 
+    <td width="10"></td>
+    <td width="30"><a href="../index.html"><img src="theme/u_arr.gif" border="0"></a></td>
+    <td width="30"><a href="numerics.html"><img src="theme/l_arr.gif" border="0"></a></td>
+    <td width="30"><a href="epsilon.html"><img src="theme/r_arr.gif" border="0"></a></td>
+  </tr>
+</tbody></table>
+<br>
+<hr size="1">
+<p class="copyright">Copyright © 1998-2003 Joel de Guzman<br>
+  <br>
+  <font size="2">Use, modification and distribution is subject to the Boost Software
+    License, Version 1.0. (See accompanying file LICENSE_1_0.txt or copy at
+    http://www.boost.org/LICENSE_1_0.txt)</font></p>
+</body></html>

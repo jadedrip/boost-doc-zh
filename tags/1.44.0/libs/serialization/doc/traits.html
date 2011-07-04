@@ -1,0 +1,966 @@
+<!DOCTYPE HTML PUBLIC "-//W3C//DTD HTML 4.01 Transitional//EN" "http://www.w3.org/TR/html4/loose.dtd">
+<html><head><!--
+(C) Copyright 2002-4 Robert Ramey - http://www.rrsd.com . 
+Use, modification and distribution is subject to the Boost Software
+License, Version 1.0. (See accompanying file LICENSE_1_0.txt or copy at
+http://www.boost.org/LICENSE_1_0.txt)
+-->
+
+
+
+
+  
+  
+  
+  <meta http-equiv="Content-Type" content="text/html; charset=UTF-8">
+
+
+
+
+  
+  
+  
+  <link rel="stylesheet" type="text/css" href="../../../boost.css">
+
+
+
+
+  
+  
+  
+  <link rel="stylesheet" type="text/css" href="style.css">
+
+
+
+
+  
+  
+  
+  <title>Serialization - Class Serialization Traits</title></head>
+<body link="#0000ff" vlink="#800080">
+
+
+
+
+<table summary="header" border="0" cellpadding="7" cellspacing="0" width="100%">
+
+
+
+
+  <tbody>
+
+
+
+    <tr>
+
+
+
+ 
+    <td valign="top" width="300"> 
+      
+      
+      
+      
+      <h3><a href="../../../index.htm"><img alt="C++ Boost" src="../../../boost.png" border="0" height="86" width="277"></a></h3>
+
+
+
+
+    </td>
+
+
+
+
+    <td valign="top"> 
+      
+      
+      
+      
+      <h1 align="center">Serialization序列化</h1>
+
+
+
+
+      
+      
+      
+      
+      <h2 align="center">类的序列化 Traits</h2>
+
+
+
+
+    </td>
+
+
+
+
+  </tr>
+
+
+
+
+  
+  
+  
+  </tbody>
+</table>
+
+
+
+
+<hr>
+<dl class="page-index">
+
+
+
+
+  <li><a href="#version">版本</a>
+  </li>
+
+
+
+  <li><a href="#level">实现级别</a>
+  </li>
+
+
+
+  <li><a href="#tracking">对象跟踪</a>
+  </li>
+
+
+
+  <li><a href="#export">导出键</a>
+  </li>
+
+
+
+  <li><a href="#abstract">抽象</a>
+  </li>
+
+
+
+  <li><a href="#typeinfo">类型信息的实现</a></li><li><a href="#wrappers">包装器</a>
+  </li><li><a href="#bitwise">接位序列化</a></li>
+
+
+
+  <li><a href="#templates">模板的序列化 Traits</a><dl class="page-index"><dt><a href="#compiletime_messages">编译期警告与错误</a>
+</dt></dl>
+  </li>
+
+
+
+</dl>
+
+
+
+
+数据的序列化依赖于数据的类型。例如，对于基本类型如 <code style="white-space: normal;">int</code>, 就无需保存一个版本号到存档中。同样的，对于不会通过指针来序列化的数据类型，也无需跟踪保存到存档或从存档取出的对象的地址，因为该对象无论如何不会被保存/取出一次以上。所以特定数据类型的序列化细节，依据类型、程序员的用法和规格而有所不同。 
+<p>你可以通过指定一个或多个 <strong>类序列化traits</strong> 来改变特定数据类型的序列化方式。对于程序员来说，通常并不需要为他的类显式地指定
+traits，因为所有的 traits 都有缺省值。如果缺省值不适用，程序员才需要对它赋值。可以用一个模板来把一个常量关联到一个类型名。相关例子请见 <a href="../../../boost/serialization/version.hpp" target="version_hpp">
+version.hpp</a>.  
+</p>
+
+
+
+<h3><a name="version">版本</a></h3>
+
+该头文件包含以下代码：
+
+<pre><code>
+namespace boost { 
+namespace serialization {
+template&lt;class T&gt;
+struct version
+{
+    BOOST_STATIC_CONSTANT(unsigned int, value = 0);
+};
+} // namespace serialization
+} // namespace boost
+</code></pre>
+
+对于任意类 <code style="white-space: normal;">T</code>,&nbsp;<code style="white-space: normal;">boost::serialization::version&lt;T&gt;::value</code> 的缺省定义是 0. 
+如果我们想将类 <code style="white-space: normal;">my_class</code>
+的版本赋为2，我们指定如下版本模板：
+<pre><code>
+namespace boost { 
+namespace serialization {
+struct version&lt;my_class&gt;
+{
+    BOOST_STATIC_CONSTANT(unsigned int, value = 2);
+};
+} // namespace serialization
+} // namespace boost
+</code></pre>
+
+现在无论何时需要类 <code style="white-space: normal;">my_class</code> 的版本号，都将返回2而不是缺省值0.
+<p>为了简化代码和增强可读性，系统定义了一个宏来替代以上写法，我们可以写：
+</p>
+
+
+
+<pre><code>
+BOOST_CLASS_VERSION(my_class, 2)
+</code></pre>
+
+它将扩展为前述代码。
+
+<h3><a name="level">实现级别</a></h3>
+
+采用和上述相同的风格，可以指定序列化实现的 "级别"。头文件 <a href="../../../boost/serialization/level.hpp" target="level_hpp">level.hpp</a> 定义如下：
+<pre><code>
+// 各个级别的名字
+enum level_type
+{
+    // 不要序列化本类型。尝试这样做将引起编译期断言。
+    not_serializable = 0,
+    // 直接将本类型写/读到存档。这样情形下不调用序列化代码。对于基本类型，这是缺省情况。
+    // 它假设存档类的一个成员函数或模板可以处理该类型。该级别实例的读/写没有运行期开销。
+    primitive_type = 1,
+    // 使用对象的"序列化"函数或模板对本类型的对象进行序列化。允许值被写/读到存档，但不
+    // 包含类信息和版本信息。
+    object_serializable = 2,
+    ///////////////////////////////////////////////////////////////////
+    // 一个对象以上述级别之一进行序列化后，如果存档对象的实现级别被改变，相应的存档将不
+    // 不能读出。
+    ///////////////////////////////////////////////////////////////////
+    // 增加类信息到存档中。类信息包含实现级别、类版本和类名。
+    object_class_info = 3,
+};
+</code></pre>
+
+使用 <code style="white-space: normal;">level.hpp</code> 中提供的一个宏，我们可以指定 <code style="white-space: normal;">my_class</code> 要和它的版本号一起序列化：
+<pre><code>
+BOOST_CLASS_IMPLEMENTATION(my_class, boost::serialization::object_class_info)
+</code></pre>
+
+如果没有显式指定实现级别，系统将按以下规则使用缺省值：
+<ul>
+
+
+
+
+  <li>如果数据类型为 <code style="white-space: normal;">volatile</code> 
+则采用 <code style="white-space: normal;">not_serializable</code>
+  </li>
+
+
+
+  <li>否则，如果是枚举或基本类型，则采用 <code style="white-space: normal;">primitive_type</code>
+  </li>
+
+
+
+  <li>否则采用 <code style="white-space: normal;">object_class_info</code>
+  </li>
+
+
+
+</ul>
+
+也就是说，对于大多数用户自定义类型，对象将与其版本信息一起序列化。这样让你可以维护向后兼容性，以处理旧版本的存档。不过这将带来少许的运行期开销。对于那些定义"永远"不变的类型，可以通过指定 <code style="white-space: normal;">object_serializable</code> 
+来覆盖缺省的 <code style="white-space: normal;">object_class_info</code>，以换取更高的效率。  例如，对于  
+<a href="../../../boost/serialization/binary_object.hpp" target="binary_object_hpp">
+binary_object 包装</a> 就是这样做的。<a href="../../../boost/serialization/binary_object.hpp" target="binary_object_hpp"></a>
+
+<h3><a name="tracking">对象跟踪</a></h3>
+
+依赖于类型被使用的方式，可能需要跟踪对象被保存和导入的地址。例如，如果是通过指针来进行对象序列化，就通常需要这样做，以确保在存档导入时不会创建多个相同的对象。这个 "跟踪行为" 是通过定义于头文件 <a href="../../../boost/serialization/tracking.hpp" target="tracking_hpp">tracking.hpp</a>
+中的类型 trait 来控制的，该头文件定义如下：
+<pre><code>
+// 各个跟踪级别的名字
+enum tracking_type
+{
+    // 从不跟踪本类型
+    track_never = 0,
+    // 如果通过指针来序列化，则跟踪本类型的对象。
+    track_selectively = 1,
+    // 总是跟踪本类型
+    track_always = 2
+};
+</code></pre>
+
+系统定义了一个相应的宏，所以我们可以用：
+<pre><code>
+BOOST_CLASS_TRACKING(my_class, boost::serialization::track_never)
+</code></pre>
+
+缺省的跟踪 traits 是：
+<ul>
+
+
+
+
+  <li>对于基本类型，<code style="white-space: normal;">track_never</code>.
+  </li>
+
+
+
+  <li>对于指针，<code style="white-space: normal;">track_never</code>.
+  即，地址的地址缺省不被跟踪。
+  </li>
+
+
+
+  <li>对于所有现有的序列化包装，如 <code style="white-space: normal;">boost::serialization::nvp</code>,
+  <code style="white-space: normal;">track_never</code>.
+  </li>
+
+
+
+  <li>对于所有其它类型，<code style="white-space: normal;">track_selectivly</code>.
+  即，跟踪序列化对象的地址当且仅当以下一条或多条为真：
+  
+    
+    
+    
+    <ul>
+
+
+
+
+  <li>在程序的某处，通过指针对该类型的对象进行序列化。
+  </li>
+
+
+
+      <li>该类被显式地 "输出exported" - 见后
+  </li>
+
+
+
+      <li>该类被显式地 "注册" 到存档
+  </li>
+
+
+
+    
+    
+    
+    </ul>
+
+
+
+
+  </li>
+
+
+
+</ul>
+
+
+
+
+
+<p>缺省的行为几乎总是最方便的。不过，有少数情形需要覆盖缺省的行为。一种情形是虚拟基类。在带有虚拟基类的菱形继承结构中，对象跟踪应防止多余的保存/导入。这种情形下可能就要覆盖缺省的跟踪
+trait. <i>(注意：在未来的版本中，缺省实现将自动跟踪被用作虚拟基类的类)。</i>这种情形在本库的 
+<a href="../test/test_diamond.cpp" target="test_diamond_cpp">test_diamond.cpp</a>
+中有相关示例。
+</p>
+
+
+
+<h3><a name="export">导出键</a></h3>
+当通过一个基类指针对派生类进行序列化时，会遇到两个问题。
+<ul><li>派生类中的代码可能不会被显式引用。这些代码将不会被实例化。
+<p>这个问题可以通过在定义(实现)类T的文件中调用 
+<code style="white-space: normal;">BOOST_CLASS_EXPORT_IMPLEMENT(T)</code>
+来解决。它保证了派生类T的代码被显式实例化。
+</p></li><li>需要有某种标识符，当导入这些对象时可以用来选择相应的代码。标准C++实现了 <code style="white-space: normal;">typeid()</code>，可以用于返回表示该类的一个唯一字符串。由于以下原因，这并不能完全符合我们的目的：
+<ul><li>它不保证跨平台时字符串是相同的。这将无法支持可移植存档。
+  </li><li>从不同的源使用代码模块，这些类可能必须在不同程序中被包装在不同的名字空间。
+  </li><li>可能有定义在不同代码模块中的局部类具有相同的名字。 
+  </li><li>可能有不同名字的类，但我们在执行序列化时将它们视为等价。
+</li></ul>
+<p>因此在序列化库中，这是通过在定义该类的头文件中调用
+<code style="white-space: normal;">BOOST_CLASS_EXPORT_KEY2(my_class, "my_class_external_identifier")</code>
+来解决的。
+在大多数应用中，类名就是很好的外部标识字符串，所以系统定义了以下简写 -
+<code style="white-space: normal;">BOOST_CLASS_EXPORT_KEY(my_class)</code>。
+</p></li></ul>对于只有一个模块的程序 - 即不使用DLLS的程序，你可以在声明头文件或定义文件中指定
+<code style="white-space: normal;">BOOST_CLASS_EXPORT(my_class)</code> 或
+<code style="white-space: normal;">BOOST_CLASS_EXPORT_GUID(my_class, "my_class_external_identifier")</code>。这些宏会展开为以上两个宏的调用。<i>(<b>GUID</b> 即 <b>全局唯一</b><b>ID</b>)</i>
+<p>
+<i>(本手册中的<a target="detail" href="special.html#export">其它地方</a>, 派生类的序列化有详细的解决方法)。</i>
+</p><p>头文件
+<a href="http://www.boost.org/doc/libs/1_41_0/boost/serialization/export.hpp" target="export_hpp">export.hpp</a>
+包含了这里介绍的所有宏定义。如果以下情形发生，本库将抛出一个运行期异常：
+</p><ul><li>一个未显式引用的类型未被导出。
+</li><li>相同类型的序列化代码在多于一个模块(或DLL)中被实例化。</li></ul>
+<h3><a name="abstract">抽象</a></h3>
+当通过基类指针序列化一个对象且该基类为抽象类(即至少有一个虚拟函数被赋为0)时，将产后一个编译错误。这可以通过下列中的一个或几个方法来解决：
+<ul>
+
+
+
+
+  <li>去掉基类中的 =0 以使该基类不再是抽象的。
+  </li>
+
+
+
+  <li>为你的编译器实现 is_abstract. (本库的代码是依照C++标准编写的。但已知有几个编译器不能通过编译)
+  </li>
+
+
+
+  <li>使用宏 <code style="white-space: normal;">BOOST_IS_ABSTRACT(my_class)</code> 来表明该类为抽象基类。这将使编译器不会生成引起错误的代码。
+  </li>
+
+
+
+</ul>
+
+
+
+
+<h3><a name="typeinfo">类型信息的实现</a></h3>
+最后这个 trait 也是与通过基类指针进行对象序列化有关。该功能的实现需要这样一种能力，即在运行时推断基类指针所指对象的真正类型。不同的序列化系统以不同方法来实现。在我们的系统中，缺省的方法是使用函数 <code style="white-space: normal;">typeid(...)</code>，该函数在支持 <b>RTTI</b> (<b>R</b>un <b>T</b>ime 
+<b>T</b>ype <b>I</b>nformation)的系统中都是可用的。对于绝大多数情况，这已经够用了，所以本库的大多数用户就算跳过本节也不会有所损失。
+<p>不过，有些情形下缺省的类型推断系统会不太好用。有些平台可能不支持
+RTTI 或者它因为执行速度或其它原因被禁用。有些应用，如需要在运行时链接插件模板的应用，就不能依赖于 C++ RTTI
+来推断真实的派生类型。RTTI 只能返回多态类的正确类型 - 即至少有一个虚拟函数的类。如果以上情形中的一个出现，你可能就要用自己的实现来替代
+<code style="white-space: normal;">extended_type_info</code> 了。<code style="white-space: normal;"></code>
+</p>
+
+
+
+<p>实现序列化所要求的工具接口定义在
+<a href="../../../boost/serialization/extended_type_info.hpp" target="extended_type_info_hpp">extended_type_info.hpp</a>.
+
+该工具的缺省实现基于 <code style="white-space: normal;">typeid(...)</code>，定义于
+
+<a href="../../../boost/serialization/extended_type_info_typeid.hpp" target="extended_type_info_typeid_hpp">extended_type_info_typeid.hpp</a>.
+
+另一个实现基于外部的类标识，定义于
+<a href="../../../boost/serialization/extended_type_info_no_rtti.hpp" target="extended_type_info_rtti_hpp">extended_type_info_no_rtti.hpp</a>.
+</p>
+
+
+
+<p>通过调用宏：
+</p>
+
+
+
+<pre><code>
+BOOST_CLASS_TYPE_INFO(
+    my_class, 
+    extended_type_info_no_rtti&lt;my_class&gt;
+)
+</code></pre>
+我们可以按需要为每个类指定类型信息的实现方式。并不要求一个程序中的所有类要使用相同的 <code style="white-space: normal;">extended_type_info</code> 实现。可以在头文件中指定类的序列化信息，然后在任何项目中包含该头文件而无需修改。
+<p>在测试程序
+<a href="../test/test_no_rtti.cpp" target="test_no_rtti_cpp">test_no_rtti.cpp</a> 中有相关的说明。对于一些特定情形，也可能需要有其它的实现方法。</p><h3><a name="wrappers">Wrappers</a></h3>存档需要区别于其它类型来处理包装器，因为例如，它们通常是非const对象，而输出存档要求任何被序列化的对象(除了包装器)都是const的。头文件 <a href="http://www.boost.org/doc/libs/1_41_0/boost/serialization/wrapper.hpp">wrapper.hpp</a>
+包含以下代码：
+
+<pre><code><br>namespace boost { <br>namespace serialization {<br>template&lt;class T&gt;<br>struct is_wrapper<br> : public mpl::false_<br>{};<br>} // namespace serialization<br>} // namespace boost<br></code></pre>对于任意类型 <code style="white-space: normal;">T</code>, 缺省定义 <code style="white-space: normal;">boost::serialization::is_wrapper&lt;T&gt;::value</code> 是 false.
+ 
+如果我们想声明某个类 <code style="white-space: normal;">my_class</code>
+是一个包装器，我们要特化以下模板：
+<pre><code><br>namespace boost { <br>namespace serialization {<br>struct is_wrapper&lt;my_class&gt;<br> : mpl::true_<br>{};<br>} // namespace serialization<br>} // namespace boost<br></code></pre>
+<p>为了减少输入和增加可读性，我们定义了一个宏来替代以上特化，我们可以写：
+</p><pre><code><br>BOOST_CLASS_IS_WRAPPER(my_class)<br></code></pre>它会被展开为前面的代码。
+
+<h3><a name="bitwise">按位序列化</a></h3>
+有一些简单的类可以通过直接复制该类的所有二进制位来序列化。特别是对于不含指针成员，既没有版本化也未被跟踪的POD数据类型。有些存档，如非移植的二进制存档，可以借助这些信息大大提高序列化的速度。为了表示某个类型可以按位进行序列化，可使用在头文件 <a href="http://www.boost.org/doc/libs/1_41_0/boost/serialization/is_bitwise_serializable.hpp" target="is_bitwise_serializable">is_bitwise_serializable.hpp</a>
+中定义的类型trait:
+<pre><code><br>namespace boost { namespace serialization {<br>    template<class t=""><br>    struct is_bitwise_serializable<br>     : public is_arithmetic<t><br>    {};<br>} }<br></t></class></code></pre>该模板可以针对其它类进行特化。特化可以通过以下宏轻易完成：
+<pre><code><br>BOOST_IS_BITWISE_SERIALIZABLE(my_class)<br></code></pre><p>
+
+</p>
+
+
+
+<h3><a name="templates">模板的序列化 Traits</a></h3>
+有时候，可能需要一次性为整组类指定序列化 traits.  考虑以下名字-值对的包装： 
+<pre><code>
+template&lt;class T&gt;
+struct nvp : public std::pair&lt;const char *, T *&gt;
+{
+    ...
+};
+</code></pre>
+
+
+
+
+它用于 XML 存档，将一个名字关联到一个类型 T 的变量。该数据类型不需要跟踪也不需要版本化。所以你可能会这样写：
+<pre><code>
+BOOST_CLASS_IMPLEMENTATION(nvp&lt;T&gt;, boost::serialization::level_type::object_serializable)
+BOOST_CLASS_TRACKING(nvp&lt;T&gt;, boost::serialization::track_never)
+</code></pre>
+测试这两个宏定义会发现，它们无法扩展为正确的代码，由于用了一个模板参数。所以不能用这些宏，而要使用原始的定义：
+<pre><code>
+template&lt;class T&gt;
+struct implementation_level&lt;nvp&lt;T&gt; &gt;
+{
+    typedef mpl::integral_c_tag tag;
+    typedef mpl::int_&lt;object_serializable&gt; type;
+    BOOST_STATIC_CONSTANT(
+        int,
+        value = implementation_level::type::value
+    );
+};
+
+// nvp 对象通常创建于栈中，无需跟踪
+template&lt;class T&gt;
+struct tracking_level&lt;nvp&lt;T&gt; &gt;
+{
+    typedef mpl::integral_c_tag tag;
+    typedef mpl::int_&lt;track_never&gt; type;
+    BOOST_STATIC_CONSTANT(
+        int, 
+        value = tracking_level::type::value
+    );
+};
+</code></pre>
+来为所有由模板
+<code style="white-space: normal;">nvp&lt;T&gt;</code> 生成的类指定序列化 traits<code style="white-space: normal;"></code>
+<p>注意，只能在可以正确支持模板偏特化的编译器上使用以上方法来为模板指定 traits. 你的第一个想法可能是这样写：
+
+</p>
+
+
+
+<pre><code><br>#ifndef BOOST_NO_TEMPLATE_PARTIAL_SPECIALIZATION<br>template&lt;class T&gt;<br>struct implementation_level&lt;nvp&lt;T&gt; &gt;<br>{<br>   ... // 见前文<br>};<br><br>// nvp </code><code>对象通常创建于栈中，无需跟踪</code><code><br>template&lt;class T&gt;<br>struct tracking_level&lt;nvp&lt;T&gt; &gt;<br>{<br>   ... // 见前文<br>};<br>#endif<br></code></pre>
+如果你想让你的代码和存档可以移植到其它平台，这样写就会有问题。这样对象的序列化行为会因为不同的平台而有所不同。这意味着在一个平台保存的对象将不能在另一个平台上导入。换句话说，存档是不可移植的。
+<p>解决的办法是为用户类型创建另一个指定序列化 traits 的方法。对&nbsp;<a target="nvp" href="../../../boost/serialization/nvp.hpp"><strong></strong>名字-值对</a> 的序列化就是一个例子。<a target="nvp" href="../../../boost/serialization/nvp.hpp"></a>
+</p>
+
+
+
+<p>
+特别地，可以让这个模板派生自一个特殊类
+<a target="traits" href="../../../boost/serialization/traits.hpp">
+<code style="white-space: normal;">boost::serialization::traits</code></a>，
+该类指定了序列化 traits 的一个特定组合。在查找序列化 traits 时，本库首先检查该类是否被用作基类。若是，则使用相应的
+traits. 否则，使用标准的缺省值。通过派生自一个序列化 traits 类而不是依赖于模板偏特化，你可为一个模板指定序列化 traits
+而且这些 traits 可以跨越所有已知平台。
+</p>
+
+
+
+<p>该 traits 模板的符号特征如下：
+</p>
+
+
+
+<pre><code>
+template&lt;
+    class T,       
+    int Level, 
+    int Tracking,
+    unsigned int Version = 0,
+    class ETII = BOOST_SERIALIZATION_DEFAULT_TYPE_INFO(T)
+&gt;
+struct traits
+</code></pre>
+其中的模板参数应根据下表进行赋值：
+<p>
+</p>
+
+
+
+<table border="1">
+
+
+
+
+  <tbody>
+
+
+
+    <tr>
+
+
+
+      <th align="left">参数</th>
+
+
+
+      <th align="left">描述</th>
+
+
+
+      <th align="left">允许的值</th>
+
+
+
+      <th align="left">缺省值</th>
+
+
+
+    </tr>
+
+
+
+
+    <tr>
+
+
+
+      <td><code>T</code></td>
+
+
+
+      <td>目标类</td>
+
+
+
+      <td>类名<t></t></td>
+
+
+
+      <td>无</td>
+
+
+
+    </tr>
+
+
+
+            
+    <tr>
+
+
+
+      <td><code>Level</code></td>
+
+
+
+      <td>实现级别</td>
+
+
+
+      <td><code>not_serializable<br>
+
+
+
+primitive_type<br>
+
+
+
+object_serializable<br>
+
+
+
+object_class_info</code></td>
+
+
+
+      <td>无</td>
+
+
+
+    </tr>
+
+
+
+  
+    <tr>
+
+
+
+      <td><code>Tracking</code></td>
+
+
+
+      <td>跟踪级别</td>
+
+
+
+      <td><code>track_never<br>
+
+
+
+track_selectivly<br>
+
+
+
+track_always</code></td>
+
+
+
+      <td>无</td>
+
+
+
+    </tr>
+
+
+
+
+    <tr>
+
+
+
+      <td><code>Version</code></td>
+
+
+
+      <td><code>类版本</code></td>
+
+
+
+      <td>无符号整数</td>
+
+
+
+      <td><code>0</code></td>
+
+
+
+    </tr>
+
+
+
+
+    <tr>
+
+
+
+      <td><code>ETTI</code></td>
+
+
+
+      <td><code>type_info</code> 实现</td>
+
+
+
+      <td><code>extended_type_info_typeid<br>
+
+
+
+extended_type_info_no_rtti</code></td>
+
+
+
+      <td>缺省 <code>type_info 实现</code></td>
+
+
+
+    </tr>
+
+
+
+
+  
+  
+  
+  </tbody>
+</table><code></code>
+
+
+<h3><a name="compiletime_messages">编译期警告与错误</a></h3>有些序列化 traits 可能与其它
+traits
+相冲突。有时，这些冲突会导致错误的行为(如创建不能读的存档)，其它时候它们可能代表了库用户对库中某部分的误解而导致意外的行为。在可能的范围内，这
+些冲突可在编译期检测出来，并生成错误(BOOST_STATIC_ASSERT)或警告(BOOST_STATIC_WARNING)。它们是以编译器
+相关的方式生成的，可能显示为检测到错误/警告的程序点的一个实例化链。没有这种能力，将很难追查到错误或意外的库使用行为。以下是这些被跟踪的冲突的列
+表：
+<dl><dt></dt><h2><a name="object_level">object_level</a> - 错误</h2><dd>该错误表示试图对某个实现级别被设置为 non_serializable 的类型进行序列。
+</dd><dt></dt><h2><a name="object_versioning">object_versioning</a> - 错误</h2><dd>
+It's possible that for efficiency reasons, a type can be
+assigned a serialization level which doesn't include type information 
+in the archive.  This would preclude the assignment
+of a new version number to the type.  This error
+traps attempts to assign a version number in this case.
+This has to be a user error.
+</dd><dt></dt><h2><a name="object_tracking">object_tracking</a> - warning</h2><dd>
+The following code will display a message when compiled:
+
+<code style="white-space: normal;"></code><pre>T t;<br>ar &lt;&lt; t;<br></pre>
+
+unless the tracking_level serialization trait is set to "track_never". The following
+will compile without problem:
+
+<code style="white-space: normal;"></code><pre>const T t<br>ar &lt;&lt; t;<br></pre>
+
+Likewise, the following code will trap at compile time:
+
+<code style="white-space: normal;"></code><pre>T * t;<br>ar &gt;&gt; t;<br></pre>
+
+if the tracking_level serialization trait is set to "track_never".
+<p>
+
+The following case illustrates the function of this message.
+It was originally used as an example in the
+mailing list by Peter Dimov.
+
+<code style="white-space: normal;"></code></p><pre>class construct_from <br>{ <br>    ... <br>}; <br><br>void main(){ <br>    ... <br>    Y y; <br>    construct_from x(y); <br>    ar &lt;&lt; x; <br>} <br></pre>
+
+Suppose that the above message is not displayed and the code is used as is.
+<ol><li>this example compiles and executes fine. No tracking is done because 
+  construct_from has never been serialized through a pointer. Now some time 
+  later, the next programmer(2) comes along and makes an enhancement. He 
+  wants the archive to be sort of a log. 
+
+<code style="white-space: normal;"></code><pre>void main(){ <br>    ... <br>    Y y; <br>    construct_from x(y); <br>    ar &lt;&lt; x; <br>    ... <br>    x.f(); // change x in some way <br>   ... <br>    ar &lt;&lt; x <br>} <br></pre>
+  <p>
+  Again no problem. He gets two different of copies in the archive, each one is different. 
+  That is he gets exactly what he expects and is naturally delighted. 
+  </p><p>
+  </p></li><li>Now sometime later, a third programmer(3) sees construct_from and says - 
+  oh cool, just what I need. He writes a function in a totally disjoint 
+  module. (The project is so big, he doesn't even realize the existence of 
+  the original usage) and writes something like: 
+
+<code style="white-space: normal;"></code><pre>class K { <br>    shared_ptr &lt;construct_from&gt; z; <br>    template &lt;class Archive&gt; <br>    void serialize(Archive &amp; ar, const unsigned version){ <br>        ar &lt;&lt; z; <br>    } <br>}; <br></pre>
+
+  <p>
+  He builds and runs the program and tests his new functionality. It works 
+  great and he's delighted. 
+  </p><p>
+  </p></li><li>Things continue smoothly as before.  A month goes by and it's 
+  discovered that when loading the archives made in the last month (reading the 
+  log). Things don't work. The second log entry is always the same as the 
+  first. After a series of very long and increasingly acrimonius email exchanges, 
+its discovered 
+  that programmer (3) accidently broke programmer(2)'s code .This is because by 
+  serializing via a pointer, the "log" object now being tracked.  This is because
+  the default tracking behavior is "track_selectively".  This means that class
+  instances are tracked only if they are serialized through pointers anywhere in
+  the program. Now multiple saves from the same address result in only the first one 
+  being written to the archive. Subsequent saves only add the address - even though the 
+  data might have been changed.  When it comes time to load the data, all instances of the log record show the same data.
+  In this way, the behavior of a functioning piece of code is changed due the side
+  effect of a change in an otherwise disjoint module.
+  Worse yet, the data has been lost and cannot not be now recovered from the archives.
+  People are really upset and disappointed with boost (at least the serialization system).
+  <p>
+  </p></li><li>
+  After a lot of investigation, it's discovered what the source of the problem
+  and class construct_from is marked "track_never" by including:
+<code style="white-space: normal;"></code><pre>BOOST_CLASS_TRACKING(construct_from, track_never) <br></pre>
+  </li><li>Now everything works again. Or - so it seems.
+  <p>
+  </p></li><li><code style="white-space: normal;">shared_ptr&lt;construct_from&gt;</code>
+is not going to have a single raw pointer shared amongst the instances. Each loaded 
+<code style="white-space: normal;">shared_ptr&lt;construct_from&gt;</code> is going to 
+have its own distinct raw pointer. This will break 
+<code style="white-space: normal;">shared_ptr</code> and cause a memory leak.  Again,
+The cause of this problem is very far removed from the point of discovery.  It could 
+well be that the problem is not even discovered until after the archives are loaded.
+Now we not only have difficult to find and fix program bug, but we have a bunch of
+invalid archives and lost data.
+</li></ol>
+
+<p>Now consider what happens when the message is displayed:
+
+</p><ol><p>
+  </p><li>Right away, the program traps at 
+<code style="white-space: normal;"></code><pre>ar &lt;&lt; x; <br></pre>
+  <p>
+  </p></li><li>The programmer curses (another %^&amp;*&amp;* hoop to jump through). If he's in a 
+  hurry (and who isn't) and would prefer not to <code style="white-space: normal;">const_cast</code>
+  - because it looks bad.  So he'll just make the following change an move on. 
+<code style="white-space: normal;"></code><pre>Y y; <br>const construct_from x(y); <br>ar &lt;&lt; x; <br></pre>
+  <p>
+  Things work fine and he moves on. 
+  </p><p>
+  </p></li><li>Now programer (2) wants to make his change - and again another 
+  annoying const issue; 
+<code style="white-space: normal;"></code><pre>Y y; <br>const construct_from x(y); <br>... <br>x.f(); // change x in some way ; compile error f() is not const <br>... <br>ar &lt;&lt; x <br></pre>
+  <p>
+  He's mildly annoyed now he tries the following: 
+  </p><ul><li>He considers making f() a const - but presumable that shifts the const 
+    error to somewhere else. And his doesn't want to fiddle with "his" code to 
+    work around a quirk in the serializaition system 
+    <p>
+    </p></li><li>He removes the <code style="white-space: normal;">const</code>
+    from <code style="white-space: normal;">const construct_from</code> above - damn now he 
+    gets the trap. If he looks at the comment code where the 
+    <code style="white-space: normal;">BOOST_STATIC_ASSERT</code>
+    occurs, he'll do one of two things 
+    <ol><p>
+      </p><li>This is just crazy. Its making my life needlessly difficult and flagging 
+      code that is just fine. So I'll fix this with a <code style="white-space: normal;">const_cast</code>
+      and fire off a complaint to the list and mabe they will fix it. 
+      In this case, the story branches off to the previous scenario.
+      <p>
+      </p></li><li>Oh, this trap is suggesting that the default serialization isn't really 
+      what I want. Of course in this particular program it doesn't matter. But 
+      then the code in the trap can't really evaluate code in other modules (which 
+      might not even be written yet). OK, I'll add the following to my 
+      construct_from.hpp to solve the problem. 
+<code style="white-space: normal;"></code><pre>BOOST_CLASS_TRACKING(construct_from, track_never) <br></pre>
+    </li></ol>
+  </li></ul>
+  <p>
+  </p></li><li>Now programmer (3) comes along and make his change. The behavior of the 
+  original (and distant module) remains unchanged because the 
+  <code style="white-space: normal;">construct_from</code> trait has been set to 
+  "track_never" so he should always get copies and the log should be what we expect.
+  <p>
+  </p></li><li>But now he gets another trap - trying to save an object of a 
+  class marked "track_never" through a pointer. So he goes back to 
+  construct_from.hpp and comments out the 
+  <code style="white-space: normal;">BOOST_CLASS_TRACKING</code> that 
+  was inserted. Now the second trap is avoided, But damn - the first trap is 
+  popping up again. Eventually, after some code restructuring, the differing
+  requirements of serializating <code style="white-space: normal;">construct_from</code>
+  are reconciled.
+</li></ol>
+Note that in this second scenario
+<ul><li>all errors are trapped at compile time.
+  </li><li>no invalid archives are created.
+  </li><li>no data is lost.
+  </li><li>no runtime errors occur.
+</li></ul>
+
+It's true that these messages may sometimes flag code that is currently correct and
+that this may be annoying to some programmers.  However, this example illustrates
+my view that these messages are useful and that any such annoyance is small price to
+pay to avoid particularly vexing programming errors.
+
+</dd><dt></dt><h2><a name="pointer_level">pointer_level</a> - warning</h2><dd>
+This trap addresses the following situaion when serializing 
+a pointer:
+<ul><li>A type doesn't save class information in the
+archive. That is, the serialization trait implementation
+level &lt;= object_serializable.
+</li><li>Tracking for this type is set to "track selectively"
+in this case, indication that an object is tracked is
+not stored in the archive itself - see level == object_serializable.
+Since class information is not saved in the archive, the existence
+or absense of the operation ar &lt;&lt; T * anywhere else in the 
+program is used to infer that an object of this type should be tracked.
+<p>
+A problem arises when a program which reads an archive
+includes the operation ar &gt;&gt; T * so that tracking information
+will be included in the archive. When a program which
+creates the archive doesn't include ar &lt;&lt; T it is presumed
+that the archive doesn't include tracking information and
+the archive will fail to load.  Also the reverse situation could 
+trigger a similar problem.
+</p><p>
+Though this situation is unlikely for several reasones, 
+it is possible - hence this warning. 
+</p></li></ul>
+So if your program traps here, consider changing the 
+tracking or implementation level traits - or not
+serializing via a pointer.
+</dd><dt></dt><h2><a name="pointer_tracking">pointer_tracking</a> - warning</h2><dd>
+Serializing an object of a type marked "track_never" through a pointer
+could result in creating more objects than were saved! There are cases
+in which a user might really want to do this so we leave it as a warning.
+</dd><dt></dt><h2><a name="const_loading">const_loading</a> - error</h2><dd>
+One cannot load data into a "const" object unless it's a
+wrapper around some other non-const object.
+</dd></dl>
+
+
+
+
+
+<hr>
+<p><i>© Copyright <a href="http://www.rrsd.com">Robert Ramey</a> 2002-2004. 
+Distributed under the Boost Software License, Version 1.0. (See
+accompanying file LICENSE_1_0.txt or copy at http://www.boost.org/LICENSE_1_0.txt)
+</i></p>
+
+
+
+
+</body></html>

@@ -1,0 +1,190 @@
+<!DOCTYPE HTML PUBLIC "-//W3C//DTD HTML 4.01 Transitional//EN" "http://www.w3.org/TR/html4/loose.dtd">
+<html><head><!--
+(C) Copyright 2002-4 Robert Ramey - http://www.rrsd.com . 
+Use, modification and distribution is subject to the Boost Software
+License, Version 1.0. (See accompanying file LICENSE_1_0.txt or copy at
+http://www.boost.org/LICENSE_1_0.txt)
+-->
+
+  <meta http-equiv="Content-Type" content="text/html; charset=UTF-8">
+
+  <link rel="stylesheet" type="text/css" href="../../../boost.css">
+
+  <link rel="stylesheet" type="text/css" href="style.css">
+
+  <title>Serialization - BOOST_STATIC_WARNING</title></head>
+
+<body link="#0000ff" vlink="#800080">
+
+<table summary="header" border="0" cellpadding="7" cellspacing="0" width="100%">
+
+  <tbody>
+    <tr>
+ 
+    <td valign="top" width="300"> 
+      
+      <h3><a href="../../../index.htm"><img alt="C++ Boost" src="../../../boost.png" border="0" height="86" width="277"></a></h3>
+
+    </td>
+
+    <td valign="top"> 
+      
+      <h1 align="center">Serialization序列化</h1>
+
+      
+      <h2 align="center"><code>smart_cast</code></h2>
+
+    </td>
+
+  </tr>
+
+  </tbody>
+</table>
+
+<hr>
+<h3>动机</h3>
+从一个类型转为另一个相关类型，C++提供了以下操作符：
+
+<dl>
+
+  <dt><code>static_cast&lt;T *&lt;&gt;(U *)<br>
+static_cast&lt;T &amp;&lt;&gt;(U &amp;)</code></dt>
+
+  <dd>
+    
+    <ul>
+
+      <li>如果 T 和 U 都不是多态的，则要求使用此转型
+      </li>
+      <li>允许其它任意情况
+      </li>
+      <li>无法在运行期检测多态指针/引用的错误转型
+      </li>
+      <li>不允许 "交叉转型"
+      </li>
+      <li>内联函数调用可以在编译期优化
+    </li>
+    </ul>
+
+  </dd>
+
+  
+  <p>
+  </p>
+  <dt><code>dynamic_cast&lt;T *&lt;&gt;(U *)<br>
+dynamic_cast&lt;T &amp;&lt;&gt;(U &amp;)</code></dt>
+
+  <dd>
+    
+    <ul>
+
+      <li>只能用于 T 或 U 是多态的情况
+      </li>
+      <li>不允许其它情况
+      </li>
+      <li>运行期检测到多态指针/引用的错误转型时会抛出异常
+      </li>
+      <li>允许 "交叉转型"
+      </li>
+      <li>不能在编译期优化内联虚拟函数
+    </li>
+    </ul>
+
+  </dd>
+
+</dl>
+以上规则使得很难对函数模板的参数使用转型。考虑以下例子：
+
+<pre><code>
+#include &lt;boost/serialization/smart_cast.hpp&gt;
+
+struct top {
+};
+
+struct base1 : public top {
+    bool is_storable() const {
+        return true;
+    }
+    virtual ~base1();
+};
+
+struct base2 {
+    virtual ~base2();
+};
+
+struct derived1 :
+    public base1
+{
+    derived1();
+};
+
+struct derived2 :
+    public base1, 
+    public base2
+{
+    derived2();
+};
+
+template&lt;class T&gt;
+bool is_storable(T &amp;t){
+    // 这里应使用哪种转型？
+
+    // 如果 T == base2，则以下代码编译失败
+    // return static_cast&lt;base1 &amp;&gt;(t).is_storable();
+
+    // 如果 T == top，则以下代码编译失败，或者可以编译但不能优化内联函数调用
+    // return dynamic_cast&lt;base1 &amp;&gt;(t).is_storable();
+
+    // 这永远可以工作 - 且保证生成最快的代码！
+    return (boost::smart_cast_reference&lt;base1 &amp;&gt;(t)).is_storable();
+}
+
+int main(){
+    derived1 d1;
+    top &amp; t1 = d1;
+    derived2 d2;
+    base2 &amp; b2 = d2;
+
+    bool result;
+    result = is_storable(d1);   
+    result = is_storable(d2);   
+    result = is_storable(b2);
+    result = is_storable(b2);
+    result = is_storable(t1);
+    return 0;
+}
+</code></pre>
+serialization 库同时包含了使用静态多态(<strong>CRTP</strong>)和采用虚拟函数的动态多态的类。<code style="white-space: normal;">smart_cast</code> 
+正是为了解决上述问题而编写的。
+
+<h3>用法</h3>
+系统支持以下语法：
+<pre><code>
+smart_cast&lt;Target *, Source *&gt;(Source * s);
+smart_cast&lt;Target *&gt;(Source * s);
+smart_cast&lt;Target &amp;, Source &amp;&gt;(Source &amp; s);
+</code></pre>
+请注意，以上语法不包含： 
+<pre><code>
+smart_cast&lt;Target &amp; &gt;(Source &amp; s)
+</code></pre>
+
+不过使用以下语法即可支持相同的功能
+<pre><code>
+smart_cast_reference&lt;Target &amp;&gt;(Source &amp; s)
+</code></pre>
+
+
+<h3>要求</h3>
+
+<code style="white-space: normal;">smart_cast</code> 仅适用于支持模板偏特化的编译器，或者是已经用宏 <code style="white-space: normal;">
+BOOST_BROKEN_COMPILER_TYPE_TRAITS_SPECIALIZATION(&lt;type&gt;)</code>
+指定过的类型。
+
+<hr>
+<p><i>© Copyright <a href="http://www.rrsd.com">Robert Ramey</a> 2002-2004. 
+Distributed under the Boost Software License, Version 1.0. (See
+accompanying file LICENSE_1_0.txt or copy at http://www.boost.org/LICENSE_1_0.txt)
+</i></p>
+
+</body></html>

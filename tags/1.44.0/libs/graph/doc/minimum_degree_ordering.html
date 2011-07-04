@@ -1,0 +1,87 @@
+<!DOCTYPE HTML PUBLIC "-//W3C//DTD HTML 4.01 Transitional//EN">
+<html><head><meta content="text/html; charset=UTF-8" http-equiv="content-type"><!--
+  -- Copyright (c) Lie-Quan Lee and Jeremy Siek, 2001
+  --
+  -- Distributed under the Boost Software License, Version 1.0.
+  -- (See accompanying file LICENSE_1_0.txt or copy at
+  -- http://www.boost.org/LICENSE_1_0.txt)
+  -->
+<title>Boost Graph Library: Minimum Degree Ordering</title></head>
+<body alink="#ff0000" bgcolor="#ffffff" link="#0000ee" text="#000000" vlink="#551a8b"> 
+<img src="../../../boost.png" alt="C++ Boost" height="86" width="277"> 
+
+<br clear="">
+
+<h1><a name="sec:mmd">
+<img src="figs/python.gif" alt="(Python)">
+<tt>minimum_degree_ordering</tt>
+</a></h1>
+
+
+<pre><a name="sec:mmd">  template &lt;class AdjacencyGraph, class OutDegreeMap,<br>           class InversePermutationMap, <br>           class PermutationMap, class SuperNodeSizeMap, class VertexIndexMap&gt;<br>  void minimum_degree_ordering<br>    (AdjacencyGraph&amp; G,<br>     OutDegreeMap outdegree,<br>     InversePermutationMap inverse_perm,<br>     PermutationMap perm, <br>     SuperNodeSizeMap supernode_size, int delta, VertexIndexMap id) <br></a></pre>
+
+<p><a name="sec:mmd">最小度排序算法[</a><a href="bibliography.html#LIU:MMD">21</a>, <a href="bibliography.html#George:evolution">35</a>]是一个减少填充的矩阵重排算法。在使用稀疏版本的&nbsp;Cholesky  分解(这是高斯消去法针对对称矩阵的一个变种)来求解形如 <i>A x = b</i>
+的方程组时，矩阵中的那些原本是零的元素常常会由于消去过程而变为非零。这就被称为"填充"，填充是不好的，因为它令矩阵变得不稀疏，从而在使用该分解结
+果进行后续消去和计算时耗费更多的时间和空间。现在事实证明，通过重排矩阵中的行，可以显著影响发生填充的数量。因此，我们不求解 <i>A x = b</i>，换为求解重排(但等价)的方程组 <i>(P A P<sup>T</sup>)(P x) = P
+b</i>。找出最优的排序是一个NP完全问题(即，不能在合理时间内解出)，所以我们换为只使用启发式策略找出一个"足够好"的排序。最小度排序算法就是这样一个方法。
+
+</p><p>通常，对称矩阵 <tt>A</tt> 表示一个无向图，但是对于这个函数，我们要求输入的是一个有向图。矩阵中的每个非零项 <tt>A(i, j)</tt> 必须由 G 中的两条有向边 (<tt>e(i,j)</tt> and
+<tt>e(j,i)</tt>) 来表示。
+
+</p><p>该算法的输出是按新顺序排列的顶点。
+</p><pre>  inverse_perm[new_index[u]] == old_index[u]<br></pre>
+<p>以及从旧索引至新索引的排列。 
+</p><pre>  perm[old_index[u]] == new_index[u]<br></pre>
+<p>以下等式总是被保持。
+</p><pre>  for (size_type i = 0; i != inverse_perm.size(); ++i)<br>    perm[inverse_perm[i]] == i;<br></pre>
+
+<h3>Parameters 参数</h3>
+
+<ul>
+
+<li> <tt>AdjacencyGraph&amp; G</tt> &nbsp;(IN) <br>一个有向图。图的类型必须符合 <a href="./AdjacencyGraph.html">邻接图Adjacency Graph</a>,
+  <a href="./VertexListGraph.html">点列表图Vertex List Graph</a>,
+  <a href="./IncidenceGraph.html">关联图Incidence Graph</a>, 和 <a href="./MutableGraph.html">可变图Mutable Graph</a>。此外，要求具有函数 <tt>num_vertices()</tt> 和
+  <tt>out_degree()</tt>。
+
+</li><li> <tt>OutDegreeMap outdegree</tt> &nbsp;(WORK) <br>内部使用以保存顶点的出度。它必须是 <a href="../../property_map/doc/LvaluePropertyMap.html">
+  左值属性映射</a>，且键类型与图的顶点描述符类型相同，值类型为整数类型。
+
+</li><li> <tt>InversePermutationMap inverse_perm</tt> &nbsp;(OUT) <br>新的顶点顺序，以从新索引至旧索引的映射(一个逆排列)方式给出。它必须是 <a href="../../property_map/doc/LvaluePropertyMap.html">
+  左值属性映射</a>，值类型和键类型均为有符号整数。 
+
+</li><li> <tt>PermutationMap perm</tt> &nbsp;(OUT) <br>新的顶点顺序，以从旧索引至新索引的映射(一个排列)方式给出。它必须是 <a href="../../property_map/doc/LvaluePropertyMap.html">
+  左值属性映射</a>，值类型和键类型均为有符号整数。 
+
+</li><li> <tt>SuperNodeSizeMap supernode_size</tt> &nbsp;(WORK/OUT) <br>内部使用以记录超级节点的大小及所带的有用信息。这是一个 <a href="../../property_map/doc/LvaluePropertyMap.html">
+  左值属性映射</a>，值类型为无符号整数，键类型为顶点描述符。
+
+</li><li> <tt>int delta</tt> &nbsp;(IN) <br>多消去控制变量。如果它大于或等于零，则激活多消去。<tt>delta</tt> 的值指定最小度与被消去顶点的度之间的差异。
+  
+</li><li> <tt>VertexIndexMap id</tt> &nbsp;(IN) <br>内部使用以将顶点映射至它们的索引。它必须是一个 <a href="../../property_map/doc/ReadablePropertyMap.html"> 可读属性映射</a>，键类型与图的顶点描述符相同，值类型为某个无符号整数类型。
+
+</li></ul>
+
+
+<h3>Example 示例</h3>见 <a href="../example/minimum_degree_ordering.cpp"><tt>example/minimum_degree_ordering.cpp</tt></a>.
+
+
+<h3>Implementation Notes 实现说明</h3>
+
+<p>建设中
+
+</p><p>在模拟高斯消去法过程的每一步中，选择最小度数的顶点。
+
+</p><p>该实现提供了一些增强，包括：大规模消去、不完整度数更新、多消去，以及外部度。有关最小度算法的历史考察，请见[<a href="bibliography.html#George:evolution">35</a>]。
+
+</p><p><b>消去图</b> <i>G<sub>v</sub></i> 通过从图 <i>G</i> 中移除顶点 <i>v</i> 及其所有关联边，然后加入一些边令邻接于
+<i>v</i> 的顶点形成一个clique(即，对于这些邻接顶点中的每一对，如果它们之间没有边的话，加入一条)而得到。假设图 <i>G</i> 是表示矩阵 <i>A</i> 的非零结构的图。则在矩阵 <i>A</i> 的第 <i>i</i> 行执行一步高斯消去，相当于<br>
+</p><hr>
+<table>
+<tbody><tr valign="top">
+<td nowrap="nowrap">Copyright © 2001</td><td>
+<a href="http://www.boost.org/people/liequan_lee.htm">Lie-Quan Lee</a>, Indiana University (<a href="mailto:llee@cs.indiana.edu">llee@cs.indiana.edu</a>) <br>
+<a href="http://www.boost.org/people/jeremy_siek.htm">Jeremy Siek</a>, Indiana University (<a href="mailto:jsiek@osl.iu.edu">jsiek@osl.iu.edu</a>)
+</td></tr></tbody></table>
+
+</body></html>

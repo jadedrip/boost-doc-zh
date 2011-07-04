@@ -1,0 +1,356 @@
+<!DOCTYPE HTML PUBLIC "-//W3C//DTD HTML 4.01 Transitional//EN" "http://www.w3.org/TR/html4/loose.dtd">
+<html><head><!--
+(C) Copyright 2002-4 Robert Ramey - http://www.rrsd.com . 
+Use, modification and distribution is subject to the Boost Software
+License, Version 1.0. (See accompanying file LICENSE_1_0.txt or copy at
+http://www.boost.org/LICENSE_1_0.txt)
+-->
+
+
+
+  
+  
+  <meta http-equiv="Content-Type" content="text/html; charset=UTF-8">
+
+
+
+  
+  
+  <link rel="stylesheet" type="text/css" href="../../../boost.css">
+
+
+
+  
+  
+  <link rel="stylesheet" type="text/css" href="style.css">
+
+
+
+  
+  
+  <title>Serialization - Dataflow Iterators</title></head>
+
+<body link="#0000ff" vlink="#800080">
+
+
+
+<table summary="header" border="0" cellpadding="7" cellspacing="0" width="100%">
+
+
+
+  <tbody>
+
+
+    <tr>
+
+
+ 
+    <td valign="top" width="300"> 
+      
+      
+      
+      <h3><a href="../../../index.htm"><img alt="C++ Boost" src="../../../boost.png" border="0" height="86" width="277"></a></h3>
+
+
+
+    </td>
+
+
+
+    <td valign="top"> 
+      
+      
+      
+      <h1 align="center">Serialization序列化</h1>
+
+
+
+      
+      
+      
+      <h2 align="center">数据流迭代器</h2>
+
+
+
+    </td>
+
+
+
+  </tr>
+
+
+
+  
+  
+  </tbody>
+</table>
+
+
+
+<hr>
+<h3>动机</h3>
+
+
+考虑以下问题，将一个任意长度的8位字节串转换为 base64 文本。该过程可以概述如下：
+<p>源 =&gt; 8位字节串 =&gt; 6位整数 =&gt; 编码为 base64 字符 =&gt; 插入行分隔 =&gt; 目标
+</p>
+
+
+<p>我们认为更好的方法应该是：
+</p>
+
+
+<ul>
+
+
+
+  <li>可分解的，我们可以独立地对转换的每个阶段进行编码、测试、验证和使用。
+  </li>
+
+
+  <li>可组合的，我们可以将它用作其它地方的一个新组件。
+  </li>
+
+
+  <li>高效的，我们不需要再次重新实现它。
+  </li>
+
+
+  <li>可伸缩的，可用于短的或是任意长的序列。
+  </li>
+
+
+</ul>
+
+下面将要介绍的以 <a href="../../iterator/doc/index.html">迭代器适配器</a> 实现的方法非常接近于满足上述要求。我们感兴趣的迭代器适配器模板的基本特性是，它以一个基础迭代器作为模板参数<a href="../../iterator/doc/index.html"></a>，并从该迭代器得到输入。这样我们就可以象下面那样编写：
+<pre><code>
+typedef 
+    insert_linebreaks&lt;         // 每72个字符插入一个行分隔
+        base64_from_binary&lt;    // 将二进制值转换为 base64 字符
+            transform_width&lt;   // 从8位字节序列中取出6位整数
+                const char *,
+                6,
+                8
+            &gt;
+        &gt; 
+        ,72
+    &gt; 
+    base64_text; // 将上述各个操作组合为一个新的迭代器
+
+std::copy(
+    base64_text(address),
+    base64_text(address + count),
+    ostream_iterator&lt;CharType&gt;(os)
+);
+</code></pre>
+
+看起来迭代器适配器正是解决这类问题的方法。Iterator Adaptor 库已经包含了一些模块，它们可以通过配置实现以上操作。例如，所包含的 <a target="transform_iterator" href="../../iterator/doc/transform_iterator.html">
+transform_iterator</a>, 就可以用于实现6位整数 =&gt; base64 编码的转换。
+
+<h3>数据流迭代器</h3>
+
+不幸的是，不是所有继承自 Iterator Adaptors 的迭代器都保证符合前述的可组合目标。为实现该目标，它们必须被重写以增加一些东西。我们定义一个 Dataflow Iterator，它是一个继承自 <code style="white-space: normal;">iterator_adaptor</code> 的类，满足一些额外的要求。
+
+<h4>模板化的构造函数</h4>
+
+
+
+<p>模板化的构造函数具有以下形式：
+</p>
+
+
+<pre><code>
+template&lt;class T&gt;
+dataflow_iterator(T start) :
+    iterator_adaptor(Base(start))
+{}
+</code></pre>
+
+当这些构造函数被应用于我们前面的例子时，将生成以下代码：
+<pre><code>
+std::copy(
+    insert_linebreaks(
+        base64_from_binary(
+            transform_width(
+                address
+            ),
+        )
+    ),
+    insert_linebreaks(
+        base64_from_binary(
+            transform_width(
+                address + count
+            )
+        )
+    )
+    ostream_iterator&lt;char&gt;(os)
+);
+</code></pre>
+
+在上述例子中，该模板的递归应用将自动生成构造函数 <code style="white-space: normal;">base64_text(const char *)</code>.  原来的
+Iterator Adaptors 提供了一个 <code style="white-space: normal;">make_xxx_iterator</code> 来实现这个功能。不过我认为，与使用模板化构造函数的方法相比，原来的方法更难用。
+<p>不幸的是，有些系统不能正确支持 partial function template
+ordering，也就不能支持上述的模板化构造函数。有一个特别的"包装"  宏可以绕过这个问题。要使用这个 "包装"，则上述例子要改为：
+</p>
+
+
+<pre><code>
+std::copy(
+    base64_text(BOOST_MAKE_PFTO_WRAPPER(address)),
+    base64_text(BOOST_MAKE_PFTO_WRAPPER(address + count)),
+    ostream_iterator&lt;char&gt;(os)
+);
+</code></pre>
+
+该宏定义于&nbsp;<a href="../../../boost/serialization/pfto.hpp" target="pfto">&lt;boost/serialization/pfto.hpp&gt;</a>.
+有关它的更多信息，请看源代码。
+
+<h4>提领</h4>
+有些迭代器在提领时可能会有问题。例如，按普通的方法编写一个 <code style="white-space: normal;">remove_whitespace</code> 迭代器，需要在构建迭代器时跳过初始的空白。如果传递给构造函数的迭代器是"指向"字符串的末尾的，这个操作就会失败。以这种方法实现的 
+<a target="filter_iterator" href="../../iterator/doc/filter_iterator.html">
+<code style="white-space: normal;">filter_iterator</code></a> 就不能用于我们的上下文。因此，为了实现这个迭代器，删除空白的操作要延后到迭代器真的被提领时。
+
+<h4>比较</h4>
+<code style="white-space: normal;">iterator_adaptor</code> 迭代器的等价性比较的缺省实现只是调用了其基础迭代器的等价比较操作符。通常这是可以满足的。不过这意味着其它操作(如提领操作)不能过早地递增基础操作符。在某些情况下，要避免这样做会有些怪(如 transform_width)。
+
+<p>满足以上要求的迭代器就是可组合的，上面的例子代码可以实现我们的二进制到 base64 的转换。
+
+</p>
+
+
+<h3>本库中包含的迭代器</h3>
+serialization 库中的数据流迭代器全部定义于名字空间
+<code style="white-space: normal;">boost::archive::iterators</code>，包括以下迭代器：
+<dl class="index">
+
+
+
+  <dt><a target="base64_from_binary" href="../../../boost/archive/iterators/base64_from_binary.hpp">
+  base64_from_binary</a></dt>
+
+
+
+  <dd>将一个整数序列转换为 base64 文本</dd>
+
+
+
+
+  <dt><a target="base64_from_binary" href="../../../boost/archive/iterators/binary_from_base64.hpp">
+  binary_from_base64</a></dt>
+
+
+
+  <dd>将一个 base64 字符序列转换为整数序列</dd>
+
+
+
+
+  <dt><a target="insert_linebreaks" href="../../../boost/archive/iterators/insert_linebreaks.hpp">
+  insert_linebreaks</a></dt>
+
+
+
+  <dd>给定一个序列，创建一个序列并插入换行符</dd>
+
+
+
+
+  <dt><a target="mb_from_wchar" href="../../../boost/archive/iterators/mb_from_wchar.hpp">
+  mb_from_wchar</a></dt>
+
+
+
+  <dd>将一个宽字符序列转换为多字节字符序列</dd>
+
+
+
+
+  <dt><a target="remove_whitespace" href="../../../boost/archive/iterators/remove_whitespace.hpp">
+  remove_whitespace</a></dt>
+
+
+
+  <dd>给定一个字符序列，返回一个删去空白字符的序列。它派生自 <code style="white-space: normal;">boost::filter_iterator</code></dd>
+
+
+
+
+  <dt><a target="transform_width" href="../../../boost/archive/iterators/transform_width.hpp">
+  transform_width</a></dt>
+
+
+
+  <dd>将一个 x 位元素的序列转换为 y 位元素的序列。这是实现向/从 base64 文本进行转换的迭代器的关键组件。</dd>
+
+
+
+
+  <dt><a target="wchar_from_mb" href="../../../boost/archive/iterators/wchar_from_mb.hpp">
+  wchar_from_mb</a></dt>
+
+
+
+  <dd>将一个多字节字符序列转换为当前 locale 的宽字符序列。</dd>
+
+
+
+
+  <dt><a target="xml_escape" href="../../../boost/archive/iterators/xml_escape.hpp">
+  xml_escape</a></dt>
+
+
+
+  <dd>对 xml 文本中的元字符进行转义</dd>
+
+
+
+
+  <dt><a target="xml_unescape" href="../../../boost/archive/iterators/xml_unescape.hpp">
+  xml_unescape</a></dt>
+
+
+
+  <dd>消去 xml 中的转义序列，创建一个普通文本</dd>
+
+
+  <dd>
+  </dd>
+
+
+</dl>
+
+
+
+<p>标准流的迭代器对我们并不太适用。在将 <code style="white-space: normal;">wchar_t</code>
+实现为 unsigned short 整数的系统(如 VC 6)上，它们不能提供我想要的功能。为此我做了一些调整以保持我们的 Dataflow Iterators 概念的一致性。和我们的其它迭代器一样，它们位于名字空间 <code style="white-space: normal;">boost::archive::interators</code>，以避免与标准库中的迭代器冲突。
+</p>
+
+
+<dl class="index">
+
+
+
+  <dt><a target="istream_iterator" href="../../../boost/archive/iterators/istream_iterator.hpp">
+  istream_iterator</a></dt>
+
+
+
+  <dt><a target="ostream_iterator" href="../../../boost/archive/iterators/ostream_iterator.hpp">
+  ostream_iterator</a></dt>
+
+
+
+</dl>
+
+
+
+
+<hr>
+<p><i>© Copyright <a href="http://www.rrsd.com">Robert Ramey</a> 2002-2004. 
+Distributed under the Boost Software License, Version 1.0. (See
+accompanying file LICENSE_1_0.txt or copy at http://www.boost.org/LICENSE_1_0.txt)
+</i></p>
+
+
+
+</body></html>

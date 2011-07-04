@@ -1,0 +1,86 @@
+<!DOCTYPE HTML PUBLIC "-//W3C//DTD HTML 4.01 Transitional//EN">
+<html><head><meta content="text/html; charset=UTF-8" http-equiv="content-type"><!--
+  -- Copyright (c) Jeremy Siek, Lie-Quan Lee, and Andrew Lumsdaine 2000
+  --
+  -- Distributed under the Boost Software License, Version 1.0.
+  -- (See accompanying file LICENSE_1_0.txt or copy at
+  -- http://www.boost.org/LICENSE_1_0.txt)
+  -->
+<title>Boost Graph Library: Converting Existing Graphs to BGL</title></head>
+<body alink="#ff0000" bgcolor="#ffffff" link="#0000ee" text="#000000" vlink="#551a8b"> 
+<img src="../../../boost.png" alt="C++ Boost" height="86" width="277"> 
+
+<br clear="">
+
+
+<h1><a name="sec:leda-conversion">How to Convert Existing Graphs to BGL 如果把已有图转换至BGL</a></h1>
+
+<p>
+<a name="sec:leda-conversion">虽然BGL的主要目标是帮助开发新的应用和图算法，但是还有不少的已有代码可以受益于
+BGL算法。将BGL算法用于已有的图数据结构的一种方法是，从旧的图格式中将数据复制至一个可以在BGL算法中使用的BGL图中。这种方法的问题是，进
+行复制的代价可能是昂贵的。另一种方法就是，在已有的图数据结构外面包一层BGL接口。
+</a></p><p>
+<a name="sec:leda-conversion">适配器模式[</a><a href="bibliography.html#gamma95:_design_patterns">12</a>]通常要求将适配对象包含在一个新类中，以提供所需的接口。在将一个图针对BGL进行包装时，并没有这种限制，因为BGL图接口纯粹是自由(全局)函数。你不用创建一个新的图类，而是重载接口所需要的所有自由函数。我们称这种自由函数的包装方法为<i>外部适配</i>。
+
+</p><p>一种最常见的图类是 LEDA 参数化的
+<a href="http://www.mpi-sb.mpg.de/LEDA/MANUAL/bgraph.html"><tt>GRAPH</tt></a>
+类[<a href="bibliography.html#mehlhorn99:_leda">22</a>]。在本节中，我们将示范如何为这个类创建一个BGL接口。第一个问题是，我们应实现哪些BGL接口(或概念)。以下概念非常简单，可以很容易地在LEDA之上实现：<a href="./VertexListGraph.html">VertexListGraph</a>, <a href="./BidirectionalGraph.html">BidirectionalGraph</a>, 和 <a href="./MutableGraph.html">MutableGraph</a>。
+
+</p><p>与一个BGL图类相关的所有类型都是通过
+<tt>graph_traits</tt> 类来访问的。我们可以用以下方式为 LEDA GRAPH 类偏特化这个 traits
+类。<tt>node</tt> 和 <tt>edge</tt> 是表示顶点和边的 LEDA 类型。LEDA <tt>GRAPH</tt> 是用于有向图的，所以我们选择 <tt>directed_tag</tt> 作为 <tt>directed_category</tt>。LEDA <tt>GRAPH</tt> 不能自动阻止平行边的插入，所以我们选择 <tt>allow_parallel_edge_tag</tt> 作为 <tt>edge_parallel_category</tt>。LEDA 函数 <tt>number_of_nodes()</tt> 和 <tt>number_of_edges()</tt> 的返回类型为
+<tt>int</tt>，所以我们选择该类型作为图的
+<tt>vertices_size_type</tt> 和 <tt>edges_size_type</tt>。迭代器类型比较复杂，所以我们晚一些再处理。
+
+</p><pre>namespace boost {<br>  template &lt;class vtype, class etype&gt;<br>  struct graph_traits&lt; GRAPH&lt;vtype,etype&gt; &gt; {<br>    typedef node vertex_descriptor;<br>    typedef edge edge_descriptor;<br><br>    // 迭代器的 typedefs...<br><br>    typedef directed_tag directed_category;<br>    typedef allow_parallel_edge_tag edge_parallel_category;<br>    typedef int vertices_size_type;<br>    typedef int edges_size_type;<br>  };<br>} // namespace boost<br></pre>
+
+<p>首先，我们要编写 <a href="IncidenceGraph.html">IncidenceGraph</a> 概念的 <tt>source()</tt> 和 <tt>target()</tt>
+函数，<a href="./IncidenceGraph.html"></a>该概念是 <a href="./VertexListGraph.html">VertexListGraph</a> 概念的一部分。我们用
+LEDA <tt>GRAPH</tt> 类型作为 graph 参数，并使用
+<tt>graph_traits</tt> 来指定 edge 参数和 vertex
+返回类型。在这里，我们也可以直接使用 LEDA 类型 <tt>node</tt> 和
+<tt>edge</tt>，不过始终使用
+<tt>graph_traits</tt> 是更好的做法。如果需要修改相关的
+vertex 或 edge 类型，你只需要在一个地方作出修改，即特化 <tt>graph_traits</tt> 的内部，而不是在你代码的多处地方。LEDA 提供了 <tt>source()</tt> 和 <tt>target()</tt> 函数，所以我们只要调用它们就行了。
+
+</p><pre>namespace boost {<br>  template &lt;class vtype, class etype&gt;<br>  typename graph_traits&lt; GRAPH&lt;vtype,etype&gt; &gt;::vertex_descriptor<br>  source(<br>    typename graph_traits&lt; GRAPH&lt;vtype,etype&gt; &gt;::edge_descriptor e,<br>    const GRAPH&lt;vtype,etype&gt;&amp; g)<br>  {<br>    return source(e);<br>  }<br><br>  template &lt;class vtype, class etype&gt;<br>  typename graph_traits&lt; GRAPH&lt;vtype,etype&gt; &gt;::vertex_descriptor<br>  target(<br>    typename graph_traits&lt; GRAPH&lt;vtype,etype&gt; &gt;::edge_descriptor e,<br>    const GRAPH&lt;vtype,etype&gt;&amp; g)<br>  {<br>    return target(e);<br>  }<br>} // namespace boost<br></pre>
+
+<p>我们需要实现的下一个 <a href="./IncidenceGraph.html">IncidenceGraph</a> 的函数是 <tt>out_edges()</tt>。该函数一对出边迭代器。因为 LEDA 没有使用STL风格的迭代器，所以我们要来实现一个。实现迭代器有一个非常有用的boost工具，名为 <tt>iterator_adaptor</tt>。编写一个符合标准的迭代器类实际上相当困难，难度要比你想象的高。而有了 <tt>iterator_adaptor</tt> 类，你只需要实现一个策略类，剩下的就不用管了。以下代码是我们的出边迭代器的策略类。在 LEDA 中，边对象本身是被当作迭代器来使用的。它有两个函数
+<tt>Succ_Adj_Edge()</tt> 和 <tt>Pred_Adj_Edge()</tt>，分别移至下一条边和前一条边(后继与前导)。把 LEDA <tt>edge</tt> 用作迭代器的一个例子出现在
+<tt>dereference()</tt> 函数中，它仅仅是返回这个 edge
+对象。符合标准的迭代器的解引用操作符必须是一个 const 成员函数，这就是为什么 edge 参数为
+const 的原因。不过，返回类型不应为 const, 因此需要用到 <tt>const_cast</tt>。
+
+</p><pre>namespace boost {<br>  struct out_edge_iterator_policies<br>  {<br>    static void increment(edge&amp; e)<br>    { e = Succ_Adj_Edge(e,0); }<br><br>    static void decrement(edge&amp; e)<br>    { e = Pred_Adj_Edge(e,0); }<br><br>    template &lt;class Reference&gt;<br>    static Reference dereference(type&lt;Reference&gt;, const edge&amp; e)<br>    { return const_cast&lt;Reference&gt;(e); }<br><br>    static bool equal(const edge&amp; x, const edge&amp; y)<br>    { return x == y; }<br>  };<br>} // namespace boost<br></pre>
+
+<p>现在我们回到 <tt>graph_traits</tt> 类，用
+<tt>iterator_adaptor</tt> 来完成
+<tt>out_edge_iterator</tt>。我们用这个迭代器类型来指定与该迭代器相关的类型，包括迭代器种类和值类型。
+
+</p><pre>  namespace boost {<br>    template &lt;class vtype, class etype&gt;<br>    struct graph_traits&lt; GRAPH&lt;vtype,etype&gt; &gt; {<br>      // ...<br>      typedef iterator_adaptor&lt;edge,<br>        out_edge_iterator_policies, <br>        iterator&lt;std::bidirectional_iterator_tag,edge&gt;<br>      &gt; out_edge_iterator;<br>      // ...<br>    };<br>  } // namespace boost<br></pre>
+
+<p>有了在 <tt>graph_traits</tt> 中定义的 <tt>out_edge_iterator</tt>，我们就可以定义 <tt>out_edges()</tt> 函数了。以下定义乍一看有点复杂，但其实相当简单。返回类型应为一对出边迭代器，所以我们用了 <tt>std::pair</tt> 和 <tt>graph_traits</tt> 来获得出边迭代器类型。在函数体中，我们这样来构造两个出边迭代器，通过传入第一条相邻边来构造始端迭代器，传入0来构造末端迭代器(在 LEDA 中作为结束哨兵使用)。传给 <tt>First_Adj_Edge</tt> 的参数0告诉
+LEDA 我们要的是出边(而非入边)。
+
+</p><pre>namespace boost {<br>  template &lt;class vtype, class etype&gt;<br>  inline std::pair&lt;<br>    typename graph_traits&lt; GRAPH&lt;vtype,etype&gt; &gt;::out_edge_iterator,<br>    typename graph_traits&lt; GRAPH&lt;vtype,etype&gt; &gt;::out_edge_iterator &gt;  <br>  out_edges(<br>    typename graph_traits&lt; GRAPH&lt;vtype,etype&gt; &gt;::vertex_descriptor u, <br>    const GRAPH&lt;vtype,etype&gt;&amp; g)<br>  {<br>    typedef typename graph_traits&lt; GRAPH&lt;vtype,etype&gt; &gt;<br>      ::out_edge_iterator Iter;<br>    return std::make_pair( Iter(First_Adj_Edge(u,0)), Iter(0) );<br>  }<br>} // namespace boost<br></pre>
+
+<p>其余的迭代器类型和接口函数都可以用同样的技术来构造。LEDA
+包装器接口的完整代码在 <a href="../../../boost/graph/leda_graph.hpp"><tt>boost/graph/leda_graph.hpp</tt></a>。以下代码中，我们用BGL概念检查来确认是否正确地实现了BGL接口。这些检查并不是测试该实现的运行期行为；运行期行为在 <a href="../test/graph.cpp"><tt>test/graph.cpp</tt></a> 中测试。
+
+</p><pre>  #include &lt;boost/graph/graph_concepts.hpp&gt;<br>  #include &lt;boost/graph/leda_graph.hpp&gt;<br><br>  int<br>  main(int,char*[])<br>  {<br>    typedef GRAPH&lt;int,int&gt; Graph;<br>    function_requires&lt; VertexListGraphConcept&lt;Graph&gt; &gt;();<br>    function_requires&lt; BidirectionalGraphConcept&lt;Graph&gt; &gt;();<br>    function_requires&lt; MutableGraphConcept&lt;Graph&gt; &gt;();<br>    return 0;<br>  }<br></pre>
+
+
+
+<br>
+<hr>
+<table>
+<tbody><tr valign="top">
+<td nowrap="nowrap">Copyright © 2000-2001</td><td>
+<a href="http://www.boost.org/people/jeremy_siek.htm">Jeremy Siek</a>,
+Indiana University (<a href="mailto:jsiek@osl.iu.edu">jsiek@osl.iu.edu</a>)<br>
+<a href="http://www.boost.org/people/liequan_lee.htm">Lie-Quan Lee</a>, Indiana University (<a href="mailto:llee@cs.indiana.edu">llee@cs.indiana.edu</a>)<br>
+<a href="http://www.osl.iu.edu/%7Elums">Andrew Lumsdaine</a>,
+Indiana University (<a href="mailto:lums@osl.iu.edu">lums@osl.iu.edu</a>)
+</td></tr></tbody></table>
+
+</body></html>
