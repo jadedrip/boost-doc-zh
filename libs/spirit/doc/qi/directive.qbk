@@ -1,16 +1,18 @@
 [/==============================================================================
-    Copyright (C) 2001-2010 Joel de Guzman
-    Copyright (C) 2001-2010 Hartmut Kaiser
+    Copyright (C) 2001-2011 Joel de Guzman
+    Copyright (C) 2001-2011 Hartmut Kaiser
+    Copyright (C) 2011      Bryce Lelbach
 
     Distributed under the Boost Software License, Version 1.0. (See accompanying
     file LICENSE_1_0.txt or copy at http://www.boost.org/LICENSE_1_0.txt)
 ===============================================================================/]
 
-[section:directive Directive]
+[section:directive Parser Directives]
 
-This module includes different directives usable to augment and parametrize
+This module includes different directives usable to augment and parameterize
 other parsers. It includes the `no_case`, `lexeme`, `omit`, `raw`, `repeat`,
-`matches`, `no_skip`, and `skip` directives.
+`matches`, `no_skip`, `skip`, `hold`, `as<T>`, `as_string` and
+`as_wstring` directives.
 
 
 [heading Module Header]
@@ -21,7 +23,7 @@ other parsers. It includes the `no_case`, `lexeme`, `omit`, `raw`, `repeat`,
 Also, see __include_structure__.
 
 [/------------------------------------------------------------------------------]
-[section:lexeme Inhibiting Skipping (`lexeme[]`)]
+[section:lexeme Parser Directive Inhibiting Skipping (`lexeme[]`)]
 
 [heading Description]
 
@@ -113,7 +115,7 @@ Simple usage of `lexeme[]`:
 [endsect]
 
 [/------------------------------------------------------------------------------]
-[section:no_skip Inhibiting Skipping Without Pre-skip (`no_skip[]`)]
+[section:no_skip Parser Directive Inhibiting Skipping Without Pre-skip (`no_skip[]`)]
 
 [heading Description]
 
@@ -186,7 +188,7 @@ Simple usage of `no_skip[]`:
 [endsect]
 
 [/------------------------------------------------------------------------------]
-[section:no_case Inhibiting Case Sensitivity (`no_case[]`)]
+[section:no_case Parser Directive Inhibiting Case Sensitivity (`no_case[]`)]
 
 [heading Description]
 
@@ -267,7 +269,7 @@ table (see __qi_symbols__ for more details):
 [endsect]
 
 [/------------------------------------------------------------------------------]
-[section:omit Ignoring Attribute (`omit[]`)]
+[section:omit Parser Directive Ignoring Attribute (`omit[]`)]
 
 [heading Description]
 
@@ -331,7 +333,7 @@ Some using declarations:
 [endsect]
 
 [/------------------------------------------------------------------------------]
-[section:raw Transduction Parsing (`raw[]`)]
+[section:raw Directive for Transduction Parsing (`raw[]`)]
 
 [heading Description]
 
@@ -407,7 +409,7 @@ Some using declarations:
 [endsect]
 
 [/------------------------------------------------------------------------------]
-[section:repeat Repetition (`repeat[]`)]
+[section:repeat Repetition Parser Directive (`repeat[]`)]
 
 [heading Description]
 
@@ -510,7 +512,7 @@ the length of the incoming string. Here's a sample input:
 [endsect]
 
 [/------------------------------------------------------------------------------]
-[section:matches Test if Parser Succeeded (`matches[]`)]
+[section:matches Directive Testing if Parser Succeeded (`matches[]`)]
 
 [heading Description]
 
@@ -576,7 +578,7 @@ Some using declarations:
 [endsect]
 
 [/------------------------------------------------------------------------------]
-[section:skip Re-Establish Skipping (`skip[]`)]
+[section:skip Parser Directive Re-Establishing Skipping (`skip[]`)]
 
 [heading Description]
 
@@ -661,6 +663,198 @@ Some using declarations:
 Simple usage of `skip[]`:
 
 [reference_skip]
+
+[endsect]
+
+[/------------------------------------------------------------------------------]
+[section:hold Parser Directive for Attribute Commit/Rollback (`hold[]`)]
+
+[heading Description]
+
+The `hold[]` directive helps managing attributes, mainly for alternative 
+parsers. It instantiates a new attribute instance for the embedded parser. The
+value of that attribute instance is copied to the outer attribute if the 
+embedded parser succeeds and it is discarded otherwise. Alternative parsers 
+normally do not rollback changes made to the outer attribute by an failed 
+alternative. Wrapping those alternatives into a `hold[]` directive ensures that 
+only the succeeding alternative gets to modify the attribute.
+
+[heading Header]
+
+    // forwards to <boost/spirit/home/qi/directive/hold.hpp>
+    #include <boost/spirit/include/qi_hold.hpp>
+
+Also, see __include_structure__.
+
+[heading Namespace]
+
+[table
+    [[Name]]
+    [[`boost::spirit::hold // alias: boost::spirit::qi::hold` ]]
+]
+
+[heading Model of]
+
+[:__unary_parser_concept__]
+
+[variablelist Notation
+    [[`a`]      [A __parser_concept__.]]
+]
+
+[heading Expression Semantics]
+
+Semantics of an expression is defined only where it differs from, or is
+not defined in __unary_parser_concept__.
+
+[table
+    [[Expression]       [Semantics]]
+
+    [[`hold[a]`]        [Create a new attribute instance while parsing `a`, 
+                         copying the result to the outer attribute only after
+                         `a` succeeds.]]
+]
+
+[heading Attributes]
+
+See __qi_comp_attr_notation__.
+
+[table
+    [[Expression]       [Attribute]]
+    [[`hold[a]`]
+[``a: A --> hold[a]: A
+a: Unused --> hold[a]: Unused``]]
+]
+
+[note The `hold[]` directive uses `swap()` to implement the rollback/commit 
+      semantics for the attribute. For this reason the attribute type needs to
+      to be usable with `boost::swap` (needs to either define a proper overload
+      for `swap(attribute_type&, attribute_type&)` or expose a member function
+      `attribute_type::swap(attribute_type&)`.]
+
+[heading Complexity]
+
+[:The complexity is defined by the complexity of the subject parser, `a`]
+
+[heading Example]
+
+[note The test harness for the example(s) below is presented in the
+__qi_basics_examples__ section.]
+
+Some using declarations:
+
+[reference_using_declarations_hold]
+
+[reference_hold]
+
+[endsect]
+
+[/------------------------------------------------------------------------------]
+[section:as Parser Directives Forcing Atomic Assignment (`as<T>, as_string[], as_wstring[]`)]
+
+[heading Description]
+
+The `as<T>` class forces the atomic assignment of it's subject's synthesized
+attribute. Usually, repetitive parsers (such as __qi_kleene__, etc) or
+sequences exposing a `vector<A>` will assign elements to the container supplied
+as their synthesized attribute by calling __customize_push_back_container__
+repeatedly. In some cases, this may be undesirable. The `as<T>` class creates a
+directive that will pass a temporary object of type `T` to it's subject. If the
+subject parser passes, the temporary object will be assigned to the directive's
+supplied attribute with a single call to __customize_assign_to__.  If the
+subject parser fails, the directive's attribute is not mutated. 
+
+[note `T` is required to be a container type. If __customize_is_container__ 
+does not return true for `T`, a compile-time error will occur.]
+
+[note The `as<T>` implicitly causes commit/rollback semantics
+similar in nature to the __qi_hold__ directive.]
+
+[caution The __customize_assign_to__ customization point may end up
+using __customize_push_back_container__ to assign the temporary object to the
+supplied attribute by default, depending on the types involved. Use the
+interface described in __sec_customization_points__ to manipulate the semantics
+of this assignment operation.] 
+
+[heading Header]
+
+    // forwards to <boost/spirit/home/qi/directive/as.hpp>
+    #include <boost/spirit/include/qi_as.hpp>
+
+Also, see __include_structure__.
+
+[heading Namespace]
+
+[table
+    [[Name]]
+    [[`boost::spirit::as         // alias: boost::spirit::qi::as` ]]
+    [[`boost::spirit::as_string  // alias: boost::spirit::qi::as_string` ]]
+    [[`boost::spirit::as_wstring // alias: boost::spirit::qi::as_wstring` ]]
+]
+
+[heading Synopsis]
+
+    template <typename T>
+    struct as;
+
+[heading Template parameters]
+
+[table
+    [[Parameter]    [Description]                       [Default]]
+    [[`T`]          [A container type.                  [none]]
+]
+
+[heading Model of]
+
+[:__unary_parser_concept__]
+
+[variablelist Notation
+    [[`a`]      [A __parser_concept__.]]
+    [[`t`]      [A container of type `T`.]]
+    [[`attr`]   [The attribute supplied to the directive.]]
+]
+
+[heading Expression Semantics]
+
+Semantics of an expression is defined only where it differs from, or is
+not defined in __unary_parser_concept__.
+
+[table
+    [[Expression]      [Semantics]]
+    [[`as<T>()[a]`]    [Create a temporary object of `t` of type `T`,
+                        and invoke the subject parser `a`, supplying 
+                        `t` as an attribute. If the subject parser
+                        passes, assign `t` to `attr`.]]
+    [[`as_string[a]`]  [Equivalent to `as<std::string>()[a]`]]
+    [[`as_wstring[a]`] [Equivalent to `as<std::wstring>()[a]`]] 
+]
+
+[heading Attributes]
+
+See __qi_comp_attr_notation__.
+
+[table
+    [[Expression]   [Attribute]]
+    [[`as<T>()[a]`] [`a: A --> as<T>()[a]: T`]]
+]
+
+[heading Complexity]
+
+[:The complexity is defined by the complexity of the subject parser, `a`, and
+the complexity of the assignment of the container `t` to the supplied
+attribute `attr`.]
+
+[heading Example]
+
+[note The test harness for the example(s) below is presented in the
+__qi_basics_examples__ section.]
+
+Some using declarations:
+
+[reference_using_declarations_as]
+
+Simple usage of `as<T>`, `as_string` and `as_wstring`:
+
+[reference_as]
 
 [endsect]
 

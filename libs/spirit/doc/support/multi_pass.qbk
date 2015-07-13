@@ -1,6 +1,6 @@
 [/==============================================================================
-    Copyright (C) 2001-2010 Hartmut Kaiser
-    Copyright (C) 2001-2010 Joel de Guzman
+    Copyright (C) 2001-2011 Hartmut Kaiser
+    Copyright (C) 2001-2011 Joel de Guzman
     Copyright (C) 2001-2002 Daniel C. Nuffer
 
     Distributed under the Boost Software License, Version 1.0. (See accompanying
@@ -47,9 +47,9 @@ will cause data to be buffered. The rules that are optimal to use are
 repetition constructs (as kleene and plus). 
 
 Sequences of the form `a >> b` will buffer data as well. This is different from 
-the behaviour of __classic__ but for a good reason. Sequences need to reset the 
-current iterator to its initial state if one of the components of a seqeunce 
-fails to match. To compensate for this behaviour we added functionality to 
+the behavior of __classic__ but for a good reason. Sequences need to reset the 
+current iterator to its initial state if one of the components of a sequence 
+fails to match. To compensate for this behavior we added functionality to 
 the `expect` parsers (i.e. constructs like `a > b`). Expectation points introduce
 deterministic points into the grammar ensuring no backtracking can occur if
 they match. For this reason we clear the buffers of any multi_pass iterator
@@ -150,7 +150,7 @@ The multi_pass class has two template parameters:
                  below]]
 ]
 
-It is possible to implement all of the required functionality of the combinded 
+It is possible to implement all of the required functionality of the combined 
 policy in a single class. But it has shown to be more convenient to split this 
 into four different groups of functions, i.e. four separate, but well 
 coordinated policies. For this reason the `multi_pass` library
@@ -186,7 +186,7 @@ All predefined `multi_pass` policies are defined in the namespace
     [[`input_iterator`]   [This policy directs `multi_pass` to read from an 
                            input iterator of type `Input`.]]
     [[`buffering_input_iterator`]   [This policy directs `multi_pass` to read from an 
-                           input iterator of type `Input`. Aditionally it buffers
+                           input iterator of type `Input`. Additionally it buffers
                            the last character received from the underlying iterator.
                            This allows to wrap iterators not buffering the last 
                            character on their own (as `std::istreambuf_iterator`).]]
@@ -207,7 +207,7 @@ All predefined `multi_pass` policies are defined in the namespace
                            named `eof` which is comparable to a variable of 
                            `result_type`.]]
     [[`split_functor_input`][This is essentially the same as the `functor_input`
-                           policy except that the (user supplied) funtion 
+                           policy except that the (user supplied) function 
                            object exposes separate `unique` and `shared` sub 
                            classes, allowing to integrate the functors /unique/
                            data members with the `multi_pass` data items held
@@ -309,7 +309,7 @@ There is one other pre-defined class called `look_ahead`. The class
 template parameters: `Input`, the type of the input iterator to wrap, and a 
 `std::size_t N`, which specifies the size of the buffer to the 
 `fixed_size_queue` policy. While the default multi_pass configuration is 
-designed for safey, `look_ahead` is designed for speed. `look_ahead` is derived 
+designed for safety, `look_ahead` is designed for speed. `look_ahead` is derived 
 from a multi_pass with the following policies: `input_iterator` InputPolicy, 
 `first_owner` OwnershipPolicy, `no_check` CheckingPolicy, and 
 `fixed_size_queue<N>` StoragePolicy. 
@@ -353,16 +353,22 @@ STL. Also, it must supply a static variable called eof which is compared against
 to know whether the input has reached the end. Last but not least the function 
 object must be default constructible. Here is an example: 
 
+    #include <iostream>
+    #include <boost/spirit/home/qi.hpp>
+    #include <boost/spirit/home/support.hpp>
+    #include <boost/spirit/home/support/multi_pass.hpp>
+    #include <boost/spirit/home/support/iterators/detail/functor_input_policy.hpp>
+
     // define the function object
     class iterate_a2m
     {
     public:
         typedef char result_type;
 
-        iterate_a2m() : c('A') {}
+        iterate_a2m() : c_('A') {}
         iterate_a2m(char c) : c_(c) {}
 
-        result_type operator()() const
+        result_type operator()()
         {
             if (c_ == 'M')
                 return eof;
@@ -375,24 +381,31 @@ object must be default constructible. Here is an example:
         char c_;
     };
 
-    iterate_a2m::result_type iterate_a2m::eof = iterate_a2m::result_type('\0');
+    iterate_a2m::result_type iterate_a2m::eof = iterate_a2m::result_type('M');
+
+    using namespace boost::spirit;
 
     // create two iterators using the define function object, one of which is 
     // an end iterator
     typedef multi_pass<iterate_a2m
-      , iterator_policies::functor_input
       , iterator_policies::first_owner
       , iterator_policies::no_check
+      , iterator_policies::functor_input
       , iterator_policies::split_std_deque> 
     functor_multi_pass_type;
 
-    functor_multi_pass_type first = functor_multi_pass_t(iterate_a2m());
-    functor_multi_pass_type last;
+    int main()
+    {
+        functor_multi_pass_type first = functor_multi_pass_type(iterate_a2m());
+        functor_multi_pass_type last;
 
-    // use the iterators: this will print "ABCDEFGHIJKL"
-    while (first != last) {
-        std::cout << *first;
-        ++first;
+        // use the iterators: this will print "ABCDEFGHIJKL"
+        while (first != last) {
+            std::cout << *first;
+            ++first;
+        }
+        std::cout << std::endl;
+        return 0;
     }
 
 [heading How to write policies for use with multi_pass]
@@ -442,7 +455,7 @@ An `InputPolicy` must have the following interface:
             //
             //   mp:    is a reference to the whole multi_pass instance
             //
-            // This method is expected to return a refernce to the next 
+            // This method is expected to return a reference to the next 
             // character/token
             template <typename MultiPass>
             static typename MultiPass::reference get_input(MultiPass& mp);
@@ -666,7 +679,7 @@ A `StoragePolicy` must have the following interface:
             //          to
             //
             // This function is expected to return true if the current instance
-            // is eual to the right hand side multi_pass instance
+            // is equal to the right hand side multi_pass instance
             template <typename MultiPass>
             static bool equal_to(MultiPass const& mp, MultiPass const& rhs);
 
